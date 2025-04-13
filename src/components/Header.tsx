@@ -235,9 +235,6 @@ export default function NavigationBar() {
                     </div>
 
                     <div className="hidden md:flex items-center space-x-3">
-                        <Link href="/perfil" className="p-2 text-gray-300 hover:text-white hover:bg-gray-800 rounded-full transition-colors">
-                            <User className="h-5 w-5" />
-                        </Link>
                         <Link href="/logout" className="p-2 text-gray-300 hover:text-white hover:bg-gray-800 rounded-full transition-colors">
                             <LogOut className="h-5 w-5" />
                         </Link>

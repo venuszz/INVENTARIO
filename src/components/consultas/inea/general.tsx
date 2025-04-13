@@ -287,402 +287,520 @@ export default function ConsultasIneaGeneral() {
     };
 
     return (
-        <div className="p-6 max-w-7xl mx-auto">
-            <div className="mb-6">
-                <h1 className="text-2xl font-bold text-gray-900">Consulta de Inventario INEA</h1>
-                <p className="text-gray-600">Vista general de todos los bienes registrados en el sistema.</p>
-            </div>
+        <div className="bg-black text-white min-h-screen p-6">
+            <div className="max-w-7xl mx-auto">
+                {/* Encabezado */}
+                <div className="mb-6 border-b border-gray-700 pb-4">
+                    <h1 className="text-2xl font-bold text-white">Consulta de Inventario INEA</h1>
+                    <p className="text-gray-400">Vista general de todos los bienes registrados en el sistema.</p>
+                </div>
 
-            {/* Panel de acciones y búsqueda */}
-            <div className="mb-6 bg-white p-4 rounded-lg shadow-md">
-                <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-4">
-                    <div className="relative flex-grow">
-                        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                            <Search className="h-5 w-5 text-gray-400" />
+                {/* Panel de acciones y búsqueda */}
+                <div className="mb-6 bg-gray-900 p-5 rounded-lg border border-gray-800">
+                    <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-4">
+                        <div className="relative flex-grow">
+                            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                <Search className="h-5 w-5 text-gray-500" />
+                            </div>
+                            <input
+                                type="text"
+                                value={searchTerm}
+                                onChange={(e) => {
+                                    setSearchTerm(e.target.value);
+                                    setCurrentPage(1);
+                                }}
+                                placeholder="Buscar por ID, descripción o resguardante..."
+                                className="pl-10 pr-4 py-2 w-full bg-gray-800 border border-gray-700 rounded-md text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                            />
                         </div>
-                        <input
-                            type="text"
-                            value={searchTerm}
-                            onChange={(e) => {
-                                setSearchTerm(e.target.value);
-                                setCurrentPage(1);
-                            }}
-                            placeholder="Buscar por ID, descripción o resguardante..."
-                            className="pl-10 pr-4 py-2 w-full border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                        />
+
+                        <div className="flex gap-2">
+                            <button
+                                onClick={() => setShowFilters(!showFilters)}
+                                className={`px-4 py-2 rounded-md font-medium flex items-center gap-2 transition-colors ${Object.values(filters).some(value => value !== '')
+                                    ? 'bg-blue-900 text-blue-200 hover:bg-blue-800'
+                                    : 'bg-gray-800 text-gray-300 hover:bg-gray-700'
+                                    }`}
+                            >
+                                <Filter className="h-4 w-4" />
+                                Filtros
+                                {Object.values(filters).some(value => value !== '') && (
+                                    <span className="ml-1 bg-blue-600 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs">
+                                        {Object.values(filters).filter(value => value !== '').length}
+                                    </span>
+                                )}
+                            </button>
+
+                            <button
+                                onClick={fetchMuebles}
+                                className="px-4 py-2 bg-gray-800 text-gray-300 rounded-md font-medium flex items-center gap-2 hover:bg-gray-700 transition-colors"
+                            >
+                                <RefreshCw className="h-4 w-4" />
+                                Actualizar
+                            </button>
+
+                            <button
+                                onClick={exportToCSV}
+                                className="px-4 py-2 bg-green-900 text-green-200 rounded-md font-medium flex items-center gap-2 hover:bg-green-800 transition-colors"
+                            >
+                                <Download className="h-4 w-4" />
+                                Exportar
+                            </button>
+                        </div>
                     </div>
 
-                    <div className="flex gap-2">
-                        <button
-                            onClick={() => setShowFilters(!showFilters)}
-                            className={`px-4 py-2 rounded-md font-medium flex items-center gap-2 transition-colors ${Object.values(filters).some(value => value !== '')
-                                ? 'bg-blue-100 text-blue-700 hover:bg-blue-200'
-                                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                                }`}
-                        >
-                            <Filter className="h-4 w-4" />
-                            Filtros
-                            {Object.values(filters).some(value => value !== '') && (
-                                <span className="ml-1 bg-blue-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs">
-                                    {Object.values(filters).filter(value => value !== '').length}
-                                </span>
-                            )}
-                        </button>
+                    {/* Panel de filtros desplegable */}
+                    {showFilters && (
+                        <div className="mt-4 p-4 border border-gray-700 rounded-md bg-gray-800">
+                            <div className="flex justify-between items-center mb-3">
+                                <h3 className="font-medium text-gray-300">Filtros avanzados</h3>
+                                <button
+                                    onClick={clearFilters}
+                                    className="text-sm text-blue-400 hover:text-blue-300"
+                                >
+                                    Limpiar filtros
+                                </button>
+                            </div>
 
-                        <button
-                            onClick={fetchMuebles}
-                            className="px-4 py-2 bg-gray-100 text-gray-700 rounded-md font-medium flex items-center gap-2 hover:bg-gray-200 transition-colors"
-                        >
-                            <RefreshCw className="h-4 w-4" />
-                            Actualizar
-                        </button>
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-400 mb-1">Estado</label>
+                                    <select
+                                        value={filters.estado}
+                                        onChange={(e) => {
+                                            setFilters({ ...filters, estado: e.target.value });
+                                            setCurrentPage(1);
+                                        }}
+                                        className="w-full bg-gray-700 border border-gray-600 rounded-md px-3 py-2 text-white focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                                    >
+                                        <option value="">Todos</option>
+                                        {filterOptions.estados.map((estado) => (
+                                            <option key={estado} value={estado}>{estado}</option>
+                                        ))}
+                                    </select>
+                                </div>
 
-                        <button
-                            onClick={exportToCSV}
-                            className="px-4 py-2 bg-green-100 text-green-700 rounded-md font-medium flex items-center gap-2 hover:bg-green-200 transition-colors"
-                        >
-                            <Download className="h-4 w-4" />
-                            Exportar
-                        </button>
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-400 mb-1">Estatus</label>
+                                    <select
+                                        value={filters.estatus}
+                                        onChange={(e) => {
+                                            setFilters({ ...filters, estatus: e.target.value });
+                                            setCurrentPage(1);
+                                        }}
+                                        className="w-full bg-gray-700 border border-gray-600 rounded-md px-3 py-2 text-white focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                                    >
+                                        <option value="">Todos</option>
+                                        {filterOptions.estatus.map((status) => (
+                                            <option key={status} value={status}>{status}</option>
+                                        ))}
+                                    </select>
+                                </div>
+
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-400 mb-1">Área</label>
+                                    <select
+                                        value={filters.area}
+                                        onChange={(e) => {
+                                            setFilters({ ...filters, area: e.target.value });
+                                            setCurrentPage(1);
+                                        }}
+                                        className="w-full bg-gray-700 border border-gray-600 rounded-md px-3 py-2 text-white focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                                    >
+                                        <option value="">Todas</option>
+                                        {filterOptions.areas.map((area) => (
+                                            <option key={area} value={area}>{area}</option>
+                                        ))}
+                                    </select>
+                                </div>
+
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-400 mb-1">Rubro</label>
+                                    <select
+                                        value={filters.rubro}
+                                        onChange={(e) => {
+                                            setFilters({ ...filters, rubro: e.target.value });
+                                            setCurrentPage(1);
+                                        }}
+                                        className="w-full bg-gray-700 border border-gray-600 rounded-md px-3 py-2 text-white focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                                    >
+                                        <option value="">Todos</option>
+                                        {filterOptions.rubros.map((rubro) => (
+                                            <option key={rubro} value={rubro}>{rubro}</option>
+                                        ))}
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+                </div>
+
+                {/* Contador de resultados */}
+                <div className="mb-4 text-sm text-gray-400">
+                    Mostrando {muebles.length} de {filteredCount} resultados
+                    {filteredCount !== totalCount && ` (filtrados de ${totalCount} total)`}
+                </div>
+
+                {/* Tabla de datos */}
+                <div className="bg-gray-900 rounded-lg border border-gray-800 overflow-hidden mb-6">
+                    <div className="overflow-x-auto">
+                        <table className="min-w-full divide-y divide-gray-800">
+                            <thead className="bg-gray-800">
+                                <tr>
+                                    <th
+                                        onClick={() => handleSort('id_inv')}
+                                        className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider cursor-pointer hover:bg-gray-700"
+                                    >
+                                        <div className="flex items-center gap-1">
+                                            ID Inventario
+                                            <ArrowUpDown className="h-3 w-3" />
+                                        </div>
+                                    </th>
+                                    <th
+                                        onClick={() => handleSort('rubro')}
+                                        className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider cursor-pointer hover:bg-gray-700"
+                                    >
+                                        <div className="flex items-center gap-1">
+                                            Rubro
+                                            <ArrowUpDown className="h-3 w-3" />
+                                        </div>
+                                    </th>
+                                    <th
+                                        onClick={() => handleSort('descripcion')}
+                                        className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider cursor-pointer hover:bg-gray-700"
+                                    >
+                                        <div className="flex items-center gap-1">
+                                            Descripción
+                                            <ArrowUpDown className="h-3 w-3" />
+                                        </div>
+                                    </th>
+                                    <th
+                                        onClick={() => handleSort('valor')}
+                                        className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider cursor-pointer hover:bg-gray-700"
+                                    >
+                                        <div className="flex items-center gap-1">
+                                            Valor
+                                            <ArrowUpDown className="h-3 w-3" />
+                                        </div>
+                                    </th>
+                                    <th
+                                        onClick={() => handleSort('f_adq')}
+                                        className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider cursor-pointer hover:bg-gray-700"
+                                    >
+                                        <div className="flex items-center gap-1">
+                                            Fecha Adq.
+                                            <ArrowUpDown className="h-3 w-3" />
+                                        </div>
+                                    </th>
+                                    <th
+                                        onClick={() => handleSort('formadq')}
+                                        className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider cursor-pointer hover:bg-gray-700"
+                                    >
+                                        <div className="flex items-center gap-1">
+                                            Forma Adq.
+                                            <ArrowUpDown className="h-3 w-3" />
+                                        </div>
+                                    </th>
+                                    <th
+                                        onClick={() => handleSort('proveedor')}
+                                        className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider cursor-pointer hover:bg-gray-700"
+                                    >
+                                        <div className="flex items-center gap-1">
+                                            Proveedor
+                                            <ArrowUpDown className="h-3 w-3" />
+                                        </div>
+                                    </th>
+                                    <th
+                                        onClick={() => handleSort('factura')}
+                                        className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider cursor-pointer hover:bg-gray-700"
+                                    >
+                                        <div className="flex items-center gap-1">
+                                            Factura
+                                            <ArrowUpDown className="h-3 w-3" />
+                                        </div>
+                                    </th>
+                                    <th
+                                        onClick={() => handleSort('ubicacion_es')}
+                                        className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider cursor-pointer hover:bg-gray-700"
+                                    >
+                                        <div className="flex items-center gap-1">
+                                            Ubicación ES
+                                            <ArrowUpDown className="h-3 w-3" />
+                                        </div>
+                                    </th>
+                                    <th
+                                        onClick={() => handleSort('ubicacion_mu')}
+                                        className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider cursor-pointer hover:bg-gray-700"
+                                    >
+                                        <div className="flex items-center gap-1">
+                                            Ubicación MU
+                                            <ArrowUpDown className="h-3 w-3" />
+                                        </div>
+                                    </th>
+                                    <th
+                                        onClick={() => handleSort('ubicacion_no')}
+                                        className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider cursor-pointer hover:bg-gray-700"
+                                    >
+                                        <div className="flex items-center gap-1">
+                                            Ubicación NO
+                                            <ArrowUpDown className="h-3 w-3" />
+                                        </div>
+                                    </th>
+                                    <th
+                                        onClick={() => handleSort('estado')}
+                                        className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider cursor-pointer hover:bg-gray-700"
+                                    >
+                                        <div className="flex items-center gap-1">
+                                            Estado
+                                            <ArrowUpDown className="h-3 w-3" />
+                                        </div>
+                                    </th>
+                                    <th
+                                        onClick={() => handleSort('estatus')}
+                                        className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider cursor-pointer hover:bg-gray-700"
+                                    >
+                                        <div className="flex items-center gap-1">
+                                            Estatus
+                                            <ArrowUpDown className="h-3 w-3" />
+                                        </div>
+                                    </th>
+                                    <th
+                                        onClick={() => handleSort('area')}
+                                        className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider cursor-pointer hover:bg-gray-700"
+                                    >
+                                        <div className="flex items-center gap-1">
+                                            Área
+                                            <ArrowUpDown className="h-3 w-3" />
+                                        </div>
+                                    </th>
+                                    <th
+                                        onClick={() => handleSort('usufinal')}
+                                        className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider cursor-pointer hover:bg-gray-700"
+                                    >
+                                        <div className="flex items-center gap-1">
+                                            Usuario Final
+                                            <ArrowUpDown className="h-3 w-3" />
+                                        </div>
+                                    </th>
+                                    <th
+                                        onClick={() => handleSort('fechabaja')}
+                                        className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider cursor-pointer hover:bg-gray-700"
+                                    >
+                                        <div className="flex items-center gap-1">
+                                            Fecha Baja
+                                            <ArrowUpDown className="h-3 w-3" />
+                                        </div>
+                                    </th>
+                                    <th
+                                        onClick={() => handleSort('causadebaja')}
+                                        className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider cursor-pointer hover:bg-gray-700"
+                                    >
+                                        <div className="flex items-center gap-1">
+                                            Causa de Baja
+                                            <ArrowUpDown className="h-3 w-3" />
+                                        </div>
+                                    </th>
+                                    <th
+                                        onClick={() => handleSort('resguardante')}
+                                        className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider cursor-pointer hover:bg-gray-700"
+                                    >
+                                        <div className="flex items-center gap-1">
+                                            Resguardante
+                                            <ArrowUpDown className="h-3 w-3" />
+                                        </div>
+                                    </th>
+                                    <th className="px-6 py-3 text-center text-xs font-medium text-gray-400 uppercase tracking-wider">
+                                        Acciones
+                                    </th>
+                                </tr>
+                            </thead>
+                            <tbody className="bg-gray-900 divide-y divide-gray-800">
+                                {loading ? (
+                                    <tr>
+                                        <td colSpan="21" className="px-6 py-4 text-center text-gray-400">
+                                            <div className="flex justify-center">
+                                                <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-blue-500"></div>
+                                            </div>
+                                            <div className="mt-2">Cargando datos...</div>
+                                        </td>
+                                    </tr>
+                                ) : error ? (
+                                    <tr>
+                                        <td colSpan="21" className="px-6 py-4 text-center text-red-400">
+                                            <div className="flex items-center justify-center gap-2">
+                                                <AlertCircle className="h-5 w-5" />
+                                                {error}
+                                            </div>
+                                        </td>
+                                    </tr>
+                                ) : muebles.length === 0 ? (
+                                    <tr>
+                                        <td colSpan="21" className="px-6 py-4 text-center text-gray-400">
+                                            No se encontraron resultados
+                                        </td>
+                                    </tr>
+                                ) : (
+                                    muebles.map((item) => (
+                                        <tr key={item.id} className="hover:bg-gray-800">
+                                            <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-white">
+                                                {item.id_inv || "No Data"}
+                                            </td>
+                                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">
+                                                {item.rubro || "No Data"}
+                                            </td>
+                                            <td className="px-6 py-4 text-sm text-gray-300">
+                                                {item.descripcion?.length > 50
+                                                    ? `${item.descripcion.substring(0, 50)}...`
+                                                    : item.descripcion || "No Data"}
+                                            </td>
+                                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">
+                                                {item.valor || "No Data"}
+                                            </td>
+                                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">
+                                                {formatDate(item.f_adq) || "No Data"}
+                                            </td>
+                                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">
+                                                {item.formadq || "No Data"}
+                                            </td>
+                                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">
+                                                {item.proveedor || "No Data"}
+                                            </td>
+                                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">
+                                                {item.factura || "No Data"}
+                                            </td>
+                                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">
+                                                {item.ubicacion_es || "No Data"}
+                                            </td>
+                                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">
+                                                {item.ubicacion_mu || "No Data"}
+                                            </td>
+                                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">
+                                                {item.ubicacion_no || "No Data"}
+                                            </td>
+                                            <td className="px-6 py-4 whitespace-nowrap text-sm">
+                                                <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${item.estado === 'B' || item.estado === 'BUENO' ? 'bg-green-900 text-green-200' :
+                                                        item.estado === 'R' || item.estado === 'REGULAR' ? 'bg-yellow-900 text-yellow-200' :
+                                                            item.estado === 'M' || item.estado === 'MALO' ? 'bg-red-900 text-red-200' :
+                                                                'bg-gray-700 text-gray-300'
+                                                    }`}>
+                                                    {item.estado === 'b' ? 'BUENO' :
+                                                        item.estado === 'r' ? 'REGULAR' :
+                                                            item.estado === 'm' ? 'MALO' :
+                                                                item.estado || "No Data"}
+                                                </span>
+                                            </td>
+                                            <td className="px-6 py-4 whitespace-nowrap text-sm">
+                                                <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${item.estatus === 'ACTIVO' ? 'bg-blue-900 text-blue-200' :
+                                                        item.estatus === 'INACTIVO' ? 'bg-gray-700 text-gray-300' :
+                                                            item.estatus === 'NO LOCALIZADO' ? 'bg-red-900 text-red-200' :
+                                                                item.estatus === 'OBSOLETO' ? 'bg-purple-900 text-purple-200' :
+                                                                    'bg-gray-700 text-gray-300'
+                                                    }`}>
+                                                    {item.estatus || "No Data"}
+                                                </span>
+                                            </td>
+                                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">
+                                                {item.area || "No Data"}
+                                            </td>
+                                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">
+                                                {item.usufinal || "No Data"}
+                                            </td>
+                                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">
+                                                {formatDate(item.fechabaja) || "No Data"}
+                                            </td>
+                                            <td className="px-6 py-4 text-sm text-gray-300">
+                                                {item.causadebaja?.length > 50
+                                                    ? `${item.causadebaja.substring(0, 50)}...`
+                                                    : item.causadebaja || "No Data"}
+                                            </td>
+                                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">
+                                                {item.resguardante || "No Data"}
+                                            </td>
+                                            <td className="px-6 py-4 whitespace-nowrap text-center">
+                                                <button
+                                                    className="text-blue-400 hover:text-blue-300 focus:outline-none"
+                                                    title="Ver detalles"
+                                                >
+                                                    <Info className="h-5 w-5" />
+                                                </button>
+                                            </td>
+                                        </tr>
+                                    ))
+                                )}
+                            </tbody>
+                        </table>
                     </div>
                 </div>
 
-                {/* Panel de filtros desplegable */}
-                {showFilters && (
-                    <div className="mt-4 p-4 border border-gray-200 rounded-md bg-gray-50">
-                        <div className="flex justify-between items-center mb-3">
-                            <h3 className="font-medium text-gray-700">Filtros avanzados</h3>
-                            <button
-                                onClick={clearFilters}
-                                className="text-sm text-blue-600 hover:text-blue-800"
+                {/* Paginación */}
+                {!loading && !error && muebles.length > 0 && (
+                    <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
+                        <div className="flex items-center gap-2">
+                            <span className="text-sm text-gray-400">Filas por página:</span>
+                            <select
+                                value={rowsPerPage}
+                                onChange={(e) => {
+                                    setRowsPerPage(Number(e.target.value));
+                                    setCurrentPage(1);
+                                }}
+                                className="bg-gray-800 border border-gray-700 rounded-md text-sm px-2 py-1 text-white focus:outline-none focus:ring-blue-500 focus:border-blue-500"
                             >
-                                Limpiar filtros
-                            </button>
+                                {[10, 25, 50, 100].map(size => (
+                                    <option key={size} value={size}>{size}</option>
+                                ))}
+                            </select>
+                            <span className="text-sm text-gray-400">
+                                Página {currentPage} de {totalPages}
+                            </span>
                         </div>
 
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">Estado</label>
-                                <select
-                                    value={filters.estado}
-                                    onChange={(e) => {
-                                        setFilters({ ...filters, estado: e.target.value });
-                                        setCurrentPage(1);
-                                    }}
-                                    className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                        <div className="flex items-center">
+                            <nav className="isolate inline-flex -space-x-px rounded-md shadow-sm" aria-label="Pagination">
+                                <button
+                                    onClick={() => changePage(currentPage - 1)}
+                                    disabled={currentPage === 1}
+                                    className={`relative inline-flex items-center rounded-l-md px-2 py-2 text-gray-400 ring-1 ring-inset ring-gray-700 hover:bg-gray-800 focus:z-20 focus:outline-offset-0 ${currentPage === 1 ? 'opacity-50 cursor-not-allowed' : ''
+                                        }`}
                                 >
-                                    <option value="">Todos</option>
-                                    {filterOptions.estados.map((estado) => (
-                                        <option key={estado} value={estado}>{estado}</option>
-                                    ))}
-                                </select>
-                            </div>
+                                    <span className="sr-only">Anterior</span>
+                                    <ChevronLeft className="h-5 w-5" aria-hidden="true" />
+                                </button>
 
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">Estatus</label>
-                                <select
-                                    value={filters.estatus}
-                                    onChange={(e) => {
-                                        setFilters({ ...filters, estatus: e.target.value });
-                                        setCurrentPage(1);
-                                    }}
-                                    className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                                >
-                                    <option value="">Todos</option>
-                                    {filterOptions.estatus.map((status) => (
-                                        <option key={status} value={status}>{status}</option>
-                                    ))}
-                                </select>
-                            </div>
+                                {getPageNumbers().map((page, index) => (
+                                    page === '...' ? (
+                                        <span
+                                            key={`ellipsis-${index}`}
+                                            className="relative inline-flex items-center px-4 py-2 text-sm font-semibold text-gray-400 ring-1 ring-inset ring-gray-700"
+                                        >
+                                            ...
+                                        </span>
+                                    ) : (
+                                        <button
+                                            key={page}
+                                            onClick={() => changePage(page)}
+                                            className={`relative inline-flex items-center px-4 py-2 text-sm font-semibold ${currentPage === page
+                                                ? 'bg-blue-900 text-blue-200 focus:z-20 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-500'
+                                                : 'text-gray-400 ring-1 ring-inset ring-gray-700 hover:bg-gray-800 focus:z-20 focus:outline-offset-0'
+                                                }`}
+                                        >
+                                            {page}
+                                        </button>
+                                    )))}
 
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">Área</label>
-                                <select
-                                    value={filters.area}
-                                    onChange={(e) => {
-                                        setFilters({ ...filters, area: e.target.value });
-                                        setCurrentPage(1);
-                                    }}
-                                    className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                                <button
+                                    onClick={() => changePage(currentPage + 1)}
+                                    disabled={currentPage === totalPages}
+                                    className={`relative inline-flex items-center rounded-r-md px-2 py-2 text-gray-400 ring-1 ring-inset ring-gray-700 hover:bg-gray-800 focus:z-20 focus:outline-offset-0 ${currentPage === totalPages ? 'opacity-50 cursor-not-allowed' : ''
+                                        }`}
                                 >
-                                    <option value="">Todas</option>
-                                    {filterOptions.areas.map((area) => (
-                                        <option key={area} value={area}>{area}</option>
-                                    ))}
-                                </select>
-                            </div>
-
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">Rubro</label>
-                                <select
-                                    value={filters.rubro}
-                                    onChange={(e) => {
-                                        setFilters({ ...filters, rubro: e.target.value });
-                                        setCurrentPage(1);
-                                    }}
-                                    className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                                >
-                                    <option value="">Todos</option>
-                                    {filterOptions.rubros.map((rubro) => (
-                                        <option key={rubro} value={rubro}>{rubro}</option>
-                                    ))}
-                                </select>
-                            </div>
+                                    <span className="sr-only">Siguiente</span>
+                                    <ChevronRight className="h-5 w-5" aria-hidden="true" />
+                                </button>
+                            </nav>
                         </div>
                     </div>
                 )}
             </div>
-
-            {/* Contador de resultados */}
-            <div className="mb-4 text-sm text-gray-600">
-                Mostrando {muebles.length} de {filteredCount} resultados
-                {filteredCount !== totalCount && ` (filtrados de ${totalCount} total)`}
-            </div>
-
-            {/* Tabla de datos */}
-            <div className="bg-white rounded-lg shadow-md overflow-hidden mb-6">
-                <div className="overflow-x-auto">
-                    <table className="min-w-full divide-y divide-gray-200">
-                        <thead className="bg-gray-50">
-                            <tr>
-                                <th
-                                    onClick={() => handleSort('id_inv')}
-                                    className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
-                                >
-                                    <div className="flex items-center gap-1">
-                                        ID Inventario
-                                        <ArrowUpDown className="h-3 w-3" />
-                                    </div>
-                                </th>
-                                <th
-                                    onClick={() => handleSort('descripcion')}
-                                    className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
-                                >
-                                    <div className="flex items-center gap-1">
-                                        Descripción
-                                        <ArrowUpDown className="h-3 w-3" />
-                                    </div>
-                                </th>
-                                <th
-                                    onClick={() => handleSort('rubro')}
-                                    className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
-                                >
-                                    <div className="flex items-center gap-1">
-                                        Rubro
-                                        <ArrowUpDown className="h-3 w-3" />
-                                    </div>
-                                </th>
-                                <th
-                                    onClick={() => handleSort('valor')}
-                                    className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
-                                >
-                                    <div className="flex items-center gap-1">
-                                        Valor
-                                        <ArrowUpDown className="h-3 w-3" />
-                                    </div>
-                                </th>
-                                <th
-                                    onClick={() => handleSort('f_adq')}
-                                    className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
-                                >
-                                    <div className="flex items-center gap-1">
-                                        Fecha Adq.
-                                        <ArrowUpDown className="h-3 w-3" />
-                                    </div>
-                                </th>
-                                <th
-                                    onClick={() => handleSort('estado')}
-                                    className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
-                                >
-                                    <div className="flex items-center gap-1">
-                                        Estado
-                                        <ArrowUpDown className="h-3 w-3" />
-                                    </div>
-                                </th>
-                                <th
-                                    onClick={() => handleSort('estatus')}
-                                    className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
-                                >
-                                    <div className="flex items-center gap-1">
-                                        Estatus
-                                        <ArrowUpDown className="h-3 w-3" />
-                                    </div>
-                                </th>
-                                <th
-                                    onClick={() => handleSort('area')}
-                                    className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
-                                >
-                                    <div className="flex items-center gap-1">
-                                        Área
-                                        <ArrowUpDown className="h-3 w-3" />
-                                    </div>
-                                </th>
-                                <th
-                                    onClick={() => handleSort('resguardante')}
-                                    className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
-                                >
-                                    <div className="flex items-center gap-1">
-                                        Resguardante
-                                        <ArrowUpDown className="h-3 w-3" />
-                                    </div>
-                                </th>
-                                <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                    Acciones
-                                </th>
-                            </tr>
-                        </thead>
-                        <tbody className="bg-white divide-y divide-gray-200">
-                            {loading ? (
-                                <tr>
-                                    <td colSpan="10" className="px-6 py-4 text-center text-gray-500">
-                                        Cargando datos...
-                                    </td>
-                                </tr>
-                            ) : error ? (
-                                <tr>
-                                    <td colSpan="10" className="px-6 py-4 text-center text-red-500">
-                                        <div className="flex items-center justify-center gap-2">
-                                            <AlertCircle className="h-5 w-5" />
-                                            {error}
-                                        </div>
-                                    </td>
-                                </tr>
-                            ) : muebles.length === 0 ? (
-                                <tr>
-                                    <td colSpan="10" className="px-6 py-4 text-center text-gray-500">
-                                        No se encontraron resultados
-                                    </td>
-                                </tr>
-                            ) : (
-                                muebles.map((item) => (
-                                    <tr key={item.id} className="hover:bg-gray-50">
-                                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                                            {item.id_inv || '-'}
-                                        </td>
-                                        <td className="px-6 py-4 text-sm text-gray-500">
-                                            {item.descripcion?.length > 50
-                                                ? `${item.descripcion.substring(0, 50)}...`
-                                                : item.descripcion || '-'}
-                                        </td>
-                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                            {item.rubro || '-'}
-                                        </td>
-                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                            {item.valor || '-'}
-                                        </td>
-                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                            {formatDate(item.f_adq) || '-'}
-                                        </td>
-                                        <td className="px-6 py-4 whitespace-nowrap text-sm">
-                                            <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${item.estado === 'BUENO' ? 'bg-green-100 text-green-800' :
-                                                item.estado === 'REGULAR' ? 'bg-yellow-100 text-yellow-800' :
-                                                    item.estado === 'MALO' ? 'bg-red-100 text-red-800' :
-                                                        'bg-gray-100 text-gray-800'
-                                                }`}>
-                                                {item.estado || '-'}
-                                            </span>
-                                        </td>
-                                        <td className="px-6 py-4 whitespace-nowrap text-sm">
-                                            <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${item.estatus === 'ACTIVO' ? 'bg-blue-100 text-blue-800' :
-                                                item.estatus === 'INACTIVO' ? 'bg-gray-100 text-gray-800' :
-                                                    item.estatus === 'NO LOCALIZADO' ? 'bg-red-100 text-red-800' :
-                                                        item.estatus === 'OBSOLETO' ? 'bg-purple-100 text-purple-800' :
-                                                            'bg-gray-100 text-gray-800'
-                                                }`}>
-                                                {item.estatus || '-'}
-                                            </span>
-                                        </td>
-                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                            {item.area || '-'}
-                                        </td>
-                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                            {item.resguardante || '-'}
-                                        </td>
-                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 text-center">
-                                            <button
-                                                className="text-blue-600 hover:text-blue-900 focus:outline-none"
-                                                title="Ver detalles"
-                                            >
-                                                <Info className="h-5 w-5" />
-                                            </button>
-                                        </td>
-                                    </tr>
-                                ))
-                            )}
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-
-            {/* Paginación */}
-            {!loading && !error && muebles.length > 0 && (
-                <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
-                    <div className="flex items-center gap-2">
-                        <span className="text-sm text-gray-700">Filas por página:</span>
-                        <select
-                            value={rowsPerPage}
-                            onChange={(e) => {
-                                setRowsPerPage(Number(e.target.value));
-                                setCurrentPage(1);
-                            }}
-                            className="border border-gray-300 rounded-md text-sm px-2 py-1 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                        >
-                            {[10, 25, 50, 100].map(size => (
-                                <option key={size} value={size}>{size}</option>
-                            ))}
-                        </select>
-                        <span className="text-sm text-gray-700">
-                            Página {currentPage} de {totalPages}
-                        </span>
-                    </div>
-
-                    <div className="flex items-center">
-                        <nav className="isolate inline-flex -space-x-px rounded-md shadow-sm" aria-label="Pagination">
-                            <button
-                                onClick={() => changePage(currentPage - 1)}
-                                disabled={currentPage === 1}
-                                className={`relative inline-flex items-center rounded-l-md px-2 py-2 text-gray-400 ring-1 ring-inset ring-gray-300 hover:bg-gray-50 focus:z-20 focus:outline-offset-0 ${currentPage === 1 ? 'opacity-50 cursor-not-allowed' : ''
-                                    }`}
-                            >
-                                <span className="sr-only">Anterior</span>
-                                <ChevronLeft className="h-5 w-5" aria-hidden="true" />
-                            </button>
-
-                            {getPageNumbers().map((page, index) => (
-                                page === '...' ? (
-                                    <span
-                                        key={`ellipsis-${index}`}
-                                        className="relative inline-flex items-center px-4 py-2 text-sm font-semibold text-gray-700 ring-1 ring-inset ring-gray-300"
-                                    >
-                                        ...
-                                    </span>
-                                ) : (
-                                    <button
-                                        key={page}
-                                        onClick={() => changePage(page)}
-                                        className={`relative inline-flex items-center px-4 py-2 text-sm font-semibold ${currentPage === page
-                                            ? 'z-10 bg-blue-600 text-white focus:z-20 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600'
-                                            : 'text-gray-900 ring-1 ring-inset ring-gray-300 hover:bg-gray-50 focus:z-20 focus:outline-offset-0'
-                                            }`}
-                                    >
-                                        {page}
-                                    </button>
-                                )
-                            ))}
-
-                            <button
-                                onClick={() => changePage(currentPage + 1)}
-                                disabled={currentPage === totalPages}
-                                className={`relative inline-flex items-center rounded-r-md px-2 py-2 text-gray-400 ring-1 ring-inset ring-gray-300 hover:bg-gray-50 focus:z-20 focus:outline-offset-0 ${currentPage === totalPages ? 'opacity-50 cursor-not-allowed' : ''
-                                    }`}
-                            >
-                                <span className="sr-only">Siguiente</span>
-                                <ChevronRight className="h-5 w-5" aria-hidden="true" />
-                            </button>
-                        </nav>
-                    </div>
-                </div>
-            )}
         </div>
     );
 }
