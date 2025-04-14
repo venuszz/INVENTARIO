@@ -1,36 +1,42 @@
 "use client"
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import {
-    Search, Download, RefreshCw, Filter, ChevronLeft, ChevronRight,
-    ArrowUpDown, Info, AlertCircle
+    Search, RefreshCw, Filter, ChevronLeft, ChevronRight,
+    ArrowUpDown, AlertCircle, X, Save, Trash2, Check, CircleSlash2,
+    ActivitySquare, LayoutGrid, TagIcon, ChevronDown, Building2, BookOpen, FileText, User, Shield, AlertTriangle, Calendar, Info, Edit, Receipt, ClipboardList, Store, CheckCircle, XCircle
 } from 'lucide-react';
 import supabase from '@/app/lib/supabase/client';
 
-// Definir la interfaz para los objetos de mueble
 interface Mueble {
     id: number;
     id_inv: string;
-    rubro: string;
-    descripcion: string;
-    valor: number;
-    f_adq: string;
-    formadq: string;
-    proveedor: string;
-    factura: string;
-    ubicacion_es: string;
-    ubicacion_mu: string;
-    ubicacion_no: string;
-    estado: string;
-    estatus: string;
-    area: string;
-    usufinal: string;
-    fechabaja: string;
-    causadebaja: string;
-    resguardante: string;
+    rubro: string | null;
+    descripcion: string | null;
+    valor: number | null;
+    f_adq: string | null;
+    formadq: string | null;
+    proveedor: string | null;
+    factura: string | null;
+    ubicacion_es: string | null;
+    ubicacion_mu: string | null;
+    ubicacion_no: string | null;
+    estado: string | null;
+    estatus: string | null;
+    area: string | null;
+    usufinal: string | null;
+    fechabaja: string | null;
+    causadebaja: string | null;
+    resguardante: string | null;
+}
+
+interface FilterOptions {
+    estados: string[];
+    estatus: string[];
+    areas: string[];
+    rubros: string[];
 }
 
 export default function ConsultasIneaGeneral() {
-    // Estados para manejar los datos y la paginación
     const [muebles, setMuebles] = useState<Mueble[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
@@ -51,121 +57,80 @@ export default function ConsultasIneaGeneral() {
         rubro: ''
     });
 
-    // Estados para opciones de filtro
-    const [filterOptions, setFilterOptions] = useState({
-        estados: [] as string[],
-        estatus: [] as string[],
-        areas: [] as string[],
-        rubros: [] as string[]
+    const [filterOptions, setFilterOptions] = useState<FilterOptions>({
+        estados: [],
+        estatus: [],
+        areas: [],
+        rubros: []
     });
 
-    // Estado para mostrar/ocultar el panel de filtros
     const [showFilters, setShowFilters] = useState(false);
-
-    // Cargar datos iniciales
-    useEffect(() => {
-        fetchMuebles();
-        fetchFilterOptions();
-    }, [currentPage, rowsPerPage, sortField, sortDirection]);
-
-    // Efecto para aplicar filtros cuando cambian
-    useEffect(() => {
-        if (searchTerm || filters.estado || filters.estatus || filters.area || filters.rubro) {
-            fetchMuebles();
-        }
-    }, [searchTerm, filters]);
-
-    // Función para obtener las opciones de filtro
-    const fetchFilterOptions = async () => {
-        try {
-            // Obtener estados únicos
-            const { data: estados, error: estadosError } = await supabase
-                .from('muebles')
-                .select('estado')
-                .filter('estado', 'not.is', null)
-                .limit(1000);
-
-            // Obtener estatus únicos
-            const { data: estatus, error: estatusError } = await supabase
-                .from('muebles')
-                .select('estatus')
-                .filter('estatus', 'not.is', null)
-                .limit(1000);
-
-            // Obtener áreas únicas
-            const { data: areas, error: areasError } = await supabase
-                .from('muebles')
-                .select('area')
-                .filter('area', 'not.is', null)
-                .limit(1000);
-
-            // Obtener rubros únicos
-            const { data: rubros, error: rubrosError } = await supabase
-                .from('muebles')
-                .select('rubro')
-                .filter('rubro', 'not.is', null)
-                .limit(1000);
-
-            if (estadosError || estatusError || areasError || rubrosError) {
-                throw new Error('Error al cargar opciones de filtro');
-            }
-
-            setFilterOptions({
-                estados: [...new Set(estados.map(item => item.estado))].filter(Boolean).sort(),
-                estatus: [...new Set(estatus.map(item => item.estatus))].filter(Boolean).sort(),
-                areas: [...new Set(areas.map(item => item.area))].filter(Boolean).sort(),
-                rubros: [...new Set(rubros.map(item => item.rubro))].filter(Boolean).sort()
-            });
-        } catch (error) {
-            console.error('Error al cargar opciones de filtro:', error);
-        }
-    };
+    const [selectedItem, setSelectedItem] = useState<Mueble | null>(null);
+    const [isEditing, setIsEditing] = useState(false);
+    const [editFormData, setEditFormData] = useState<Mueble | null>(null);
+    const detailRef = useRef<HTMLDivElement>(null);
 
     // Función para obtener los muebles de Supabase
-    const fetchMuebles = async () => {
+    const fetchMuebles = useCallback(async () => {
         setLoading(true);
 
         try {
-            // Construir la consulta base
-            let query = supabase.from('muebles').select('*');
+            // Construir la consulta base para contar
+            let countQuery = supabase
+                .from('muebles')
+                .select('*', { count: 'exact', head: false });
 
-            // Aplicar filtros si existen
+            // Construir la consulta base para datos
+            let dataQuery = supabase.from('muebles').select('*');
+
+            // Aplicar filtros a ambas consultas
             if (searchTerm) {
-                query = query.or(`id_inv.ilike.%${searchTerm}%,descripcion.ilike.%${searchTerm}%,resguardante.ilike.%${searchTerm}%`);
+                const searchFilter = `id_inv.ilike.%${searchTerm}%,descripcion.ilike.%${searchTerm}%,resguardante.ilike.%${searchTerm}%,usufinal.ilike.%${searchTerm}%`;
+                countQuery = countQuery.or(searchFilter);
+                dataQuery = dataQuery.or(searchFilter);
             }
 
             if (filters.estado) {
-                query = query.eq('estado', filters.estado);
+                countQuery = countQuery.eq('estado', filters.estado);
+                dataQuery = dataQuery.eq('estado', filters.estado);
             }
 
             if (filters.estatus) {
-                query = query.eq('estatus', filters.estatus);
+                countQuery = countQuery.eq('estatus', filters.estatus);
+                dataQuery = dataQuery.eq('estatus', filters.estatus);
             }
 
             if (filters.area) {
-                query = query.eq('area', filters.area);
+                countQuery = countQuery.eq('area', filters.area);
+                dataQuery = dataQuery.eq('area', filters.area);
             }
 
             if (filters.rubro) {
-                query = query.eq('rubro', filters.rubro);
+                countQuery = countQuery.eq('rubro', filters.rubro);
+                dataQuery = dataQuery.eq('rubro', filters.rubro);
             }
 
-            // Contar los resultados filtrados
-            const { count: filteredCountResult, error: filteredCountError } = await query
-                .select('*')
-                .range(0, 0)
+            // Ejecutar consulta de conteo primero
+            const { count } = await countQuery;
+            setFilteredCount(count || 0);
 
-            if (filteredCountError) throw filteredCountError;
-            setFilteredCount(filteredCountResult || 0);
-
-            // Aplicar ordenamiento y paginación
-            const { data, error } = await query
+            // Aplicar ordenamiento y paginación a la consulta de datos
+            const { data, error } = await dataQuery
                 .order(sortField, { ascending: sortDirection === 'asc' })
                 .range((currentPage - 1) * rowsPerPage, currentPage * rowsPerPage - 1);
 
             if (error) throw error;
 
-            setMuebles((data as Mueble[]) || []);
+            const mueblesData = (data as Mueble[]) || [];
+            setMuebles(mueblesData);
+
+            // Si el item seleccionado ya no está en la lista debido a los filtros, cerrar el detalle
+            if (selectedItem && !mueblesData.some(item => item.id === selectedItem.id)) {
+                setSelectedItem(null);
+                setIsEditing(false);
+                setEditFormData(null);
+            }
+
             setError(null);
         } catch (error) {
             console.error('Error fetching data:', error);
@@ -174,9 +139,185 @@ export default function ConsultasIneaGeneral() {
         } finally {
             setLoading(false);
         }
+    }, [currentPage, rowsPerPage, searchTerm, filters, sortField, sortDirection, selectedItem]);
+
+    // Función para obtener las opciones de filtro
+    const fetchFilterOptions = useCallback(async () => {
+        try {
+            // Obtener estados únicos
+            const { data: estados } = await supabase
+                .from('muebles')
+                .select('estado')
+                .filter('estado', 'not.is', null)
+                .limit(1000);
+
+            // Obtener estatus únicos
+            const { data: estatus } = await supabase
+                .from('muebles')
+                .select('estatus')
+                .filter('estatus', 'not.is', null)
+                .limit(1000);
+
+            // Obtener áreas únicas
+            const { data: areas } = await supabase
+                .from('muebles')
+                .select('area')
+                .filter('area', 'not.is', null)
+                .limit(1000);
+
+            // Obtener rubros únicos
+            const { data: rubros } = await supabase
+                .from('muebles')
+                .select('rubro')
+                .filter('rubro', 'not.is', null)
+                .limit(1000);
+
+            setFilterOptions({
+                estados: [...new Set(estados?.map(item => item.estado).filter(Boolean))] as string[],
+                estatus: [...new Set(estatus?.map(item => item.estatus).filter(Boolean))] as string[],
+                areas: [...new Set(areas?.map(item => item.area).filter(Boolean))] as string[],
+                rubros: [...new Set(rubros?.map(item => item.rubro).filter(Boolean))] as string[]
+            });
+        } catch (error) {
+            console.error('Error al cargar opciones de filtro:', error);
+        }
+    }, []);
+
+    // Cargar datos iniciales
+    useEffect(() => {
+        fetchFilterOptions();
+        fetchMuebles();
+    }, [fetchFilterOptions, fetchMuebles]);
+
+    // Efecto para aplicar filtros y ordenamiento
+    useEffect(() => {
+        setCurrentPage(1);
+    }, [searchTerm, filters, sortField, sortDirection, rowsPerPage]);
+
+    // Efecto para cambiar de página
+    useEffect(() => {
+        fetchMuebles();
+    }, [currentPage, fetchMuebles]);
+
+    const handleSelectItem = (item: Mueble) => {
+        setSelectedItem(item);
+        setIsEditing(false);
+        setEditFormData(null);
+
+        if (window.innerWidth < 768 && detailRef.current) {
+            setTimeout(() => {
+                detailRef.current?.scrollIntoView({ behavior: 'smooth' });
+            }, 100);
+        }
     };
 
-    // Función para limpiar todos los filtros
+    const handleStartEdit = () => {
+        if (!selectedItem) return;
+        setIsEditing(true);
+        setEditFormData({ ...selectedItem });
+    };
+
+    const cancelEdit = () => {
+        setIsEditing(false);
+        setEditFormData(null);
+    };
+
+    const saveChanges = async () => {
+        if (!editFormData) return;
+
+        setLoading(true);
+        try {
+            const { error } = await supabase
+                .from('muebles')
+                .update(editFormData)
+                .eq('id', editFormData.id);
+
+            if (error) throw error;
+
+            fetchMuebles();
+            setSelectedItem(editFormData);
+            setIsEditing(false);
+            setEditFormData(null);
+        } catch (error) {
+            console.error('Error al guardar cambios:', error);
+            setError('Error al guardar los cambios. Por favor, intente nuevamente.');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const markAsInactive = async () => {
+        if (!selectedItem) return;
+        if (!confirm('¿Está seguro de que desea marcar este artículo como INACTIVO?')) return;
+
+        setLoading(true);
+        try {
+            const { error } = await supabase
+                .from('muebles')
+                .update({ estatus: 'INACTIVO' })
+                .eq('id', selectedItem.id);
+
+            if (error) throw error;
+
+            fetchMuebles();
+            setSelectedItem(null);
+        } catch (error) {
+            console.error('Error al marcar como inactivo:', error);
+            setError('Error al cambiar el estatus. Por favor, intente nuevamente.');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleEditFormChange = (
+        e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>,
+        field: keyof Mueble
+    ) => {
+        if (!editFormData) return;
+
+        const newData = { ...editFormData };
+
+        // Type-safe approach based on field types
+        switch (field) {
+            case 'id':
+                newData.id = parseInt(e.target.value) || newData.id;
+                break;
+            case 'id_inv':
+                newData.id_inv = e.target.value;
+                break;
+            case 'valor':
+                newData.valor = e.target.value ? parseFloat(e.target.value) : null;
+                break;
+            case 'rubro':
+            case 'descripcion':
+            case 'f_adq':
+            case 'formadq':
+            case 'proveedor':
+            case 'factura':
+            case 'ubicacion_es':
+            case 'ubicacion_mu':
+            case 'ubicacion_no':
+            case 'estado':
+            case 'estatus':
+            case 'area':
+            case 'usufinal':
+            case 'fechabaja':
+            case 'causadebaja':
+            case 'resguardante':
+                // All string | null fields
+                newData[field] = e.target.value || null;
+                break;
+        }
+
+        setEditFormData(newData);
+    };
+
+    const closeDetail = () => {
+        setSelectedItem(null);
+        setIsEditing(false);
+        setEditFormData(null);
+    };
+
     const clearFilters = () => {
         setSearchTerm('');
         setFilters({
@@ -188,43 +329,6 @@ export default function ConsultasIneaGeneral() {
         setCurrentPage(1);
     };
 
-    // Función para exportar a CSV
-    const exportToCSV = () => {
-        // Verificar si hay datos para exportar
-        if (muebles.length === 0) {
-            alert('No hay datos para exportar');
-            return;
-        }
-
-        // Crear encabezados CSV
-        const headers = Object.keys(muebles[0]).join(',');
-
-        // Crear filas CSV
-        const rows = muebles.map(item =>
-            Object.values(item).map(value =>
-                value === null ? '' :
-                    typeof value === 'string' ? `"${value.replace(/"/g, '""')}"` : value
-            ).join(',')
-        ).join('\n');
-
-        // Combinar encabezados y filas
-        const csv = `${headers}\n${rows}`;
-
-        // Crear blob y enlace de descarga
-        const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-        const url = URL.createObjectURL(blob);
-        const link = document.createElement('a');
-
-        // Configurar enlace y descargar
-        link.setAttribute('href', url);
-        link.setAttribute('download', `inventario_inea_${new Date().toISOString().slice(0, 10)}.csv`);
-        link.style.visibility = 'hidden';
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-    };
-
-    // Función para manejar el cambio de ordenamiento
     const handleSort = (field: keyof Mueble) => {
         if (sortField === field) {
             setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
@@ -235,24 +339,21 @@ export default function ConsultasIneaGeneral() {
         setCurrentPage(1);
     };
 
-    // Función para formatear fechas
     const formatDate = (dateStr: string | null) => {
         if (!dateStr) return '';
         const date = new Date(dateStr);
         return date.toLocaleDateString('es-MX');
     };
 
-    // Calcular el número total de páginas
     const totalPages = Math.ceil(filteredCount / rowsPerPage);
 
-    // Función para cambiar de página
     const changePage = (page: number) => {
+        if (page === currentPage) return;
         if (page >= 1 && page <= totalPages) {
             setCurrentPage(page);
         }
     };
 
-    // Generar un array con los números de página a mostrar
     const getPageNumbers = () => {
         const pages: (number | string)[] = [];
         const maxVisiblePages = 5;
@@ -262,38 +363,31 @@ export default function ConsultasIneaGeneral() {
                 pages.push(i);
             }
         } else {
-            // Siempre mostrar la primera página
             pages.push(1);
 
             let startPage = Math.max(2, currentPage - 1);
             let endPage = Math.min(totalPages - 1, currentPage + 1);
 
-            // Ajustar si estamos cerca del inicio
             if (currentPage <= 3) {
                 endPage = Math.min(totalPages - 1, 4);
             }
 
-            // Ajustar si estamos cerca del final
             if (currentPage >= totalPages - 2) {
                 startPage = Math.max(2, totalPages - 3);
             }
 
-            // Agregar elipsis después de la página 1 si es necesario
             if (startPage > 2) {
                 pages.push('...');
             }
 
-            // Agregar páginas intermedias
             for (let i = startPage; i <= endPage; i++) {
                 pages.push(i);
             }
 
-            // Agregar elipsis antes de la última página si es necesario
             if (endPage < totalPages - 1) {
                 pages.push('...');
             }
 
-            // Siempre mostrar la última página
             if (totalPages > 1) {
                 pages.push(totalPages);
             }
@@ -302,557 +396,873 @@ export default function ConsultasIneaGeneral() {
         return pages;
     };
 
+    const getMainContainerClass = () => {
+        return selectedItem
+            ? "grid grid-cols-1 md:grid-cols-2 gap-6 h-full overflow-hidden"
+            : "w-full h-full overflow-hidden";
+    };
+
+    const truncateText = (text: string | null, length: number = 50) => {
+        if (!text) return "No Data";
+        return text.length > length ? `${text.substring(0, length)}...` : text;
+    };
+
     return (
-        <div className="bg-black text-white min-h-screen p-6">
-            <div className="max-w-7xl mx-auto">
+        <div className="bg-black text-white max-h-screen p-4 md:p-2 flex flex-col overflow-y-hidden">
+            <div className="max-w-7xl mx-auto h-screen flex flex-col overflow-hidden">
                 {/* Encabezado */}
                 <div className="mb-6 border-b border-gray-700 pb-4">
                     <h1 className="text-2xl font-bold text-white">Consulta de Inventario INEA</h1>
                     <p className="text-gray-400">Vista general de todos los bienes registrados en el sistema.</p>
                 </div>
 
-                {/* Panel de acciones y búsqueda */}
-                <div className="mb-6 bg-gray-900 p-5 rounded-lg border border-gray-800">
-                    <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-4">
-                        <div className="relative flex-grow">
-                            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                                <Search className="h-5 w-5 text-gray-500" />
+                {/* Contenedor principal */}
+                <div className={getMainContainerClass()}>
+                    {/* Panel izquierdo: Búsqueda, filtros y tabla */}
+                    <div className={`${selectedItem ? 'h-full overflow-y-hidden' : 'h-fill'}`}>
+                        {/* Panel de acciones y búsqueda */}
+                        <div className="mb-6 bg-gray-900 p-4 rounded-lg border border-gray-800">
+                            <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-4">
+                                <div className="relative flex-grow">
+                                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                        <Search className="h-5 w-5 text-gray-500" />
+                                    </div>
+                                    <input
+                                        type="text"
+                                        value={searchTerm}
+                                        onChange={(e) => setSearchTerm(e.target.value)}
+                                        placeholder="Buscar por ID, descripción o usuario..."
+                                        className="pl-10 pr-4 py-2 w-full bg-gray-800 border border-gray-700 rounded-md text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                    />
+                                </div>
+
+                                <div className="flex gap-2">
+                                    <button
+                                        onClick={() => setShowFilters(!showFilters)}
+                                        className={`px-4 py-2 rounded-md font-medium flex items-center gap-2 transition-colors ${Object.values(filters).some(value => value !== '')
+                                            ? 'bg-blue-900 text-blue-200 hover:bg-blue-800'
+                                            : 'bg-gray-800 text-gray-300 hover:bg-gray-700'
+                                            }`}
+                                    >
+                                        <Filter className="h-4 w-4" />
+                                        Filtros
+                                        {Object.values(filters).some(value => value !== '') && (
+                                            <span className="ml-1 bg-blue-600 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs">
+                                                {Object.values(filters).filter(value => value !== '').length}
+                                            </span>
+                                        )}
+                                    </button>
+
+                                    <button
+                                        onClick={fetchMuebles}
+                                        className="px-4 py-2 bg-gray-800 text-gray-300 rounded-md font-medium flex items-center gap-2 hover:bg-gray-700 transition-colors"
+                                    >
+                                        <RefreshCw className="h-4 w-4" />
+                                        <span className="hidden sm:inline">Actualizar</span>
+                                    </button>
+                                </div>
                             </div>
-                            <input
-                                type="text"
-                                value={searchTerm}
-                                onChange={(e) => {
-                                    setSearchTerm(e.target.value);
-                                    setCurrentPage(1);
-                                }}
-                                placeholder="Buscar por ID, descripción o resguardante..."
-                                className="pl-10 pr-4 py-2 w-full bg-gray-800 border border-gray-700 rounded-md text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                            />
+
+                            {/* Panel de filtros */}
+                            {showFilters && (
+                                <div className="mt-6 border border-gray-700 rounded-xl bg-gray-800/90 shadow-lg backdrop-blur-sm transition-all duration-300 overflow-hidden">
+                                    <div className="flex justify-between items-center px-5 py-4 border-b border-gray-700">
+                                        <div className="flex items-center gap-2">
+                                            <Filter className="h-5 w-5 text-blue-400" />
+                                            <h3 className="font-semibold text-gray-200 text-lg">Filtros avanzados</h3>
+                                        </div>
+                                        <button
+                                            onClick={clearFilters}
+                                            className="text-sm text-blue-400 hover:text-blue-300 flex items-center gap-1.5 transition-colors duration-200 px-3 py-1.5 rounded-lg hover:bg-gray-700/70 border border-transparent hover:border-gray-600"
+                                            aria-label="Limpiar todos los filtros"
+                                        >
+                                            <span>Limpiar filtros</span>
+                                            <X className="h-4 w-4" />
+                                        </button>
+                                    </div>
+
+                                    <div className="p-5">
+                                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5">
+                                            {/* Estado */}
+                                            <div className="filter-group">
+                                                <label htmlFor="estado-select" className="flex items-center gap-1.5 text-sm font-medium text-gray-300 mb-2">
+                                                    <CircleSlash2 className="h-4 w-4 text-gray-400" />
+                                                    Estado
+                                                </label>
+                                                <div className="relative">
+                                                    <select
+                                                        id="estado-select"
+                                                        value={filters.estado}
+                                                        onChange={(e) => setFilters({ ...filters, estado: e.target.value })}
+                                                        className="w-full bg-gray-700 border border-gray-600 rounded-lg px-3 py-2.5 text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 appearance-none transition-all duration-200"
+                                                    >
+                                                        <option value="">Todos los estados</option>
+                                                        {filterOptions.estados.map((estado) => (
+                                                            <option key={estado} value={estado}>{estado}</option>
+                                                        ))}
+                                                    </select>
+                                                    <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
+                                                        <ChevronDown className="h-4 w-4 text-gray-400" />
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            {/* Estatus */}
+                                            <div className="filter-group">
+                                                <label htmlFor="estatus-select" className="flex items-center gap-1.5 text-sm font-medium text-gray-300 mb-2">
+                                                    <ActivitySquare className="h-4 w-4 text-gray-400" />
+                                                    Estatus
+                                                </label>
+                                                <div className="relative">
+                                                    <select
+                                                        id="estatus-select"
+                                                        value={filters.estatus}
+                                                        onChange={(e) => setFilters({ ...filters, estatus: e.target.value })}
+                                                        className="w-full bg-gray-700 border border-gray-600 rounded-lg px-3 py-2.5 text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 appearance-none transition-all duration-200"
+                                                    >
+                                                        <option value="">Todos los estatus</option>
+                                                        {filterOptions.estatus.map((status) => (
+                                                            <option key={status} value={status}>{status}</option>
+                                                        ))}
+                                                    </select>
+                                                    <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
+                                                        <ChevronDown className="h-4 w-4 text-gray-400" />
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            {/* Área */}
+                                            <div className="filter-group">
+                                                <label htmlFor="area-select" className="flex items-center gap-1.5 text-sm font-medium text-gray-300 mb-2">
+                                                    <LayoutGrid className="h-4 w-4 text-gray-400" />
+                                                    Área
+                                                </label>
+                                                <div className="relative">
+                                                    <select
+                                                        id="area-select"
+                                                        value={filters.area}
+                                                        onChange={(e) => setFilters({ ...filters, area: e.target.value })}
+                                                        className="w-full bg-gray-700 border border-gray-600 rounded-lg px-3 py-2.5 text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 appearance-none transition-all duration-200"
+                                                    >
+                                                        <option value="">Todas las áreas</option>
+                                                        {filterOptions.areas.map((area) => (
+                                                            <option key={area} value={area}>{area}</option>
+                                                        ))}
+                                                    </select>
+                                                    <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
+                                                        <ChevronDown className="h-4 w-4 text-gray-400" />
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            {/* Rubro */}
+                                            <div className="filter-group">
+                                                <label htmlFor="rubro-select" className="flex items-center gap-1.5 text-sm font-medium text-gray-300 mb-2">
+                                                    <TagIcon className="h-4 w-4 text-gray-400" />
+                                                    Rubro
+                                                </label>
+                                                <div className="relative">
+                                                    <select
+                                                        id="rubro-select"
+                                                        value={filters.rubro}
+                                                        onChange={(e) => setFilters({ ...filters, rubro: e.target.value })}
+                                                        className="w-full bg-gray-700 border border-gray-600 rounded-lg px-3 py-2.5 text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 appearance-none transition-all duration-200"
+                                                    >
+                                                        <option value="">Todos los rubros</option>
+                                                        {filterOptions.rubros.map((rubro) => (
+                                                            <option key={rubro} value={rubro}>{rubro}</option>
+                                                        ))}
+                                                    </select>
+                                                    <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
+                                                        <ChevronDown className="h-4 w-4 text-gray-400" />
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
                         </div>
 
-                        <div className="flex gap-2">
-                            <button
-                                onClick={() => setShowFilters(!showFilters)}
-                                className={`px-4 py-2 rounded-md font-medium flex items-center gap-2 transition-colors ${Object.values(filters).some(value => value !== '')
-                                    ? 'bg-blue-900 text-blue-200 hover:bg-blue-800'
-                                    : 'bg-gray-800 text-gray-300 hover:bg-gray-700'
-                                    }`}
-                            >
-                                <Filter className="h-4 w-4" />
-                                Filtros
-                                {Object.values(filters).some(value => value !== '') && (
-                                    <span className="ml-1 bg-blue-600 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs">
-                                        {Object.values(filters).filter(value => value !== '').length}
-                                    </span>
-                                )}
-                            </button>
+                        {/* Tabla */}
+                        <div className="bg-gray-900 rounded-lg border border-gray-800 overflow-hidden mb-6 flex flex-col flex-grow">
+                            <div className="overflow-x-auto flex-grow overflow-y-auto max-h-[calc(100vh-300px)]">
+                                <table className="min-w-full divide-y divide-gray-800">
+                                    <thead className="bg-gray-800 sticky top-0 z-10">
+                                        <tr>
+                                            <th
+                                                onClick={() => handleSort('id_inv')}
+                                                className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider cursor-pointer hover:bg-gray-700"
+                                            >
+                                                <div className="flex items-center gap-1">
+                                                    ID Inventario
+                                                    <ArrowUpDown className="h-3 w-3" />
+                                                </div>
+                                            </th>
+                                            <th
+                                                onClick={() => handleSort('descripcion')}
+                                                className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider cursor-pointer hover:bg-gray-700"
+                                            >
+                                                <div className="flex items-center gap-1">
+                                                    Descripción
+                                                    <ArrowUpDown className="h-3 w-3" />
+                                                </div>
+                                            </th>
+                                            <th
+                                                onClick={() => handleSort('area')}
+                                                className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider cursor-pointer hover:bg-gray-700"
+                                            >
+                                                <div className="flex items-center gap-1">
+                                                    Área
+                                                    <ArrowUpDown className="h-3 w-3" />
+                                                </div>
+                                            </th>
+                                            <th
+                                                onClick={() => handleSort('usufinal')}
+                                                className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider cursor-pointer hover:bg-gray-700"
+                                            >
+                                                <div className="flex items-center gap-1">
+                                                    Usuario Final
+                                                    <ArrowUpDown className="h-3 w-3" />
+                                                </div>
+                                            </th>
+                                            <th
+                                                onClick={() => handleSort('estatus')}
+                                                className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider cursor-pointer hover:bg-gray-700"
+                                            >
+                                                <div className="flex items-center gap-1">
+                                                    Estado
+                                                    <ArrowUpDown className="h-3 w-3" />
+                                                </div>
+                                            </th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className="bg-gray-900 divide-y divide-gray-800">
+                                        {loading ? (
+                                            <tr>
+                                                <td colSpan={4} className="px-6 py-8 text-center text-gray-400">
+                                                    <div className="flex flex-col items-center justify-center space-y-3">
+                                                        <RefreshCw className="h-8 w-8 animate-spin text-blue-500" />
+                                                        <p>Cargando datos...</p>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        ) : error ? (
+                                            <tr>
+                                                <td colSpan={4} className="px-6 py-8 text-center">
+                                                    <div className="flex flex-col items-center justify-center space-y-3 text-red-400">
+                                                        <AlertCircle className="h-8 w-8" />
+                                                        <p>{error}</p>
+                                                        <button
+                                                            onClick={fetchMuebles}
+                                                            className="px-4 py-2 bg-gray-800 text-gray-300 rounded-md text-sm hover:bg-gray-700"
+                                                        >
+                                                            Intentar nuevamente
+                                                        </button>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        ) : muebles.length === 0 ? (
+                                            <tr>
+                                                <td colSpan={4} className="px-6 py-8 text-center text-gray-400">
+                                                    <div className="flex flex-col items-center justify-center space-y-3">
+                                                        <Search className="h-8 w-8" />
+                                                        <p>No se encontraron resultados</p>
+                                                        {(searchTerm || Object.values(filters).some(value => value !== '')) && (
+                                                            <button
+                                                                onClick={clearFilters}
+                                                                className="px-4 py-2 bg-gray-800 text-blue-400 rounded-md text-sm hover:bg-gray-700"
+                                                            >
+                                                                Limpiar filtros
+                                                            </button>
+                                                        )}
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        ) : (
+                                            muebles.map((item) => (
+                                                <tr
+                                                    key={item.id}
+                                                    onClick={() => handleSelectItem(item)}
+                                                    className={`hover:bg-gray-800 cursor-pointer transition-colors ${selectedItem?.id === item.id ? 'bg-blue-900/20 border-l-4 border-blue-600' : ''}`}
+                                                >
+                                                    <td className="px-4 py-3 whitespace-nowrap text-sm font-medium text-white">
+                                                        {item.id_inv}
+                                                    </td>
+                                                    <td className="px-4 py-3 text-sm text-gray-300">
+                                                        {truncateText(item.descripcion, 40)}
+                                                    </td>
+                                                    <td className="px-4 py-3 text-sm text-gray-300">
+                                                        {truncateText(item.area, 20)}
+                                                    </td>
+                                                    <td className="px-4 py-3 text-sm text-gray-300">
+                                                        {truncateText(item.usufinal, 20)}
+                                                    </td>
+                                                    <td className="px-4 py-3 text-sm">
+                                                        <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium ${item.estatus === 'ACTIVO' ? 'bg-green-900/70 text-green-200 border border-green-700' :
+                                                                item.estatus === 'INACTIVO' ? 'bg-red-900/70 text-red-200 border border-red-700' :
+                                                                    item.estatus === 'NO LOCALIZADO' ? 'bg-yellow-900/70 text-yellow-200 border border-yellow-700' :
+                                                                        'bg-gray-700 text-gray-300 border border-gray-600'
+                                                            }`}>
+                                                            {item.estatus === 'ACTIVO' && <CheckCircle className="h-3.5 w-3.5 mr-1.5" />}
+                                                            {item.estatus === 'INACTIVO' && <XCircle className="h-3.5 w-3.5 mr-1.5" />}
+                                                            {item.estatus === 'NO LOCALIZADO' && <AlertTriangle className="h-3.5 w-3.5 mr-1.5" />}
+                                                            {truncateText(item.estatus, 20)}
+                                                        </span>
+                                                    </td>
+                                                </tr>
+                                            ))
+                                        )}
+                                    </tbody>
+                                </table>
+                            </div>
 
-                            <button
-                                onClick={fetchMuebles}
-                                className="px-4 py-2 bg-gray-800 text-gray-300 rounded-md font-medium flex items-center gap-2 hover:bg-gray-700 transition-colors"
-                            >
-                                <RefreshCw className="h-4 w-4" />
-                                Actualizar
-                            </button>
+                            {/* Paginación */}
+                            <div className="px-6 py-4 border-t border-gray-800 bg-gray-900 flex flex-col sm:flex-row items-center justify-between gap-4">
+                                {/* Información de registros */}
+                                <div className="text-sm text-gray-400 font-medium">
+                                    Mostrando <span className="text-white">{(currentPage - 1) * rowsPerPage + 1}-{Math.min(currentPage * rowsPerPage, filteredCount)}</span> de <span className="text-white">{filteredCount}</span> registros
+                                </div>
 
-                            <button
-                                onClick={exportToCSV}
-                                className="px-4 py-2 bg-green-900 text-green-200 rounded-md font-medium flex items-center gap-2 hover:bg-green-800 transition-colors"
-                            >
-                                <Download className="h-4 w-4" />
-                                Exportar
-                            </button>
+                                <div className="flex items-center gap-4">
+                                    {/* Controles de paginación */}
+                                    <div className="flex items-center space-x-1 bg-gray-850 rounded-lg p-1">
+                                        {/* Botón primera página */}
+                                        <button
+                                            onClick={() => changePage(1)}
+                                            disabled={currentPage === 1}
+                                            className={`p-1.5 rounded-md flex items-center justify-center ${currentPage === 1
+                                                ? 'text-gray-600 cursor-not-allowed'
+                                                : 'text-gray-400 hover:bg-gray-800 hover:text-white'
+                                                }`}
+                                            aria-label="Primera página"
+                                            title="Primera página"
+                                        >
+                                            <div className="flex">
+                                                <ChevronLeft className="h-4 w-4" />
+                                                <ChevronLeft className="h-4 w-4 -ml-2" />
+                                            </div>
+                                        </button>
+
+                                        {/* Botón página anterior */}
+                                        <button
+                                            onClick={() => changePage(currentPage - 1)}
+                                            disabled={currentPage === 1}
+                                            className={`p-1.5 rounded-md ${currentPage === 1
+                                                ? 'text-gray-600 cursor-not-allowed'
+                                                : 'text-gray-400 hover:bg-gray-800 hover:text-white'
+                                                }`}
+                                            aria-label="Página anterior"
+                                            title="Página anterior"
+                                        >
+                                            <ChevronLeft className="h-4 w-4" />
+                                        </button>
+
+                                        {/* Números de página */}
+                                        <div className="flex items-center">
+                                            {getPageNumbers().map((page, index) => (
+                                                <button
+                                                    key={index}
+                                                    onClick={() => typeof page === 'number' ? changePage(page) : null}
+                                                    disabled={page === '...'}
+                                                    className={`min-w-[32px] h-8 px-2 rounded-md text-sm font-medium flex items-center justify-center ${currentPage === page
+                                                        ? 'bg-blue-600 text-white'
+                                                        : page === '...'
+                                                            ? 'text-gray-500 cursor-default'
+                                                            : 'text-gray-400 hover:bg-gray-800 hover:text-white'
+                                                        }`}
+                                                >
+                                                    {page}
+                                                </button>
+                                            ))}
+                                        </div>
+
+                                        {/* Botón página siguiente */}
+                                        <button
+                                            onClick={() => changePage(currentPage + 1)}
+                                            disabled={currentPage === totalPages || totalPages === 0}
+                                            className={`p-1.5 rounded-md ${currentPage === totalPages || totalPages === 0
+                                                ? 'text-gray-600 cursor-not-allowed'
+                                                : 'text-gray-400 hover:bg-gray-800 hover:text-white'
+                                                }`}
+                                            aria-label="Página siguiente"
+                                            title="Página siguiente"
+                                        >
+                                            <ChevronRight className="h-4 w-4" />
+                                        </button>
+
+                                        {/* Botón última página */}
+                                        <button
+                                            onClick={() => changePage(totalPages)}
+                                            disabled={currentPage === totalPages || totalPages === 0}
+                                            className={`p-1.5 rounded-md flex items-center justify-center ${currentPage === totalPages || totalPages === 0
+                                                ? 'text-gray-600 cursor-not-allowed'
+                                                : 'text-gray-400 hover:bg-gray-800 hover:text-white'
+                                                }`}
+                                            aria-label="Última página"
+                                            title="Última página"
+                                        >
+                                            <div className="flex">
+                                                <ChevronRight className="h-4 w-4" />
+                                                <ChevronRight className="h-4 w-4 -ml-2" />
+                                            </div>
+                                        </button>
+                                    </div>
+
+                                    {/* Selector de filas por página */}
+                                    <div className="flex items-center bg-gray-850 rounded-lg px-3 py-1.5">
+                                        <label htmlFor="rowsPerPage" className="text-sm text-gray-400 mr-2">Filas:</label>
+                                        <select
+                                            id="rowsPerPage"
+                                            value={rowsPerPage}
+                                            onChange={(e) => {
+                                                setRowsPerPage(Number(e.target.value));
+                                                setCurrentPage(1);
+                                            }}
+                                            className="bg-gray-800 border border-gray-700 rounded-md px-2 py-1 text-sm text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                        >
+                                            <option value={10}>10</option>
+                                            <option value={25}>25</option>
+                                            <option value={50}>50</option>
+                                            <option value={100}>100</option>
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                     </div>
 
-                    {/* Panel de filtros desplegable */}
-                    {showFilters && (
-                        <div className="mt-4 p-5 border border-gray-700 rounded-lg bg-gray-800/90 shadow-lg backdrop-blur-sm transition-all duration-300">
-                            <div className="flex justify-between items-center mb-4 border-b border-gray-700 pb-3">
-                                <h3 className="font-semibold text-gray-200 text-lg">Filtros avanzados</h3>
+                    {/* Panel de detalles */}
+                    {selectedItem && (
+                        <div
+                            ref={detailRef}
+                            className="bg-gray-900 border border-gray-800 rounded-lg shadow-xl overflow-y-auto h-full flex flex-col"
+                        >
+                            <div className="sticky top-0 z-10 bg-gray-900 border-b border-gray-800 px-6 py-4 flex justify-between items-center">
+                                <h2 className="text-xl font-semibold text-white flex items-center gap-2">
+                                    <ClipboardList className="h-5 w-5 text-blue-400" />
+                                    Detalle del Artículo
+                                </h2>
                                 <button
-                                    onClick={clearFilters}
-                                    className="text-sm text-blue-400 hover:text-blue-300 flex items-center gap-1 transition-colors duration-200 px-3 py-1 rounded hover:bg-gray-700/50"
+                                    type="button"
+                                    onClick={closeDetail}
+                                    title="Cerrar detalle"
+                                    className="text-gray-400 hover:text-white rounded-full p-2 focus:outline-none focus:ring-2 focus:ring-blue-500 hover:bg-gray-800 transition-colors"
                                 >
-                                    <span>Limpiar filtros</span>
-                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
-                                        <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
-                                    </svg>
+                                    <X className="h-5 w-5" />
                                 </button>
                             </div>
 
-                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5">
-                                <div className="filter-group">
-                                    <label htmlFor="estado-select" className="block text-sm font-medium text-gray-300 mb-2">Estado</label>
-                                    <div className="relative">
-                                        <select
-                                            id="estado-select"
-                                            title="Seleccionar estado"
-                                            value={filters.estado}
-                                            onChange={(e) => {
-                                                setFilters({ ...filters, estado: e.target.value });
-                                                setCurrentPage(1);
-                                            }}
-                                            className="w-full bg-gray-700 border border-gray-600 rounded-md px-3 py-2.5 text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 appearance-none transition-all duration-200"
-                                        >
-                                            <option value="">Todos</option>
-                                            {filterOptions.estados.map((estado) => (
-                                                <option key={estado} value={estado}>{estado}</option>
-                                            ))}
-                                        </select>
-                                        <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-400">
-                                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7"></path>
-                                            </svg>
-                                        </div>
-                                    </div>
-                                </div>
+                            <div className="flex-grow p-6">
+                                {isEditing ? (
+                                    <div className="space-y-6">
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                                            <div className="form-group">
+                                                <label className="block text-sm font-medium text-gray-400 mb-2">ID Inventario</label>
+                                                <input
+                                                    type="text"
+                                                    value={editFormData?.id_inv || ''}
+                                                    onChange={(e) => handleEditFormChange(e, 'id_inv')}
+                                                    className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2.5 text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                                                    placeholder="Ingrese el ID de inventario"
+                                                />
+                                            </div>
 
-                                <div className="filter-group">
-                                    <label htmlFor="estatus-select" className="block text-sm font-medium text-gray-300 mb-2">Estatus</label>
-                                    <div className="relative">
-                                        <select
-                                            id="estatus-select"
-                                            title="Seleccionar estatus"
-                                            value={filters.estatus}
-                                            onChange={(e) => {
-                                                setFilters({ ...filters, estatus: e.target.value });
-                                                setCurrentPage(1);
-                                            }}
-                                            className="w-full bg-gray-700 border border-gray-600 rounded-md px-3 py-2.5 text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 appearance-none transition-all duration-200"
-                                        >
-                                            <option value="">Todos</option>
-                                            {filterOptions.estatus.map((status) => (
-                                                <option key={status} value={status}>{status}</option>
-                                            ))}
-                                        </select>
-                                        <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-400">
-                                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7"></path>
-                                            </svg>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <div className="filter-group">
-                                    <label htmlFor="area-select" className="block text-sm font-medium text-gray-300 mb-2">Área</label>
-                                    <div className="relative">
-                                        <select
-                                            id="area-select"
-                                            title="Seleccionar área"
-                                            value={filters.area}
-                                            onChange={(e) => {
-                                                setFilters({ ...filters, area: e.target.value });
-                                                setCurrentPage(1);
-                                            }}
-                                            className="w-full bg-gray-700 border border-gray-600 rounded-md px-3 py-2.5 text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 appearance-none transition-all duration-200"
-                                        >
-                                            <option value="">Todas</option>
-                                            {filterOptions.areas.map((area) => (
-                                                <option key={area} value={area}>{area}</option>
-                                            ))}
-                                        </select>
-                                        <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-400">
-                                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7"></path>
-                                            </svg>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <div className="filter-group">
-                                    <label htmlFor="rubro-select" className="block text-sm font-medium text-gray-300 mb-2">Rubro</label>
-                                    <div className="relative">
-                                        <select
-                                            id="rubro-select"
-                                            title="Seleccionar rubro"
-                                            value={filters.rubro}
-                                            onChange={(e) => {
-                                                setFilters({ ...filters, rubro: e.target.value });
-                                                setCurrentPage(1);
-                                            }}
-                                            className="w-full bg-gray-700 border border-gray-600 rounded-md px-3 py-2.5 text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 appearance-none transition-all duration-200"
-                                        >
-                                            <option value="">Todos</option>
-                                            {filterOptions.rubros.map((rubro) => (
-                                                <option key={rubro} value={rubro}>{rubro}</option>
-                                            ))}
-                                        </select>
-                                        <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-400">
-                                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7"></path>
-                                            </svg>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    )}
-                </div>
-
-                    {/* Tabla de datos */}
-                    <div className="bg-gray-900 rounded-lg border border-gray-800 overflow-hidden mb-6">
-                        <div className="overflow-x-auto">
-                            <table className="min-w-full divide-y divide-gray-800">
-                                <thead className="bg-gray-800">
-                                    <tr>
-                                        <th
-                                            onClick={() => handleSort('id_inv')}
-                                            className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider cursor-pointer hover:bg-gray-700"
-                                        >
-                                            <div className="flex items-center gap-1">
-                                                ID Inventario
-                                                <ArrowUpDown className="h-3 w-3" />
-                                            </div>
-                                        </th>
-                                        <th
-                                            onClick={() => handleSort('rubro')}
-                                            className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider cursor-pointer hover:bg-gray-700"
-                                        >
-                                            <div className="flex items-center gap-1">
-                                                Rubro
-                                                <ArrowUpDown className="h-3 w-3" />
-                                            </div>
-                                        </th>
-                                        <th
-                                            onClick={() => handleSort('descripcion')}
-                                            className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider cursor-pointer hover:bg-gray-700"
-                                        >
-                                            <div className="flex items-center gap-1">
-                                                Descripción
-                                                <ArrowUpDown className="h-3 w-3" />
-                                            </div>
-                                        </th>
-                                        <th
-                                            onClick={() => handleSort('valor')}
-                                            className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider cursor-pointer hover:bg-gray-700"
-                                        >
-                                            <div className="flex items-center gap-1">
-                                                Valor
-                                                <ArrowUpDown className="h-3 w-3" />
-                                            </div>
-                                        </th>
-                                        <th
-                                            onClick={() => handleSort('f_adq')}
-                                            className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider cursor-pointer hover:bg-gray-700"
-                                        >
-                                            <div className="flex items-center gap-1">
-                                                Fecha Adq.
-                                                <ArrowUpDown className="h-3 w-3" />
-                                            </div>
-                                        </th>
-                                        <th
-                                            onClick={() => handleSort('formadq')}
-                                            className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider cursor-pointer hover:bg-gray-700"
-                                        >
-                                            <div className="flex items-center gap-1">
-                                                Forma Adq.
-                                                <ArrowUpDown className="h-3 w-3" />
-                                            </div>
-                                        </th>
-                                        <th
-                                            onClick={() => handleSort('proveedor')}
-                                            className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider cursor-pointer hover:bg-gray-700"
-                                        >
-                                            <div className="flex items-center gap-1">
-                                                Proveedor
-                                                <ArrowUpDown className="h-3 w-3" />
-                                            </div>
-                                        </th>
-                                        <th
-                                            onClick={() => handleSort('factura')}
-                                            className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider cursor-pointer hover:bg-gray-700"
-                                        >
-                                            <div className="flex items-center gap-1">
-                                                Factura
-                                                <ArrowUpDown className="h-3 w-3" />
-                                            </div>
-                                        </th>
-                                        <th
-                                            onClick={() => handleSort('ubicacion_es')}
-                                            className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider cursor-pointer hover:bg-gray-700"
-                                        >
-                                            <div className="flex items-center gap-1">
-                                                Ubicación ES
-                                                <ArrowUpDown className="h-3 w-3" />
-                                            </div>
-                                        </th>
-                                        <th
-                                            onClick={() => handleSort('ubicacion_mu')}
-                                            className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider cursor-pointer hover:bg-gray-700"
-                                        >
-                                            <div className="flex items-center gap-1">
-                                                Ubicación MU
-                                                <ArrowUpDown className="h-3 w-3" />
-                                            </div>
-                                        </th>
-                                        <th
-                                            onClick={() => handleSort('ubicacion_no')}
-                                            className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider cursor-pointer hover:bg-gray-700"
-                                        >
-                                            <div className="flex items-center gap-1">
-                                                Ubicación NO
-                                                <ArrowUpDown className="h-3 w-3" />
-                                            </div>
-                                        </th>
-                                        <th
-                                            onClick={() => handleSort('estado')}
-                                            className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider cursor-pointer hover:bg-gray-700"
-                                        >
-                                            <div className="flex items-center gap-1">
-                                                Estado
-                                                <ArrowUpDown className="h-3 w-3" />
-                                            </div>
-                                        </th>
-                                        <th
-                                            onClick={() => handleSort('estatus')}
-                                            className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider cursor-pointer hover:bg-gray-700"
-                                        >
-                                            <div className="flex items-center gap-1">
-                                                Estatus
-                                                <ArrowUpDown className="h-3 w-3" />
-                                            </div>
-                                        </th>
-                                        <th
-                                            onClick={() => handleSort('area')}
-                                            className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider cursor-pointer hover:bg-gray-700"
-                                        >
-                                            <div className="flex items-center gap-1">
-                                                Área
-                                                <ArrowUpDown className="h-3 w-3" />
-                                            </div>
-                                        </th>
-                                        <th
-                                            onClick={() => handleSort('usufinal')}
-                                            className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider cursor-pointer hover:bg-gray-700"
-                                        >
-                                            <div className="flex items-center gap-1">
-                                                Usuario Final
-                                                <ArrowUpDown className="h-3 w-3" />
-                                            </div>
-                                        </th>
-                                        <th
-                                            onClick={() => handleSort('fechabaja')}
-                                            className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider cursor-pointer hover:bg-gray-700"
-                                        >
-                                            <div className="flex items-center gap-1">
-                                                Fecha Baja
-                                                <ArrowUpDown className="h-3 w-3" />
-                                            </div>
-                                        </th>
-                                        <th
-                                            onClick={() => handleSort('causadebaja')}
-                                            className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider cursor-pointer hover:bg-gray-700"
-                                        >
-                                            <div className="flex items-center gap-1">
-                                                Causa de Baja
-                                                <ArrowUpDown className="h-3 w-3" />
-                                            </div>
-                                        </th>
-                                        <th
-                                            onClick={() => handleSort('resguardante')}
-                                            className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider cursor-pointer hover:bg-gray-700"
-                                        >
-                                            <div className="flex items-center gap-1">
-                                                Resguardante
-                                                <ArrowUpDown className="h-3 w-3" />
-                                            </div>
-                                        </th>
-                                        <th className="px-6 py-3 text-center text-xs font-medium text-gray-400 uppercase tracking-wider">
-                                            Acciones
-                                        </th>
-                                    </tr>
-                                </thead>
-                                <tbody className="bg-gray-900 divide-y divide-gray-800">
-                                    {loading ? (
-                                        <tr>
-                                            <td colSpan={21} className="px-6 py-4 text-center text-gray-400">
-                                                <div className="flex justify-center">
-                                                    <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-blue-500"></div>
-                                                </div>
-                                                <div className="mt-2">Cargando datos...</div>
-                                            </td>
-                                        </tr>
-                                    ) : error ? (
-                                        <tr>
-                                            <td colSpan={21} className="px-6 py-4 text-center text-red-400">
-                                                <div className="flex items-center justify-center gap-2">
-                                                    <AlertCircle className="h-5 w-5" />
-                                                    {error}
-                                                </div>
-                                            </td>
-                                        </tr>
-                                    ) : muebles.length === 0 ? (
-                                        <tr>
-                                            <td colSpan={21} className="px-6 py-4 text-center text-gray-400">
-                                                No se encontraron resultados
-                                            </td>
-                                        </tr>
-                                    ) : (
-                                        muebles.map((item) => (
-                                            <tr key={item.id} className="hover:bg-gray-800">
-                                                <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-white">
-                                                    {item.id_inv || "No Data"}
-                                                </td>
-                                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">
-                                                    {item.rubro || "No Data"}
-                                                </td>
-                                                <td className="px-6 py-4 text-sm text-gray-300">
-                                                    {item.descripcion?.length > 50
-                                                        ? `${item.descripcion.substring(0, 50)}...`
-                                                        : item.descripcion || "No Data"}
-                                                </td>
-                                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">
-                                                    {item.valor || "No Data"}
-                                                </td>
-                                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">
-                                                    {formatDate(item.f_adq) || "No Data"}
-                                                </td>
-                                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">
-                                                    {item.formadq || "No Data"}
-                                                </td>
-                                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">
-                                                    {item.proveedor || "No Data"}
-                                                </td>
-                                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">
-                                                    {item.factura || "No Data"}
-                                                </td>
-                                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">
-                                                    {item.ubicacion_es || "No Data"}
-                                                </td>
-                                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">
-                                                    {item.ubicacion_mu || "No Data"}
-                                                </td>
-                                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">
-                                                    {item.ubicacion_no || "No Data"}
-                                                </td>
-                                                <td className="px-6 py-4 whitespace-nowrap text-sm">
-                                                    <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${item.estado === 'B' || item.estado === 'BUENO' ? 'bg-green-900 text-green-200' :
-                                                        item.estado === 'R' || item.estado === 'REGULAR' ? 'bg-yellow-900 text-yellow-200' :
-                                                            item.estado === 'M' || item.estado === 'MALO' ? 'bg-red-900 text-red-200' :
-                                                                'bg-gray-700 text-gray-300'
-                                                        }`}>
-                                                        {item.estado === 'b' ? 'BUENO' :
-                                                            item.estado === 'r' ? 'REGULAR' :
-                                                                item.estado === 'm' ? 'MALO' :
-                                                                    item.estado || "No Data"}
-                                                    </span>
-                                                </td>
-                                                <td className="px-6 py-4 whitespace-nowrap text-sm">
-                                                    <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${item.estatus === 'ACTIVO' ? 'bg-blue-900 text-blue-200' :
-                                                        item.estatus === 'INACTIVO' ? 'bg-gray-700 text-gray-300' :
-                                                            item.estatus === 'NO LOCALIZADO' ? 'bg-red-900 text-red-200' :
-                                                                item.estatus === 'OBSOLETO' ? 'bg-purple-900 text-purple-200' :
-                                                                    'bg-gray-700 text-gray-300'
-                                                        }`}>
-                                                        {item.estatus || "No Data"}
-                                                    </span>
-                                                </td>
-                                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">
-                                                    {item.area || "No Data"}
-                                                </td>
-                                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">
-                                                    {item.usufinal || "No Data"}
-                                                </td>
-                                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">
-                                                    {formatDate(item.fechabaja) || "No Data"}
-                                                </td>
-                                                <td className="px-6 py-4 text-sm text-gray-300">
-                                                    {item.causadebaja?.length > 50
-                                                        ? `${item.causadebaja.substring(0, 50)}...`
-                                                        : item.causadebaja || "No Data"}
-                                                </td>
-                                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">
-                                                    {item.resguardante || "No Data"}
-                                                </td>
-                                                <td className="px-6 py-4 whitespace-nowrap text-center">
-                                                    <button
-                                                        className="text-blue-400 hover:text-blue-300 focus:outline-none"
-                                                        title="Ver detalles"
+                                            <div className="form-group">
+                                                <label className="block text-sm font-medium text-gray-400 mb-2">Rubro</label>
+                                                <div className="relative">
+                                                    <select
+                                                        id="rubro-select"
+                                                        value={editFormData?.rubro || ''}
+                                                        onChange={(e) => handleEditFormChange(e, 'rubro')}
+                                                        className="appearance-none w-full bg-gray-800 border border-gray-700 rounded-lg pl-4 pr-10 py-2.5 text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
                                                     >
-                                                        <Info className="h-5 w-5" />
-                                                    </button>
-                                                </td>
-                                            </tr>
-                                        ))
-                                    )}
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
+                                                        {filterOptions.rubros.map((rubro) => (
+                                                            <option key={rubro} value={rubro}>{rubro}</option>
+                                                        ))}
+                                                    </select>
+                                                    <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />
+                                                </div>
+                                            </div>
 
-                    {/* Paginación */}
-                    {!loading && !error && muebles.length > 0 && (
-                        <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
-                            <div className="flex items-center gap-2">
-                                <span className="text-sm text-gray-400">Filas por página:</span>
-                                <label htmlFor="rowsPerPage" className="sr-only">Filas por página</label>
-                                <select
-                                    id="rowsPerPage"
-                                    title="Filas por página"
-                                    value={rowsPerPage}
-                                    onChange={(e) => {
-                                        setRowsPerPage(Number(e.target.value));
-                                        setCurrentPage(1);
-                                    }}
-                                    className="bg-gray-800 border border-gray-700 rounded-md text-sm px-2 py-1 text-white focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                                >
-                                    {[10, 25, 50, 100].map(size => (
-                                        <option key={size} value={size}>{size}</option>
-                                    ))}
-                                </select>
-                                <span className="text-sm text-gray-400">
-                                    Página {currentPage} de {totalPages}
-                                </span>
-                            </div>
+                                            <div className="form-group col-span-2">
+                                                <label className="block text-sm font-medium text-gray-400 mb-2">Descripción</label>
+                                                <textarea
+                                                    value={editFormData?.descripcion || ''}
+                                                    onChange={(e) => handleEditFormChange(e, 'descripcion')}
+                                                    className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2.5 text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                                                    rows={3}
+                                                    placeholder="Ingrese la descripción"
+                                                />
+                                            </div>
 
-                            <div className="flex items-center">
-                                <nav className="isolate inline-flex -space-x-px rounded-md shadow-sm" aria-label="Pagination">
-                                    <button
-                                        onClick={() => changePage(currentPage - 1)}
-                                        disabled={currentPage === 1}
-                                        className={`relative inline-flex items-center rounded-l-md px-2 py-2 text-gray-400 ring-1 ring-inset ring-gray-700 hover:bg-gray-800 focus:z-20 focus:outline-offset-0 ${currentPage === 1 ? 'opacity-50 cursor-not-allowed' : ''
-                                            }`}
-                                    >
-                                        <span className="sr-only">Anterior</span>
-                                        <ChevronLeft className="h-5 w-5" aria-hidden="true" />
-                                    </button>
+                                            <div className="form-group">
+                                                <label className="block text-sm font-medium text-gray-400 mb-2">Valor</label>
+                                                <div className="relative">
+                                                    <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-gray-400">$</span>
+                                                    <input
+                                                        type="number"
+                                                        value={editFormData?.valor || 0}
+                                                        onChange={(e) => handleEditFormChange(e, 'valor')}
+                                                        className="w-full bg-gray-800 border border-gray-700 rounded-lg pl-8 pr-4 py-2.5 text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                                                        title="Ingrese el valor"
+                                                        placeholder="0.00"
+                                                    />
+                                                </div>
+                                            </div>
 
-                                    {getPageNumbers().map((page, index) => (
-                                        page === '...' ? (
-                                            <span
-                                                key={`ellipsis-${index}`}
-                                                className="relative inline-flex items-center px-4 py-2 text-sm font-semibold text-gray-400 ring-1 ring-inset ring-gray-700"
-                                            >
-                                                ...
-                                            </span>
-                                        ) : (
+                                            <div className="form-group">
+                                                <label className="block text-sm font-medium text-gray-400 mb-2">Fecha de Adquisición</label>
+                                                <div className="relative">
+                                                    <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500 pointer-events-none" />
+                                                    <input
+                                                        type="date"
+                                                        value={editFormData?.f_adq || ''}
+                                                        onChange={(e) => handleEditFormChange(e, 'f_adq')}
+                                                        className="w-full bg-gray-800 border border-gray-700 rounded-lg pl-10 pr-4 py-2.5 text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                                                        title="Seleccione la fecha de adquisición"
+                                                    />
+                                                </div>
+                                            </div>
+
+                                            <div className="form-group">
+                                                <label className="block text-sm font-medium text-gray-400 mb-2">Forma de Adquisición</label>
+                                                <input
+                                                    type="text"
+                                                    value={editFormData?.formadq || ''}
+                                                    onChange={(e) => handleEditFormChange(e, 'formadq')}
+                                                    className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2.5 text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                                                    title="Ingrese la forma de adquisición"
+                                                    placeholder="Forma de adquisición"
+                                                />
+                                            </div>
+
+                                            <div className="form-group">
+                                                <label className="block text-sm font-medium text-gray-400 mb-2">Proveedor</label>
+                                                <div className="relative">
+                                                    <Store className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500 pointer-events-none" />
+                                                    <input
+                                                        type="text"
+                                                        value={editFormData?.proveedor || ''}
+                                                        onChange={(e) => handleEditFormChange(e, 'proveedor')}
+                                                        className="w-full bg-gray-800 border border-gray-700 rounded-lg pl-10 pr-4 py-2.5 text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                                                        title="Ingrese el nombre del proveedor"
+                                                        placeholder="Nombre del proveedor"
+                                                    />
+                                                </div>
+                                            </div>
+
+                                            <div className="form-group">
+                                                <label className="block text-sm font-medium text-gray-400 mb-2">Factura</label>
+                                                <div className="relative">
+                                                    <Receipt className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500 pointer-events-none" />
+                                                    <input
+                                                        type="text"
+                                                        value={editFormData?.factura || ''}
+                                                        onChange={(e) => handleEditFormChange(e, 'factura')}
+                                                        className="w-full bg-gray-800 border border-gray-700 rounded-lg pl-10 pr-4 py-2.5 text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                                                        title="Ingrese el número de factura"
+                                                        placeholder="Número de factura"
+                                                    />
+                                                </div>
+                                            </div>
+
+                                            <div className="form-group">
+                                                <label className="block text-sm font-medium text-gray-400 mb-2">Ubicación (Edificio)</label>
+                                                <div className="relative">
+                                                    <Building2 className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500 pointer-events-none" />
+                                                    <input
+                                                        type="text"
+                                                        title="Ubicación (Edificio)"
+                                                        placeholder="Ubicación (Edificio)"
+                                                        value={editFormData?.ubicacion_es || ''}
+                                                        onChange={(e) => handleEditFormChange(e, 'ubicacion_es')}
+                                                        className="w-full bg-gray-800 border border-gray-700 rounded-lg pl-10 pr-4 py-2.5 text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                                                    />
+                                                </div>
+                                            </div>
+
+                                            <div className="form-group">
+                                                <label className="block text-sm font-medium text-gray-400 mb-2">Ubicación (Mueble)</label>
+                                                <div className="relative">
+                                                    <BookOpen className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500 pointer-events-none" />
+                                                    <input
+                                                        type="text"
+                                                        title="Ubicación (Mueble)"
+                                                        placeholder="Ubicación (Mueble)"
+                                                        value={editFormData?.ubicacion_mu || ''}
+                                                        onChange={(e) => handleEditFormChange(e, 'ubicacion_mu')}
+                                                        className="w-full bg-gray-800 border border-gray-700 rounded-lg pl-10 pr-4 py-2.5 text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                                                    />
+                                                </div>
+                                            </div>
+
+                                            <div className="form-group">
+                                                <label className="block text-sm font-medium text-gray-400 mb-2">Ubicación (Notas)</label>
+                                                <input
+                                                    type="text"
+                                                    value={editFormData?.ubicacion_no || ''}
+                                                    onChange={(e) => handleEditFormChange(e, 'ubicacion_no')}
+                                                    className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2.5 text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                                                    title="Ingrese notas de ubicación"
+                                                    placeholder="Notas de ubicación"
+                                                />
+                                            </div>
+
+                                            <div className="form-group">
+                                                <label className="block text-sm font-medium text-gray-400 mb-2">Estado</label>
+                                                <div className="relative">
+                                                    <select
+                                                        id="estado-select"
+                                                        title="Seleccione el estado"
+                                                        value={editFormData?.estado || ''}
+                                                        onChange={(e) => handleEditFormChange(e, 'estado')}
+                                                        className="appearance-none w-full bg-gray-800 border border-gray-700 rounded-lg pl-4 pr-10 py-2.5 text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                                                    >
+                                                        {filterOptions.estados.map((estado) => (
+                                                            <option key={estado} value={estado}>{estado}</option>
+                                                        ))}
+                                                    </select>
+                                                    <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />
+                                                </div>
+                                            </div>
+
+                                            <div className="form-group">
+                                                <label className="block text-sm font-medium text-gray-400 mb-2">Estatus</label>
+                                                <div className="relative">
+                                                    <select
+                                                        id="estatus-select"
+                                                        title="Seleccione el estatus"
+                                                        value={editFormData?.estatus || ''}
+                                                        onChange={(e) => handleEditFormChange(e, 'estatus')}
+                                                        className="appearance-none w-full bg-gray-800 border border-gray-700 rounded-lg pl-4 pr-10 py-2.5 text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                                                    >
+                                                        {filterOptions.estatus.map((status) => (
+                                                            <option key={status} value={status}>{status}</option>
+                                                        ))}
+                                                    </select>
+                                                    <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />
+                                                </div>
+                                            </div>
+
+                                            <div className="form-group">
+                                                <label className="block text-sm font-medium text-gray-400 mb-2">Área</label>
+                                                <div className="relative">
+                                                    <select
+                                                        aria-label="Área"
+                                                        value={editFormData?.area || ''}
+                                                        onChange={(e) => handleEditFormChange(e, 'area')}
+                                                        className="appearance-none w-full bg-gray-800 border border-gray-700 rounded-lg pl-4 pr-10 py-2.5 text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                                                    >
+                                                        {filterOptions.areas.map((area) => (
+                                                            <option key={area} value={area}>{area}</option>
+                                                        ))}
+                                                    </select>
+                                                    <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />
+                                                </div>
+                                            </div>
+
+                                            <div className="form-group">
+                                                <label className="block text-sm font-medium text-gray-400 mb-2">Usuario Final</label>
+                                                <div className="relative">
+                                                    <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500 pointer-events-none" />
+                                                    <input
+                                                        type="text"
+                                                        title="Ingrese el usuario final"
+                                                        placeholder="Ingrese el usuario final"
+                                                        value={editFormData?.usufinal || ''}
+                                                        onChange={(e) => handleEditFormChange(e, 'usufinal')}
+                                                        className="w-full bg-gray-800 border border-gray-700 rounded-lg pl-10 pr-4 py-2.5 text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                                                    />
+                                                </div>
+                                            </div>
+
+                                            <div className="form-group">
+                                                <label className="block text-sm font-medium text-gray-400 mb-2">Resguardante</label>
+                                                <div className="relative">
+                                                    <Shield className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500 pointer-events-none" />
+                                                    <input
+                                                        type="text"
+                                                        value={editFormData?.resguardante || ''}
+                                                        onChange={(e) => handleEditFormChange(e, 'resguardante')}
+                                                        className="w-full bg-gray-800 border border-gray-700 rounded-lg pl-10 pr-4 py-2.5 text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                                                        title="Ingrese el resguardante"
+                                                        placeholder="Ingrese el resguardante"
+                                                    />
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <div className="flex items-center space-x-4 pt-6 border-t border-gray-800">
                                             <button
-                                                key={page}
-                                                onClick={() => changePage(page as number)}
-                                                className={`relative inline-flex items-center px-4 py-2 text-sm font-semibold ${currentPage === page
-                                                    ? 'bg-blue-900 text-blue-200 focus:z-20 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-500'
-                                                    : 'text-gray-400 ring-1 ring-inset ring-gray-700 hover:bg-gray-800 focus:z-20 focus:outline-offset-0'
-                                                    }`}
+                                                onClick={saveChanges}
+                                                className="px-5 py-2.5 bg-blue-600 text-white rounded-lg font-medium flex items-center gap-2 hover:bg-blue-700 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:ring-offset-gray-900"
                                             >
-                                                {page}
+                                                <Save className="h-4 w-4" />
+                                                Guardar Cambios
                                             </button>
-                                        )))}
+                                            <button
+                                                onClick={cancelEdit}
+                                                className="px-5 py-2.5 bg-gray-800 text-gray-300 rounded-lg font-medium flex items-center gap-2 hover:bg-gray-700 transition-colors focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 focus:ring-offset-gray-900"
+                                            >
+                                                <X className="h-4 w-4" />
+                                                Cancelar
+                                            </button>
+                                        </div>
+                                    </div>
+                                ) : (
+                                    <div className="space-y-6">
+                                        <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+                                            <div className="detail-card bg-gray-800/50 rounded-lg p-4 hover:bg-gray-800/80 transition-all">
+                                                <h3 className="text-xs font-medium uppercase tracking-wider text-gray-400">ID Inventario</h3>
+                                                <p className="mt-2 text-white font-medium">{selectedItem.id_inv}</p>
+                                            </div>
+                                            <div className="detail-card bg-gray-800/50 rounded-lg p-4 hover:bg-gray-800/80 transition-all">
+                                                <h3 className="text-xs font-medium uppercase tracking-wider text-gray-400">Rubro</h3>
+                                                <p className="mt-2 text-white font-medium">{selectedItem.rubro || 'No especificado'}</p>
+                                            </div>
+                                            <div className="detail-card bg-gray-800/50 rounded-lg p-4 hover:bg-gray-800/80 transition-all col-span-2">
+                                                <h3 className="text-xs font-medium uppercase tracking-wider text-gray-400">Descripción</h3>
+                                                <p className="mt-2 text-white">{selectedItem.descripcion || 'No especificado'}</p>
+                                            </div>
+                                            <div className="detail-card bg-gray-800/50 rounded-lg p-4 hover:bg-gray-800/80 transition-all">
+                                                <h3 className="text-xs font-medium uppercase tracking-wider text-gray-400">Valor</h3>
+                                                <p className="mt-2 text-white font-medium">
+                                                    {selectedItem.valor ?
+                                                        `$${selectedItem.valor.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` :
+                                                        '$0.00'}
+                                                </p>
+                                            </div>
+                                            <div className="detail-card bg-gray-800/50 rounded-lg p-4 hover:bg-gray-800/80 transition-all">
+                                                <h3 className="text-xs font-medium uppercase tracking-wider text-gray-400">Fecha de Adquisición</h3>
+                                                <p className="mt-2 text-white flex items-center gap-2">
+                                                    <Calendar className="h-4 w-4 text-blue-400" />
+                                                    {formatDate(selectedItem.f_adq) || 'No especificado'}
+                                                </p>
+                                            </div>
+                                            <div className="detail-card bg-gray-800/50 rounded-lg p-4 hover:bg-gray-800/80 transition-all">
+                                                <h3 className="text-xs font-medium uppercase tracking-wider text-gray-400">Forma de Adquisición</h3>
+                                                <p className="mt-2 text-white">{selectedItem.formadq || 'No especificado'}</p>
+                                            </div>
+                                            <div className="detail-card bg-gray-800/50 rounded-lg p-4 hover:bg-gray-800/80 transition-all">
+                                                <h3 className="text-xs font-medium uppercase tracking-wider text-gray-400">Proveedor</h3>
+                                                <p className="mt-2 text-white flex items-center gap-2">
+                                                    <Store className="h-4 w-4 text-blue-400" />
+                                                    {selectedItem.proveedor || 'No especificado'}
+                                                </p>
+                                            </div>
+                                            <div className="detail-card bg-gray-800/50 rounded-lg p-4 hover:bg-gray-800/80 transition-all">
+                                                <h3 className="text-xs font-medium uppercase tracking-wider text-gray-400">Factura</h3>
+                                                <p className="mt-2 text-white flex items-center gap-2">
+                                                    <Receipt className="h-4 w-4 text-blue-400" />
+                                                    {selectedItem.factura || 'No especificado'}
+                                                </p>
+                                            </div>
+                                            <div className="detail-card bg-gray-800/50 rounded-lg p-4 hover:bg-gray-800/80 transition-all">
+                                                <h3 className="text-xs font-medium uppercase tracking-wider text-gray-400">Estado</h3>
+                                                <p className="mt-2 text-white">{selectedItem.estado || 'No especificado'}</p>
+                                            </div>
+                                            <div className="detail-card bg-gray-800/50 rounded-lg p-4 hover:bg-gray-800/80 transition-all">
+                                                <h3 className="text-xs font-medium uppercase tracking-wider text-gray-400">Estatus</h3>
+                                                <div className="mt-2">
+                                                    <span className={`inline-flex items-center px-3 py-1 text-sm font-medium rounded-full ${selectedItem.estatus === 'ACTIVO' ? 'bg-green-900/70 text-green-200 border border-green-700' :
+                                                        selectedItem.estatus === 'INACTIVO' ? 'bg-red-900/70 text-red-200 border border-red-700' :
+                                                            'bg-gray-700 text-gray-300 border border-gray-600'
+                                                        }`}>
+                                                        {selectedItem.estatus === 'ACTIVO' && <Check className="h-3.5 w-3.5 mr-1.5" />}
+                                                        {selectedItem.estatus === 'INACTIVO' && <AlertCircle className="h-3.5 w-3.5 mr-1.5" />}
+                                                        {selectedItem.estatus || 'No especificado'}
+                                                    </span>
+                                                </div>
+                                            </div>
+                                            <div className="detail-card bg-gray-800/50 rounded-lg p-4 hover:bg-gray-800/80 transition-all col-span-2">
+                                                <h3 className="text-xs font-medium uppercase tracking-wider text-gray-400">Ubicación</h3>
+                                                <div className="mt-2 grid grid-cols-1 md:grid-cols-3 gap-3">
+                                                    {selectedItem.ubicacion_es && (
+                                                        <div className="flex items-center gap-2 bg-gray-900/60 p-2 rounded-md">
+                                                            <Building2 className="h-4 w-4 text-blue-400 flex-shrink-0" />
+                                                            <span className="text-white">{selectedItem.ubicacion_es}</span>
+                                                        </div>
+                                                    )}
+                                                    {selectedItem.ubicacion_mu && (
+                                                        <div className="flex items-center gap-2 bg-gray-900/60 p-2 rounded-md">
+                                                            <BookOpen className="h-4 w-4 text-blue-400 flex-shrink-0" />
+                                                            <span className="text-white">{selectedItem.ubicacion_mu}</span>
+                                                        </div>
+                                                    )}
+                                                    {selectedItem.ubicacion_no && (
+                                                        <div className="flex items-center gap-2 bg-gray-900/60 p-2 rounded-md">
+                                                            <FileText className="h-4 w-4 text-blue-400 flex-shrink-0" />
+                                                            <span className="text-white">{selectedItem.ubicacion_no}</span>
+                                                        </div>
+                                                    )}
+                                                    {!selectedItem.ubicacion_es && !selectedItem.ubicacion_mu && !selectedItem.ubicacion_no && (
+                                                        <span className="text-gray-400">No especificado</span>
+                                                    )}
+                                                </div>
+                                            </div>
+                                            <div className="detail-card bg-gray-800/50 rounded-lg p-4 hover:bg-gray-800/80 transition-all">
+                                                <h3 className="text-xs font-medium uppercase tracking-wider text-gray-400">Área</h3>
+                                                <p className="mt-2 text-white">{selectedItem.area || 'No especificado'}</p>
+                                            </div>
+                                            <div className="detail-card bg-gray-800/50 rounded-lg p-4 hover:bg-gray-800/80 transition-all">
+                                                <h3 className="text-xs font-medium uppercase tracking-wider text-gray-400">Usuario Final</h3>
+                                                <p className="mt-2 text-white flex items-center gap-2">
+                                                    <User className="h-4 w-4 text-blue-400" />
+                                                    {selectedItem.usufinal || 'No especificado'}
+                                                </p>
+                                            </div>
+                                            <div className="detail-card bg-gray-800/50 rounded-lg p-4 hover:bg-gray-800/80 transition-all">
+                                                <h3 className="text-xs font-medium uppercase tracking-wider text-gray-400">Resguardante</h3>
+                                                <p className="mt-2 text-white flex items-center gap-2">
+                                                    <Shield className="h-4 w-4 text-blue-400" />
+                                                    {selectedItem.resguardante || 'No especificado'}
+                                                </p>
+                                            </div>
+                                            {selectedItem.fechabaja && (
+                                                <div className="detail-card bg-red-900/20 border border-red-800/50 rounded-lg p-4 col-span-2">
+                                                    <h3 className="text-xs font-medium uppercase tracking-wider text-red-400 flex items-center gap-2">
+                                                        <AlertTriangle className="h-4 w-4" />
+                                                        Información de Baja
+                                                    </h3>
+                                                    <div className="mt-2 flex flex-col sm:flex-row sm:items-center sm:gap-4">
+                                                        <div className="flex items-center gap-2 text-gray-300">
+                                                            <Calendar className="h-4 w-4 text-red-400" />
+                                                            <span>Fecha: {formatDate(selectedItem.fechabaja)}</span>
+                                                        </div>
+                                                        <div className="flex items-center gap-2 text-gray-300">
+                                                            <Info className="h-4 w-4 text-red-400" />
+                                                            <span>Causa: {selectedItem.causadebaja || 'No especificada'}</span>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            )}
+                                        </div>
 
-                                    <button
-                                        onClick={() => changePage(currentPage + 1)}
-                                        disabled={currentPage === totalPages}
-                                        className={`relative inline-flex items-center rounded-r-md px-2 py-2 text-gray-400 ring-1 ring-inset ring-gray-700 hover:bg-gray-800 focus:z-20 focus:outline-offset-0 ${currentPage === totalPages ? 'opacity-50 cursor-not-allowed' : ''
-                                            }`}
-                                    >
-                                        <span className="sr-only">Siguiente</span>
-                                        <ChevronRight className="h-5 w-5" aria-hidden="true" />
-                                    </button>
-                                </nav>
+                                        <div className="flex items-center space-x-4 pt-6 border-t border-gray-800">
+                                            <button
+                                                onClick={handleStartEdit}
+                                                className="px-5 py-2.5 bg-blue-600 text-white rounded-lg font-medium flex items-center gap-2 hover:bg-blue-700 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:ring-offset-gray-900"
+                                            >
+                                                <Edit className="h-4 w-4" />
+                                                Editar
+                                            </button>
+                                            <button
+                                                onClick={markAsInactive}
+                                                className="px-5 py-2.5 bg-red-900 text-red-200 rounded-lg font-medium flex items-center gap-2 hover:bg-red-800 transition-colors focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 focus:ring-offset-gray-900"
+                                            >
+                                                <Trash2 className="h-4 w-4" />
+                                                Marcar como Inactivo
+                                            </button>
+                                        </div>
+                                    </div>
+                                )}
                             </div>
                         </div>
-                    )}
+                    )
+                    }
                 </div>
             </div>
-            );
+        </div>
+    );
 }
