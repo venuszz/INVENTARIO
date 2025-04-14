@@ -3,7 +3,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import {
     Search, RefreshCw, Filter, ChevronLeft, ChevronRight,
     ArrowUpDown, AlertCircle, X, Save, Trash2, Check, CircleSlash2,
-    ActivitySquare, LayoutGrid, TagIcon, ChevronDown, Building2, BookOpen, FileText, User, Shield, AlertTriangle, Calendar, Info, Edit, Receipt, ClipboardList, Store, CheckCircle, XCircle
+    ActivitySquare, LayoutGrid, TagIcon, ChevronDown, Building2, BookOpen, FileText, User, Shield, AlertTriangle, Calendar, Info, Edit, Receipt, ClipboardList, Store, CheckCircle, XCircle, Plus
 } from 'lucide-react';
 import supabase from '@/app/lib/supabase/client';
 
@@ -27,6 +27,7 @@ interface Mueble {
     fechabaja: string | null;
     causadebaja: string | null;
     resguardante: string | null;
+    image_path: string | null;
 }
 
 interface FilterOptions {
@@ -36,11 +37,107 @@ interface FilterOptions {
     rubros: string[];
 }
 
+// Componente para mostrar imágenes con manejo de carga y errores
+const ImagePreview = ({ imagePath }: { imagePath: string | null }) => {
+    const [imageUrl, setImageUrl] = useState<string | null>(null);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState(false);
+
+    useEffect(() => {
+        let isMounted = true;
+
+        const loadImage = async () => {
+            if (!imagePath) {
+                if (isMounted) {
+                    setLoading(false);
+                    setError(false);
+                }
+                return;
+            }
+
+            try {
+                if (isMounted) {
+                    setLoading(true);
+                    setError(false);
+                }
+
+                // Generar URL firmada
+                const { data, error } = await supabase
+                    .storage
+                    .from('muebles.inea')
+                    .createSignedUrl(imagePath, 3600);
+
+                if (error) throw error;
+
+                // Verificar que la imagen se puede cargar
+                const img = new Image();
+                img.src = data.signedUrl;
+
+                img.onload = () => {
+                    if (isMounted) {
+                        setImageUrl(data.signedUrl);
+                        setLoading(false);
+                    }
+                };
+
+                img.onerror = () => {
+                    if (isMounted) {
+                        setError(true);
+                        setLoading(false);
+                    }
+                };
+            } catch (err) {
+                if (isMounted) {
+                    setError(true);
+                    setLoading(false);
+                }
+                console.error("Error loading image:", err);
+            }
+        };
+
+        loadImage();
+
+        return () => {
+            isMounted = false;
+        };
+    }, [imagePath]);
+
+    if (loading) {
+        return (
+            <div className="w-full h-64 flex items-center justify-center bg-gray-900/50 rounded-lg">
+                <span className="text-gray-400">Cargando imagen...</span>
+            </div>
+        );
+    }
+
+    if (error || !imageUrl) {
+        return (
+            <div className="w-full h-64 flex items-center justify-center bg-gray-900/50 rounded-lg">
+                <span className="text-gray-500">Imagen no disponible</span>
+            </div>
+        );
+    }
+
+    return (
+        <div className="w-full h-64 bg-gray-900 rounded-lg overflow-hidden">
+            <img
+                src={imageUrl}
+                alt="Imagen del bien"
+                className="w-full h-full object-cover"
+                onError={() => setError(true)}
+            />
+        </div>
+    );
+};
+
 export default function ConsultasIneaGeneral() {
     const [muebles, setMuebles] = useState<Mueble[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [filteredCount, setFilteredCount] = useState(0);
+    const [imageFile, setImageFile] = useState<File | null>(null);
+    const [imagePreview, setImagePreview] = useState<string | null>(null);
+    const [uploading, setUploading] = useState(false);
 
     // Estados para paginación
     const [currentPage, setCurrentPage] = useState(1);
@@ -75,15 +172,12 @@ export default function ConsultasIneaGeneral() {
         setLoading(true);
 
         try {
-            // Construir la consulta base para contar
             let countQuery = supabase
                 .from('muebles')
-                .select('*', { count: 'exact', head: false });
+                .select('id, id_inv, rubro, descripcion, valor, f_adq, formadq, proveedor, factura, ubicacion_es, ubicacion_mu, ubicacion_no, estado, estatus, area, usufinal, fechabaja, causadebaja, resguardante, image_path', { count: 'exact', head: false });
 
-            // Construir la consulta base para datos
-            let dataQuery = supabase.from('muebles').select('*');
+            let dataQuery = supabase.from('muebles').select('id, id_inv, rubro, descripcion, valor, f_adq, formadq, proveedor, factura, ubicacion_es, ubicacion_mu, ubicacion_no, estado, estatus, area, usufinal, fechabaja, causadebaja, resguardante, image_path');
 
-            // Aplicar filtros a ambas consultas
             if (searchTerm) {
                 const searchFilter = `id_inv.ilike.%${searchTerm}%,descripcion.ilike.%${searchTerm}%,resguardante.ilike.%${searchTerm}%,usufinal.ilike.%${searchTerm}%`;
                 countQuery = countQuery.or(searchFilter);
@@ -110,11 +204,9 @@ export default function ConsultasIneaGeneral() {
                 dataQuery = dataQuery.eq('rubro', filters.rubro);
             }
 
-            // Ejecutar consulta de conteo primero
             const { count } = await countQuery;
             setFilteredCount(count || 0);
 
-            // Aplicar ordenamiento y paginación a la consulta de datos
             const { data, error } = await dataQuery
                 .order(sortField, { ascending: sortDirection === 'asc' })
                 .range((currentPage - 1) * rowsPerPage, currentPage * rowsPerPage - 1);
@@ -124,7 +216,6 @@ export default function ConsultasIneaGeneral() {
             const mueblesData = (data as Mueble[]) || [];
             setMuebles(mueblesData);
 
-            // Si el item seleccionado ya no está en la lista debido a los filtros, cerrar el detalle
             if (selectedItem && !mueblesData.some(item => item.id === selectedItem.id)) {
                 setSelectedItem(null);
                 setIsEditing(false);
@@ -144,28 +235,24 @@ export default function ConsultasIneaGeneral() {
     // Función para obtener las opciones de filtro
     const fetchFilterOptions = useCallback(async () => {
         try {
-            // Obtener estados únicos
             const { data: estados } = await supabase
                 .from('muebles')
                 .select('estado')
                 .filter('estado', 'not.is', null)
                 .limit(1000);
 
-            // Obtener estatus únicos
             const { data: estatus } = await supabase
                 .from('muebles')
                 .select('estatus')
                 .filter('estatus', 'not.is', null)
                 .limit(1000);
 
-            // Obtener áreas únicas
             const { data: areas } = await supabase
                 .from('muebles')
                 .select('area')
                 .filter('area', 'not.is', null)
                 .limit(1000);
 
-            // Obtener rubros únicos
             const { data: rubros } = await supabase
                 .from('muebles')
                 .select('rubro')
@@ -182,6 +269,56 @@ export default function ConsultasIneaGeneral() {
             console.error('Error al cargar opciones de filtro:', error);
         }
     }, []);
+
+    const uploadImage = async (muebleId: number) => {
+        if (!imageFile) return null;
+
+        try {
+            const fileExt = imageFile.name.split('.').pop();
+            const fileName = `${muebleId}/image.${fileExt}`;
+            const filePath = `${fileName}`;
+
+            const { error: uploadError } = await supabase.storage
+                .from('muebles.inea')
+                .upload(filePath, imageFile, {
+                    cacheControl: '3600',
+                    upsert: true
+                });
+
+            if (uploadError) {
+                console.error('Error subiendo imagen', uploadError);
+                return null;
+            }
+
+            return filePath;
+        } catch (err) {
+            console.error('Error inesperado subiendo imagen', err);
+            return null;
+        }
+    };
+
+    const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (file) {
+            if (file.size > 5 * 1024 * 1024) {
+                setError('El archivo es demasiado grande. Máximo 5MB.');
+                return;
+            }
+
+            const validTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+            if (!validTypes.includes(file.type)) {
+                setError('Formato no válido. Use JPG, PNG, GIF o WebP');
+                return;
+            }
+
+            setImageFile(file);
+            const reader = new FileReader();
+            reader.onloadend = () => {
+                setImagePreview(reader.result as string);
+            };
+            reader.readAsDataURL(file);
+        }
+    };
 
     // Cargar datos iniciales
     useEffect(() => {
@@ -203,6 +340,8 @@ export default function ConsultasIneaGeneral() {
         setSelectedItem(item);
         setIsEditing(false);
         setEditFormData(null);
+        setImageFile(null);
+        setImagePreview(null);
 
         if (window.innerWidth < 768 && detailRef.current) {
             setTimeout(() => {
@@ -220,29 +359,42 @@ export default function ConsultasIneaGeneral() {
     const cancelEdit = () => {
         setIsEditing(false);
         setEditFormData(null);
+        setImageFile(null);
+        setImagePreview(null);
     };
 
     const saveChanges = async () => {
         if (!editFormData) return;
 
         setLoading(true);
+        setUploading(true);
+
         try {
+            let imagePath = editFormData.image_path;
+            if (imageFile) {
+                const newPath = await uploadImage(editFormData.id);
+                if (newPath) imagePath = newPath;
+            }
+
             const { error } = await supabase
                 .from('muebles')
-                .update(editFormData)
+                .update({ ...editFormData, image_path: imagePath })
                 .eq('id', editFormData.id);
 
             if (error) throw error;
 
             fetchMuebles();
-            setSelectedItem(editFormData);
+            setSelectedItem({ ...editFormData, image_path: imagePath });
             setIsEditing(false);
             setEditFormData(null);
+            setImageFile(null);
+            setImagePreview(null);
         } catch (error) {
             console.error('Error al guardar cambios:', error);
             setError('Error al guardar los cambios. Por favor, intente nuevamente.');
         } finally {
             setLoading(false);
+            setUploading(false);
         }
     };
 
@@ -277,7 +429,6 @@ export default function ConsultasIneaGeneral() {
 
         const newData = { ...editFormData };
 
-        // Type-safe approach based on field types
         switch (field) {
             case 'id':
                 newData.id = parseInt(e.target.value) || newData.id;
@@ -304,7 +455,7 @@ export default function ConsultasIneaGeneral() {
             case 'fechabaja':
             case 'causadebaja':
             case 'resguardante':
-                // All string | null fields
+            case 'image_path':
                 newData[field] = e.target.value || null;
                 break;
         }
@@ -316,6 +467,8 @@ export default function ConsultasIneaGeneral() {
         setSelectedItem(null);
         setIsEditing(false);
         setEditFormData(null);
+        setImageFile(null);
+        setImagePreview(null);
     };
 
     const clearFilters = () => {
@@ -700,9 +853,9 @@ export default function ConsultasIneaGeneral() {
                                                     </td>
                                                     <td className="px-4 py-3 text-sm">
                                                         <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium ${item.estatus === 'ACTIVO' ? 'bg-green-900/70 text-green-200 border border-green-700' :
-                                                                item.estatus === 'INACTIVO' ? 'bg-red-900/70 text-red-200 border border-red-700' :
-                                                                    item.estatus === 'NO LOCALIZADO' ? 'bg-yellow-900/70 text-yellow-200 border border-yellow-700' :
-                                                                        'bg-gray-700 text-gray-300 border border-gray-600'
+                                                            item.estatus === 'INACTIVO' ? 'bg-red-900/70 text-red-200 border border-red-700' :
+                                                                item.estatus === 'NO LOCALIZADO' ? 'bg-yellow-900/70 text-yellow-200 border border-yellow-700' :
+                                                                    'bg-gray-700 text-gray-300 border border-gray-600'
                                                             }`}>
                                                             {item.estatus === 'ACTIVO' && <CheckCircle className="h-3.5 w-3.5 mr-1.5" />}
                                                             {item.estatus === 'INACTIVO' && <XCircle className="h-3.5 w-3.5 mr-1.5" />}
@@ -857,6 +1010,63 @@ export default function ConsultasIneaGeneral() {
                                 {isEditing ? (
                                     <div className="space-y-6">
                                         <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                                            {/* Sección de imagen en edición */}
+                                            <div className="form-group col-span-2">
+                                                <label className="block text-sm font-medium text-gray-400 mb-2">
+                                                    Imagen del Bien
+                                                </label>
+
+                                                <div className="flex items-start gap-4">
+                                                    <div className="flex-1">
+                                                        {imagePreview ? (
+                                                            <div className="relative group">
+                                                                <img
+                                                                    src={imagePreview}
+                                                                    alt="Vista previa"
+                                                                    className="w-full h-64 object-contain rounded-lg border border-gray-700"
+                                                                />
+                                                                <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 flex items-center justify-center rounded-lg transition-opacity">
+                                                                    <label className="cursor-pointer p-2 bg-gray-800/50 rounded-full hover:bg-gray-700">
+                                                                        <Edit className="h-4 w-4 text-white" />
+                                                                        <input
+                                                                            type="file"
+                                                                            onChange={handleImageChange}
+                                                                            className="hidden"
+                                                                            accept="image/*"
+                                                                            id="image-upload"
+                                                                            aria-label="Seleccionar nueva imagen"
+                                                                            title="Seleccionar nueva imagen"
+                                                                        />
+                                                                    </label>
+                                                                </div>
+                                                            </div>
+                                                        ) : (
+                                                            <ImagePreview imagePath={editFormData?.image_path || null} />
+                                                        )}
+                                                    </div>
+
+                                                    <div className="flex-shrink-0 w-64 space-y-2">
+                                                        <label className="flex flex-col items-center justify-center h-32 border-2 border-dashed border-gray-700 rounded-lg cursor-pointer hover:border-blue-500 transition-colors p-4">
+                                                            <div className="text-center">
+                                                                <Plus className="h-6 w-6 mx-auto text-gray-400 mb-1" />
+                                                                <span className="text-xs text-gray-400">Cambiar imagen</span>
+                                                            </div>
+                                                            <input
+                                                                type="file"
+                                                                onChange={handleImageChange}
+                                                                className="hidden"
+                                                                accept="image/*"
+                                                            />
+                                                        </label>
+                                                        <div className="text-xs text-gray-400 p-2 bg-gray-800/50 rounded-lg">
+                                                            <p>Formatos: JPG, PNG, GIF, WebP</p>
+                                                            <p>Tamaño máximo: 5MB</p>
+                                                            {uploading && <p className="text-blue-400 mt-1">Subiendo imagen...</p>}
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+
                                             <div className="form-group">
                                                 <label className="block text-sm font-medium text-gray-400 mb-2">ID Inventario</label>
                                                 <input
@@ -1112,6 +1322,14 @@ export default function ConsultasIneaGeneral() {
                                     </div>
                                 ) : (
                                     <div className="space-y-6">
+                                        {/* Sección de imagen en vista de detalles */}
+                                        <div className="detail-card bg-gray-800/50 rounded-lg p-4 hover:bg-gray-800/80 transition-all col-span-2">
+                                            <h3 className="text-xs font-medium uppercase tracking-wider text-gray-400 mb-2">
+                                                Fotografía del Bien
+                                            </h3>
+                                            <ImagePreview imagePath={selectedItem.image_path} />
+                                        </div>
+                                        {/* Sección de detalles del artículo */}
                                         <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
                                             <div className="detail-card bg-gray-800/50 rounded-lg p-4 hover:bg-gray-800/80 transition-all">
                                                 <h3 className="text-xs font-medium uppercase tracking-wider text-gray-400">ID Inventario</h3>
@@ -1259,8 +1477,7 @@ export default function ConsultasIneaGeneral() {
                                 )}
                             </div>
                         </div>
-                    )
-                    }
+                    )}
                 </div>
             </div>
         </div>
