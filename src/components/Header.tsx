@@ -73,7 +73,6 @@ export default function NavigationBar() {
             submenu: [
                 { title: 'Registro de nuevos bienes', path: '/inventario/registro' },
                 { title: 'Bienes obsoletos', path: '/inventario/obsoletos' },
-                { title: 'Perfil y cierre de sesión', path: '/perfil' }
             ]
         },
         {
@@ -86,9 +85,6 @@ export default function NavigationBar() {
                     path: '/consultas/inea',
                     children: [
                         { title: 'Vista general', path: '/consultas/inea/general' },
-                        { title: 'Bienes activos', path: '/consultas/inea/activos' },
-                        { title: 'Bienes inactivos', path: '/consultas/inea/inactivos' },
-                        { title: 'Bienes no localizados', path: '/consultas/inea/no-localizados' },
                         { title: 'Bienes obsoletos', path: '/consultas/inea/obsoletos' }
                     ]
                 },
@@ -97,9 +93,6 @@ export default function NavigationBar() {
                     path: '/consultas/itea',
                     children: [
                         { title: 'Vista general', path: '/consultas/itea/general' },
-                        { title: 'Bienes activos', path: '/consultas/itea/activos' },
-                        { title: 'Bienes inactivos', path: '/consultas/itea/inactivos' },
-                        { title: 'Bienes no localizados', path: '/consultas/itea/no-localizados' },
                         { title: 'Bienes obsoletos', path: '/consultas/itea/obsoletos' }
                     ]
                 }
@@ -167,8 +160,12 @@ export default function NavigationBar() {
                 <div className="flex justify-between h-16">
                     <div className="flex items-center">
                         <div className="flex-shrink-0 flex items-center">
-                            <Link href="/" onClick={closeAll} className="text-white font-bold text-xl hover:text-blue-400 transition-colors">
-                                SisInv
+                            <Link href="/" onClick={closeAll} className="hover:opacity-80 transition-opacity">
+                                <img
+                                    src="/images/ITEA_logo.png"  // Ruta a tu imagen en la carpeta public
+                                    alt="Logo ITEA"
+                                    className="h-10 w-auto"  // Ajusta la altura según necesites
+                                />
                             </Link>
                         </div>
                         <div className="hidden md:ml-8 md:flex md:space-x-1">
