@@ -87,6 +87,7 @@ export default function LoginPage() {
         }
     }, [])
 
+    // Modifica la función handleLogin en tu LoginPage.js
     const handleLogin = async (e: React.FormEvent) => {
         e.preventDefault()
         setError(null)
@@ -145,7 +146,13 @@ export default function LoginPage() {
             localStorage.setItem('username', username)
             localStorage.setItem('rol', userData.rol)
 
-            router.push(redirectPath)
+            // Añadir un pequeño retraso antes de la redirección
+            setTimeout(() => {
+                router.push(redirectPath)
+            }, 500)
+
+            // Opcionalmente, puedes mostrar un mensaje de éxito
+            setError(null)
         } catch {
             setError('Ocurrió un error inesperado. Por favor, intenta de nuevo.')
             setIsLoading(false)
@@ -259,18 +266,6 @@ export default function LoginPage() {
                                     >
                                         {isLoading ? 'Procesando...' : 'Iniciar Sesión'}
                                     </button>
-                                </div>
-
-                                <div className="text-center mt-6">
-                                    <p className="text-gray-400">
-                                        ¿No tienes una cuenta?
-                                        <a
-                                            href="/register"
-                                            className="text-blue-400 ml-2 hover:underline"
-                                        >
-                                            Regístrate
-                                        </a>
-                                    </p>
                                 </div>
                             </form>
                         </div>

@@ -25,13 +25,16 @@ export async function middleware(request: NextRequest) {
     }
 
     const authToken = request.cookies.get('authToken')?.value
+    const userData = request.cookies.get('userData')?.value
 
-    if (!authToken) {
+    // Si no hay token o datos de usuario, redirigir al login
+    if (!authToken || !userData) {
         const url = new URL('/login', request.url)
         url.searchParams.set('from', pathname)
         return NextResponse.redirect(url)
     }
 
+    // Opcionalmente: verificar el token solo una vez cada cierto tiempo para mejorar rendimiento
     try {
         const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || ''
         const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ''
@@ -40,17 +43,21 @@ export async function middleware(request: NextRequest) {
         const { data, error } = await supabase.auth.getUser(authToken)
 
         if (error || !data.user) {
-            const url = new URL('/login', request.url)
-            url.searchParams.set('from', pathname)
-            return NextResponse.redirect(url)
+            // Limpiar cookies en caso de error
+            const response = NextResponse.redirect(new URL('/login?from=' + pathname, request.url))
+            response.cookies.delete('authToken')
+            response.cookies.delete('userData')
+            return response
         }
 
         return NextResponse.next()
     } catch (error) {
         console.error('Error en middleware de autenticación:', error)
-        const url = new URL('/login', request.url)
-        url.searchParams.set('from', pathname)
-        return NextResponse.redirect(url)
+        const response = NextResponse.redirect(new URL('/login?from=' + pathname, request.url))
+        // Limpiar cookies en caso de error
+        response.cookies.delete('authToken')
+        response.cookies.delete('userData')
+        return response
     }
 }
 
