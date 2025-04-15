@@ -10,7 +10,6 @@ export default function LoginPage() {
     const [username, setUsername] = useState('')
     const [password, setPassword] = useState('')
     const [error, setError] = useState<string | null>(null)
-    const [debugInfo, setDebugInfo] = useState<string | null>(null)
     const [isLoading, setIsLoading] = useState(false)
     const [isLoaded, setIsLoaded] = useState(false)
     const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 })
@@ -20,26 +19,9 @@ export default function LoginPage() {
     const searchParams = useSearchParams()
     const redirectPath = searchParams.get('from') || '/'
 
-    // Función para imprimir información de depuración
-    const logDebug = (message: string) => {
-        console.log(`[DEBUG] ${message}`)
-        setDebugInfo(prev => {
-            const timestamp = new Date().toISOString().split('T')[1].slice(0, 8)
-            const newMessage = `${timestamp} - ${message}`
-            return prev ? `${prev}\n${newMessage}` : newMessage
-        })
-    }
 
     useEffect(() => {
         setIsLoaded(true)
-        logDebug(`Página cargada - Ruta de redirección: ${redirectPath}`)
-        logDebug(`Entorno: ${process.env.NODE_ENV}`)
-
-        // Revisar si hay tokens guardados
-        const existingToken = Cookies.get('authToken')
-        if (existingToken) {
-            logDebug(`Token existente encontrado en cookies: ${existingToken.substring(0, 10)}...`)
-        }
 
         const handleMouseMove = (e: MouseEvent) => {
             if (containerRef.current) {
@@ -109,23 +91,17 @@ export default function LoginPage() {
     const handleLogin = async (e: React.FormEvent) => {
         e.preventDefault()
         setError(null)
-        logDebug("Inicio de proceso de login")
-
         if (isLoading) {
-            logDebug("Proceso ya en curso, ignorando solicitud")
             return
         }
         if (!username.trim() || !password.trim()) {
             setError('Por favor, ingresa tu nombre de usuario y contraseña')
-            logDebug("Campos incompletos")
             return
         }
 
         setIsLoading(true)
-        logDebug(`Intentando autenticar usuario: ${username}`)
 
         try {
-            logDebug("Consultando información de usuario en Supabase")
             const { data: userData, error: userError } = await supabase
                 .from('users')
                 .select('email, rol')
@@ -133,21 +109,16 @@ export default function LoginPage() {
                 .single()
 
             if (userError) {
-                logDebug(`Error al buscar usuario: ${userError.message}`)
                 setError('Usuario o contraseña incorrectos')
                 setIsLoading(false)
                 return
             }
 
             if (!userData) {
-                logDebug("No se encontraron datos de usuario")
                 setError('Usuario o contraseña incorrectos')
                 setIsLoading(false)
                 return
             }
-
-            logDebug(`Usuario encontrado, rol: ${userData.rol}`)
-            logDebug("Iniciando sesión con email y contraseña")
 
             const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
                 email: userData.email,
@@ -155,16 +126,10 @@ export default function LoginPage() {
             })
 
             if (authError) {
-                logDebug(`Error de autenticación: ${authError.message}`)
                 setError('Usuario o contraseña incorrectos')
                 setIsLoading(false)
                 return
             }
-
-            logDebug(`Autenticación exitosa. Session ID: ${authData.session.access_token.substring(0, 10)}...`)
-
-            // Guardar datos en cookies y localStorage
-            logDebug("Guardando token en cookies")
 
             try {
                 Cookies.set('authToken', authData.session.access_token, {
@@ -182,64 +147,31 @@ export default function LoginPage() {
                     path: '/'
                 })
 
-                logDebug("Cookies establecidas correctamente")
-
-                // Verificar que las cookies se guardaron
-                const savedToken = Cookies.get('authToken')
-                logDebug(`Cookie token guardado: ${savedToken ? 'Sí' : 'No'} - Primeros caracteres: ${savedToken ? savedToken.substring(0, 10) : 'N/A'}...`)
-            } catch (cookieError) {
-                logDebug(`Error al establecer cookies: ${cookieError instanceof Error ? cookieError.message : 'Error desconocido'}`)
-            }
-
-            logDebug("Guardando datos en localStorage")
-            try {
-                localStorage.setItem('authToken', authData.session.access_token)
-                localStorage.setItem('refreshToken', authData.session.refresh_token)
-                localStorage.setItem('userId', authData.user.id)
-                localStorage.setItem('username', username)
-                localStorage.setItem('rol', userData.rol)
-                logDebug("localStorage actualizado correctamente")
-            } catch (storageError) {
-                logDebug(`Error al guardar en localStorage: ${storageError instanceof Error ? storageError.message : 'Error desconocido'}`)
-            }
-
-            logDebug(`Intentando redireccionar a: ${redirectPath}`)
-
-            // Esperar un momento antes de redireccionar
-            setTimeout(() => {
-                logDebug(`Ejecutando redirección a ${redirectPath} después de timeout`)
-                try {
-                    router.push(redirectPath)
-                    // También intentar con window.location como fallback
-                    setTimeout(() => {
-                        if (document.location.pathname === '/login') {
-                            logDebug("Fallback: usando window.location.href para redireccionar")
-                            window.location.href = redirectPath
-                        }
-                    }, 1000)
-                } catch (routerError) {
-                    logDebug(`Error en router.push: ${routerError instanceof Error ? routerError.message : 'Error desconocido'}`)
-                    // Intento alternativo de redirección
+                // Esperar un momento antes de redireccionar
+                setTimeout(() => {
                     try {
-                        window.location.href = redirectPath
-                        logDebug("Usando window.location.href como alternativa")
-                    } catch (navError) {
-                        logDebug(`Error también en window.location: ${navError instanceof Error ? navError.message : 'Error desconocido'}`)
+                        router.push(redirectPath)
+                        // También intentar con window.location como fallback
+                        setTimeout(() => {
+                            if (document.location.pathname === '/login') {
+                                window.location.href = redirectPath
+                            }
+                        }, 1000)
+                    } catch {
+                        // Intento alternativo de redirección
+                        try {
+                            window.location.href = redirectPath
+                        } catch {
+                            // No se pudo redirigir
+                        }
                     }
-                }
-            }, 1000)
-
-        } catch (error) {
-            const errorMessage = error instanceof Error ? error.message : 'Error desconocido'
-            logDebug(`Error inesperado: ${errorMessage}`)
-            setError('Ocurrió un error inesperado. Por favor, intenta de nuevo.')
+                }, 1000)
+            } catch {
+                setIsLoading(false)
+            }
+        } catch {
             setIsLoading(false)
         }
-    }
-
-    // Función para limpiar la información de depuración
-    const clearDebug = () => {
-        setDebugInfo(null)
     }
 
     return (
@@ -351,24 +283,6 @@ export default function LoginPage() {
                                     </button>
                                 </div>
                             </form>
-
-                            {/* Panel de depuración (visible solo en desarrollo o con ?debug=true en URL) */}
-                            {(process.env.NODE_ENV === 'development' || searchParams.get('debug') === 'true') && debugInfo && (
-                                <div className="mt-6 p-4 bg-gray-900 rounded-lg border border-gray-700 text-xs text-gray-300">
-                                    <div className="flex justify-between mb-2">
-                                        <h3 className="font-bold text-blue-400">Información de depuración</h3>
-                                        <button
-                                            onClick={clearDebug}
-                                            className="text-red-400 hover:text-red-300"
-                                        >
-                                            Limpiar
-                                        </button>
-                                    </div>
-                                    <pre className="whitespace-pre-wrap overflow-auto max-h-40">
-                                        {debugInfo}
-                                    </pre>
-                                </div>
-                            )}
                         </div>
                     </div>
                 </div>
