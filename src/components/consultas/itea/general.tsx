@@ -561,8 +561,8 @@ export default function ConsultasIteaGeneral() {
     };
 
     return (
-        <div className="bg-black text-white max-h-screen p-4 md:p-2 flex flex-col overflow-y-hidden">
-            <div className="max-w-7xl mx-auto h-screen flex flex-col overflow-hidden">
+        <div className="bg-black text-white max-h-[102vh] p-4 md:p-2 flex flex-col overflow-y-auto">
+            <div className="w-full mx-auto max-h-full flex flex-col overflow-y-hidden">
                 {/* Encabezado */}
                 <div className="mb-6 border-b border-gray-700 pb-4">
                     <h1 className="text-2xl font-bold text-white">Consulta de Inventario ITEA</h1>
@@ -572,7 +572,7 @@ export default function ConsultasIteaGeneral() {
                 {/* Contenedor principal */}
                 <div className={getMainContainerClass()}>
                     {/* Panel izquierdo: Búsqueda, filtros y tabla */}
-                    <div className={`${selectedItem ? 'h-full overflow-y-hidden' : 'h-fill'}`}>
+                    <div className={`flex-1 min-w-0 flex flex-col ${selectedItem ? '' : 'w-full'}`}>
                         {/* Panel de acciones y búsqueda */}
                         <div className="mb-6 bg-gray-900 p-4 rounded-lg border border-gray-800">
                             <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-4">
@@ -738,8 +738,8 @@ export default function ConsultasIteaGeneral() {
                         </div>
 
                         {/* Tabla */}
-                        <div className="bg-gray-900 rounded-lg border border-gray-800 overflow-hidden mb-6 flex flex-col flex-grow">
-                            <div className="overflow-x-auto flex-grow overflow-y-auto max-h-[calc(100vh-300px)]">
+                        <div className="bg-gray-800 rounded-lg border border-gray-800 overflow-x-auto overflow-y-auto mb-6 flex flex-col flex-grow max-h-[70vh]">
+                            <div className="flex-grow min-w-[800px]">
                                 <table className="min-w-full divide-y divide-gray-800">
                                     <thead className="bg-gray-800 sticky top-0 z-10">
                                         <tr>
@@ -792,23 +792,25 @@ export default function ConsultasIteaGeneral() {
                                     </thead>
                                     <tbody className="bg-gray-900 divide-y divide-gray-800">
                                         {loading ? (
-                                            <tr>
-                                                <td colSpan={4} className="px-6 py-8 text-center text-gray-400">
-                                                    <div className="flex flex-col items-center justify-center space-y-3">
-                                                        <RefreshCw className="h-8 w-8 animate-spin text-blue-500" />
-                                                        <p>Cargando datos...</p>
+                                            <tr className="h-96">
+                                                <td colSpan={5} className="px-6 py-24 text-center text-gray-400">
+                                                    <div className="flex flex-col items-center justify-center space-y-4">
+                                                        <RefreshCw className="h-12 w-12 animate-spin text-blue-500" />
+                                                        <p className="text-lg font-medium">Cargando datos...</p>
+                                                        <p className="text-sm text-gray-500">Por favor espere mientras se cargan los registros de inventario</p>
                                                     </div>
                                                 </td>
                                             </tr>
                                         ) : error ? (
-                                            <tr>
-                                                <td colSpan={4} className="px-6 py-8 text-center">
-                                                    <div className="flex flex-col items-center justify-center space-y-3 text-red-400">
-                                                        <AlertCircle className="h-8 w-8" />
-                                                        <p>{error}</p>
+                                            <tr className="h-96">
+                                                <td colSpan={5} className="px-6 py-24 text-center">
+                                                    <div className="flex flex-col items-center justify-center space-y-4 text-red-400">
+                                                        <AlertCircle className="h-12 w-12" />
+                                                        <p className="text-lg font-medium">Error al cargar datos</p>
+                                                        <p className="text-sm text-gray-400 max-w-lg mx-auto mb-2">{error}</p>
                                                         <button
                                                             onClick={fetchMuebles}
-                                                            className="px-4 py-2 bg-gray-800 text-gray-300 rounded-md text-sm hover:bg-gray-700"
+                                                            className="px-4 py-2 bg-gray-800 text-gray-300 rounded-md text-sm hover:bg-gray-700 transition-colors"
                                                         >
                                                             Intentar nuevamente
                                                         </button>
@@ -816,18 +818,26 @@ export default function ConsultasIteaGeneral() {
                                                 </td>
                                             </tr>
                                         ) : muebles.length === 0 ? (
-                                            <tr>
-                                                <td colSpan={4} className="px-6 py-8 text-center text-gray-400">
-                                                    <div className="flex flex-col items-center justify-center space-y-3">
-                                                        <Search className="h-8 w-8" />
-                                                        <p>No se encontraron resultados</p>
-                                                        {(searchTerm || Object.values(filters).some(value => value !== '')) && (
-                                                            <button
-                                                                onClick={clearFilters}
-                                                                className="px-4 py-2 bg-gray-800 text-blue-400 rounded-md text-sm hover:bg-gray-700"
-                                                            >
-                                                                Limpiar filtros
-                                                            </button>
+                                            <tr className="h-96">
+                                                <td colSpan={5} className="px-6 py-24 text-center text-gray-400">
+                                                    <div className="flex flex-col items-center justify-center space-y-4">
+                                                        <Search className="h-12 w-12 text-gray-500" />
+                                                        <p className="text-lg font-medium">No se encontraron resultados</p>
+                                                        {(searchTerm || Object.values(filters).some(value => value !== '')) ? (
+                                                            <>
+                                                                <p className="text-sm text-gray-500 max-w-lg mx-auto">
+                                                                    No hay elementos que coincidan con los criterios de búsqueda actuales
+                                                                </p>
+                                                                <button
+                                                                    onClick={clearFilters}
+                                                                    className="px-4 py-2 bg-gray-800 text-blue-400 rounded-md text-sm hover:bg-gray-700 transition-colors flex items-center gap-2"
+                                                                >
+                                                                    <X className="h-4 w-4" />
+                                                                    Limpiar filtros
+                                                                </button>
+                                                            </>
+                                                        ) : (
+                                                            <p className="text-sm text-gray-500">No hay registros disponibles en el inventario</p>
                                                         )}
                                                     </div>
                                                 </td>
@@ -857,12 +867,12 @@ export default function ConsultasIteaGeneral() {
                                                         </td>
                                                         <td className="px-4 py-3 text-sm">
                                                             <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium ${normalizedStatus === 'ACTIVO' ? 'bg-green-900/70 text-green-200 border border-green-700' :
-                                                                    normalizedStatus === 'INACTIVO' ? 'bg-red-900/70 text-red-200 border border-red-700' :
-                                                                        normalizedStatus === 'NO LOCALIZADO' ? 'bg-yellow-900/70 text-yellow-200 border border-yellow-700' :
-                                                                            normalizedStatus === 'EN PROCESO DE BAJA' ? 'bg-purple-900/70 text-purple-200 border border-purple-700' :
-                                                                                normalizedStatus?.startsWith('C.1./') || normalizedStatus?.startsWith('CIATLAX/') ?
-                                                                                    'bg-blue-900/70 text-blue-200 border border-blue-700' :
-                                                                                    'bg-gray-700 text-gray-300 border border-gray-600'
+                                                                normalizedStatus === 'INACTIVO' ? 'bg-red-900/70 text-red-200 border border-red-700' :
+                                                                    normalizedStatus === 'NO LOCALIZADO' ? 'bg-yellow-900/70 text-yellow-200 border border-yellow-700' :
+                                                                        normalizedStatus === 'EN PROCESO DE BAJA' ? 'bg-purple-900/70 text-purple-200 border border-purple-700' :
+                                                                            normalizedStatus?.startsWith('C.1./') || normalizedStatus?.startsWith('CIATLAX/') ?
+                                                                                'bg-blue-900/70 text-blue-200 border border-blue-700' :
+                                                                                'bg-gray-700 text-gray-300 border border-gray-600'
                                                                 }`}>
                                                                 {normalizedStatus === 'ACTIVO' && <CheckCircle className="h-3.5 w-3.5 mr-1.5" />}
                                                                 {normalizedStatus === 'INACTIVO' && <XCircle className="h-3.5 w-3.5 mr-1.5" />}
@@ -882,7 +892,7 @@ export default function ConsultasIteaGeneral() {
                             </div>
 
                             {/* Paginación */}
-                            <div className="px-6 py-4 border-t border-gray-800 bg-gray-900 flex flex-col sm:flex-row items-center justify-between gap-4">
+                            <div className="px-6 py-4 border-t border-gray-800 bg-gray-900 flex flex-col sm:flex-row items-center justify-between gap-4 min-w-[118vh]">
                                 {/* Información de registros */}
                                 <div className="text-sm text-gray-400 font-medium">
                                     Mostrando <span className="text-white">{(currentPage - 1) * rowsPerPage + 1}-{Math.min(currentPage * rowsPerPage, filteredCount)}</span> de <span className="text-white">{filteredCount}</span> registros
@@ -1000,7 +1010,7 @@ export default function ConsultasIteaGeneral() {
                     {selectedItem && (
                         <div
                             ref={detailRef}
-                            className="bg-gray-900 border border-gray-800 rounded-lg shadow-xl overflow-y-auto h-full flex flex-col"
+                            className="bg-gray-900 border border-gray-800 rounded-lg shadow-xl overflow-visible flex flex-col flex-shrink-0 lg:w-[600px] min-w-full max-h-[85vh]"
                         >
                             <div className="sticky top-0 z-10 bg-gray-900 border-b border-gray-800 px-6 py-4 flex justify-between items-center">
                                 <h2 className="text-xl font-semibold text-white flex items-center gap-2">
@@ -1017,7 +1027,7 @@ export default function ConsultasIteaGeneral() {
                                 </button>
                             </div>
 
-                            <div className="flex-grow p-6">
+                            <div className="flex-grow p-6 overflow-y-auto">
                                 {isEditing ? (
                                     <div className="space-y-6">
                                         <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
