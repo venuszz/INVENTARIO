@@ -162,7 +162,7 @@ export default function NavigationBar() {
                         <div className="flex-shrink-0 flex items-center">
                             <Link href="/" onClick={closeAll} className="hover:opacity-80 transition-opacity">
                                 <img
-                                    src="/images/ITEA_logo.png"  // Ruta a tu imagen en la carpeta public
+                                    src="/images/ITEA_logo.svg"  // Ruta a tu imagen en la carpeta public
                                     alt="Logo ITEA"
                                     className="h-10 w-auto"  // Ajusta la altura según necesites
                                 />
