@@ -3,6 +3,9 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { ChevronDown, ChevronRight, User, LogOut, Database, FileText, Settings, Menu, X } from 'lucide-react';
+import Cookies from 'js-cookie';
+import { useRouter } from 'next/navigation';
+import supabase from '@/app/lib/supabase/client'; // Asegúrate de que la ruta sea correcta
 
 type MenuItem = {
     title: string;
@@ -18,11 +21,37 @@ type MenuItem = {
     }[];
 };
 
+export function useCerrarSesion() {
+    const router = useRouter();
+
+    const handleLogout = async () => {
+        try {
+            // Cerrar sesión en Supabase
+            await supabase.auth.signOut();
+
+            // Eliminar tokens y datos del usuario
+            Cookies.remove('authToken', { path: '/' });
+            localStorage.removeItem('authToken');
+            localStorage.removeItem('refreshToken');
+            localStorage.removeItem('userId');
+            localStorage.removeItem('username');
+
+            // Redireccionar al login
+            router.push('/login');
+        } catch (error) {
+            console.error('Error al cerrar sesión:', error);
+        }
+    };
+
+    return handleLogout;
+}
+
 export default function NavigationBar() {
     const pathname = usePathname();
     const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
     const [openMenu, setOpenMenu] = useState<string | null>(null);
     const [openSubmenu, setOpenSubmenu] = useState<string | null>(null);
+    const handleLogout = useCerrarSesion();
 
     // Cerrar menús al hacer clic fuera
     useEffect(() => {
@@ -232,9 +261,9 @@ export default function NavigationBar() {
                     </div>
 
                     <div className="hidden md:flex items-center space-x-3">
-                        <Link href="/logout" className="p-2 text-gray-300 hover:text-white hover:bg-gray-800 rounded-full transition-colors">
+                        <button onClick={handleLogout} className="p-2 text-gray-300 hover:text-white hover:bg-gray-800 rounded-full" title='Cerrar sesión'>
                             <LogOut className="h-5 w-5" />
-                        </Link>
+                        </button>
                     </div>
 
                     <button
@@ -322,9 +351,9 @@ export default function NavigationBar() {
                                 <Link href="/perfil" onClick={closeAll} className="p-2 text-gray-300 hover:text-white hover:bg-gray-800 rounded-full">
                                     <User className="h-5 w-5" />
                                 </Link>
-                                <Link href="/logout" onClick={closeAll} className="p-2 text-gray-300 hover:text-white hover:bg-gray-800 rounded-full">
+                                <button onClick={handleLogout} className="p-2 text-gray-300 hover:text-white hover:bg-gray-800 rounded-full" title='Cerrar sesión'>
                                     <LogOut className="h-5 w-5" />
-                                </Link>
+                                </button>
                             </div>
                         </div>
                     </div>
