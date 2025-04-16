@@ -132,20 +132,22 @@ export default function LoginPage() {
             }
 
             try {
+                // Set cookie to expire in 30 minutes
+                const expires = new Date(Date.now() + 30 * 60 * 1000);
                 Cookies.set('authToken', authData.session.access_token, {
-                    expires: 7,
+                    expires,
                     path: '/',
                     secure: process.env.NODE_ENV === 'production',
                     sameSite: 'strict'
-                })
+                });
 
                 Cookies.set('userData', JSON.stringify({
                     username: username,
                     rol: userData.rol
                 }), {
-                    expires: 7,
+                    expires,
                     path: '/'
-                })
+                });
 
                 // Esperar un momento antes de redireccionar
                 setTimeout(() => {

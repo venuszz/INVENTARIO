@@ -547,12 +547,15 @@ export default function ConsultasIneaGeneral() {
     };
 
     return (
-        <div className="bg-black text-white max-h-[102vh] p-4 md:p-2 flex flex-col  overflow-y-auto">
-            <div className="w-full mx-auto max-h-full flex flex-col overflow-y-hidden">
-                {/* Encabezado */}
-                <div className="mb-6 border-b border-gray-700 pb-4">
-                    <h1 className="text-2xl font-bold text-white">Consulta de Inventario INEA</h1>
-                    <p className="text-gray-400">Vista general de todos los bienes registrados en el sistema.</p>
+        <div className="bg-black text-white min-h-screen p-2 sm:p-4 md:p-6 lg:p-8">
+            <div className="w-full mx-auto bg-black rounded-lg sm:rounded-xl shadow-2xl overflow-hidden transition-all duration-500 transform border border-gray-800">
+                {/* Header con título */}
+                <div className="bg-black p-4 sm:p-6 flex flex-col sm:flex-row justify-between items-start sm:items-center border-b border-gray-800 gap-2 sm:gap-0">
+                    <h1 className="text-xl sm:text-2xl md:text-3xl font-bold flex items-center">
+                        <span className="mr-2 sm:mr-3 bg-gray-900 text-white p-1 sm:p-2 rounded-lg border border-gray-700 text-sm sm:text-base">INV</span>
+                        Consulta de Inventario INEA
+                    </h1>
+                    <p className="text-gray-400 text-sm sm:text-base">Vista general de todos los bienes registrados en el sistema.</p>
                 </div>
 
                 {/* Contenedor principal */}
@@ -560,7 +563,7 @@ export default function ConsultasIneaGeneral() {
                     {/* Panel izquierdo: Búsqueda, filtros y tabla */}
                     <div className={`flex-1 min-w-0 flex flex-col ${selectedItem ? '' : 'w-full'}`}>
                         {/* Panel de acciones y búsqueda */}
-                        <div className="mb-6 bg-gray-900 p-4 rounded-lg border border-gray-800">
+                        <div className="mb-6 bg-black p-4 rounded-lg border border-gray-800">
                             <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-4">
                                 <div className="relative flex-grow">
                                     <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -571,7 +574,7 @@ export default function ConsultasIneaGeneral() {
                                         value={searchTerm}
                                         onChange={(e) => setSearchTerm(e.target.value)}
                                         placeholder="Buscar por ID, descripción o usuario..."
-                                        className="pl-10 pr-4 py-2 w-full bg-gray-800 border border-gray-700 rounded-md text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                        className="pl-10 pr-4 py-2 w-full bg-black border border-gray-700 rounded-md text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:border-gray-500"
                                     />
                                 </div>
 
@@ -579,14 +582,14 @@ export default function ConsultasIneaGeneral() {
                                     <button
                                         onClick={() => setShowFilters(!showFilters)}
                                         className={`px-4 py-2 rounded-md font-medium flex items-center gap-2 transition-colors ${Object.values(filters).some(value => value !== '')
-                                            ? 'bg-blue-900 text-blue-200 hover:bg-blue-800'
+                                            ? 'bg-gray-900 text-blue-200 hover:bg-gray-800'
                                             : 'bg-gray-800 text-gray-300 hover:bg-gray-700'
                                             }`}
                                     >
                                         <Filter className="h-4 w-4" />
                                         Filtros
                                         {Object.values(filters).some(value => value !== '') && (
-                                            <span className="ml-1 bg-blue-600 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs">
+                                            <span className="ml-1 bg-black text-white rounded-full w-5 h-5 flex items-center justify-center text-xs">
                                                 {Object.values(filters).filter(value => value !== '').length}
                                             </span>
                                         )}
@@ -594,7 +597,7 @@ export default function ConsultasIneaGeneral() {
 
                                     <button
                                         onClick={fetchMuebles}
-                                        className="px-4 py-2 bg-gray-800 text-gray-300 rounded-md font-medium flex items-center gap-2 hover:bg-gray-700 transition-colors"
+                                        className="px-4 py-2 bg-black text-gray-300 rounded-md font-medium flex items-center gap-2 hover:bg-gray-700 transition-colors"
                                     >
                                         <RefreshCw className="h-4 w-4" />
                                         <span className="hidden sm:inline">Actualizar</span>
@@ -604,15 +607,15 @@ export default function ConsultasIneaGeneral() {
 
                             {/* Panel de filtros */}
                             {showFilters && (
-                                <div className="mt-6 border border-gray-700 rounded-xl bg-gray-800/90 shadow-lg backdrop-blur-sm transition-all duration-300 overflow-hidden">
+                                <div className="mt-6 border border-gray-700 rounded-xl bg-black shadow-lg backdrop-blur-sm transition-all duration-300 overflow-hidden">
                                     <div className="flex justify-between items-center px-5 py-4 border-b border-gray-700">
                                         <div className="flex items-center gap-2">
-                                            <Filter className="h-5 w-5 text-blue-400" />
+                                            <Filter className="h-5 w-5 text-gray-400" />
                                             <h3 className="font-semibold text-gray-200 text-lg">Filtros avanzados</h3>
                                         </div>
                                         <button
                                             onClick={clearFilters}
-                                            className="text-sm text-blue-400 hover:text-blue-300 flex items-center gap-1.5 transition-colors duration-200 px-3 py-1.5 rounded-lg hover:bg-gray-700/70 border border-transparent hover:border-gray-600"
+                                            className="text-sm text-gray-400 hover:text-gray-300 flex items-center gap-1.5 transition-colors duration-200 px-3 py-1.5 rounded-lg hover:bg-gray-700/70 border border-transparent hover:border-gray-600"
                                             aria-label="Limpiar todos los filtros"
                                         >
                                             <span>Limpiar filtros</span>
@@ -633,7 +636,7 @@ export default function ConsultasIneaGeneral() {
                                                         id="estado-select"
                                                         value={filters.estado}
                                                         onChange={(e) => setFilters({ ...filters, estado: e.target.value })}
-                                                        className="w-full bg-gray-700 border border-gray-600 rounded-lg px-3 py-2.5 text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 appearance-none transition-all duration-200"
+                                                        className="w-full bg-gray-700 border border-gray-600 rounded-lg px-3 py-2.5 text-white focus:outline-none focus:ring-2 focus:ring-gray-500 focus:border-gray-500 appearance-none transition-all duration-200"
                                                     >
                                                         <option value="">Todos los estados</option>
                                                         {filterOptions.estados.map((estado) => (
@@ -657,7 +660,7 @@ export default function ConsultasIneaGeneral() {
                                                         id="estatus-select"
                                                         value={filters.estatus}
                                                         onChange={(e) => setFilters({ ...filters, estatus: e.target.value })}
-                                                        className="w-full bg-gray-700 border border-gray-600 rounded-lg px-3 py-2.5 text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 appearance-none transition-all duration-200"
+                                                        className="w-full bg-gray-700 border border-gray-600 rounded-lg px-3 py-2.5 text-white focus:outline-none focus:ring-2 focus:ring-gray-500 focus:border-gray-500 appearance-none transition-all duration-200"
                                                     >
                                                         <option value="">Todos los estatus</option>
                                                         {filterOptions.estatus.map((status) => (
@@ -681,7 +684,7 @@ export default function ConsultasIneaGeneral() {
                                                         id="area-select"
                                                         value={filters.area}
                                                         onChange={(e) => setFilters({ ...filters, area: e.target.value })}
-                                                        className="w-full bg-gray-700 border border-gray-600 rounded-lg px-3 py-2.5 text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 appearance-none transition-all duration-200"
+                                                        className="w-full bg-gray-700 border border-gray-600 rounded-lg px-3 py-2.5 text-white focus:outline-none focus:ring-2 focus:ring-gray-500 focus:border-gray-500 appearance-none transition-all duration-200"
                                                     >
                                                         <option value="">Todas las áreas</option>
                                                         {filterOptions.areas.map((area) => (
@@ -705,7 +708,7 @@ export default function ConsultasIneaGeneral() {
                                                         id="rubro-select"
                                                         value={filters.rubro}
                                                         onChange={(e) => setFilters({ ...filters, rubro: e.target.value })}
-                                                        className="w-full bg-gray-700 border border-gray-600 rounded-lg px-3 py-2.5 text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 appearance-none transition-all duration-200"
+                                                        className="w-full bg-gray-700 border border-gray-600 rounded-lg px-3 py-2.5 text-white focus:outline-none focus:ring-2 focus:ring-gray-500 focus:border-gray-500 appearance-none transition-all duration-200"
                                                     >
                                                         <option value="">Todos los rubros</option>
                                                         {filterOptions.rubros.map((rubro) => (
@@ -724,10 +727,10 @@ export default function ConsultasIneaGeneral() {
                         </div>
 
                         {/* Tabla */}
-                        <div className="bg-gray-800 rounded-lg border border-gray-800 overflow-x-auto overflow-y-auto mb-6 flex flex-col flex-grow max-h-[70vh]">
+                        <div className="bg-black rounded-lg border border-gray-800 overflow-x-auto overflow-y-auto mb-6 flex flex-col flex-grow max-h-[70vh]">
                             <div className="flex-grow min-w-[800px]">
                                 <table className="min-w-full divide-y divide-gray-800">
-                                    <thead className="bg-gray-800 sticky top-0 z-10">
+                                    <thead className="bg-black sticky top-0 z-10">
                                         <tr>
                                             <th
                                                 onClick={() => handleSort('id_inv')}
@@ -776,12 +779,12 @@ export default function ConsultasIneaGeneral() {
                                             </th>
                                         </tr>
                                     </thead>
-                                    <tbody className="bg-gray-900 divide-y divide-gray-800">
+                                    <tbody className="bg-black divide-y divide-gray-800">
                                         {loading ? (
                                             <tr className="h-96">
                                                 <td colSpan={5} className="px-6 py-24 text-center text-gray-400">
                                                     <div className="flex flex-col items-center justify-center space-y-4">
-                                                        <RefreshCw className="h-12 w-12 animate-spin text-blue-500" />
+                                                        <RefreshCw className="h-12 w-12 animate-spin text-gray-500" />
                                                         <p className="text-lg font-medium">Cargando datos...</p>
                                                         <p className="text-sm text-gray-500">Por favor espere mientras se cargan los registros de inventario</p>
                                                     </div>
@@ -849,9 +852,9 @@ export default function ConsultasIneaGeneral() {
                                                     </td>
                                                     <td className="px-4 py-3 text-sm">
                                                         <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium ${item.estatus === 'ACTIVO' ? 'bg-green-900/70 text-green-200 border border-green-700' :
-                                                                item.estatus === 'INACTIVO' ? 'bg-red-900/70 text-red-200 border border-red-700' :
-                                                                    item.estatus === 'NO LOCALIZADO' ? 'bg-yellow-900/70 text-yellow-200 border border-yellow-700' :
-                                                                        'bg-gray-700 text-gray-300 border border-gray-600'
+                                                            item.estatus === 'INACTIVO' ? 'bg-red-900/70 text-red-200 border border-red-700' :
+                                                                item.estatus === 'NO LOCALIZADO' ? 'bg-yellow-900/70 text-yellow-200 border border-yellow-700' :
+                                                                    'bg-gray-700 text-gray-300 border border-gray-600'
                                                             }`}>
                                                             {item.estatus === 'ACTIVO' && <CheckCircle className="h-3.5 w-3.5 mr-1.5" />}
                                                             {item.estatus === 'INACTIVO' && <XCircle className="h-3.5 w-3.5 mr-1.5" />}
@@ -867,7 +870,7 @@ export default function ConsultasIneaGeneral() {
                             </div>
 
                             {/* Paginación */}
-                            <div className="px-6 py-4 border-t border-gray-800 bg-gray-900 flex flex-col sm:flex-row items-center justify-between gap-4 min-w-[93vh]">
+                            <div className="px-6 py-4 border-t border-gray-800 bg-black flex flex-col sm:flex-row items-center justify-between gap-4 min-w-[93vh]">
                                 {/* Información de registros */}
                                 <div className="text-sm text-gray-400 font-medium">
                                     Mostrando <span className="text-white">{(currentPage - 1) * rowsPerPage + 1}-{Math.min(currentPage * rowsPerPage, filteredCount)}</span> de <span className="text-white">{filteredCount}</span> registros
@@ -915,7 +918,7 @@ export default function ConsultasIneaGeneral() {
                                                     onClick={() => typeof page === 'number' ? changePage(page) : null}
                                                     disabled={page === '...'}
                                                     className={`min-w-[32px] h-8 px-2 rounded-md text-sm font-medium flex items-center justify-center ${currentPage === page
-                                                        ? 'bg-blue-600 text-white'
+                                                        ? 'bg-black text-white'
                                                         : page === '...'
                                                             ? 'text-gray-500 cursor-default'
                                                             : 'text-gray-400 hover:bg-gray-800 hover:text-white'
@@ -985,9 +988,9 @@ export default function ConsultasIneaGeneral() {
                     {selectedItem && (
                         <div
                             ref={detailRef}
-                            className="bg-gray-900 border border-gray-800 rounded-lg shadow-xl overflow-visible flex flex-col flex-shrink-0 lg:w-[600px] min-w-full max-h-[85vh]"
+                            className="bg-black border border-gray-800 rounded-lg shadow-xl overflow-visible flex flex-col flex-shrink-0 lg:w-[600px] min-w-full max-h-[85vh]"
                         >
-                            <div className="sticky top-0 z-10 bg-gray-900 border-b border-gray-800 px-6 py-4 flex justify-between items-center">
+                            <div className="sticky top-0 z-10 bg-black border-b border-gray-800 px-6 py-4 flex justify-between items-center">
                                 <h2 className="text-xl font-semibold text-white flex items-center gap-2">
                                     <ClipboardList className="h-5 w-5 text-blue-400" />
                                     Detalle del Artículo
