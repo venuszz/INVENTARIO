@@ -37,6 +37,7 @@ interface FilterOptions {
     rubros: string[];
     formasAdquisicion: string[];
     causasBaja: string[];
+    usuarios: { nombre: string; area: string }[];
 }
 
 interface Message {
@@ -80,7 +81,8 @@ export default function RegistroBienesForm() {
         areas: [],
         rubros: [],
         formasAdquisicion: ['Compra', 'Donación', 'Transferencia', 'Comodato'],
-        causasBaja: ['Obsolescencia', 'Daño irreparable', 'Robo o extravío', 'Transferencia', 'Donación']
+        causasBaja: ['Obsolescencia', 'Daño irreparable', 'Robo o extravío', 'Transferencia', 'Donación'],
+        usuarios: []
     });
 
     const imageFileRef = useRef<File | null>(null);
@@ -109,22 +111,39 @@ export default function RegistroBienesForm() {
             const estatusMueblesItea = await fetchUniqueValues('mueblesitea', 'estatus');
             const estatusUnicos = [...new Set([...estatusMuebles, ...estatusMueblesItea])];
 
-            // Obtener áreas únicas de ambas tablas
-            const areasMuebles = await fetchUniqueValues('muebles', 'area');
-            const areasMueblesItea = await fetchUniqueValues('mueblesitea', 'area');
-            const areasUnicas = [...new Set([...areasMuebles, ...areasMueblesItea])];
-
             // Obtener rubros únicos (solo de mueblesitea como antes)
             const rubrosUnicos = [...new Set(
                 (await fetchUniqueValues('mueblesitea', 'rubro'))
             )];
+
+            // Obtener áreas desde la tabla areas
+            const { data: areasData } = await supabase
+                .from('areas')
+                .select('itea')
+                .not('itea', 'is', null);
+
+            const areasUnicas = [...new Set(
+                areasData?.map(item => item.itea?.trim().toUpperCase()).filter(Boolean) || []
+            )];
+
+            // Obtener usuarios desde la tabla directorio
+            const { data: usuariosData } = await supabase
+                .from('directorio')
+                .select('nombre, area')
+                .not('nombre', 'is', null);
+
+            const usuarios = usuariosData?.map(item => ({
+                nombre: item.nombre?.trim().toUpperCase() || '',
+                area: item.area?.trim().toUpperCase() || ''
+            })) || [];
 
             setFilterOptions(prev => ({
                 ...prev,
                 estados: estadosUnicos,
                 estatus: estatusUnicos,
                 areas: areasUnicas,
-                rubros: rubrosUnicos
+                rubros: rubrosUnicos,
+                usuarios: usuarios
             }));
 
             // Establecer valores por defecto
@@ -632,30 +651,35 @@ export default function RegistroBienesForm() {
 
                             <div className="space-y-2 sm:space-y-4">
                                 <div>
-                                    <label className="block mb-1 text-sm sm:text-base font-medium">Usuario Final <span className="text-red-500">*</span></label>
-                                    <input
-                                        type="text"
+                                    <label className="block mb-1 text-sm sm:text-base font-medium">Director/Jefe de Área<span className="text-red-500">*</span></label>
+                                    <select
+                                    title='Seleccionar Director/Jefe de Área'
                                         name="usufinal"
                                         value={formData.usufinal}
                                         onChange={handleChange}
                                         onBlur={handleBlur}
                                         className={`w-full bg-black border ${!isFieldValid('usufinal') ? 'border-red-500' : 'border-gray-700'} rounded-lg p-2 sm:p-3 focus:border-white focus:ring focus:ring-gray-700 focus:ring-opacity-50 transition-all text-sm sm:text-base`}
-                                        placeholder="Nombre del usuario final"
-                                    />
+                                        required
+                                    >
+                                        <option value="">Seleccionar Director/Jefe de Área</option>
+                                        {filterOptions.usuarios.map((usuario, index) => (
+                                            <option key={index} value={usuario.nombre}>{usuario.nombre}</option>
+                                        ))}
+                                    </select>
                                     {!isFieldValid('usufinal') && (
                                         <p className="text-red-500 text-xs sm:text-sm mt-1">Este campo es obligatorio</p>
                                     )}
                                 </div>
 
                                 <div>
-                                    <label className="block mb-1 text-sm sm:text-base font-medium">Resguardante</label>
+                                    <label className="block mb-1 text-sm sm:text-base font-medium">Usuario Final</label>
                                     <input
                                         type="text"
-                                        name="resguardante"
+                                        name="Usuario Final"
                                         value={formData.resguardante}
                                         onChange={handleChange}
                                         className="w-full bg-black border border-gray-700 rounded-lg p-2 sm:p-3 focus:border-white focus:ring focus:ring-gray-700 focus:ring-opacity-50 transition-all text-sm sm:text-base"
-                                        placeholder="Persona responsable del resguardo"
+                                        placeholder="Persona que Usará el Bien"
                                     />
                                 </div>
 

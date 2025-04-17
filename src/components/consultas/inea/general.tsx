@@ -35,6 +35,7 @@ interface FilterOptions {
     estatus: string[];
     areas: string[];
     rubros: string[];
+    directores: { nombre: string; area: string }[];
 }
 
 const ImagePreview = ({ imagePath }: { imagePath: string | null }) => {
@@ -150,7 +151,8 @@ export default function ConsultasIneaGeneral() {
         estados: [],
         estatus: [],
         areas: [],
-        rubros: []
+        rubros: [],
+        directores: []
     });
     const [showFilters, setShowFilters] = useState(false);
     const [selectedItem, setSelectedItem] = useState<Mueble | null>(null);
@@ -224,35 +226,48 @@ export default function ConsultasIneaGeneral() {
 
     const fetchFilterOptions = useCallback(async () => {
         try {
+            // Obtener estados únicos
             const { data: estados } = await supabase
                 .from('muebles')
                 .select('estado')
                 .filter('estado', 'not.is', null)
                 .limit(1000);
 
+            // Obtener estatus únicos
             const { data: estatus } = await supabase
                 .from('muebles')
                 .select('estatus')
                 .filter('estatus', 'not.is', null)
                 .limit(1000);
 
-            const { data: areas } = await supabase
-                .from('muebles')
-                .select('area')
-                .filter('area', 'not.is', null)
-                .limit(1000);
-
+            // Obtener rubros únicos
             const { data: rubros } = await supabase
                 .from('muebles')
                 .select('rubro')
                 .filter('rubro', 'not.is', null)
                 .limit(1000);
 
+            // Obtener áreas desde la tabla areas
+            const { data: areasData } = await supabase
+                .from('areas')
+                .select('itea')
+                .not('itea', 'is', null);
+
+            // Obtener directores/jefes de área desde la tabla directorio
+            const { data: directoresData } = await supabase
+                .from('directorio')
+                .select('nombre, area')
+                .not('nombre', 'is', null);
+
             setFilterOptions({
                 estados: [...new Set(estados?.map(item => item.estado).filter(Boolean))] as string[],
                 estatus: [...new Set(estatus?.map(item => item.estatus).filter(Boolean))] as string[],
-                areas: [...new Set(areas?.map(item => item.area).filter(Boolean))] as string[],
-                rubros: [...new Set(rubros?.map(item => item.rubro).filter(Boolean))] as string[]
+                areas: [...new Set(areasData?.map(item => item.itea).filter(Boolean))] as string[],
+                rubros: [...new Set(rubros?.map(item => item.rubro).filter(Boolean))] as string[],
+                directores: directoresData?.map(item => ({
+                    nombre: item.nombre?.trim().toUpperCase() || '',
+                    area: item.area?.trim().toUpperCase() || ''
+                })) || []
             });
         } catch (error) {
             console.error('Error al cargar opciones de filtro:', error);
@@ -764,7 +779,7 @@ export default function ConsultasIneaGeneral() {
                                                 className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider cursor-pointer hover:bg-gray-700"
                                             >
                                                 <div className="flex items-center gap-1">
-                                                        Director/Jefe de Área
+                                                    Director/Jefe de Área
                                                     <ArrowUpDown className="h-3 w-3" />
                                                 </div>
                                             </th>
@@ -1263,6 +1278,7 @@ export default function ConsultasIneaGeneral() {
                                                         onChange={(e) => handleEditFormChange(e, 'area')}
                                                         className="appearance-none w-full bg-gray-800 border border-gray-700 rounded-lg pl-4 pr-10 py-2.5 text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
                                                     >
+                                                        <option value="">Seleccionar Área</option>
                                                         {filterOptions.areas.map((area) => (
                                                             <option key={area} value={area}>{area}</option>
                                                         ))}
@@ -1274,15 +1290,19 @@ export default function ConsultasIneaGeneral() {
                                             <div className="form-group">
                                                 <label className="block text-sm font-medium text-gray-400 mb-2">Director/Jefe de Área</label>
                                                 <div className="relative">
-                                                    <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500 pointer-events-none" />
-                                                    <input
-                                                        type="text"
-                                                        title="Ingrese el Director/Jefe de Área"
-                                                        placeholder="Ingrese el Director/Jefe de Área"
+                                                    <select
+                                                        title='Seleccione el Director/Jefe de Área'
+                                                        name="usufinal"
                                                         value={editFormData?.usufinal || ''}
                                                         onChange={(e) => handleEditFormChange(e, 'usufinal')}
-                                                        className="w-full bg-gray-800 border border-gray-700 rounded-lg pl-10 pr-4 py-2.5 text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
-                                                    />
+                                                        className="w-full bg-gray-800 border border-gray-700 rounded-lg pl-4 pr-10 py-2.5 text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all appearance-none"
+                                                    >
+                                                        <option value="">Seleccionar Director/Jefe</option>
+                                                        {filterOptions.directores.map((director, index) => (
+                                                            <option key={index} value={director.nombre}>{director.nombre}</option>
+                                                        ))}
+                                                    </select>
+                                                    <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />
                                                 </div>
                                             </div>
 

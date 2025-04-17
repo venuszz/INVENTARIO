@@ -645,9 +645,11 @@ export default function CrearResguardos() {
                                                         </td>
                                                         <td className="px-4 py-4">
                                                             <div className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium 
-                                                                ${mueble.estado === 'BUENO' ? 'bg-green-900/20 text-green-300 border border-green-900' :
-                                                                    mueble.estado === 'REGULAR' ? 'bg-yellow-900/20 text-yellow-300 border border-yellow-900' :
-                                                                        'bg-red-900/20 text-red-300 border border-red-900'}`}>
+                                                                ${mueble.estado === 'B' ? 'bg-green-900/20 text-green-300 border border-green-900' :
+                                                                mueble.estado === 'R' ? 'bg-yellow-900/20 text-yellow-300 border border-yellow-900' :
+                                                                mueble.estado === 'M' ? 'bg-red-900/20 text-red-300 border border-red-900' :
+                                                                mueble.estado === 'N' ? 'bg-blue-900/20 text-blue-300 border border-blue-900' :
+                                                                'bg-gray-900/20 text-gray-300 border border-gray-900'}`}>
                                                                 {mueble.estado}
                                                             </div>
                                                         </td>
@@ -764,9 +766,10 @@ export default function CrearResguardos() {
                                     <input
                                         type="text"
                                         value={formData.area}
+                                        readOnly={true}
                                         onChange={(e) => setFormData({ ...formData, area: e.target.value })}
                                         placeholder="Área"
-                                        className="block w-full bg-black border border-gray-800 rounded-lg py-2.5 px-4 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                        className="block w-full bg-black border border-gray-800 rounded-lg py-2.5 px-4 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-gray-300"
                                     />
                                 </div>
                                 <div>
@@ -774,9 +777,10 @@ export default function CrearResguardos() {
                                     <input
                                         type="text"
                                         value={formData.puesto}
+                                        readOnly={true}
                                         onChange={(e) => setFormData({ ...formData, puesto: e.target.value })}
                                         placeholder="Puesto"
-                                        className="block w-full bg-black border border-gray-800 rounded-lg py-2.5 px-4 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                        className="block w-full bg-black border border-gray-800 rounded-lg py-2.5 px-4 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-gray-300"
                                     />
                                 </div>
                             </div>
@@ -893,7 +897,7 @@ export default function CrearResguardos() {
 
             {/* Director Modal */}
             {showDirectorModal && (
-                <div className="fixed inset-0 bg-black/90 flex items-center justify-center z-50 px-4 backdrop-blur-sm animate-fadeIn">
+                <div className="fixed inset-0 bg-black/90 flex items-center justify-center z-50 px-4 animate-fadeIn">
                     <div className="bg-black rounded-2xl shadow-2xl border border-yellow-600/30 w-full max-w-md overflow-hidden transition-all duration-300 transform">
                         <div className="relative p-6 bg-gradient-to-b from-black to-gray-900">
                             <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-yellow-500/60 via-yellow-400 to-yellow-500/60"></div>
@@ -904,7 +908,7 @@ export default function CrearResguardos() {
                                 </div>
                                 <h3 className="text-2xl font-bold text-white">¡Ups! Falta información</h3>
                                 <p className="text-gray-400 mt-2">
-                                    Necesitamos algunos datos adicionales del director seleccionado
+                                    Necesitamos algunos datos adicionales del director seleccionado para Continuar
                                 </p>
                             </div>
 
