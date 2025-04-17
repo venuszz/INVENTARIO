@@ -102,9 +102,10 @@ export default function LoginPage() {
         setIsLoading(true)
 
         try {
+            // Primero obtenemos los datos completos del usuario
             const { data: userData, error: userError } = await supabase
                 .from('users')
-                .select('email, rol')
+                .select('email, rol, first_name, last_name')
                 .eq('username', username)
                 .single()
 
@@ -141,8 +142,11 @@ export default function LoginPage() {
                     sameSite: 'strict'
                 });
 
+                // Guardar información extendida del usuario en la cookie
                 Cookies.set('userData', JSON.stringify({
                     username: username,
+                    firstName: userData.first_name,
+                    lastName: userData.last_name,
                     rol: userData.rol
                 }), {
                     expires,
@@ -283,6 +287,18 @@ export default function LoginPage() {
                                     >
                                         {isLoading ? 'Procesando...' : 'Iniciar Sesión'}
                                     </button>
+                                </div>
+
+                                <div className="text-center mt-6">
+                                    <p className="text-gray-400">
+                                        ¿No tiene una cuenta?
+                                        <a
+                                            href="/register"
+                                            className="text-blue-400 ml-2 hover:underline"
+                                        >
+                                            Registrarse
+                                        </a>
+                                    </p>
                                 </div>
                             </form>
                         </div>

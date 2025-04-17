@@ -3,9 +3,12 @@
 import { useState, useEffect, useRef } from 'react'
 import supabase from '@/app/lib/supabase/client'
 import { useRouter } from 'next/navigation'
-import { User, Lock, Shield } from 'lucide-react'
+import { User, Lock, Shield, UserCircle, Users } from 'lucide-react'
 
 export default function RegisterPage() {
+    const [step, setStep] = useState(1) // Paso 1: Datos personales, Paso 2: Credenciales
+    const [firstName, setFirstName] = useState('')
+    const [lastName, setLastName] = useState('')
     const [username, setUsername] = useState('')
     const [password, setPassword] = useState('')
     const [rol, setRol] = useState('usuario')
@@ -85,7 +88,19 @@ export default function RegisterPage() {
         }
     }, [])
 
-    const validateInputs = () => {
+    const validatePersonalData = () => {
+        if (!firstName.trim()) {
+            setError('Por favor, ingresa tu nombre')
+            return false
+        }
+        if (!lastName.trim()) {
+            setError('Por favor, ingresa tu apellido')
+            return false
+        }
+        return true
+    }
+
+    const validateCredentials = () => {
         if (!username.trim()) {
             setError('Por favor, ingresa un nombre de usuario')
             return false
@@ -101,21 +116,31 @@ export default function RegisterPage() {
         return true
     }
 
+    const handleNextStep = () => {
+        setError(null)
+        if (validatePersonalData()) {
+            setStep(2)
+        }
+    }
+
+    const handlePrevStep = () => {
+        setError(null)
+        setStep(1)
+    }
+
     const handleRegister = async (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault()
         setError(null)
 
         if (isLoading) return
-        if (!validateInputs()) return
+        if (!validateCredentials()) return
 
         setIsLoading(true)
 
         try {
-
             // Generar un email único para Supabase con formato válido pero SIN timestamp
             const sanitizedUsername = username.replace(/[^a-zA-Z0-9]/g, '').toLowerCase()
-            const uniqueEmail = `${sanitizedUsername}@guerita.com`
-
+            const uniqueEmail = `${sanitizedUsername}@inventario.com`
 
             // Verificar si el nombre de usuario ya existe
             const { data: existingUser, error: checkError } = await supabase
@@ -156,6 +181,8 @@ export default function RegisterPage() {
                 options: {
                     data: {
                         username,
+                        firstName,
+                        lastName,
                         rol
                     },
                     emailRedirectTo: undefined,
@@ -177,6 +204,8 @@ export default function RegisterPage() {
                         id: data.user.id,
                         username,
                         email: uniqueEmail,
+                        first_name: firstName,
+                        last_name: lastName,
                         rol: rol,
                     })
 
@@ -192,7 +221,7 @@ export default function RegisterPage() {
 
                     if (confirmError) {
                     }
-                } catch  {
+                } catch {
                 }
             }
 
@@ -282,71 +311,137 @@ export default function RegisterPage() {
                         </div>
 
                         <div className="p-8 bg-black/40">
-                            <h2 className="text-2xl font-bold text-white mb-8 text-center">
+                            <h2 className="text-2xl font-bold text-white mb-6 text-center">
                                 Registro de Usuario
                             </h2>
 
-                            <form onSubmit={handleRegister} className="space-y-6">
+                            <div className="flex justify-center mb-6">
+                                <div className="flex items-center">
+                                    <div className={`w-10 h-10 rounded-full flex items-center justify-center ${step === 1 ? 'bg-blue-600' : 'bg-blue-900'} text-white font-bold`}>
+                                        1
+                                    </div>
+                                    <div className={`h-1 w-20 ${step === 1 ? 'bg-gray-600' : 'bg-blue-600'}`}></div>
+                                    <div className={`w-10 h-10 rounded-full flex items-center justify-center ${step === 2 ? 'bg-blue-600' : 'bg-blue-900'} text-white font-bold`}>
+                                        2
+                                    </div>
+                                </div>
+                            </div>
+
+                            <p className="text-center text-gray-300 mb-6">
+                                {step === 1 ? 'Ingresa tus datos personales' : 'Configura tus credenciales de acceso'}
+                            </p>
+
+                            <form onSubmit={step === 1 ? (e => { e.preventDefault(); handleNextStep(); }) : handleRegister} className="space-y-6">
                                 {error && (
                                     <div className="bg-red-500/20 border border-red-500/30 text-red-300 p-3 rounded-lg text-center">
                                         {error}
                                     </div>
                                 )}
 
-                                <div className="relative">
-                                    <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                                        <User className="text-blue-400" size={20} />
-                                    </div>
-                                    <input
-                                        type="text"
-                                        placeholder="Nombre de Usuario"
-                                        value={username}
-                                        onChange={(e) => setUsername(e.target.value)}
-                                        required
-                                        className="w-full pl-12 pr-4 py-4 bg-gray-800 text-white rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all text-lg"
-                                    />
-                                </div>
+                                {step === 1 ? (
+                                    <>
+                                        <div className="relative">
+                                            <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                                                <UserCircle className="text-blue-400" size={20} />
+                                            </div>
+                                            <input
+                                                type="text"
+                                                placeholder="Nombre(s)"
+                                                value={firstName}
+                                                onChange={(e) => setFirstName(e.target.value)}
+                                                required
+                                                className="w-full pl-12 pr-4 py-4 bg-gray-800 text-white rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all text-lg"
+                                            />
+                                        </div>
 
-                                <div className="relative">
-                                    <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                                        <Lock className="text-blue-400" size={20} />
-                                    </div>
-                                    <input
-                                        type="password"
-                                        placeholder="Contraseña"
-                                        value={password}
-                                        onChange={(e) => setPassword(e.target.value)}
-                                        required
-                                        minLength={8}
-                                        className="w-full pl-12 pr-4 py-4 bg-gray-800 text-white rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all text-lg"
-                                    />
-                                </div>
+                                        <div className="relative">
+                                            <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                                                <Users className="text-blue-400" size={20} />
+                                            </div>
+                                            <input
+                                                type="text"
+                                                placeholder="Apellido(s)"
+                                                value={lastName}
+                                                onChange={(e) => setLastName(e.target.value)}
+                                                required
+                                                className="w-full pl-12 pr-4 py-4 bg-gray-800 text-white rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all text-lg"
+                                            />
+                                        </div>
 
-                                <div className="relative">
-                                    <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                                        <Shield className="text-blue-400" size={20} />
-                                    </div>
-                                    <select
-                                        value={rol}
-                                        onChange={(e) => setRol(e.target.value)}
-                                        title='Rol de Usuario'
-                                        className="w-full pl-12 pr-4 py-4 bg-gray-800 text-white rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all text-lg appearance-none"
-                                        required
-                                    >
-                                        <option value="usuario">Usuario Normal</option>
-                                        <option value="admin">Administrador</option>
-                                    </select>
-                                </div>
+                                        <div className="pt-4">
+                                            <button
+                                                type="submit"
+                                                className="w-full bg-blue-600 text-white py-4 rounded-xl hover:bg-blue-700 transition-colors font-semibold text-lg"
+                                            >
+                                                Continuar
+                                            </button>
+                                        </div>
+                                    </>
+                                ) : (
+                                    <>
+                                        <div className="relative">
+                                            <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                                                <User className="text-blue-400" size={20} />
+                                            </div>
+                                            <input
+                                                type="text"
+                                                placeholder="Nombre de Usuario"
+                                                value={username}
+                                                onChange={(e) => setUsername(e.target.value)}
+                                                required
+                                                className="w-full pl-12 pr-4 py-4 bg-gray-800 text-white rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all text-lg"
+                                            />
+                                        </div>
 
-                                <div className="pt-4">
-                                    <button
-                                        type="submit"
-                                        disabled={isLoading}
-                                        className="w-full bg-blue-600 text-white py-4 rounded-xl hover:bg-blue-700 transition-colors font-semibold disabled:opacity-50 disabled:cursor-not-allowed text-lg"
-                                    >
-                                        {isLoading ? 'Procesando...' : 'Crear Cuenta'}
-                                    </button>
-                                </div>
+                                        <div className="relative">
+                                            <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                                                <Lock className="text-blue-400" size={20} />
+                                            </div>
+                                            <input
+                                                type="password"
+                                                placeholder="Contraseña"
+                                                value={password}
+                                                onChange={(e) => setPassword(e.target.value)}
+                                                required
+                                                minLength={8}
+                                                className="w-full pl-12 pr-4 py-4 bg-gray-800 text-white rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all text-lg"
+                                            />
+                                        </div>
+
+                                        <div className="relative">
+                                            <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                                                <Shield className="text-blue-400" size={20} />
+                                            </div>
+                                            <select
+                                                value={rol}
+                                                onChange={(e) => setRol(e.target.value)}
+                                                title='Rol de Usuario'
+                                                className="w-full pl-12 pr-4 py-4 bg-gray-800 text-white rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all text-lg appearance-none"
+                                                required
+                                            >
+                                                <option value="usuario">Usuario Normal</option>
+                                                <option value="admin">Administrador</option>
+                                            </select>
+                                        </div>
+
+                                        <div className="grid grid-cols-2 gap-4 pt-4">
+                                            <button
+                                                type="button"
+                                                onClick={handlePrevStep}
+                                                className="w-full bg-gray-700 text-white py-4 rounded-xl hover:bg-gray-600 transition-colors font-semibold text-lg"
+                                            >
+                                                Atrás
+                                            </button>
+                                            <button
+                                                type="submit"
+                                                disabled={isLoading}
+                                                className="w-full bg-blue-600 text-white py-4 rounded-xl hover:bg-blue-700 transition-colors font-semibold disabled:opacity-50 disabled:cursor-not-allowed text-lg"
+                                            >
+                                                {isLoading ? 'Procesando...' : 'Crear Cuenta'}
+                                            </button>
+                                        </div>
+                                    </>
+                                )}
 
                                 <div className="text-center mt-6">
                                     <p className="text-gray-400">

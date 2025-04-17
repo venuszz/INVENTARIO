@@ -5,7 +5,8 @@ import { usePathname } from 'next/navigation';
 import { ChevronDown, ChevronRight, User, LogOut, Database, FileText, Settings, Menu, X } from 'lucide-react';
 import Cookies from 'js-cookie';
 import { useRouter } from 'next/navigation';
-import supabase from '@/app/lib/supabase/client'; // Asegúrate de que la ruta sea correcta
+import supabase from '@/app/lib/supabase/client';
+import { WelcomeMessage } from "@/components/WelcomeMessage";
 
 type MenuItem = {
     title: string;
@@ -259,10 +260,13 @@ export default function NavigationBar() {
                         </div>
                     </div>
 
-                    <div className="hidden md:flex items-center space-x-3">
-                        <button onClick={handleLogout} className="p-2 text-gray-300 hover:text-white hover:bg-gray-800 rounded-full" title='Cerrar sesión'>
-                            <LogOut className="h-5 w-5" />
-                        </button>
+                    <div className="hidden md:flex items-center">
+                        <WelcomeMessage />
+                        <div className="flex items-center space-x-3">
+                            <button onClick={handleLogout} className="p-2 text-gray-300 hover:text-white hover:bg-gray-800 rounded-full" title='Cerrar sesión'>
+                                <LogOut className="h-5 w-5" />
+                            </button>
+                        </div>
                     </div>
 
                     <button
