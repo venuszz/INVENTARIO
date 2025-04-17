@@ -173,8 +173,7 @@ export default function NavigationBar() {
             icon: <Settings className="w-4 h-4" />,
             path: '/admin',
             submenu: [
-                { title: 'Áreas organizacionales', path: '/admin/areas' },
-                { title: 'Sub-áreas', path: '/admin/subareas' },
+                { title: 'Áreas', path: '/admin/areas' },
                 { title: 'Directorio de personal', path: '/admin/personal' }
             ]
         }
@@ -202,7 +201,7 @@ export default function NavigationBar() {
                                 <div key={item.title} className="relative">
                                     <button
                                         onClick={() => toggleMenu(item.title)}
-                                        className={`flex items-center px-4 py-2 rounded-md ${isActive(item.path) ? 'text-blue-400 bg-gray-900' : 'text-gray-300 hover:text-white hover:bg-gray-800'}`}
+                                        className={`flex items-center px-4 py-2 rounded-md ${isActive(item.path) ? 'text-blue-400 bg-blue-950' : 'text-gray-300 hover:text-white hover:bg-gray-800'}`}
                                     >
                                         <span className="mr-2">{item.icon}</span>
                                         {item.title}
@@ -210,7 +209,7 @@ export default function NavigationBar() {
                                     </button>
 
                                     {openMenu === item.title && item.submenu && (
-                                        <div className="absolute left-0 mt-1 w-56 rounded-md bg-gray-900 shadow-lg z-20">
+                                        <div className="absolute left-0 mt-1 w-56 rounded-md bg-black shadow-lg z-20">
                                             <div className="py-1">
                                                 {item.submenu.map((subItem) => (
                                                     <div key={subItem.title}>
@@ -218,21 +217,21 @@ export default function NavigationBar() {
                                                             <div className="relative">
                                                                 <button
                                                                     onClick={(e) => toggleSubmenu(`${item.title}-${subItem.title}`, e)}
-                                                                    className={`flex justify-between w-full px-4 py-2 text-sm ${isActive(subItem.path) ? 'text-blue-400 bg-gray-800' : 'text-gray-300 hover:bg-gray-800 hover:text-white'}`}
+                                                                    className={`flex justify-between w-full px-4 py-2 text-sm ${isActive(subItem.path) ? 'text-blue-400 bg-black' : 'text-gray-300 hover:bg-gray-800 hover:text-white'}`}
                                                                 >
                                                                     {subItem.title}
                                                                     <ChevronRight className="w-3 h-3" />
                                                                 </button>
 
                                                                 {openSubmenu === `${item.title}-${subItem.title}` && (
-                                                                    <div className="absolute left-full top-0 w-56 rounded-md bg-gray-900 shadow-lg z-30">
+                                                                    <div className="absolute left-full top-0 w-56 rounded-md bg-black shadow-lg z-30">
                                                                         <div className="py-1">
                                                                             {subItem.children.map((child) => (
                                                                                 <Link
                                                                                     key={child.title}
                                                                                     href={child.path}
                                                                                     onClick={closeAll}
-                                                                                    className={`block px-4 py-2 text-sm ${pathname === child.path ? 'text-blue-400 bg-gray-800' : 'text-gray-300 hover:bg-gray-800 hover:text-white'}`}
+                                                                                    className={`block px-4 py-2 text-sm ${pathname === child.path ? 'text-blue-400 bg-black' : 'text-gray-300 hover:bg-gray-800 hover:text-white'}`}
                                                                                 >
                                                                                     {child.title}
                                                                                 </Link>
@@ -245,7 +244,7 @@ export default function NavigationBar() {
                                                             <Link
                                                                 href={subItem.path}
                                                                 onClick={closeAll}
-                                                                className={`block px-4 py-2 text-sm ${pathname === subItem.path ? 'text-blue-400 bg-gray-800' : 'text-gray-300 hover:bg-gray-800 hover:text-white'}`}
+                                                                className={`block px-4 py-2 text-sm ${pathname === subItem.path ? 'text-blue-400 bg-black' : 'text-gray-300 hover:bg-gray-800 hover:text-white'}`}
                                                             >
                                                                 {subItem.title}
                                                             </Link>

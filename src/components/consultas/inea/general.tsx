@@ -764,7 +764,7 @@ export default function ConsultasIneaGeneral() {
                                                 className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider cursor-pointer hover:bg-gray-700"
                                             >
                                                 <div className="flex items-center gap-1">
-                                                    Usuario Final
+                                                        Director/Jefe de Área
                                                     <ArrowUpDown className="h-3 w-3" />
                                                 </div>
                                             </th>
@@ -1272,13 +1272,13 @@ export default function ConsultasIneaGeneral() {
                                             </div>
 
                                             <div className="form-group">
-                                                <label className="block text-sm font-medium text-gray-400 mb-2">Usuario Final</label>
+                                                <label className="block text-sm font-medium text-gray-400 mb-2">Director/Jefe de Área</label>
                                                 <div className="relative">
                                                     <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500 pointer-events-none" />
                                                     <input
                                                         type="text"
-                                                        title="Ingrese el usuario final"
-                                                        placeholder="Ingrese el usuario final"
+                                                        title="Ingrese el Director/Jefe de Área"
+                                                        placeholder="Ingrese el Director/Jefe de Área"
                                                         value={editFormData?.usufinal || ''}
                                                         onChange={(e) => handleEditFormChange(e, 'usufinal')}
                                                         className="w-full bg-gray-800 border border-gray-700 rounded-lg pl-10 pr-4 py-2.5 text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
@@ -1287,7 +1287,7 @@ export default function ConsultasIneaGeneral() {
                                             </div>
 
                                             <div className="form-group">
-                                                <label className="block text-sm font-medium text-gray-400 mb-2">Resguardante</label>
+                                                <label className="block text-sm font-medium text-gray-400 mb-2">Usuario Final</label>
                                                 <div className="relative">
                                                     <Shield className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500 pointer-events-none" />
                                                     <input
@@ -1295,8 +1295,8 @@ export default function ConsultasIneaGeneral() {
                                                         value={editFormData?.resguardante || ''}
                                                         onChange={(e) => handleEditFormChange(e, 'resguardante')}
                                                         className="w-full bg-gray-800 border border-gray-700 rounded-lg pl-10 pr-4 py-2.5 text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
-                                                        title="Ingrese el resguardante"
-                                                        placeholder="Ingrese el resguardante"
+                                                        title="Ingrese el Usuario Final"
+                                                        placeholder="Ingrese el Usuario Final"
                                                     />
                                                 </div>
                                             </div>
@@ -1423,14 +1423,14 @@ export default function ConsultasIneaGeneral() {
                                                 <p className="mt-2 text-white">{selectedItem.area || 'No especificado'}</p>
                                             </div>
                                             <div className="detail-card bg-gray-800/50 rounded-lg p-4 hover:bg-gray-800/80 transition-all">
-                                                <h3 className="text-xs font-medium uppercase tracking-wider text-gray-400">Usuario Final</h3>
+                                                <h3 className="text-xs font-medium uppercase tracking-wider text-gray-400">Director/Jefe de Área</h3>
                                                 <p className="mt-2 text-white flex items-center gap-2">
                                                     <User className="h-4 w-4 text-blue-400" />
                                                     {selectedItem.usufinal || 'No especificado'}
                                                 </p>
                                             </div>
                                             <div className="detail-card bg-gray-800/50 rounded-lg p-4 hover:bg-gray-800/80 transition-all">
-                                                <h3 className="text-xs font-medium uppercase tracking-wider text-gray-400">Resguardante</h3>
+                                                <h3 className="text-xs font-medium uppercase tracking-wider text-gray-400">Usuario Final</h3>
                                                 <p className="mt-2 text-white flex items-center gap-2">
                                                     <Shield className="h-4 w-4 text-blue-400" />
                                                     {selectedItem.resguardante || 'No especificado'}

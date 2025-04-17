@@ -1,6 +1,6 @@
 "use client"
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { Plus, Save, Trash2, Edit, AlertTriangle, CheckCircle, X, Search, RefreshCw } from 'lucide-react';
+import { Plus, Trash2, Edit, AlertTriangle, CheckCircle, X, Search, RefreshCw, CheckSquare, XSquare } from 'lucide-react';
 import supabase from "@/app/lib/supabase/client";
 
 interface Directorio {
@@ -15,21 +15,25 @@ interface Message {
     text: string;
 }
 
-export default function AreasManagementComponent() {
+export default function DirectorioManagementComponent() {
     // Estados
-    const [directorio, setAreas] = useState<Directorio[]>([]);
+    const [directorio, setDirectorio] = useState<Directorio[]>([]);
     const [loading, setLoading] = useState<boolean>(true);
-    const [formMode, setFormMode] = useState<'add' | 'edit' | 'delete' | ''>('');
-    const [currentArea, setCurrentArea] = useState<Directorio>({ id_directorio: 0, nombre: '', area: '', puesto: '' });
+    const [isAddingNew, setIsAddingNew] = useState<boolean>(false);
+    const [editingId, setEditingId] = useState<number | null>(null);
+    const [deletingId, setDeletingId] = useState<number | null>(null);
+    const [newEmployee, setNewEmployee] = useState<Directorio>({ id_directorio: 0, nombre: '', area: '', puesto: '' });
+    const [editEmployee, setEditEmployee] = useState<Directorio>({ id_directorio: 0, nombre: '', area: '', puesto: '' });
     const [searchTerm, setSearchTerm] = useState<string>('');
     const [message, setMessage] = useState<Message>({ type: '', text: '' });
     const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
     const [error, setError] = useState<string>('');
 
-    const inputRef = useRef<HTMLInputElement>(null);
+    const addInputRef = useRef<HTMLInputElement>(null);
+    const editInputRef = useRef<HTMLInputElement>(null);
 
-    // Cargar datos de áreas
-    const fetchAreas = useCallback(async () => {
+    // Cargar datos del directorio
+    const fetchDirectorio = useCallback(async () => {
         try {
             setLoading(true);
             const { data, error } = await supabase
@@ -38,10 +42,10 @@ export default function AreasManagementComponent() {
                 .order('id_directorio', { ascending: true });
 
             if (error) throw error;
-            setAreas(data || []);
+            setDirectorio(data || []);
         } catch (error) {
-            console.error('Error cargando áreas:', error);
-            setError('Error al cargar las áreas');
+            console.error('Error cargando directorio:', error);
+            setError('Error al cargar el directorio de personal');
         } finally {
             setLoading(false);
         }
@@ -49,132 +53,173 @@ export default function AreasManagementComponent() {
 
     // Cargar datos al montar el componente
     useEffect(() => {
-        fetchAreas();
-    }, [fetchAreas]);
+        fetchDirectorio();
+    }, [fetchDirectorio]);
 
     // Función para obtener el próximo ID disponible
     const getNextAvailableId = useCallback(() => {
         if (directorio.length === 0) return 1;
-        const maxId = Math.max(...directorio.map(directorio => directorio.id_directorio));
+        const maxId = Math.max(...directorio.map(item => item.id_directorio));
         return maxId + 1;
     }, [directorio]);
 
-    // Filtrar áreas según el término de búsqueda
-    const filteredAreas = directorio.filter(directorio =>
-        directorio.nombre?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        directorio.area?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        directorio.puesto?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        directorio.id_directorio.toString().includes(searchTerm)
+    // Filtrar directorio según el término de búsqueda
+    const filteredDirectorio = directorio.filter(item =>
+        item.nombre?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        item.area?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        item.puesto?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        item.id_directorio.toString().includes(searchTerm)
     );
 
     // Manejadores de eventos
-    const handleAdd = () => {
-        setFormMode('add');
-        setCurrentArea({ id_directorio: getNextAvailableId(), nombre: '', area: '', puesto: '' });
-        setTimeout(() => inputRef.current?.focus(), 100);
+    const handleAddNew = () => {
+        setIsAddingNew(true);
+        setNewEmployee({ id_directorio: getNextAvailableId(), nombre: '', area: '', puesto: '' });
+        setTimeout(() => addInputRef.current?.focus(), 100);
     };
 
-    const handleEdit = (directorio: Directorio) => {
-        setFormMode('edit');
-        setCurrentArea({ ...directorio });
-        setTimeout(() => inputRef.current?.focus(), 100);
-    };
-
-    const handleDelete = (directorio: Directorio) => {
-        setFormMode('delete');
-        setCurrentArea({ ...directorio });
-    };
-
-    const handleCancel = () => {
-        setFormMode('');
-        setCurrentArea({ id_directorio: 0, nombre: '', area: '', puesto: '' });
+    const handleCancelAdd = () => {
+        setIsAddingNew(false);
+        setNewEmployee({ id_directorio: 0, nombre: '', area: '', puesto: '' });
         setError('');
     };
 
-    const handleSubmit = async (e: React.FormEvent) => {
+    const handleEdit = (employee: Directorio) => {
+        setEditingId(employee.id_directorio);
+        setEditEmployee({ ...employee });
+        setTimeout(() => editInputRef.current?.focus(), 100);
+    };
+
+    const handleCancelEdit = () => {
+        setEditingId(null);
+        setEditEmployee({ id_directorio: 0, nombre: '', area: '', puesto: '' });
+        setError('');
+    };
+
+    const handleDelete = (id: number) => {
+        setDeletingId(id);
+    };
+
+    const handleCancelDelete = () => {
+        setDeletingId(null);
+    };
+
+    const handleSubmitAdd = async (e: React.FormEvent) => {
         e.preventDefault();
         setIsSubmitting(true);
         setError('');
 
         try {
             // Validación de campos
-            if (formMode !== 'delete' && (!currentArea.nombre || currentArea.nombre.trim() === '')) {
-                throw new Error('Nombre del área es obligatorio');
+            if (!newEmployee.nombre || newEmployee.nombre.trim() === '') {
+                throw new Error('El nombre del empleado es obligatorio');
             }
 
             // Convertir a mayúsculas y trim
-            const directorioName = currentArea.nombre?.trim().toUpperCase() || '';
-            const directorioArea = currentArea.area?.trim().toUpperCase() || '';
-            const directorioPuesto = currentArea.puesto?.trim().toUpperCase() || '';
+            const nombreEmployee = newEmployee.nombre.trim().toUpperCase();
+            const areaEmployee = newEmployee.area?.trim().toUpperCase() || '';
+            const puestoEmployee = newEmployee.puesto?.trim().toUpperCase() || '';
 
-            if (formMode === 'add') {
-                // Verificar si el área ya existe
-                const directorioName = currentArea.nombre?.trim().toUpperCase() || '';
-                const directorioArea = currentArea.area?.trim().toUpperCase() || '';
-                const directorioPuesto = currentArea.puesto?.trim().toUpperCase() || '';
+            // Verificar si el empleado ya existe
+            const existingEmployee = directorio.find((item: Directorio) =>
+                item.nombre?.toUpperCase() === nombreEmployee &&
+                item.area?.toUpperCase() === areaEmployee &&
+                item.puesto?.toUpperCase() === puestoEmployee
+            );
 
-                const existingArea = directorio.find((area: Directorio) =>
-                    area.nombre?.toUpperCase() === directorioName &&
-                    area.area?.toUpperCase() === directorioArea &&
-                    area.puesto?.toUpperCase() === directorioPuesto
-                );
-
-                if (existingArea) {
-                    throw new Error('El área ya existe');
-                }
-
-                // Agregar nueva área
-                const { error } = await supabase
-                    .from('directorio')
-                    .insert([{ nombre: directorioName, area: directorioArea, puesto: directorioPuesto }])
-                    .select();
-
-                if (error) throw error;
-
-                setMessage({ type: 'success', text: 'Área agregada correctamente' });
-            } else if (formMode === 'edit') {
-                // Verificar si el nuevo nombre ya existe (excluyendo el área actual)
-                const existingArea = directorio.find((directorio: Directorio) =>
-                    directorio.nombre?.toUpperCase() === directorioName &&
-                    directorio.area?.toUpperCase() === directorioArea &&
-                    directorio.puesto?.toUpperCase() === directorioPuesto &&
-                    directorio.id_directorio !== currentArea.id_directorio
-                );
-
-                if (existingArea) {
-                    throw new Error('El Empleado ya existe');
-                }
-
-                // Editar área existente
-                const { error } = await supabase
-                    .from('directorio')
-                    .update({ nombre: directorioName, area: directorioArea, puesto: directorioPuesto })
-                    .eq('id_directorio', currentArea.id_directorio);
-
-                if (error) throw error;
-
-                setMessage({ type: 'success', text: 'Área actualizada correctamente' });
-            } else if (formMode === 'delete') {
-                // Eliminar área
-                const { error } = await supabase
-                    .from('directorio')
-                    .delete()
-                    .eq('id_directorio', currentArea.id_directorio);
-
-                if (error) throw error;
-
-                setMessage({ type: 'success', text: 'Empleado eliminado correctamente' });
+            if (existingEmployee) {
+                throw new Error('El empleado ya existe');
             }
 
-            // Recargar datos después de la operación
-            fetchAreas();
-            setFormMode('');
-            setCurrentArea({ id_directorio: 0, nombre: '', area: '', puesto: '' });
+            // Agregar nuevo empleado
+            const { error } = await supabase
+                .from('directorio')
+                .insert([{ nombre: nombreEmployee, area: areaEmployee, puesto: puestoEmployee }])
+                .select();
+
+            if (error) throw error;
+
+            setMessage({ type: 'success', text: 'Empleado agregado correctamente' });
+            setIsAddingNew(false);
+            setNewEmployee({ id_directorio: 0, nombre: '', area: '', puesto: '' });
+            fetchDirectorio();
         } catch (error: unknown) {
             console.error('Error:', error);
             const errorMessage = (error instanceof Error) ? error.message : 'Ha ocurrido un error';
             setError(errorMessage);
-            setMessage({ type: 'error', text: errorMessage || 'Ha ocurrido un error al procesar la solicitud' });
+            setMessage({ type: 'error', text: errorMessage });
+        } finally {
+            setIsSubmitting(false);
+        }
+    };
+
+    const handleSubmitEdit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        setIsSubmitting(true);
+        setError('');
+
+        try {
+            // Validación de campos
+            if (!editEmployee.nombre || editEmployee.nombre.trim() === '') {
+                throw new Error('El nombre del empleado es obligatorio');
+            }
+
+            // Convertir a mayúsculas y trim
+            const nombreEmployee = editEmployee.nombre.trim().toUpperCase();
+            const areaEmployee = editEmployee.area?.trim().toUpperCase() || '';
+            const puestoEmployee = editEmployee.puesto?.trim().toUpperCase() || '';
+
+            // Verificar si el nuevo nombre ya existe (excluyendo el empleado actual)
+            const existingEmployee = directorio.find((item: Directorio) =>
+                item.nombre?.toUpperCase() === nombreEmployee &&
+                item.area?.toUpperCase() === areaEmployee &&
+                item.puesto?.toUpperCase() === puestoEmployee &&
+                item.id_directorio !== editEmployee.id_directorio
+            );
+
+            if (existingEmployee) {
+                throw new Error('El empleado ya existe');
+            }
+
+            // Editar empleado existente
+            const { error } = await supabase
+                .from('directorio')
+                .update({ nombre: nombreEmployee, area: areaEmployee, puesto: puestoEmployee })
+                .eq('id_directorio', editEmployee.id_directorio);
+
+            if (error) throw error;
+
+            setMessage({ type: 'success', text: 'Empleado actualizado correctamente' });
+            setEditingId(null);
+            setEditEmployee({ id_directorio: 0, nombre: '', area: '', puesto: '' });
+            fetchDirectorio();
+        } catch (error: unknown) {
+            console.error('Error:', error);
+            const errorMessage = (error instanceof Error) ? error.message : 'Ha ocurrido un error';
+            setError(errorMessage);
+            setMessage({ type: 'error', text: errorMessage });
+        } finally {
+            setIsSubmitting(false);
+        }
+    };
+
+    const handleConfirmDelete = async (id: number) => {
+        setIsSubmitting(true);
+        try {
+            const { error } = await supabase
+                .from('directorio')
+                .delete()
+                .eq('id_directorio', id);
+
+            if (error) throw error;
+
+            setMessage({ type: 'success', text: 'Empleado eliminado correctamente' });
+            setDeletingId(null);
+            fetchDirectorio();
+        } catch (error: unknown) {
+            console.error('Error:', error);
+            const errorMessage = (error instanceof Error) ? error.message : 'Ha ocurrido un error';
+            setMessage({ type: 'error', text: errorMessage });
         } finally {
             setIsSubmitting(false);
         }
@@ -188,8 +233,8 @@ export default function AreasManagementComponent() {
                 {/* Header con título */}
                 <div className="bg-black p-4 sm:p-6 flex flex-col sm:flex-row justify-between items-start sm:items-center border-b border-gray-800 gap-2 sm:gap-0">
                     <h1 className="text-xl sm:text-2xl md:text-3xl font-bold flex items-center">
-                        <span className="mr-2 sm:mr-3 bg-gray-900 text-white p-1 sm:p-2 rounded-lg border border-gray-700 text-sm sm:text-base">ADM</span>
-                        Personal Autorizado
+                        <span className="mr-2 sm:mr-3 bg-gray-900 text-white p-1 sm:p-2 rounded-lg border border-gray-700 text-sm sm:text-base">DIR</span>
+                        Directorio de Personal Autorizado
                     </h1>
                 </div>
 
@@ -227,15 +272,16 @@ export default function AreasManagementComponent() {
                         {/* Botones de acción */}
                         <div className="flex gap-2">
                             <button
-                                onClick={handleAdd}
+                                onClick={handleAddNew}
                                 className="flex items-center px-3 py-2 bg-gray-800 hover:bg-gray-700 rounded-lg transition-colors text-sm"
                                 title="Agregar nuevo personal autorizado"
+                                disabled={isAddingNew}
                             >
                                 <Plus size={16} className="mr-1" />
                                 Agregar Personal
                             </button>
                             <button
-                                onClick={fetchAreas}
+                                onClick={fetchDirectorio}
                                 className="p-2 bg-gray-800 hover:bg-gray-700 rounded-lg transition-colors"
                                 title="Refrescar datos"
                             >
@@ -244,109 +290,7 @@ export default function AreasManagementComponent() {
                         </div>
                     </div>
 
-                    {/* Formulario (visible solo en modos add, edit o delete) */}
-                    {formMode !== '' && (
-                        <div className="mb-6 bg-gray-900 p-4 rounded-lg border border-gray-800 animate-fadeIn">
-                            <h2 className="text-lg font-semibold mb-4 pb-2 border-b border-gray-800">
-                                {formMode === 'add' ? 'Agregar Nuevo Empleado' :
-                                    formMode === 'edit' ? 'Editar Empleado' : 'Eliminar Empleado'}
-                            </h2>
-
-                            <form onSubmit={handleSubmit}>
-                                {formMode !== 'delete' ? (
-                                    <div className="mb-4">
-                                        <label className="block mb-1 text-sm font-medium">
-                                            Nombre del Empleado <span className="text-red-500">*</span>
-                                        </label>
-                                        <input
-                                            ref={inputRef}
-                                            type="text"
-                                            value={currentArea.nombre || ''}
-                                            onChange={(e) => setCurrentArea({ ...currentArea, nombre: e.target.value })}
-                                            className={`w-full bg-black border ${error ? 'border-red-500' : 'border-gray-700'} rounded-lg p-2 focus:border-white focus:ring focus:ring-gray-700 focus:ring-opacity-50 transition-all`}
-                                            placeholder="Nombre del personal"
-                                            disabled={(formMode as string) === 'delete'}
-                                            onBlur={(e) => {
-                                                // Convertir a mayúsculas al salir del campo
-                                                setCurrentArea({ ...currentArea, nombre: e.target.value.toUpperCase() });
-                                            }}
-                                        />
-                                        <input
-                                            ref={inputRef}
-                                            type="text"
-                                            value={currentArea.area || ''}
-                                            onChange={(e) => setCurrentArea({ ...currentArea, area: e.target.value })}
-                                            className={`w-full bg-black border ${error ? 'border-red-500' : 'border-gray-700'} rounded-lg p-2 focus:border-white focus:ring focus:ring-gray-700 focus:ring-opacity-50 transition-all`}
-                                            placeholder="Área de Adscripción"
-                                            disabled={(formMode as string) === 'delete'}
-                                            onBlur={(e) => {
-                                                // Convertir a mayúsculas al salir del campo
-                                                setCurrentArea({ ...currentArea, area: e.target.value.toUpperCase() });
-                                            }}
-                                        />
-                                        <input
-                                            ref={inputRef}
-                                            type="text"
-                                            value={currentArea.puesto || ''}
-                                            onChange={(e) => setCurrentArea({ ...currentArea, puesto: e.target.value })}
-                                            className={`w-full bg-black border ${error ? 'border-red-500' : 'border-gray-700'} rounded-lg p-2 focus:border-white focus:ring focus:ring-gray-700 focus:ring-opacity-50 transition-all`}
-                                            placeholder="Puesto a desempeñar"
-                                            disabled={(formMode as string) === 'delete'}
-                                            onBlur={(e) => {
-                                                // Convertir a mayúsculas al salir del campo
-                                                setCurrentArea({ ...currentArea, puesto: e.target.value.toUpperCase() });
-                                            }}
-                                        />
-                                        {error && <p className="text-red-500 text-xs mt-1">{error}</p>}
-                                    </div>
-                                ) : (
-                                    <div className="mb-4 p-3 bg-red-900 bg-opacity-30 border border-red-800 rounded-lg">
-                                        <p className="text-sm">
-                                            ¿Estás seguro de que deseas eliminar el Empleado <strong>{currentArea.nombre}</strong>?
-                                            Esta acción no se puede deshacer.
-                                        </p>
-                                    </div>
-                                )}
-
-                                <div className="flex justify-end gap-2 mt-4">
-                                    <button
-                                        type="button"
-                                        onClick={handleCancel}
-                                        className="px-3 py-1.5 bg-gray-800 hover:bg-gray-700 rounded-lg transition-colors text-sm"
-                                    >
-                                        Cancelar
-                                    </button>
-                                    <button
-                                        type="submit"
-                                        disabled={isSubmitting}
-                                        className={`px-3 py-1.5 rounded-lg transition-colors text-sm flex items-center ${formMode === 'delete'
-                                            ? 'bg-red-600 hover:bg-red-700'
-                                            : 'bg-white text-black hover:bg-gray-200'
-                                            }`}
-                                    >
-                                        {isSubmitting ? (
-                                            <>
-                                                <div className="w-3 h-3 border-2 border-gray-400 border-t-white rounded-full animate-spin mr-2"></div>
-                                                Procesando...
-                                            </>
-                                        ) : (
-                                            <>
-                                                {formMode === 'add' && <Plus size={16} className="mr-1" />}
-                                                {formMode === 'edit' && <Save size={16} className="mr-1" />}
-                                                {formMode === 'delete' && <Trash2 size={16} className="mr-1" />}
-
-                                                {formMode === 'add' && 'Agregar'}
-                                                {formMode === 'edit' && 'Guardar'}
-                                                {formMode === 'delete' && 'Eliminar'}
-                                            </>
-                                        )}
-                                    </button>
-                                </div>
-                            </form>
-                        </div>
-                    )}
-
-                    {/* Tabla de áreas */}
+                    {/* Tabla de directorio */}
                     <div className="overflow-x-auto border border-gray-800 rounded-lg">
                         <table className="min-w-full divide-y divide-gray-800">
                             <thead className="bg-gray-900">
@@ -358,57 +302,231 @@ export default function AreasManagementComponent() {
                                         NOMBRE DEL PERSONAL
                                     </th>
                                     <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
-                                        AREA
+                                        ÁREA DE ADSCRIPCIÓN
                                     </th>
                                     <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
                                         PUESTO
                                     </th>
                                     <th scope="col" className="px-4 py-3 text-right text-xs font-medium text-gray-400 uppercase tracking-wider">
-                                        Acciones
+                                        ACCIONES
                                     </th>
                                 </tr>
                             </thead>
                             <tbody className="bg-black divide-y divide-gray-800">
-                                {loading ? (
-                                    <tr>
-                                        <td colSpan={3} className="px-4 py-4 text-center text-sm">
-                                            <div className="flex justify-center items-center">
-                                                <div className="w-5 h-5 border-2 border-gray-500 border-t-white rounded-full animate-spin mr-2"></div>
-                                                Cargando áreas...
+                                {/* Fila para agregar nuevo empleado */}
+                                {isAddingNew && (
+                                    <tr className="bg-gray-900 bg-opacity-50 animate-fadeIn">
+                                        <td className="px-4 py-2 text-sm">
+                                            <span className="text-gray-500">Auto</span>
+                                        </td>
+                                        <td className="px-4 py-2 text-sm">
+                                            <input
+                                                ref={addInputRef}
+                                                type="text"
+                                                value={newEmployee.nombre || ''}
+                                                onChange={(e) => setNewEmployee({ ...newEmployee, nombre: e.target.value })}
+                                                placeholder="Nombre completo"
+                                                className="w-full bg-black border border-gray-700 rounded p-1.5 focus:border-white focus:ring focus:ring-gray-700 focus:ring-opacity-50 transition-all text-sm"
+                                            />
+                                        </td>
+                                        <td className="px-4 py-2 text-sm">
+                                            <input
+                                                type="text"
+                                                value={newEmployee.area || ''}
+                                                onChange={(e) => setNewEmployee({ ...newEmployee, area: e.target.value })}
+                                                placeholder="Área de adscripción"
+                                                className="w-full bg-black border border-gray-700 rounded p-1.5 focus:border-white focus:ring focus:ring-gray-700 focus:ring-opacity-50 transition-all text-sm"
+                                            />
+                                        </td>
+                                        <td className="px-4 py-2 text-sm">
+                                            <input
+                                                type="text"
+                                                value={newEmployee.puesto || ''}
+                                                onChange={(e) => setNewEmployee({ ...newEmployee, puesto: e.target.value })}
+                                                placeholder="Puesto a desempeñar"
+                                                className="w-full bg-black border border-gray-700 rounded p-1.5 focus:border-white focus:ring focus:ring-gray-700 focus:ring-opacity-50 transition-all text-sm"
+                                            />
+                                        </td>
+                                        <td className="px-4 py-2 text-sm text-right">
+                                            <div className="flex justify-end space-x-1">
+                                                <button
+                                                    onClick={handleSubmitAdd}
+                                                    disabled={isSubmitting}
+                                                    className="p-1 bg-green-900 hover:bg-green-800 rounded-md transition-colors"
+                                                    title="Guardar"
+                                                >
+                                                    {isSubmitting ? (
+                                                        <div className="w-4 h-4 border-2 border-gray-400 border-t-white rounded-full animate-spin"></div>
+                                                    ) : (
+                                                        <CheckSquare size={16} />
+                                                    )}
+                                                </button>
+                                                <button
+                                                    onClick={handleCancelAdd}
+                                                    className="p-1 bg-red-900 hover:bg-red-800 rounded-md transition-colors"
+                                                    title="Cancelar"
+                                                >
+                                                    <XSquare size={16} />
+                                                </button>
                                             </div>
                                         </td>
                                     </tr>
-                                ) : filteredAreas.length === 0 ? (
+                                )}
+
+                                {loading ? (
                                     <tr>
-                                        <td colSpan={3} className="px-4 py-4 text-center text-sm">
-                                            {searchTerm ? 'No se encontro personal con el término de búsqueda.' : 'No hay personal registrado.'}
+                                        <td colSpan={5} className="px-4 py-4 text-center text-sm">
+                                            <div className="flex justify-center items-center">
+                                                <div className="w-5 h-5 border-2 border-gray-500 border-t-white rounded-full animate-spin mr-2"></div>
+                                                Cargando directorio de personal...
+                                            </div>
+                                        </td>
+                                    </tr>
+                                ) : filteredDirectorio.length === 0 ? (
+                                    <tr>
+                                        <td colSpan={5} className="px-4 py-4 text-center text-sm">
+                                            {searchTerm ? 'No se encontró personal con el término de búsqueda.' : 'No hay personal registrado.'}
                                         </td>
                                     </tr>
                                 ) : (
-                                    filteredAreas.map((directorio) => (
-                                        <tr key={directorio.id_directorio} className="hover:bg-gray-900 transition-colors">
-                                            <td className="px-4 py-3 text-sm">{directorio.id_directorio}</td>                                            
-                                            <td className="px-4 py-3 text-sm">{directorio.nombre}</td>
-                                            <td className="px-4 py-3 text-sm">{directorio.area}</td>
-                                            <td className="px-4 py-3 text-sm">{directorio.puesto}</td>
-                                            <td className="px-4 py-3 text-sm text-right">
-                                                <div className="flex justify-end space-x-1">
-                                                    <button
-                                                        onClick={() => handleEdit(directorio)}
-                                                        className="p-1 hover:bg-gray-700 rounded-md transition-colors"
-                                                        title="Editar"
-                                                    >
-                                                        <Edit size={16} />
-                                                    </button>
-                                                    <button
-                                                        onClick={() => handleDelete(directorio)}
-                                                        className="p-1 hover:bg-red-900 rounded-md transition-colors"
-                                                        title="Eliminar"
-                                                    >
-                                                        <Trash2 size={16} />
-                                                    </button>
-                                                </div>
-                                            </td>
+                                    filteredDirectorio.map((employee) => (
+                                        <tr key={employee.id_directorio} className={`hover:bg-gray-900 transition-colors ${editingId === employee.id_directorio ? 'bg-gray-900 bg-opacity-80' : ''}`}>
+                                            <td className="px-4 py-3 text-sm">{employee.id_directorio}</td>
+
+                                            {editingId === employee.id_directorio ? (
+                                                <>
+                                                    <td className="px-4 py-2 text-sm">
+                                                        <input
+                                                            title='Nombre'
+                                                            ref={editInputRef}
+                                                            type="text"
+                                                            value={editEmployee.nombre || ''}
+                                                            onChange={(e) => setEditEmployee({ ...editEmployee, nombre: e.target.value })}
+                                                            className="w-full bg-black border border-gray-700 rounded p-1.5 focus:border-white focus:ring focus:ring-gray-700 focus:ring-opacity-50 transition-all text-sm"
+                                                        />
+                                                    </td>
+                                                    <td className="px-4 py-2 text-sm">
+                                                        <input
+                                                            title='Área'
+                                                            type="text"
+                                                            value={editEmployee.area || ''}
+                                                            onChange={(e) => setEditEmployee({ ...editEmployee, area: e.target.value })}
+                                                            className="w-full bg-black border border-gray-700 rounded p-1.5 focus:border-white focus:ring focus:ring-gray-700 focus:ring-opacity-50 transition-all text-sm"
+                                                        />
+                                                    </td>
+                                                    <td className="px-4 py-2 text-sm">
+                                                        <input
+                                                            title='Puesto'
+                                                            type="text"
+                                                            value={editEmployee.puesto || ''}
+                                                            onChange={(e) => setEditEmployee({ ...editEmployee, puesto: e.target.value })}
+                                                            className="w-full bg-black border border-gray-700 rounded p-1.5 focus:border-white focus:ring focus:ring-gray-700 focus:ring-opacity-50 transition-all text-sm"
+                                                        />
+                                                    </td>
+                                                    <td className="px-4 py-2 text-sm text-right">
+                                                        <div className="flex justify-end space-x-1">
+                                                            <button
+                                                                onClick={handleSubmitEdit}
+                                                                disabled={isSubmitting}
+                                                                className="p-1 bg-green-900 hover:bg-green-800 rounded-md transition-colors"
+                                                                title="Guardar cambios"
+                                                            >
+                                                                {isSubmitting ? (
+                                                                    <div className="w-4 h-4 border-2 border-gray-400 border-t-white rounded-full animate-spin"></div>
+                                                                ) : (
+                                                                    <CheckSquare size={16} />
+                                                                )}
+                                                            </button>
+                                                            <button
+                                                                onClick={handleCancelEdit}
+                                                                className="p-1 bg-red-900 hover:bg-red-800 rounded-md transition-colors"
+                                                                title="Cancelar edición"
+                                                            >
+                                                                <XSquare size={16} />
+                                                            </button>
+                                                        </div>
+                                                    </td>
+                                                </>
+                                            ) : deletingId === employee.id_directorio ? (
+                                                <>
+                                                    <td colSpan={3} className="px-4 py-3 text-sm">
+                                                        <div className="flex items-center text-red-400">
+                                                            <AlertTriangle size={16} className="mr-2" />
+                                                            <span>¿Confirma eliminar a <strong>{employee.nombre}</strong>?</span>
+                                                        </div>
+                                                    </td>
+                                                    <td className="px-4 py-3 text-sm text-right">
+                                                        <div className="flex justify-end space-x-1">
+                                                            <button
+                                                                onClick={() => handleConfirmDelete(employee.id_directorio)}
+                                                                disabled={isSubmitting}
+                                                                className="p-1 bg-red-700 hover:bg-red-600 rounded-md transition-colors"
+                                                                title="Confirmar eliminación"
+                                                            >
+                                                                {isSubmitting ? (
+                                                                    <div className="w-4 h-4 border-2 border-gray-400 border-t-white rounded-full animate-spin"></div>
+                                                                ) : (
+                                                                    <CheckSquare size={16} />
+                                                                )}
+                                                            </button>
+                                                            <button
+                                                                onClick={handleCancelDelete}
+                                                                className="p-1 bg-gray-700 hover:bg-gray-600 rounded-md transition-colors"
+                                                                title="Cancelar eliminación"
+                                                            >
+                                                                <XSquare size={16} />
+                                                            </button>
+                                                        </div>
+                                                    </td>
+                                                </>
+                                            ) : (
+                                                <>
+                                                    <td className={`px-4 py-3 text-sm font-medium ${!employee.nombre || employee.nombre.trim() === '' ? 'bg-amber-900 bg-opacity-50 border-l-2 border-amber-500' : ''}`}>
+                                                        {employee.nombre || (
+                                                            <span className="text-amber-400 flex items-center gap-1">
+                                                                <AlertTriangle size={14} />
+                                                                <span>Sin nombre</span>
+                                                            </span>
+                                                        )}
+                                                    </td>
+                                                    <td className={`px-4 py-3 text-sm ${!employee.area || employee.area.trim() === '' ? 'bg-amber-900 bg-opacity-50 border-l-2 border-amber-500' : ''}`}>
+                                                        {employee.area || (
+                                                            <span className="text-amber-400 flex items-center gap-1">
+                                                                <AlertTriangle size={14} />
+                                                                <span>Sin área</span>
+                                                            </span>
+                                                        )}
+                                                    </td>
+                                                    <td className={`px-4 py-3 text-sm ${!employee.puesto || employee.puesto.trim() === '' ? 'bg-amber-900 bg-opacity-50 border-l-2 border-amber-500' : ''}`}>
+                                                        {employee.puesto || (
+                                                            <span className="text-amber-400 flex items-center gap-1">
+                                                                <AlertTriangle size={14} />
+                                                                <span>Sin puesto</span>
+                                                            </span>
+                                                        )}
+                                                    </td>
+                                                    <td className="px-4 py-3 text-sm text-right">
+                                                        <div className="flex justify-end space-x-1">
+                                                            <button
+                                                                onClick={() => handleEdit(employee)}
+                                                                className="p-1 hover:bg-gray-700 rounded-md transition-colors"
+                                                                title="Editar"
+                                                                disabled={editingId !== null || deletingId !== null || isAddingNew}
+                                                            >
+                                                                <Edit size={16} />
+                                                            </button>
+                                                            <button
+                                                                onClick={() => handleDelete(employee.id_directorio)}
+                                                                className="p-1 hover:bg-red-900 rounded-md transition-colors"
+                                                                title="Eliminar"
+                                                                disabled={editingId !== null || deletingId !== null || isAddingNew}
+                                                            >
+                                                                <Trash2 size={16} />
+                                                            </button>
+                                                        </div>
+                                                    </td>
+                                                </>
+                                            )}
                                         </tr>
                                     ))
                                 )}
@@ -416,9 +534,16 @@ export default function AreasManagementComponent() {
                         </table>
                     </div>
 
+                    {/* Error message */}
+                    {error && (
+                        <div className="mt-3 text-red-500 text-sm bg-red-900 bg-opacity-20 p-2 rounded border border-red-800">
+                            {error}
+                        </div>
+                    )}
+
                     {/* Contador de resultados */}
                     <div className="mt-4 text-sm text-gray-400">
-                        Mostrando {filteredAreas.length} de {directorio.length} Empleados
+                        Mostrando {filteredDirectorio.length} de {directorio.length} empleados en el directorio
                     </div>
                 </div>
             </div>

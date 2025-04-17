@@ -17,14 +17,18 @@ export default function AreasManagementComponent() {
     // Estados
     const [areas, setAreas] = useState<Area[]>([]);
     const [loading, setLoading] = useState<boolean>(true);
-    const [formMode, setFormMode] = useState<'add' | 'edit' | 'delete' | ''>('');
+    const [formMode, setFormMode] = useState<'add' | ''>('');
+    const [editingRow, setEditingRow] = useState<number | null>(null);
+    const [deletingArea, setDeletingArea] = useState<Area | null>(null);
     const [currentArea, setCurrentArea] = useState<Area>({ id_area: 0, itea: '' });
+    const [editValue, setEditValue] = useState<string>('');
     const [searchTerm, setSearchTerm] = useState<string>('');
     const [message, setMessage] = useState<Message>({ type: '', text: '' });
     const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
     const [error, setError] = useState<string>('');
 
     const inputRef = useRef<HTMLInputElement>(null);
+    const editInputRef = useRef<HTMLInputElement>(null);
 
     // Cargar datos de áreas
     const fetchAreas = useCallback(async () => {
@@ -50,6 +54,13 @@ export default function AreasManagementComponent() {
         fetchAreas();
     }, [fetchAreas]);
 
+    // Efecto para enfocar el input de edición cuando se activa
+    useEffect(() => {
+        if (editingRow !== null && editInputRef.current) {
+            editInputRef.current.focus();
+        }
+    }, [editingRow]);
+
     // Función para obtener el próximo ID disponible
     const getNextAvailableId = useCallback(() => {
         if (areas.length === 0) return 1;
@@ -67,24 +78,111 @@ export default function AreasManagementComponent() {
     const handleAdd = () => {
         setFormMode('add');
         setCurrentArea({ id_area: getNextAvailableId(), itea: '' });
+        setEditingRow(null);
+        setDeletingArea(null);
         setTimeout(() => inputRef.current?.focus(), 100);
     };
 
     const handleEdit = (area: Area) => {
-        setFormMode('edit');
-        setCurrentArea({ ...area });
-        setTimeout(() => inputRef.current?.focus(), 100);
+        // Si ya estamos editando otra fila, cancelar esa edición
+        if (editingRow !== null && editingRow !== area.id_area) {
+            cancelRowEdit();
+        }
+
+        setEditingRow(area.id_area);
+        setEditValue(area.itea || '');
+        setDeletingArea(null);
+        setFormMode('');
     };
 
     const handleDelete = (area: Area) => {
-        setFormMode('delete');
-        setCurrentArea({ ...area });
+        setDeletingArea(area);
+        setEditingRow(null);
+        setFormMode('');
     };
 
     const handleCancel = () => {
         setFormMode('');
         setCurrentArea({ id_area: 0, itea: '' });
         setError('');
+    };
+
+    const cancelRowEdit = () => {
+        setEditingRow(null);
+        setEditValue('');
+    };
+
+    const cancelDelete = () => {
+        setDeletingArea(null);
+    };
+
+    const saveRowEdit = async (areaId: number) => {
+        setIsSubmitting(true);
+        setError('');
+
+        try {
+            // Validación
+            if (!editValue || editValue.trim() === '') {
+                throw new Error('Nombre del área es obligatorio');
+            }
+
+            // Convertir a mayúsculas y trim
+            const areaName = editValue.trim().toUpperCase();
+
+            // Verificar si el nuevo nombre ya existe (excluyendo el área actual)
+            const existingArea = areas.find(area =>
+                area.itea?.toUpperCase() === areaName &&
+                area.id_area !== areaId
+            );
+
+            if (existingArea) {
+                throw new Error('El área ya existe');
+            }
+
+            // Editar área existente
+            const { error } = await supabase
+                .from('areas')
+                .update({ itea: areaName })
+                .eq('id_area', areaId);
+
+            if (error) throw error;
+
+            setMessage({ type: 'success', text: 'Área actualizada correctamente' });
+            setEditingRow(null);
+            fetchAreas();
+        } catch (error: unknown) {
+            console.error('Error:', error);
+            const errorMessage = (error instanceof Error) ? error.message : 'Ha ocurrido un error';
+            setError(errorMessage);
+            setMessage({ type: 'error', text: errorMessage || 'Ha ocurrido un error al actualizar el área' });
+        } finally {
+            setIsSubmitting(false);
+        }
+    };
+
+    const confirmDelete = async () => {
+        if (!deletingArea) return;
+
+        setIsSubmitting(true);
+        try {
+            // Eliminar área
+            const { error } = await supabase
+                .from('areas')
+                .delete()
+                .eq('id_area', deletingArea.id_area);
+
+            if (error) throw error;
+
+            setMessage({ type: 'success', text: 'Área eliminada correctamente' });
+            setDeletingArea(null);
+            fetchAreas();
+        } catch (error: unknown) {
+            console.error('Error:', error);
+            const errorMessage = (error instanceof Error) ? error.message : 'Ha ocurrido un error';
+            setMessage({ type: 'error', text: errorMessage || 'Ha ocurrido un error al eliminar el área' });
+        } finally {
+            setIsSubmitting(false);
+        }
     };
 
     const handleSubmit = async (e: React.FormEvent) => {
@@ -94,63 +192,31 @@ export default function AreasManagementComponent() {
 
         try {
             // Validación de campos
-            if (formMode !== 'delete' && (!currentArea.itea || currentArea.itea.trim() === '')) {
+            if (!currentArea.itea || currentArea.itea.trim() === '') {
                 throw new Error('Nombre del área es obligatorio');
             }
 
             // Convertir a mayúsculas y trim
-            const areaName = currentArea.itea?.trim().toUpperCase() || '';
+            const areaName = currentArea.itea.trim().toUpperCase();
 
-            if (formMode === 'add') {
-                // Verificar si el área ya existe
-                const existingArea = areas.find(area =>
-                    area.itea?.toUpperCase() === areaName
-                );
+            // Verificar si el área ya existe
+            const existingArea = areas.find(area =>
+                area.itea?.toUpperCase() === areaName
+            );
 
-                if (existingArea) {
-                    throw new Error('El área ya existe');
-                }
-
-                // Agregar nueva área
-                const { error } = await supabase
-                    .from('areas')
-                    .insert([{ itea: areaName }])
-                    .select();
-
-                if (error) throw error;
-
-                setMessage({ type: 'success', text: 'Área agregada correctamente' });
-            } else if (formMode === 'edit') {
-                // Verificar si el nuevo nombre ya existe (excluyendo el área actual)
-                const existingArea = areas.find(area =>
-                    area.itea?.toUpperCase() === areaName &&
-                    area.id_area !== currentArea.id_area
-                );
-
-                if (existingArea) {
-                    throw new Error('El área ya existe');
-                }
-
-                // Editar área existente
-                const { error } = await supabase
-                    .from('areas')
-                    .update({ itea: areaName })
-                    .eq('id_area', currentArea.id_area);
-
-                if (error) throw error;
-
-                setMessage({ type: 'success', text: 'Área actualizada correctamente' });
-            } else if (formMode === 'delete') {
-                // Eliminar área
-                const { error } = await supabase
-                    .from('areas')
-                    .delete()
-                    .eq('id_area', currentArea.id_area);
-
-                if (error) throw error;
-
-                setMessage({ type: 'success', text: 'Área eliminada correctamente' });
+            if (existingArea) {
+                throw new Error('El área ya existe');
             }
+
+            // Agregar nueva área
+            const { error } = await supabase
+                .from('areas')
+                .insert([{ itea: areaName }])
+                .select();
+
+            if (error) throw error;
+
+            setMessage({ type: 'success', text: 'Área agregada correctamente' });
 
             // Recargar datos después de la operación
             fetchAreas();
@@ -230,43 +296,32 @@ export default function AreasManagementComponent() {
                         </div>
                     </div>
 
-                    {/* Formulario (visible solo en modos add, edit o delete) */}
-                    {formMode !== '' && (
+                    {/* Formulario para agregar (visible solo en modo add) */}
+                    {formMode === 'add' && (
                         <div className="mb-6 bg-gray-900 p-4 rounded-lg border border-gray-800 animate-fadeIn">
                             <h2 className="text-lg font-semibold mb-4 pb-2 border-b border-gray-800">
-                                {formMode === 'add' ? 'Agregar Nueva Área' :
-                                    formMode === 'edit' ? 'Editar Área' : 'Eliminar Área'}
+                                Agregar Nueva Área
                             </h2>
 
                             <form onSubmit={handleSubmit}>
-                                {formMode !== 'delete' ? (
-                                    <div className="mb-4">
-                                        <label className="block mb-1 text-sm font-medium">
-                                            Nombre del Área <span className="text-red-500">*</span>
-                                        </label>
-                                        <input
-                                            ref={inputRef}
-                                            type="text"
-                                            value={currentArea.itea || ''}
-                                            onChange={(e) => setCurrentArea({ ...currentArea, itea: e.target.value })}
-                                            className={`w-full bg-black border ${error ? 'border-red-500' : 'border-gray-700'} rounded-lg p-2 focus:border-white focus:ring focus:ring-gray-700 focus:ring-opacity-50 transition-all`}
-                                            placeholder="Nombre del área"
-                                            disabled={(formMode as string) === 'delete'}
-                                            onBlur={(e) => {
-                                                // Convertir a mayúsculas al salir del campo
-                                                setCurrentArea({ ...currentArea, itea: e.target.value.toUpperCase() });
-                                            }}
-                                        />
-                                        {error && <p className="text-red-500 text-xs mt-1">{error}</p>}
-                                    </div>
-                                ) : (
-                                    <div className="mb-4 p-3 bg-red-900 bg-opacity-30 border border-red-800 rounded-lg">
-                                        <p className="text-sm">
-                                            ¿Estás seguro de que deseas eliminar el área <strong>{currentArea.itea}</strong>?
-                                            Esta acción no se puede deshacer.
-                                        </p>
-                                    </div>
-                                )}
+                                <div className="mb-4">
+                                    <label className="block mb-1 text-sm font-medium">
+                                        Nombre del Área <span className="text-red-500">*</span>
+                                    </label>
+                                    <input
+                                        ref={inputRef}
+                                        type="text"
+                                        value={currentArea.itea || ''}
+                                        onChange={(e) => setCurrentArea({ ...currentArea, itea: e.target.value })}
+                                        className={`w-full bg-black border ${error ? 'border-red-500' : 'border-gray-700'} rounded-lg p-2 focus:border-white focus:ring focus:ring-gray-700 focus:ring-opacity-50 transition-all`}
+                                        placeholder="Nombre del área"
+                                        onBlur={(e) => {
+                                            // Convertir a mayúsculas al salir del campo
+                                            setCurrentArea({ ...currentArea, itea: e.target.value.toUpperCase() });
+                                        }}
+                                    />
+                                    {error && <p className="text-red-500 text-xs mt-1">{error}</p>}
+                                </div>
 
                                 <div className="flex justify-end gap-2 mt-4">
                                     <button
@@ -279,10 +334,7 @@ export default function AreasManagementComponent() {
                                     <button
                                         type="submit"
                                         disabled={isSubmitting}
-                                        className={`px-3 py-1.5 rounded-lg transition-colors text-sm flex items-center ${formMode === 'delete'
-                                            ? 'bg-red-600 hover:bg-red-700'
-                                            : 'bg-white text-black hover:bg-gray-200'
-                                            }`}
+                                        className="px-3 py-1.5 rounded-lg transition-colors text-sm flex items-center bg-white text-black hover:bg-gray-200"
                                     >
                                         {isSubmitting ? (
                                             <>
@@ -291,18 +343,57 @@ export default function AreasManagementComponent() {
                                             </>
                                         ) : (
                                             <>
-                                                {formMode === 'add' && <Plus size={16} className="mr-1" />}
-                                                {formMode === 'edit' && <Save size={16} className="mr-1" />}
-                                                {formMode === 'delete' && <Trash2 size={16} className="mr-1" />}
-
-                                                {formMode === 'add' && 'Agregar'}
-                                                {formMode === 'edit' && 'Guardar'}
-                                                {formMode === 'delete' && 'Eliminar'}
+                                                <Plus size={16} className="mr-1" />
+                                                Agregar
                                             </>
                                         )}
                                     </button>
                                 </div>
                             </form>
+                        </div>
+                    )}
+
+                    {/* Modal de confirmación de eliminación */}
+                    {deletingArea && (
+                        <div className="mb-6 bg-gray-900 p-4 rounded-lg border border-gray-800 animate-fadeIn">
+                            <h2 className="text-lg font-semibold mb-4 pb-2 border-b border-gray-800">
+                                Eliminar Área
+                            </h2>
+
+                            <div className="mb-4 p-3 bg-red-900 bg-opacity-30 border border-red-800 rounded-lg">
+                                <p className="text-sm">
+                                    ¿Estás seguro de que deseas eliminar el área <strong>{deletingArea.itea}</strong>?
+                                    Esta acción no se puede deshacer.
+                                </p>
+                            </div>
+
+                            <div className="flex justify-end gap-2 mt-4">
+                                <button
+                                    type="button"
+                                    onClick={cancelDelete}
+                                    className="px-3 py-1.5 bg-gray-800 hover:bg-gray-700 rounded-lg transition-colors text-sm"
+                                >
+                                    Cancelar
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={confirmDelete}
+                                    disabled={isSubmitting}
+                                    className="px-3 py-1.5 rounded-lg transition-colors text-sm flex items-center bg-red-600 hover:bg-red-700"
+                                >
+                                    {isSubmitting ? (
+                                        <>
+                                            <div className="w-3 h-3 border-2 border-gray-400 border-t-white rounded-full animate-spin mr-2"></div>
+                                            Procesando...
+                                        </>
+                                    ) : (
+                                        <>
+                                            <Trash2 size={16} className="mr-1" />
+                                            Eliminar
+                                        </>
+                                    )}
+                                </button>
+                            </div>
                         </div>
                     )}
 
@@ -342,24 +433,94 @@ export default function AreasManagementComponent() {
                                     filteredAreas.map((area) => (
                                         <tr key={area.id_area} className="hover:bg-gray-900 transition-colors">
                                             <td className="px-4 py-3 text-sm">{area.id_area}</td>
-                                            <td className="px-4 py-3 text-sm">{area.itea}</td>
+                                            <td className="px-4 py-3 text-sm">
+                                                {editingRow === area.id_area ? (
+                                                    <div className="flex items-center space-x-2">
+                                                        <input
+                                                            ref={editInputRef}
+                                                            type="text"
+                                                            value={editValue}
+                                                            onChange={(e) => setEditValue(e.target.value)}
+                                                            onBlur={(e) => {
+                                                                // Convertir a mayúsculas en tiempo real
+                                                                setEditValue(e.target.value.toUpperCase());
+                                                            }}
+                                                            className={`w-full bg-black border ${error && editingRow === area.id_area ? 'border-red-500' : 'border-gray-700'} rounded-lg p-1 focus:border-white focus:ring focus:ring-gray-700 focus:ring-opacity-50 transition-all text-sm`}
+                                                            placeholder="Nombre del área"
+                                                            onKeyDown={(e) => {
+                                                                if (e.key === 'Enter') {
+                                                                    e.preventDefault();
+                                                                    saveRowEdit(area.id_area);
+                                                                } else if (e.key === 'Escape') {
+                                                                    cancelRowEdit();
+                                                                }
+                                                            }}
+                                                        />
+                                                        <div className="flex space-x-1">
+                                                            <button
+                                                                onClick={() => saveRowEdit(area.id_area)}
+                                                                className="p-1 bg-gray-800 hover:bg-gray-700 rounded-md transition-colors"
+                                                                title="Guardar"
+                                                                disabled={isSubmitting}
+                                                            >
+                                                                {isSubmitting ? (
+                                                                    <div className="w-3 h-3 border-2 border-gray-500 border-t-white rounded-full animate-spin"></div>
+                                                                ) : (
+                                                                    <Save size={16} />
+                                                                )}
+                                                            </button>
+                                                            <button
+                                                                onClick={cancelRowEdit}
+                                                                className="p-1 hover:bg-gray-700 rounded-md transition-colors"
+                                                                title="Cancelar"
+                                                            >
+                                                                <X size={16} />
+                                                            </button>
+                                                        </div>
+                                                    </div>
+                                                ) : (
+                                                    area.itea
+                                                )}
+                                                {error && editingRow === area.id_area && (
+                                                    <p className="text-red-500 text-xs mt-1">{error}</p>
+                                                )}
+                                            </td>
                                             <td className="px-4 py-3 text-sm text-right">
-                                                <div className="flex justify-end space-x-1">
-                                                    <button
-                                                        onClick={() => handleEdit(area)}
-                                                        className="p-1 hover:bg-gray-700 rounded-md transition-colors"
-                                                        title="Editar"
-                                                    >
-                                                        <Edit size={16} />
-                                                    </button>
-                                                    <button
-                                                        onClick={() => handleDelete(area)}
-                                                        className="p-1 hover:bg-red-900 rounded-md transition-colors"
-                                                        title="Eliminar"
-                                                    >
-                                                        <Trash2 size={16} />
-                                                    </button>
-                                                </div>
+                                                {editingRow === area.id_area ? (
+                                                    <div className="flex justify-end space-x-1 opacity-50">
+                                                        <button
+                                                            title='Editar'
+                                                            className="p-1 hover:bg-gray-700 rounded-md transition-colors cursor-not-allowed"
+                                                            disabled
+                                                        >
+                                                            <Edit size={16} />
+                                                        </button>
+                                                        <button
+                                                            title='Eliminar'
+                                                            className="p-1 hover:bg-red-900 rounded-md transition-colors cursor-not-allowed"
+                                                            disabled
+                                                        >
+                                                            <Trash2 size={16} />
+                                                        </button>
+                                                    </div>
+                                                ) : (
+                                                    <div className="flex justify-end space-x-1">
+                                                        <button
+                                                            onClick={() => handleEdit(area)}
+                                                            className="p-1 hover:bg-gray-700 rounded-md transition-colors"
+                                                            title="Editar"
+                                                        >
+                                                            <Edit size={16} />
+                                                        </button>
+                                                        <button
+                                                            onClick={() => handleDelete(area)}
+                                                            className="p-1 hover:bg-red-900 rounded-md transition-colors"
+                                                            title="Eliminar"
+                                                        >
+                                                            <Trash2 size={16} />
+                                                        </button>
+                                                    </div>
+                                                )}
                                             </td>
                                         </tr>
                                     ))
