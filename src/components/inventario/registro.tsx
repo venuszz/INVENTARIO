@@ -772,15 +772,22 @@ export default function RegistroBienesForm() {
                                 </div>
 
                                 <div>
-                                    <label className="block mb-1 text-sm sm:text-base font-medium">Área</label>
+                                    <label className="block mb-1 text-sm sm:text-base font-medium">
+                                        Área <span className="text-red-500">*</span>
+                                    </label>
                                     <input
                                         title='Área'
                                         type="text"
                                         name="area"
                                         value={formData.area}
                                         readOnly
-                                        className="w-full bg-black border border-gray-700 rounded-lg p-2 sm:p-3 focus:border-white focus:ring focus:ring-gray-700 focus:ring-opacity-50 transition-all text-sm sm:text-base cursor-not-allowed"
+                                        required
+                                        onBlur={handleBlur}
+                                        className={`w-full bg-black border ${!isFieldValid('area') ? 'border-red-500' : 'border-gray-700'} rounded-lg p-2 sm:p-3 focus:border-white focus:ring focus:ring-gray-700 focus:ring-opacity-50 transition-all text-sm sm:text-base cursor-not-allowed`}
                                     />
+                                    {!isFieldValid('area') && (
+                                        <p className="text-red-500 text-xs sm:text-sm mt-1">Este campo es obligatorio</p>
+                                    )}
                                 </div>
                             </div>
 

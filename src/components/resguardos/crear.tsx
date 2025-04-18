@@ -210,28 +210,6 @@ export default function CrearResguardos() {
         }
     }, [formData.folio, generateFolio]);
 
-    // Handle director selection
-    const handleSelectDirector = async (id: string) => {
-        const selected = directorio.find(d => d.id_directorio.toString() === id);
-
-        if (selected && (!selected.area || !selected.puesto)) {
-            setIncompleteDirector(selected);
-            setDirectorFormData({
-                area: selected.area || '',
-                puesto: selected.puesto || ''
-            });
-            setShowDirectorModal(true);
-            return;
-        }
-
-        setFormData(prev => ({
-            ...prev,
-            directorId: id,
-            area: selected?.area || '',
-            puesto: selected?.puesto || ''
-        }));
-    };
-
     // Check if director from usufinal exists and select them
     const checkDirectorMatch = useCallback((mueble: Mueble) => {
         if (!mueble.usufinal || !directorio.length) return;
@@ -727,69 +705,58 @@ export default function CrearResguardos() {
                     {/* Right panel - Details */}
                     <div ref={detailRef} className="flex-1 bg-black p-4 border-t lg:border-t-0 lg:border-l border-gray-800 flex flex-col lg:col-span-2">
                         <div className="bg-gray-900/20 rounded-xl border border-gray-800 p-4 mb-4 shadow-inner">
-                            <h2 className="text-lg font-medium text-gray-100 mb-4 flex items-center gap-2">
+                            <h2 className="flex items-center gap-2 text-lg font-semibold mb-4">
                                 <ActivitySquare className="h-5 w-5 text-blue-400" />
                                 Información del Resguardo
                             </h2>
 
-                            {/* Director selection */}
+                            {/* Director de Área (solo lectura) */}
                             <div className="mb-4">
                                 <label className="block text-sm font-medium text-gray-400 mb-1">Director de Área</label>
-                                <div className="relative">
-                                    <select
-                                        title='Seleccionar director'
-                                        value={formData.directorId}
-                                        onChange={(e) => handleSelectDirector(e.target.value)}
-                                        className="block w-full bg-black border border-gray-800 rounded-lg py-2.5 px-4 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 appearance-none"
-                                    >
-                                        <option value="">Seleccionar director</option>
-                                        {directorio.map((director) => (
-                                            <option key={director.id_directorio} value={director.id_directorio}>
-                                                {director.nombre}
-                                            </option>
-                                        ))}
-                                    </select>
-                                    <div className="absolute inset-y-0 right-0 flex items-center px-2 pointer-events-none">
-                                        <ChevronRight className="h-4 w-4 text-gray-400" />
-                                    </div>
-                                </div>
-                            </div>
-
-                            {/* Resguardante */}
-                            <div className="mb-4">
-                                <label className="block text-sm font-medium text-gray-400 mb-1">Resguardante</label>
                                 <input
                                     type="text"
-                                    value={formData.resguardante}
-                                    onChange={(e) => setFormData({ ...formData, resguardante: e.target.value })}
-                                    placeholder="Nombre del resguardante"
-                                    className="block w-full bg-black border border-gray-800 rounded-lg py-2.5 px-4 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                    value={selectedMuebles.length > 0 ? selectedMuebles[0].usufinal || '' : ''}
+                                    readOnly
+                                    className="block w-full bg-black border border-gray-800 rounded-lg py-2.5 px-4 text-white placeholder-gray-500 focus:outline-none cursor-not-allowed"
+                                    placeholder="Director de área"
                                 />
                             </div>
 
-                            {/* Area and Puesto */}
+                            {/* Área y Puesto (solo lectura) */}
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                 <div>
                                     <label className="block text-sm font-medium text-gray-400 mb-1">Área</label>
                                     <input
                                         type="text"
                                         value={formData.area}
-                                        readOnly={true}
-                                        onChange={(e) => setFormData({ ...formData, area: e.target.value })}
+                                        readOnly
+                                        className="block w-full bg-black border border-gray-800 rounded-lg py-2.5 px-4 text-white placeholder-gray-500 focus:outline-none cursor-not-allowed"
                                         placeholder="Área"
-                                        className="block w-full bg-black border border-gray-800 rounded-lg py-2.5 px-4 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-gray-300"
                                     />
+                                    {/* Advertencia si falta información y hay artículos seleccionados */}
+                                    {selectedMuebles.length > 0 && !formData.area && (
+                                        <div className="mt-2 text-yellow-400 text-xs flex items-center gap-2">
+                                            <AlertTriangle className="h-4 w-4" />
+                                            <span>Falta información del área. <button type="button" className="underline text-yellow-300 hover:text-yellow-200" onClick={() => setShowDirectorModal(true)}>Completar ahora</button></span>
+                                        </div>
+                                    )}
                                 </div>
                                 <div>
                                     <label className="block text-sm font-medium text-gray-400 mb-1">Puesto</label>
                                     <input
                                         type="text"
                                         value={formData.puesto}
-                                        readOnly={true}
-                                        onChange={(e) => setFormData({ ...formData, puesto: e.target.value })}
+                                        readOnly
+                                        className="block w-full bg-black border border-gray-800 rounded-lg py-2.5 px-4 text-white placeholder-gray-500 focus:outline-none cursor-not-allowed"
                                         placeholder="Puesto"
-                                        className="block w-full bg-black border border-gray-800 rounded-lg py-2.5 px-4 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-gray-300"
                                     />
+                                    {/* Advertencia si falta información y hay artículos seleccionados */}
+                                    {selectedMuebles.length > 0 && !formData.puesto && (
+                                        <div className="mt-2 text-yellow-400 text-xs flex items-center gap-2">
+                                            <AlertTriangle className="h-4 w-4" />
+                                            <span>Falta información del puesto. <button type="button" className="underline text-yellow-300 hover:text-yellow-200" onClick={() => setShowDirectorModal(true)}>Completar ahora</button></span>
+                                        </div>
+                                    )}
                                 </div>
                             </div>
                         </div>
