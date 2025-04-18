@@ -19,12 +19,21 @@ export default function RegisterPage() {
     const particlesRef = useRef<HTMLDivElement>(null)
     const containerRef = useRef<HTMLDivElement>(null)
     const router = useRouter()
+    const [isMobile, setIsMobile] = useState(false)
 
     useEffect(() => {
+        // Detectar si es móvil
+        const checkIfMobile = () => {
+            setIsMobile(window.innerWidth < 768)
+        }
+
+        checkIfMobile()
+        window.addEventListener('resize', checkIfMobile)
+
         setIsLoaded(true)
 
         const handleMouseMove = (e: MouseEvent) => {
-            if (containerRef.current) {
+            if (containerRef.current && !isMobile) {
                 const rect = containerRef.current.getBoundingClientRect()
                 setMousePosition({
                     x: e.clientX - rect.left,
@@ -35,58 +44,67 @@ export default function RegisterPage() {
 
         window.addEventListener('mousemove', handleMouseMove)
 
-        const interval = setInterval(() => {
-            if (particlesRef.current) {
-                const particle = document.createElement('div')
-                particle.classList.add('particle')
+        // Solo crear partículas en dispositivos no móviles para mejor rendimiento
+        if (!isMobile) {
+            const interval = setInterval(() => {
+                if (particlesRef.current) {
+                    const particle = document.createElement('div')
+                    particle.classList.add('particle')
 
-                const posX = Math.random() * 100
-                const posY = Math.random() * 100
-                const size = Math.random() * 3 + 1
-                const speedX = (Math.random() - 0.5) * 2
-                const speedY = (Math.random() - 0.5) * 2
+                    const posX = Math.random() * 100
+                    const posY = Math.random() * 100
+                    const size = Math.random() * 3 + 1
+                    const speedX = (Math.random() - 0.5) * 2
+                    const speedY = (Math.random() - 0.5) * 2
 
-                particle.style.left = `${posX}%`
-                particle.style.top = `${posY}%`
-                particle.style.width = `${size}px`
-                particle.style.height = `${size}px`
-                particle.style.opacity = (Math.random() * 0.5 + 0.3).toString()
+                    particle.style.left = `${posX}%`
+                    particle.style.top = `${posY}%`
+                    particle.style.width = `${size}px`
+                    particle.style.height = `${size}px`
+                    particle.style.opacity = (Math.random() * 0.5 + 0.3).toString()
 
-                particlesRef.current.appendChild(particle)
+                    particlesRef.current.appendChild(particle)
 
-                let positionX = posX
-                let positionY = posY
+                    let positionX = posX
+                    let positionY = posY
 
-                const animate = () => {
-                    positionX += speedX
-                    positionY += speedY
+                    const animate = () => {
+                        positionX += speedX
+                        positionY += speedY
 
-                    particle.style.left = `${positionX}%`
-                    particle.style.top = `${positionY}%`
+                        particle.style.left = `${positionX}%`
+                        particle.style.top = `${positionY}%`
 
-                    if (positionX < -10 || positionX > 110 || positionY < -10 || positionY > 110) {
-                        particle.remove()
-                        return
+                        if (positionX < -10 || positionX > 110 || positionY < -10 || positionY > 110) {
+                            particle.remove()
+                            return
+                        }
+
+                        requestAnimationFrame(animate)
                     }
 
-                    requestAnimationFrame(animate)
+                    animate()
+
+                    setTimeout(() => {
+                        if (particle.parentNode === particlesRef.current) {
+                            particle.remove()
+                        }
+                    }, 8000)
                 }
+            }, 100)
 
-                animate()
-
-                setTimeout(() => {
-                    if (particle.parentNode === particlesRef.current) {
-                        particle.remove()
-                    }
-                }, 8000)
+            return () => {
+                window.removeEventListener('mousemove', handleMouseMove)
+                clearInterval(interval)
+                window.removeEventListener('resize', checkIfMobile)
             }
-        }, 100)
+        }
 
         return () => {
             window.removeEventListener('mousemove', handleMouseMove)
-            clearInterval(interval)
+            window.removeEventListener('resize', checkIfMobile)
         }
-    }, [])
+    }, [isMobile])
 
     const validatePersonalData = () => {
         if (!firstName.trim()) {
@@ -260,80 +278,96 @@ export default function RegisterPage() {
                 <div className="absolute inset-0 bg-grid"></div>
             </div>
 
-            <div className="absolute inset-0 z-0">
-                <div className="wave wave1"></div>
-                <div className="wave wave2"></div>
-                <div className="wave wave3"></div>
-            </div>
+            {!isMobile && (
+                <>
+                    <div className="absolute inset-0 z-0">
+                        <div className="wave wave1"></div>
+                        <div className="wave wave2"></div>
+                        <div className="wave wave3"></div>
+                    </div>
 
-            <div ref={particlesRef} className="absolute inset-0 overflow-hidden z-0"></div>
+                    <div ref={particlesRef} className="absolute inset-0 overflow-hidden z-0"></div>
 
-            <div
-                className="absolute w-64 h-64 rounded-full pointer-events-none z-0 opacity-20 blur-3xl"
-                style={{
-                    background: 'radial-gradient(circle, rgba(255,255,255,0.8) 0%, rgba(255,255,255,0) 70%)',
-                    transform: `translate(${mousePosition.x - 128}px, ${mousePosition.y - 128}px)`,
-                    transition: 'transform 0.1s ease-out'
-                }}
-            ></div>
+                    <div
+                        className="absolute w-64 h-64 rounded-full pointer-events-none z-0 opacity-20 blur-3xl"
+                        style={{
+                            background: 'radial-gradient(circle, rgba(255,255,255,0.8) 0%, rgba(255,255,255,0) 70%)',
+                            transform: `translate(${mousePosition.x - 128}px, ${mousePosition.y - 128}px)`,
+                            transition: 'transform 0.1s ease-out'
+                        }}
+                    ></div>
 
-            <div className="absolute inset-0 bg-connections z-0"></div>
+                    <div className="absolute inset-0 bg-connections z-0"></div>
+                </>
+            )}
 
-            <div className="relative z-10 flex items-center justify-center min-h-screen p-6">
-                <div className="w-full max-w-4xl bg-black/60 backdrop-blur-lg rounded-2xl shadow-2xl border border-blue-800/30 overflow-hidden">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                        <div className="p-8 flex flex-col justify-center items-center">
-                            <div className={`transform transition-all duration-1000 ${isLoaded ? 'scale-100 opacity-100' : 'scale-90 opacity-0'}`}>
-                                <img
-                                    src="/images/ITEA_logo.png"
-                                    alt="Logo Gobierno"
-                                    className="h-32 w-auto object-contain animate-float mb-8"
-                                    onLoad={() => setIsLoaded(true)}
-                                />
-                            </div>
+            <div className="relative z-10 flex items-center justify-center min-h-screen p-4">
+                <div className={`w-full ${isMobile ? 'max-w-md' : 'max-w-4xl'} bg-black/60 backdrop-blur-lg rounded-2xl shadow-2xl border border-blue-800/30 overflow-hidden`}>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-0 md:gap-8">
+                        {!isMobile && (
+                            <div className="p-6 md:p-8 flex flex-col justify-center items-center">
+                                <div className={`transform transition-all duration-1000 ${isLoaded ? 'scale-100 opacity-100' : 'scale-90 opacity-0'}`}>
+                                    <img
+                                        src="/images/ITEA_logo.png"
+                                        alt="Logo Gobierno"
+                                        className="h-24 md:h-32 w-auto object-contain animate-float mb-6 md:mb-8"
+                                        onLoad={() => setIsLoaded(true)}
+                                    />
+                                </div>
 
-                            <h1 className="text-3xl font-bold text-center text-white mb-4">
-                                Sistema Gubernamental
-                            </h1>
+                                <h1 className="text-2xl md:text-3xl font-bold text-center text-white mb-3 md:mb-4">
+                                    Sistema Gubernamental
+                                </h1>
 
-                            <p className="text-center text-gray-300 mb-6">
-                                Acceso institucional a la plataforma de administración y gestión del Inventario.
-                            </p>
+                                <p className="text-center text-gray-300 text-sm md:text-base mb-4 md:mb-6">
+                                    Acceso institucional a la plataforma de administración y gestión del Inventario.
+                                </p>
 
-                            <div className="relative h-32 w-32 mt-6">
-                                <div className="absolute inset-0">
-                                    <div className="orbit orbit1"></div>
-                                    <div className="orbit orbit2"></div>
-                                    <div className="orbital-dot orbital-dot1"></div>
-                                    <div className="orbital-dot orbital-dot2"></div>
+                                <div className="relative h-24 w-24 md:h-32 md:w-32 mt-4 md:mt-6">
+                                    <div className="absolute inset-0">
+                                        <div className="orbit orbit1"></div>
+                                        <div className="orbit orbit2"></div>
+                                        <div className="orbital-dot orbital-dot1"></div>
+                                        <div className="orbital-dot orbital-dot2"></div>
+                                    </div>
                                 </div>
                             </div>
-                        </div>
+                        )}
 
-                        <div className="p-8 bg-black/40">
-                            <h2 className="text-2xl font-bold text-white mb-6 text-center">
+                        <div className={`p-6 ${isMobile ? '' : 'md:p-8 bg-black/40'}`}>
+                            {isMobile && (
+                                <div className="flex justify-center mb-4">
+                                    <img
+                                        src="/images/ITEA_logo.png"
+                                        alt="Logo Gobierno"
+                                        className="h-16 w-auto object-contain"
+                                    />
+                                </div>
+                            )}
+
+                            <h2 className="text-xl md:text-2xl font-bold text-white mb-4 md:mb-6 text-center">
                                 Registro de Usuario
                             </h2>
 
-                            <div className="flex justify-center mb-6">
+                            <div className="flex justify-center mb-4 md:mb-6">
                                 <div className="flex items-center">
-                                    <div className={`w-10 h-10 rounded-full flex items-center justify-center ${step === 1 ? 'bg-blue-600' : 'bg-blue-900'} text-white font-bold`}>
+                                    <div className={`w-8 h-8 md:w-10 md:h-10 rounded-full flex items-center justify-center ${step === 1 ? 'bg-blue-600' : 'bg-blue-900'} text-white font-bold text-sm md:text-base`}>
                                         1
                                     </div>
-                                    <div className={`h-1 w-20 ${step === 1 ? 'bg-gray-600' : 'bg-blue-600'}`}></div>
-                                    <div className={`w-10 h-10 rounded-full flex items-center justify-center ${step === 2 ? 'bg-blue-600' : 'bg-blue-900'} text-white font-bold`}>
+                                    <div className={`h-1 w-12 md:w-20 ${step === 1 ? 'bg-gray-600' : 'bg-blue-600'}`}></div>
+                                    <div className={`w-8 h-8 md:w-10 md:h-10 rounded-full flex items-center justify-center ${step === 2 ? 'bg-blue-600' : 'bg-blue-900'} text-white font-bold text-sm md:text-base`}>
                                         2
                                     </div>
                                 </div>
                             </div>
 
-                            <p className="text-center text-gray-300 mb-6">
+                            <p className="text-center text-gray-300 text-sm md:text-base mb-4 md:mb-6">
                                 {step === 1 ? 'Ingresa tus datos personales' : 'Configura tus credenciales de acceso'}
                             </p>
 
-                            <form onSubmit={step === 1 ? (e => { e.preventDefault(); handleNextStep(); }) : handleRegister} className="space-y-6">
+                            <form onSubmit={step === 1 ? (e => { e.preventDefault(); handleNextStep(); }) : handleRegister} className="space-y-4 md:space-y-6">
                                 {error && (
-                                    <div className="bg-red-500/20 border border-red-500/30 text-red-300 p-3 rounded-lg text-center">
+                                    <div className="bg-red-500/20 border border-red-500/30 text-red-300 p-2 md:p-3 rounded-lg text-center text-sm md:text-base">
                                         {error}
                                     </div>
                                 )}
@@ -341,8 +375,8 @@ export default function RegisterPage() {
                                 {step === 1 ? (
                                     <>
                                         <div className="relative">
-                                            <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                                                <UserCircle className="text-blue-400" size={20} />
+                                            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                                <UserCircle className="text-blue-400" size={18} />
                                             </div>
                                             <input
                                                 type="text"
@@ -350,13 +384,13 @@ export default function RegisterPage() {
                                                 value={firstName}
                                                 onChange={(e) => setFirstName(e.target.value)}
                                                 required
-                                                className="w-full pl-12 pr-4 py-4 bg-gray-800 text-white rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all text-lg"
+                                                className="w-full pl-10 pr-4 py-3 md:py-4 bg-gray-800 text-white rounded-lg md:rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all text-base"
                                             />
                                         </div>
 
                                         <div className="relative">
-                                            <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                                                <Users className="text-blue-400" size={20} />
+                                            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                                <Users className="text-blue-400" size={18} />
                                             </div>
                                             <input
                                                 type="text"
@@ -364,14 +398,14 @@ export default function RegisterPage() {
                                                 value={lastName}
                                                 onChange={(e) => setLastName(e.target.value)}
                                                 required
-                                                className="w-full pl-12 pr-4 py-4 bg-gray-800 text-white rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all text-lg"
+                                                className="w-full pl-10 pr-4 py-3 md:py-4 bg-gray-800 text-white rounded-lg md:rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all text-base"
                                             />
                                         </div>
 
-                                        <div className="pt-4">
+                                        <div className="pt-2 md:pt-4">
                                             <button
                                                 type="submit"
-                                                className="w-full bg-blue-600 text-white py-4 rounded-xl hover:bg-blue-700 transition-colors font-semibold text-lg"
+                                                className="w-full bg-blue-600 text-white py-3 md:py-4 rounded-lg md:rounded-xl hover:bg-blue-700 transition-colors font-semibold text-base"
                                             >
                                                 Continuar
                                             </button>
@@ -380,8 +414,8 @@ export default function RegisterPage() {
                                 ) : (
                                     <>
                                         <div className="relative">
-                                            <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                                                <User className="text-blue-400" size={20} />
+                                            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                                <User className="text-blue-400" size={18} />
                                             </div>
                                             <input
                                                 type="text"
@@ -389,13 +423,13 @@ export default function RegisterPage() {
                                                 value={username}
                                                 onChange={(e) => setUsername(e.target.value)}
                                                 required
-                                                className="w-full pl-12 pr-4 py-4 bg-gray-800 text-white rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all text-lg"
+                                                className="w-full pl-10 pr-4 py-3 md:py-4 bg-gray-800 text-white rounded-lg md:rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all text-base"
                                             />
                                         </div>
 
                                         <div className="relative">
-                                            <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                                                <Lock className="text-blue-400" size={20} />
+                                            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                                <Lock className="text-blue-400" size={18} />
                                             </div>
                                             <input
                                                 type="password"
@@ -404,19 +438,19 @@ export default function RegisterPage() {
                                                 onChange={(e) => setPassword(e.target.value)}
                                                 required
                                                 minLength={8}
-                                                className="w-full pl-12 pr-4 py-4 bg-gray-800 text-white rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all text-lg"
+                                                className="w-full pl-10 pr-4 py-3 md:py-4 bg-gray-800 text-white rounded-lg md:rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all text-base"
                                             />
                                         </div>
 
                                         <div className="relative">
-                                            <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                                                <Shield className="text-blue-400" size={20} />
+                                            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                                <Shield className="text-blue-400" size={18} />
                                             </div>
                                             <select
                                                 value={rol}
                                                 onChange={(e) => setRol(e.target.value)}
                                                 title='Rol de Usuario'
-                                                className="w-full pl-12 pr-4 py-4 bg-gray-800 text-white rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all text-lg appearance-none"
+                                                className="w-full pl-10 pr-4 py-3 md:py-4 bg-gray-800 text-white rounded-lg md:rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all text-base appearance-none"
                                                 required
                                             >
                                                 <option value="usuario">Usuario Normal</option>
@@ -424,18 +458,18 @@ export default function RegisterPage() {
                                             </select>
                                         </div>
 
-                                        <div className="grid grid-cols-2 gap-4 pt-4">
+                                        <div className="grid grid-cols-2 gap-3 md:gap-4 pt-2 md:pt-4">
                                             <button
                                                 type="button"
                                                 onClick={handlePrevStep}
-                                                className="w-full bg-gray-700 text-white py-4 rounded-xl hover:bg-gray-600 transition-colors font-semibold text-lg"
+                                                className="w-full bg-gray-700 text-white py-3 md:py-4 rounded-lg md:rounded-xl hover:bg-gray-600 transition-colors font-semibold text-base"
                                             >
                                                 Atrás
                                             </button>
                                             <button
                                                 type="submit"
                                                 disabled={isLoading}
-                                                className="w-full bg-blue-600 text-white py-4 rounded-xl hover:bg-blue-700 transition-colors font-semibold disabled:opacity-50 disabled:cursor-not-allowed text-lg"
+                                                className="w-full bg-blue-600 text-white py-3 md:py-4 rounded-lg md:rounded-xl hover:bg-blue-700 transition-colors font-semibold disabled:opacity-50 disabled:cursor-not-allowed text-base"
                                             >
                                                 {isLoading ? 'Procesando...' : 'Crear Cuenta'}
                                             </button>
@@ -443,8 +477,8 @@ export default function RegisterPage() {
                                     </>
                                 )}
 
-                                <div className="text-center mt-6">
-                                    <p className="text-gray-400">
+                                <div className="text-center mt-4 md:mt-6">
+                                    <p className="text-gray-400 text-sm md:text-base">
                                         ¿Ya tiene una cuenta?
                                         <a
                                             href="/login"
@@ -520,21 +554,21 @@ export default function RegisterPage() {
                 }
                 
                 .orbit1 {
-                    width: 100px;
-                    height: 100px;
+                    width: 80px;
+                    height: 80px;
                     animation: spin 20s linear infinite;
                 }
                 
                 .orbit2 {
-                    width: 160px;
-                    height: 160px;
+                    width: 120px;
+                    height: 120px;
                     animation: spin 30s linear infinite reverse;
                 }
                 
                 .orbital-dot {
                     position: absolute;
-                    width: 6px;
-                    height: 6px;
+                    width: 5px;
+                    height: 5px;
                     background: white;
                     border-radius: 50%;
                     top: 50%;
@@ -544,17 +578,17 @@ export default function RegisterPage() {
                 
                 .orbital-dot1 {
                     animation: orbit1 20s linear infinite;
-                    box-shadow: 0 0 10px 2px rgba(100, 200, 255, 0.5);
+                    box-shadow: 0 0 8px 2px rgba(100, 200, 255, 0.5);
                 }
                 
                 .orbital-dot2 {
                     animation: orbit2 30s linear infinite reverse;
-                    box-shadow: 0 0 10px 2px rgba(255, 100, 255, 0.5);
+                    box-shadow: 0 0 8px 2px rgba(255, 100, 255, 0.5);
                 }
                 
                 @keyframes float {
                     0%, 100% { transform: translateY(0); }
-                    50% { transform: translateY(-10px); }
+                    50% { transform: translateY(-8px); }
                 }
                 
                 @keyframes pulse {
@@ -573,13 +607,35 @@ export default function RegisterPage() {
                 }
                 
                 @keyframes orbit1 {
-                    from { transform: rotate(0deg) translateX(50px) rotate(0deg); }
-                    to { transform: rotate(360deg) translateX(50px) rotate(-360deg); }
+                    from { transform: rotate(0deg) translateX(40px) rotate(0deg); }
+                    to { transform: rotate(360deg) translateX(40px) rotate(-360deg); }
                 }
                 
                 @keyframes orbit2 {
-                    from { transform: rotate(0deg) translateX(80px) rotate(0deg); }
-                    to { transform: rotate(360deg) translateX(80px) rotate(-360deg); }
+                    from { transform: rotate(0deg) translateX(60px) rotate(0deg); }
+                    to { transform: rotate(360deg) translateX(60px) rotate(-360deg); }
+                }
+
+                @media (max-width: 768px) {
+                    .orbit1 {
+                        width: 60px;
+                        height: 60px;
+                    }
+                    
+                    .orbit2 {
+                        width: 100px;
+                        height: 100px;
+                    }
+                    
+                    @keyframes orbit1 {
+                        from { transform: rotate(0deg) translateX(30px) rotate(0deg); }
+                        to { transform: rotate(360deg) translateX(30px) rotate(-360deg); }
+                    }
+                    
+                    @keyframes orbit2 {
+                        from { transform: rotate(0deg) translateX(50px) rotate(0deg); }
+                        to { transform: rotate(360deg) translateX(50px) rotate(-360deg); }
+                    }
                 }
             `}</style>
         </div>

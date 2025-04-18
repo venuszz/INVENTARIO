@@ -5,7 +5,7 @@ import {
     AlertCircle, X, Save, ActivitySquare,
     LayoutGrid, TagIcon, Building2,
     User, AlertTriangle, Calendar, Info,
-    CheckCircle, RefreshCw, UserCheck, Briefcase, 
+    CheckCircle, RefreshCw, UserCheck, Briefcase,
     Trash2, ListChecks, FileDigit, Users
 } from 'lucide-react';
 import supabase from '@/app/lib/supabase/client';
@@ -63,6 +63,8 @@ export default function CrearResguardos() {
     const [totalCount, setTotalCount] = useState(0);
     const [isLoadingMore] = useState(false);
     const detailRef = useRef<HTMLDivElement>(null);
+    const [showUsufinalModal, setShowUsufinalModal] = useState(false);
+    const [conflictUsufinal, setConflictUsufinal] = useState<string | null>(null);
 
     // Fetch data with pagination directly from database
     const fetchData = useCallback(async (page = 1, rowsPerPage = 10, searchQuery = '', sortField = 'id_inv', sortDir = 'asc') => {
@@ -312,10 +314,16 @@ export default function CrearResguardos() {
             // If already selected, remove it
             setSelectedMuebles(prev => prev.filter(m => m.id !== mueble.id));
         } else {
-            // If not selected, add it and check if director should be selected
+            // Validar que todos los seleccionados tengan el mismo usufinal
+            const currentUsufinal = selectedMuebles[0]?.usufinal?.trim().toUpperCase();
+            const newUsufinal = mueble.usufinal?.trim().toUpperCase();
+            if (selectedMuebles.length > 0 && currentUsufinal && newUsufinal && currentUsufinal !== newUsufinal) {
+                setConflictUsufinal(newUsufinal || '');
+                setShowUsufinalModal(true);
+                return;
+            }
             setSelectedMuebles(prev => [...prev, mueble]);
-
-            // If this is the first selected item, try to match a director
+            // Si este es el primer seleccionado, intentar seleccionar director
             if (selectedMuebles.length === 0 && !formData.directorId) {
                 checkDirectorMatch(mueble);
             }
@@ -646,10 +654,10 @@ export default function CrearResguardos() {
                                                         <td className="px-4 py-4">
                                                             <div className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium 
                                                                 ${mueble.estado === 'B' ? 'bg-green-900/20 text-green-300 border border-green-900' :
-                                                                mueble.estado === 'R' ? 'bg-yellow-900/20 text-yellow-300 border border-yellow-900' :
-                                                                mueble.estado === 'M' ? 'bg-red-900/20 text-red-300 border border-red-900' :
-                                                                mueble.estado === 'N' ? 'bg-blue-900/20 text-blue-300 border border-blue-900' :
-                                                                'bg-gray-900/20 text-gray-300 border border-gray-900'}`}>
+                                                                    mueble.estado === 'R' ? 'bg-yellow-900/20 text-yellow-300 border border-yellow-900' :
+                                                                        mueble.estado === 'M' ? 'bg-red-900/20 text-red-300 border border-red-900' :
+                                                                            mueble.estado === 'N' ? 'bg-blue-900/20 text-blue-300 border border-blue-900' :
+                                                                                'bg-gray-900/20 text-gray-300 border border-gray-900'}`}>
                                                                 {mueble.estado}
                                                             </div>
                                                         </td>
@@ -985,7 +993,40 @@ export default function CrearResguardos() {
                         </div>
                     </div>
                 </div>
-            )}       
+            )}
+
+            {/* Modal de advertencia por usufinal diferente */}
+            {showUsufinalModal && (
+                <div className="fixed inset-0 bg-black/90 flex items-center justify-center z-50 px-4 animate-fadeIn">
+                    <div className="bg-black rounded-2xl shadow-2xl border border-red-600/30 w-full max-w-md overflow-hidden transition-all duration-300 transform">
+                        <div className="relative p-6 bg-gradient-to-b from-black to-gray-900">
+                            <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-red-500/60 via-red-400 to-red-500/60"></div>
+                            <div className="flex flex-col items-center text-center mb-4">
+                                <div className="p-3 bg-red-500/10 rounded-full border border-red-500/30 mb-3">
+                                    <AlertTriangle className="h-8 w-8 text-red-500" />
+                                </div>
+                                <h3 className="text-2xl font-bold text-white">No se puede agregar</h3>
+                                <p className="text-gray-400 mt-2">
+                                    Solo puedes seleccionar bienes que pertenezcan al mismo responsable.
+                                </p>
+                                <p className="text-red-300 mt-2 text-sm">
+                                    El bien que intentas agregar actualmente pertenece a: <span className="font-semibold">{conflictUsufinal}</span>
+                                </p>
+                                <p className='text-gray-700 text-xs italic pt-3'>Te sugerimos editar las características del bien.</p>
+                            </div>
+                        </div>
+                        <div className="p-5 bg-black border-t border-gray-800 flex justify-end gap-3">
+                            <button
+                                onClick={() => setShowUsufinalModal(false)}
+                                className="px-5 py-2.5 bg-gray-900 text-white rounded-lg text-sm hover:bg-gray-800 border border-gray-800 transition-colors flex items-center gap-2"
+                            >
+                                <X className="h-4 w-4" />
+                                Cerrar
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }

@@ -52,6 +52,7 @@ export default function NavigationBar() {
     const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
     const [openMenu, setOpenMenu] = useState<string | null>(null);
     const [openSubmenu, setOpenSubmenu] = useState<string | null>(null);
+    const [userData, setUserData] = useState<{ firstName?: string; lastName?: string; username?: string; email?: string }>({});
     const handleLogout = useCerrarSesion();
 
     // Cerrar menús al hacer clic fuera
@@ -72,6 +73,23 @@ export default function NavigationBar() {
     useEffect(() => {
         closeAll();
     }, [pathname]);
+
+    useEffect(() => {
+        const userDataCookie = Cookies.get('userData');
+        if (userDataCookie) {
+            try {
+                const parsed = JSON.parse(userDataCookie);
+                setUserData({
+                    firstName: parsed.firstName,
+                    lastName: parsed.lastName,
+                    username: parsed.username,
+                    email: parsed.email
+                });
+            } catch {
+                setUserData({});
+            }
+        }
+    }, []);
 
     const toggleMenu = (menu: string) => {
         setOpenMenu(openMenu === menu ? null : menu);
@@ -280,13 +298,13 @@ export default function NavigationBar() {
 
             {/* Mobile Menu */}
             {mobileMenuOpen && (
-                <div className="md:hidden bg-gray-900">
+                <div className="md:hidden bg-black">
                     <div className="px-2 pt-2 pb-3 space-y-1">
                         {menuItems.map((item) => (
                             <div key={item.title}>
                                 <button
                                     onClick={() => toggleMenu(item.title)}
-                                    className={`flex justify-between w-full px-3 py-2 rounded-md ${isActive(item.path) ? 'text-blue-400 bg-gray-800' : 'text-gray-300 hover:text-white hover:bg-gray-800'}`}
+                                    className={`flex justify-between w-full px-3 py-2 rounded-md ${isActive(item.path) ? 'text-blue-400 bg-black' : 'text-gray-300 hover:text-white hover:bg-gray-800'}`}
                                 >
                                     <div className="flex items-center">
                                         <span className="mr-3">{item.icon}</span>
@@ -303,7 +321,7 @@ export default function NavigationBar() {
                                                     <div>
                                                         <button
                                                             onClick={(e) => toggleSubmenu(`${item.title}-${subItem.title}`, e)}
-                                                            className={`flex justify-between w-full px-3 py-2 rounded-md text-sm ${isActive(subItem.path) ? 'text-blue-400 bg-gray-800' : 'text-gray-400 hover:text-white hover:bg-gray-800'}`}
+                                                            className={`flex justify-between w-full px-3 py-2 rounded-md text-sm ${isActive(subItem.path) ? 'text-blue-400 bg-black' : 'text-gray-400 hover:text-white hover:bg-gray-800'}`}
                                                         >
                                                             {subItem.title}
                                                             <ChevronDown className={`w-4 h-4 transition-transform ${openSubmenu === `${item.title}-${subItem.title}` ? 'rotate-180' : ''}`} />
@@ -347,13 +365,9 @@ export default function NavigationBar() {
                                 <User className="h-10 w-10 text-gray-300" />
                             </div>
                             <div className="ml-3">
-                                <div className="text-base font-medium text-white">Usuario</div>
-                                <div className="text-sm font-medium text-gray-400">usuario@ejemplo.com</div>
+                                <div className="text-base font-medium text-white">{userData.firstName ? `${userData.firstName}${userData.lastName ? ' ' + userData.lastName : ''}` : userData.username || 'Usuario'}</div>
                             </div>
                             <div className="ml-auto flex space-x-2">
-                                <Link href="/perfil" onClick={closeAll} className="p-2 text-gray-300 hover:text-white hover:bg-gray-800 rounded-full">
-                                    <User className="h-5 w-5" />
-                                </Link>
                                 <button onClick={handleLogout} className="p-2 text-gray-300 hover:text-white hover:bg-gray-800 rounded-full" title='Cerrar sesión'>
                                     <LogOut className="h-5 w-5" />
                                 </button>
