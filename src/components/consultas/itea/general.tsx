@@ -35,6 +35,25 @@ interface FilterOptions {
     estatus: string[];
     areas: string[];
     rubros: string[];
+    formasAdq: string[];
+    directores: { nombre: string; area: string }[];
+}
+
+interface Area {
+    id_area: number;
+    itea: string | null;
+}
+
+interface Directorio {
+    id_directorio: number;
+    nombre: string | null;
+    area: string | null;
+    puesto: string | null;
+}
+
+interface Message {
+    type: 'success' | 'error' | 'info' | 'warning';
+    text: string;
 }
 
 const ImagePreview = ({ imagePath }: { imagePath: string | null }) => {
@@ -150,13 +169,194 @@ export default function ConsultasIteaGeneral() {
         estados: [],
         estatus: [],
         areas: [],
-        rubros: []
+        rubros: [],
+        formasAdq: [],
+        directores: []
     });
+    const [areas, setAreas] = useState<Area[]>([]);
+    const [directores, setDirectores] = useState<Directorio[]>([]);
     const [showFilters, setShowFilters] = useState(false);
     const [selectedItem, setSelectedItem] = useState<Mueble | null>(null);
     const [isEditing, setIsEditing] = useState(false);
     const [editFormData, setEditFormData] = useState<Mueble | null>(null);
+    const [showDirectorModal, setShowDirectorModal] = useState(false);
+    const [incompleteDirector, setIncompleteDirector] = useState<Directorio | null>(null);
+    const [directorFormData, setDirectorFormData] = useState({ area: '' });
+    const [savingDirector, setSavingDirector] = useState(false);
+    const [message, setMessage] = useState<Message | null>(null);
     const detailRef = useRef<HTMLDivElement>(null);
+
+    const fetchAreas = useCallback(async () => {
+        try {
+            const { data, error } = await supabase
+                .from('areas')
+                .select('*')
+                .order('itea', { ascending: true });
+
+            if (error) throw error;
+            setAreas(data || []);
+        } catch (error) {
+            console.error('Error fetching areas:', error);
+        }
+    }, []);
+
+    const fetchDirectores = useCallback(async () => {
+        try {
+            const { data, error } = await supabase
+                .from('directorio')
+                .select('*')
+                .order('nombre', { ascending: true });
+
+            if (error) throw error;
+            setDirectores(data || []);
+
+            if (data) {
+                const directores = data.map(item => ({
+                    nombre: item.nombre?.trim().toUpperCase() || '',
+                    area: item.area?.trim().toUpperCase() || ''
+                }));
+
+                setFilterOptions(prev => ({
+                    ...prev,
+                    directores: directores
+                }));
+            }
+        } catch (error) {
+            console.error('Error fetching directores:', error);
+            setMessage({
+                type: 'error',
+                text: 'Error al cargar la lista de directores'
+            });
+        }
+    }, []);
+
+    const fetchFilterOptions = useCallback(async () => {
+        try {
+            // Obtener estados desde mueblesitea (se mantiene igual)
+            const { data: estados } = await supabase
+                .from('mueblesitea')
+                .select('estado')
+                .filter('estado', 'not.is', null)
+                .limit(1000);
+
+            // Obtener rubros desde config
+            const { data: rubros } = await supabase
+                .from('config')
+                .select('concepto')
+                .eq('tipo', 'rubro');
+
+            // Obtener estatus desde config
+            const { data: estatus } = await supabase
+                .from('config')
+                .select('concepto')
+                .eq('tipo', 'estatus');
+
+            // Obtener formas de adquisición desde config
+            const { data: formasAdq } = await supabase
+                .from('config')
+                .select('concepto')
+                .eq('tipo', 'formadq');
+
+            setFilterOptions(prev => ({
+                ...prev,
+                estados: [...new Set(estados?.map(item => item.estado?.trim()).filter(Boolean))] as string[],
+                rubros: rubros?.map(item => item.concepto?.trim()).filter(Boolean) || [],
+                estatus: estatus?.map(item => item.concepto?.trim()).filter(Boolean) || [],
+                formasAdq: formasAdq?.map(item => item.concepto?.trim()).filter(Boolean) || []
+            }));
+        } catch (error) {
+            console.error('Error al cargar opciones de filtro:', error);
+        }
+    }, []);
+
+    const handleSelectDirector = (nombre: string) => {
+        const selected = directores.find(d => d.nombre === nombre);
+
+        if (!selected) return;
+
+        if (!selected.area) {
+            setIncompleteDirector(selected);
+            setDirectorFormData({ area: '' });
+            setShowDirectorModal(true);
+            return;
+        }
+
+        if (editFormData) {
+            setEditFormData(prev => ({
+                ...prev!,
+                usufinal: nombre,
+                area: selected.area || ''
+            }));
+        } else if (selectedItem) {
+            setSelectedItem(prev => ({
+                ...prev!,
+                usufinal: nombre,
+                area: selected.area || ''
+            }));
+        }
+    };
+
+    const saveDirectorInfo = async () => {
+        if (!incompleteDirector || !directorFormData.area) return;
+
+        setSavingDirector(true);
+        try {
+            const { error: updateError } = await supabase
+                .from('directorio')
+                .update({
+                    area: directorFormData.area
+                })
+                .eq('id_directorio', incompleteDirector.id_directorio);
+
+            if (updateError) throw updateError;
+
+            const updatedDirectores = directores.map(d =>
+                d.id_directorio === incompleteDirector.id_directorio
+                    ? { ...d, area: directorFormData.area }
+                    : d
+            );
+
+            setDirectores(updatedDirectores);
+
+            const updatedDirectoresList = updatedDirectores.map(item => ({
+                nombre: item.nombre?.trim().toUpperCase() || '',
+                area: item.area?.trim().toUpperCase() || ''
+            }));
+
+            setFilterOptions(prev => ({
+                ...prev,
+                directores: updatedDirectoresList
+            }));
+
+            if (editFormData) {
+                setEditFormData(prev => ({
+                    ...prev!,
+                    usufinal: incompleteDirector.nombre ?? '',
+                    area: directorFormData.area
+                }));
+            } else if (selectedItem) {
+                setSelectedItem(prev => ({
+                    ...prev!,
+                    usufinal: incompleteDirector.nombre ?? '',
+                    area: directorFormData.area
+                }));
+            }
+
+            setShowDirectorModal(false);
+            setMessage({
+                type: 'success',
+                text: 'Información del director actualizada correctamente'
+            });
+        } catch (err) {
+            setMessage({
+                type: 'error',
+                text: 'Error al actualizar la información del director'
+            });
+            console.error(err);
+        } finally {
+            setSavingDirector(false);
+        }
+    };
 
     const fetchMuebles = useCallback(async () => {
         setLoading(true);
@@ -222,43 +422,6 @@ export default function ConsultasIteaGeneral() {
         }
     }, [currentPage, rowsPerPage, searchTerm, filters, sortField, sortDirection, selectedItem]);
 
-    const fetchFilterOptions = useCallback(async () => {
-        try {
-            const { data: estados } = await supabase
-                .from('mueblesitea')
-                .select('estado')
-                .filter('estado', 'not.is', null)
-                .limit(1000);
-
-            const { data: estatus } = await supabase
-                .from('mueblesitea')
-                .select('estatus')
-                .filter('estatus', 'not.is', null)
-                .limit(1000);
-
-            const { data: areas } = await supabase
-                .from('mueblesitea')
-                .select('area')
-                .filter('area', 'not.is', null)
-                .limit(1000);
-
-            const { data: rubros } = await supabase
-                .from('mueblesitea')
-                .select('rubro')
-                .filter('rubro', 'not.is', null)
-                .limit(1000);
-
-            setFilterOptions({
-                estados: [...new Set(estados?.map(item => item.estado?.trim()).filter(Boolean))] as string[],
-                estatus: [...new Set(estatus?.map(item => item.estatus?.trim()).filter(Boolean))] as string[],
-                areas: [...new Set(areas?.map(item => item.area?.trim()).filter(Boolean))] as string[],
-                rubros: [...new Set(rubros?.map(item => item.rubro?.trim()).filter(Boolean))] as string[]
-            });
-        } catch (error) {
-            console.error('Error al cargar opciones de filtro:', error);
-        }
-    }, []);
-
     const uploadImage = async (muebleId: number) => {
         if (!imageFile) return null;
 
@@ -310,9 +473,11 @@ export default function ConsultasIteaGeneral() {
     };
 
     useEffect(() => {
+        fetchAreas();
+        fetchDirectores();
         fetchFilterOptions();
         fetchMuebles();
-    }, [fetchFilterOptions, fetchMuebles]);
+    }, [fetchAreas, fetchDirectores, fetchFilterOptions, fetchMuebles]);
 
     useEffect(() => {
         setCurrentPage(1);
@@ -338,8 +503,16 @@ export default function ConsultasIteaGeneral() {
 
     const handleStartEdit = () => {
         if (!selectedItem) return;
+        // Normalizar rubro al valor exacto de las opciones
+        let normalizedRubro = '';
+        if (selectedItem.rubro) {
+            const match = filterOptions.rubros.find(
+                r => r.trim().toUpperCase() === selectedItem.rubro!.trim().toUpperCase()
+            );
+            normalizedRubro = match || '';
+        }
         setIsEditing(true);
-        setEditFormData({ ...selectedItem });
+        setEditFormData({ ...selectedItem, rubro: normalizedRubro });
     };
 
     const cancelEdit = () => {
@@ -548,6 +721,26 @@ export default function ConsultasIteaGeneral() {
 
     return (
         <div className="bg-black text-white min-h-screen p-2 sm:p-4 md:p-6 lg:p-8">
+            {/* Notificación de mensaje */}
+            {message && (
+                <div className={`fixed top-6 right-6 z-50 p-4 rounded-lg shadow-lg flex items-center gap-3 animate-fadeIn ${message.type === 'success' ? 'bg-green-900/90 border border-green-700' :
+                    message.type === 'error' ? 'bg-red-900/90 border border-red-700' :
+                        message.type === 'warning' ? 'bg-yellow-900/90 border border-yellow-700' :
+                            'bg-blue-900/90 border border-blue-700'}`}>
+                    {message.type === 'success' && <CheckCircle className="h-5 w-5 text-green-300" />}
+                    {message.type === 'error' && <XCircle className="h-5 w-5 text-red-300" />}
+                    {message.type === 'warning' && <AlertTriangle className="h-5 w-5 text-yellow-300" />}
+                    <span className="text-white">{message.text}</span>
+                    <button
+                        title='Cerrar mensaje'
+                        onClick={() => setMessage(null)}
+                        className="ml-2 text-gray-300 hover:text-white"
+                    >
+                        <X className="h-4 w-4" />
+                    </button>
+                </div>
+            )}
+
             <div className="w-full mx-auto bg-black rounded-lg sm:rounded-xl shadow-2xl overflow-hidden transition-all duration-500 transform border border-gray-800">
                 {/* Header con título */}
                 <div className="bg-black p-4 sm:p-6 flex flex-col sm:flex-row justify-between items-start sm:items-center border-b border-gray-800 gap-2 sm:gap-0">
@@ -687,8 +880,8 @@ export default function ConsultasIteaGeneral() {
                                                         className="w-full bg-gray-700 border border-gray-600 rounded-lg px-3 py-2.5 text-white focus:outline-none focus:ring-2 focus:ring-gray-500 focus:border-gray-500 appearance-none transition-all duration-200"
                                                     >
                                                         <option value="">Todas las áreas</option>
-                                                        {filterOptions.areas.map((area) => (
-                                                            <option key={area} value={area}>{area}</option>
+                                                        {areas.map((area) => (
+                                                            <option key={area.id_area} value={area.itea || ''}>{area.itea}</option>
                                                         ))}
                                                     </select>
                                                     <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
@@ -711,7 +904,7 @@ export default function ConsultasIteaGeneral() {
                                                         className="w-full bg-gray-700 border border-gray-600 rounded-lg px-3 py-2.5 text-white focus:outline-none focus:ring-2 focus:ring-gray-500 focus:border-gray-500 appearance-none transition-all duration-200"
                                                     >
                                                         <option value="">Todos los rubros</option>
-                                                        {filterOptions.rubros.map((rubro) => (
+                                                        {[...new Set(filterOptions.rubros)].map((rubro) => (
                                                             <option key={rubro} value={rubro}>{rubro}</option>
                                                         ))}
                                                     </select>
@@ -833,7 +1026,6 @@ export default function ConsultasIteaGeneral() {
                                             </tr>
                                         ) : (
                                             muebles.map((item) => {
-                                                // Normalizar el estado eliminando espacios al final
                                                 const normalizedStatus = item.estatus?.trim();
 
                                                 return (
@@ -1097,7 +1289,8 @@ export default function ConsultasIteaGeneral() {
                                                         onChange={(e) => handleEditFormChange(e, 'rubro')}
                                                         className="appearance-none w-full bg-gray-800 border border-gray-700 rounded-lg pl-4 pr-10 py-2.5 text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
                                                     >
-                                                        {filterOptions.rubros.map((rubro) => (
+                                                        <option value="">Seleccione un rubro</option>
+                                                        {[...new Set(filterOptions.rubros)].map((rubro) => (
                                                             <option key={rubro} value={rubro}>{rubro}</option>
                                                         ))}
                                                     </select>
@@ -1147,14 +1340,20 @@ export default function ConsultasIteaGeneral() {
 
                                             <div className="form-group">
                                                 <label className="block text-sm font-medium text-gray-400 mb-2">Forma de Adquisición</label>
-                                                <input
-                                                    type="text"
-                                                    value={editFormData?.formadq || ''}
-                                                    onChange={(e) => handleEditFormChange(e, 'formadq')}
-                                                    className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2.5 text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
-                                                    title="Ingrese la forma de adquisición"
-                                                    placeholder="Forma de adquisición"
-                                                />
+                                                <div className="relative">
+                                                    <select
+                                                        title='Seleccione la forma de adquisición'
+                                                        value={editFormData?.formadq || ''}
+                                                        onChange={(e) => handleEditFormChange(e, 'formadq')}
+                                                        className="appearance-none w-full bg-gray-800 border border-gray-700 rounded-lg pl-4 pr-10 py-2.5 text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                                                    >
+                                                        <option value="">Seleccione una forma</option>
+                                                        {filterOptions.formasAdq.map((forma) => (
+                                                            <option key={forma} value={forma}>{forma}</option>
+                                                        ))}
+                                                    </select>
+                                                    <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />
+                                                </div>
                                             </div>
 
                                             <div className="form-group">
@@ -1239,6 +1438,7 @@ export default function ConsultasIteaGeneral() {
                                                         onChange={(e) => handleEditFormChange(e, 'estado')}
                                                         className="appearance-none w-full bg-gray-800 border border-gray-700 rounded-lg pl-4 pr-10 py-2.5 text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
                                                     >
+                                                        <option value="">Seleccione un estado</option>
                                                         {filterOptions.estados.map((estado) => (
                                                             <option key={estado} value={estado}>{estado}</option>
                                                         ))}
@@ -1257,6 +1457,7 @@ export default function ConsultasIteaGeneral() {
                                                         onChange={(e) => handleEditFormChange(e, 'estatus')}
                                                         className="appearance-none w-full bg-gray-800 border border-gray-700 rounded-lg pl-4 pr-10 py-2.5 text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
                                                     >
+                                                        <option value="">Seleccione un estatus</option>
                                                         {filterOptions.estatus.map((status) => (
                                                             <option key={status} value={status}>{status}</option>
                                                         ))}
@@ -1268,32 +1469,32 @@ export default function ConsultasIteaGeneral() {
                                             <div className="form-group">
                                                 <label className="block text-sm font-medium text-gray-400 mb-2">Área</label>
                                                 <div className="relative">
-                                                    <select
-                                                        aria-label="Área"
+                                                    <input
+                                                        type="text"
                                                         value={editFormData?.area || ''}
-                                                        onChange={(e) => handleEditFormChange(e, 'area')}
-                                                        className="appearance-none w-full bg-gray-800 border border-gray-700 rounded-lg pl-4 pr-10 py-2.5 text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
-                                                    >
-                                                        {filterOptions.areas.map((area) => (
-                                                            <option key={area} value={area}>{area}</option>
-                                                        ))}
-                                                    </select>
-                                                    <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />
+                                                        readOnly
+                                                        className="w-full bg-gray-700 border border-gray-600 rounded-lg pl-4 pr-10 py-2.5 text-white cursor-not-allowed"
+                                                        aria-label="Área (se autocompleta al seleccionar un director/jefe)"
+                                                    />
                                                 </div>
                                             </div>
 
                                             <div className="form-group">
                                                 <label className="block text-sm font-medium text-gray-400 mb-2">Director/Jefe de Área</label>
                                                 <div className="relative">
-                                                    <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500 pointer-events-none" />
-                                                    <input
-                                                        type="text"
-                                                        title="Ingrese el Director/Jefe de Área"
-                                                        placeholder="Ingrese el Director/Jefe de Área"
+                                                    <select
+                                                        title='Seleccione el Director/Jefe de Área'
+                                                        name="usufinal"
                                                         value={editFormData?.usufinal || ''}
-                                                        onChange={(e) => handleEditFormChange(e, 'usufinal')}
-                                                        className="w-full bg-gray-800 border border-gray-700 rounded-lg pl-10 pr-4 py-2.5 text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
-                                                    />
+                                                        onChange={(e) => handleSelectDirector(e.target.value)}
+                                                        className="w-full bg-gray-800 border border-gray-700 rounded-lg pl-4 pr-10 py-2.5 text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all appearance-none"
+                                                    >
+                                                        <option value="">Seleccionar Director/Jefe</option>
+                                                        {directores.map((director) => (
+                                                            <option key={director.id_directorio} value={director.nombre || ''}>{director.nombre}</option>
+                                                        ))}
+                                                    </select>
+                                                    <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />
                                                 </div>
                                             </div>
 
@@ -1488,6 +1689,85 @@ export default function ConsultasIteaGeneral() {
                     )}
                 </div>
             </div>
+
+            {/* Modal para completar información del director */}
+            {showDirectorModal && (
+                <div className="fixed inset-0 bg-black/90 flex items-center justify-center z-50 px-4 animate-fadeIn">
+                    <div className="bg-black rounded-2xl shadow-2xl border border-yellow-600/30 w-full max-w-md overflow-hidden transition-all duration-300 transform">
+                        <div className="relative p-6 bg-gradient-to-b from-black to-gray-900">
+                            <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-yellow-500/60 via-yellow-400 to-yellow-500/60"></div>
+
+                            <div className="flex flex-col items-center text-center mb-4">
+                                <div className="p-3 bg-yellow-500/10 rounded-full border border-yellow-500/30 mb-3">
+                                    <AlertCircle className="h-8 w-8 text-yellow-500" />
+                                </div>
+                                <h3 className="text-2xl font-bold text-white">Información requerida</h3>
+                                <p className="text-gray-400 mt-2">
+                                    Por favor complete el área del director/jefe de área seleccionado
+                                </p>
+                            </div>
+
+                            <div className="space-y-5 mt-6">
+                                <div className="rounded-lg border border-gray-800 bg-gray-900/50 p-4">
+                                    <label className="block text-xs uppercase tracking-wider text-gray-500 mb-1">Director/Jefe seleccionado</label>
+                                    <div className="flex items-center gap-3">
+                                        <div className="p-2 bg-gray-800 rounded-lg">
+                                            <User className="h-4 w-4 text-yellow-400" />
+                                        </div>
+                                        <span className="text-white font-medium">{incompleteDirector?.nombre || 'Director'}</span>
+                                    </div>
+                                </div>
+
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-300 mb-2 flex items-center gap-2">
+                                        <LayoutGrid className="h-4 w-4 text-gray-400" />
+                                        Área
+                                    </label>
+                                    <input
+                                        type="text"
+                                        value={directorFormData.area}
+                                        onChange={(e) => setDirectorFormData({ area: e.target.value })}
+                                        placeholder="Ej: Administración, Recursos Humanos, Contabilidad..."
+                                        className="block w-full bg-gray-900 border border-gray-700 rounded-lg py-3 px-4 text-white placeholder-gray-500 focus:outline-none focus:border-yellow-500 focus:ring-1 focus:ring-yellow-500 transition-colors"
+                                        required
+                                    />
+                                    {!directorFormData.area && (
+                                        <p className="text-xs text-yellow-500/80 mt-2 flex items-center gap-1">
+                                            <AlertCircle className="h-3 w-3" />
+                                            Este campo es obligatorio
+                                        </p>
+                                    )}
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="p-5 bg-black border-t border-gray-800 flex justify-end gap-3">
+                            <button
+                                onClick={() => setShowDirectorModal(false)}
+                                className="px-5 py-2.5 bg-gray-900 text-white rounded-lg text-sm hover:bg-gray-800 border border-gray-800 transition-colors flex items-center gap-2"
+                            >
+                                <X className="h-4 w-4" />
+                                Cancelar
+                            </button>
+                            <button
+                                onClick={saveDirectorInfo}
+                                disabled={savingDirector || !directorFormData.area}
+                                className={`px-5 py-2.5 rounded-lg text-sm flex items-center gap-2 transition-all duration-300 
+                                    ${savingDirector || !directorFormData.area ?
+                                        'bg-gray-900 text-gray-500 cursor-not-allowed border border-gray-800' :
+                                        'bg-gradient-to-r from-yellow-600 to-yellow-500 text-black font-medium hover:shadow-lg hover:shadow-yellow-500/20'}`}
+                            >
+                                {savingDirector ? (
+                                    <RefreshCw className="h-4 w-4 animate-spin" />
+                                ) : (
+                                    <Save className="h-4 w-4" />
+                                )}
+                                {savingDirector ? 'Guardando...' : 'Guardar y Continuar'}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }

@@ -174,8 +174,8 @@ export default function NavigationBar() {
             icon: <Settings className="w-4 h-4" />,
             path: '/admin',
             submenu: [
-                { title: 'Áreas', path: '/admin/areas' },
-                { title: 'Directorio de personal', path: '/admin/personal' }
+                { title: 'Configuración General', path: '/admin/areas' },
+                { title: 'Directorio de Personal', path: '/admin/personal' }
             ]
         }
     ];

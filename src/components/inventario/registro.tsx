@@ -1,6 +1,6 @@
 "use client"
 import { useState, useEffect, useCallback, useRef, ChangeEvent } from 'react';
-import { Calendar, Save, AlertTriangle, CheckCircle, X, ChevronRight, ChevronLeft, Camera, Eye } from 'lucide-react';
+import { Calendar, Save, AlertTriangle, CheckCircle, X, ChevronRight, ChevronLeft, Camera, Eye, User, AlertCircle, RefreshCw } from 'lucide-react';
 import supabase from "@/app/lib/supabase/client";
 
 // Tipos dinámicos basados en los valores de la base de datos
@@ -45,8 +45,15 @@ interface Message {
     text: string;
 }
 
+interface Directorio {
+    id_directorio: number;
+    nombre: string;
+    area: string | null;
+    puesto: string | null;
+}
+
 export default function RegistroBienesForm() {
-    // Estados
+    // Estados principales
     const [institucion, setInstitucion] = useState<Institucion>('INEA');
     const [formData, setFormData] = useState<FormData>({
         id_inv: '',
@@ -70,6 +77,14 @@ export default function RegistroBienesForm() {
         image_path: '',
     });
 
+    // Estados para el modal del director
+    const [showDirectorModal, setShowDirectorModal] = useState(false);
+    const [incompleteDirector, setIncompleteDirector] = useState<Directorio | null>(null);
+    const [directorFormData, setDirectorFormData] = useState({ area: '' });
+    const [savingDirector, setSavingDirector] = useState(false);
+    const [directorio, setDirectorio] = useState<Directorio[]>([]);
+
+    // Resto de estados
     const [currentStep, setCurrentStep] = useState<number>(1);
     const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
     const [message, setMessage] = useState<Message>({ type: '', text: '' });
@@ -87,6 +102,111 @@ export default function RegistroBienesForm() {
 
     const imageFileRef = useRef<File | null>(null);
 
+    // Función para obtener el directorio
+    const fetchDirectorio = useCallback(async () => {
+        try {
+            const { data: directorioData } = await supabase.from('directorio').select('*');
+            setDirectorio(directorioData || []);
+
+            // Actualizar la lista de usuarios en filterOptions
+            if (directorioData) {
+                const usuarios = directorioData.map(item => ({
+                    nombre: item.nombre?.trim().toUpperCase() || '',
+                    area: item.area?.trim().toUpperCase() || ''
+                }));
+
+                setFilterOptions(prev => ({
+                    ...prev,
+                    usuarios: usuarios
+                }));
+            }
+        } catch (err) {
+            console.error('Error al cargar directorio:', err);
+        }
+    }, []);
+
+    useEffect(() => {
+        fetchDirectorio();
+    }, [fetchDirectorio]);
+
+    // Función para manejar la selección del director/jefe de área
+    const handleSelectDirector = (nombre: string) => {
+        const selected = directorio.find(d => d.nombre === nombre);
+
+        if (selected && !selected.area) {
+            setIncompleteDirector(selected);
+            setDirectorFormData({
+                area: selected.area || ''
+            });
+            setShowDirectorModal(true);
+            return;
+        }
+
+        setFormData(prev => ({
+            ...prev,
+            usufinal: nombre,
+            area: selected?.area || ''
+        }));
+    };
+
+    // Función para guardar la información del director
+    const saveDirectorInfo = async () => {
+        if (!incompleteDirector) return;
+
+        setSavingDirector(true);
+        try {
+            const { error: updateError } = await supabase
+                .from('directorio')
+                .update({
+                    area: directorFormData.area
+                })
+                .eq('id_directorio', incompleteDirector.id_directorio);
+
+            if (updateError) throw updateError;
+
+            // Actualizar estado local
+            const updatedDirectorio = directorio.map(d =>
+                d.id_directorio === incompleteDirector.id_directorio
+                    ? { ...d, area: directorFormData.area }
+                    : d
+            );
+
+            setDirectorio(updatedDirectorio);
+
+            // Actualizar filterOptions.usuarios
+            const updatedUsuarios = updatedDirectorio.map(item => ({
+                nombre: item.nombre?.trim().toUpperCase() || '',
+                area: item.area?.trim().toUpperCase() || ''
+            }));
+
+            setFilterOptions(prev => ({
+                ...prev,
+                usuarios: updatedUsuarios
+            }));
+
+            // Actualizar formulario
+            setFormData(prev => ({
+                ...prev,
+                usufinal: incompleteDirector.nombre,
+                area: directorFormData.area
+            }));
+
+            setShowDirectorModal(false);
+            setMessage({
+                type: 'success',
+                text: 'Información del director actualizada correctamente'
+            });
+        } catch (err) {
+            setMessage({
+                type: 'error',
+                text: 'Error al actualizar la información del director'
+            });
+            console.error(err);
+        } finally {
+            setSavingDirector(false);
+        }
+    };
+
     const fetchFilterOptions = useCallback(async () => {
         try {
             // Función auxiliar para obtener datos únicos de una tabla
@@ -101,20 +221,43 @@ export default function RegistroBienesForm() {
                 ).filter(Boolean) || [];
             };
 
+            // Obtener valores de la tabla config
+            const fetchConfigValues = async (tipo: string) => {
+                const { data } = await supabase
+                    .from('config')
+                    .select('concepto')
+                    .eq('tipo', tipo);
+
+                return data?.map(item => item.concepto?.trim().toUpperCase()).filter(Boolean) || [];
+            };
+
             // Obtener estados únicos de ambas tablas
             const estadosMuebles = await fetchUniqueValues('muebles', 'estado');
             const estadosMueblesItea = await fetchUniqueValues('mueblesitea', 'estado');
             const estadosUnicos = [...new Set([...estadosMuebles, ...estadosMueblesItea])];
 
-            // Obtener estatus únicos de ambas tablas
-            const estatusMuebles = await fetchUniqueValues('muebles', 'estatus');
-            const estatusMueblesItea = await fetchUniqueValues('mueblesitea', 'estatus');
-            const estatusUnicos = [...new Set([...estatusMuebles, ...estatusMueblesItea])];
+            // Obtener estatus desde la tabla config
+            const estatusConfig = await fetchConfigValues('estatus');
 
-            // Obtener rubros únicos (solo de mueblesitea como antes)
-            const rubrosUnicos = [...new Set(
-                (await fetchUniqueValues('mueblesitea', 'rubro'))
-            )];
+            // Si hay valores en la tabla config, usarlos; de lo contrario, usar los de las tablas de muebles
+            const estatusUnicos = estatusConfig.length > 0
+                ? estatusConfig
+                : [...new Set([
+                    ...(await fetchUniqueValues('muebles', 'estatus')),
+                    ...(await fetchUniqueValues('mueblesitea', 'estatus'))
+                ])];
+
+            // Obtener rubros desde la tabla config
+            const rubrosConfig = await fetchConfigValues('rubro');
+            const rubrosUnicos = rubrosConfig.length > 0
+                ? rubrosConfig
+                : [...new Set(await fetchUniqueValues('mueblesitea', 'rubro'))];
+
+            // Obtener formas de adquisición desde la tabla config
+            const formasConfig = await fetchConfigValues('formadq');
+            const formasAdquisicion = formasConfig.length > 0
+                ? formasConfig
+                : ['Compra', 'Donación', 'Transferencia', 'Comodato'];
 
             // Obtener áreas desde la tabla areas
             const { data: areasData } = await supabase
@@ -126,24 +269,14 @@ export default function RegistroBienesForm() {
                 areasData?.map(item => item.itea?.trim().toUpperCase()).filter(Boolean) || []
             )];
 
-            // Obtener usuarios desde la tabla directorio
-            const { data: usuariosData } = await supabase
-                .from('directorio')
-                .select('nombre, area')
-                .not('nombre', 'is', null);
-
-            const usuarios = usuariosData?.map(item => ({
-                nombre: item.nombre?.trim().toUpperCase() || '',
-                area: item.area?.trim().toUpperCase() || ''
-            })) || [];
-
             setFilterOptions(prev => ({
                 ...prev,
                 estados: estadosUnicos,
                 estatus: estatusUnicos,
                 areas: areasUnicas,
                 rubros: rubrosUnicos,
-                usuarios: usuarios
+                formasAdquisicion: formasAdquisicion,
+                causasBaja: prev.causasBaja // Mantener los valores predeterminados para causas de baja
             }));
 
             // Establecer valores por defecto
@@ -255,8 +388,14 @@ export default function RegistroBienesForm() {
 
     const handleChange = (e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
         const { name, value } = e.target;
-        setFormData(prev => ({ ...prev, [name]: value }));
-        setTouched(prev => ({ ...prev, [name]: true }));
+
+        // Si es el campo de director/jefe de área, llamar a handleSelectDirector
+        if (name === 'usufinal') {
+            handleSelectDirector(value);
+        } else {
+            setFormData(prev => ({ ...prev, [name]: value }));
+            setTouched(prev => ({ ...prev, [name]: true }));
+        }
     };
 
     const handleImageChange = (e: ChangeEvent<HTMLInputElement>) => {
@@ -634,18 +773,14 @@ export default function RegistroBienesForm() {
 
                                 <div>
                                     <label className="block mb-1 text-sm sm:text-base font-medium">Área</label>
-                                    <select
+                                    <input
+                                        title='Área'
+                                        type="text"
                                         name="area"
-                                        title='Seleccionar Área'
                                         value={formData.area}
-                                        onChange={handleChange}
-                                        className="w-full bg-black border border-gray-700 rounded-lg p-2 sm:p-3 focus:border-white focus:ring focus:ring-gray-700 focus:ring-opacity-50 transition-all text-sm sm:text-base"
-                                    >
-                                        <option value="">Seleccionar Área</option>
-                                        {filterOptions.areas.map((area, index) => (
-                                            <option key={index} value={area}>{area}</option>
-                                        ))}
-                                    </select>
+                                        readOnly
+                                        className="w-full bg-black border border-gray-700 rounded-lg p-2 sm:p-3 focus:border-white focus:ring focus:ring-gray-700 focus:ring-opacity-50 transition-all text-sm sm:text-base cursor-not-allowed"
+                                    />
                                 </div>
                             </div>
 
@@ -653,7 +788,7 @@ export default function RegistroBienesForm() {
                                 <div>
                                     <label className="block mb-1 text-sm sm:text-base font-medium">Director/Jefe de Área<span className="text-red-500">*</span></label>
                                     <select
-                                    title='Seleccionar Director/Jefe de Área'
+                                        title='Seleccionar Director/Jefe de Área'
                                         name="usufinal"
                                         value={formData.usufinal}
                                         onChange={handleChange}
@@ -675,7 +810,7 @@ export default function RegistroBienesForm() {
                                     <label className="block mb-1 text-sm sm:text-base font-medium">Usuario Final</label>
                                     <input
                                         type="text"
-                                        name="Usuario Final"
+                                        name="resguardante"
                                         value={formData.resguardante}
                                         onChange={handleChange}
                                         className="w-full bg-black border border-gray-700 rounded-lg p-2 sm:p-3 focus:border-white focus:ring focus:ring-gray-700 focus:ring-opacity-50 transition-all text-sm sm:text-base"
@@ -866,6 +1001,85 @@ export default function RegistroBienesForm() {
                     </div>
                 </form>
             </div>
+
+            {/* Modal para completar información del director */}
+            {showDirectorModal && (
+                <div className="fixed inset-0 bg-black/90 flex items-center justify-center z-50 px-4 animate-fadeIn">
+                    <div className="bg-black rounded-2xl shadow-2xl border border-yellow-600/30 w-full max-w-md overflow-hidden transition-all duration-300 transform">
+                        <div className="relative p-6 bg-gradient-to-b from-black to-gray-900">
+                            <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-yellow-500/60 via-yellow-400 to-yellow-500/60"></div>
+
+                            <div className="flex flex-col items-center text-center mb-4">
+                                <div className="p-3 bg-yellow-500/10 rounded-full border border-yellow-500/30 mb-3">
+                                    <AlertCircle className="h-8 w-8 text-yellow-500" />
+                                </div>
+                                <h3 className="text-2xl font-bold text-white">Información requerida</h3>
+                                <p className="text-gray-400 mt-2">
+                                    Por favor complete el área del director/jefe de área seleccionado
+                                </p>
+                            </div>
+
+                            <div className="space-y-5 mt-6">
+                                <div className="rounded-lg border border-gray-800 bg-gray-900/50 p-4">
+                                    <label className="block text-xs uppercase tracking-wider text-gray-500 mb-1">Director/Jefe seleccionado</label>
+                                    <div className="flex items-center gap-3">
+                                        <div className="p-2 bg-gray-800 rounded-lg">
+                                            <User className="h-4 w-4 text-yellow-400" />
+                                        </div>
+                                        <span className="text-white font-medium">{incompleteDirector?.nombre || 'Director'}</span>
+                                    </div>
+                                </div>
+
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-300 mb-2 flex items-center gap-2">
+                                        <User className="h-4 w-4 text-gray-400" />
+                                        Área
+                                    </label>
+                                    <input
+                                        type="text"
+                                        value={directorFormData.area}
+                                        onChange={(e) => setDirectorFormData({ area: e.target.value })}
+                                        placeholder="Ej: Administración, Recursos Humanos, Contabilidad..."
+                                        className="block w-full bg-gray-900 border border-gray-700 rounded-lg py-3 px-4 text-white placeholder-gray-500 focus:outline-none focus:border-yellow-500 focus:ring-1 focus:ring-yellow-500 transition-colors"
+                                        required
+                                    />
+                                    {!directorFormData.area && (
+                                        <p className="text-xs text-yellow-500/80 mt-2 flex items-center gap-1">
+                                            <AlertCircle className="h-3 w-3" />
+                                            Este campo es obligatorio
+                                        </p>
+                                    )}
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="p-5 bg-black border-t border-gray-800 flex justify-end gap-3">
+                            <button
+                                onClick={() => setShowDirectorModal(false)}
+                                className="px-5 py-2.5 bg-gray-900 text-white rounded-lg text-sm hover:bg-gray-800 border border-gray-800 transition-colors flex items-center gap-2"
+                            >
+                                <X className="h-4 w-4" />
+                                Cancelar
+                            </button>
+                            <button
+                                onClick={saveDirectorInfo}
+                                disabled={savingDirector || !directorFormData.area}
+                                className={`px-5 py-2.5 rounded-lg text-sm flex items-center gap-2 transition-all duration-300 
+                                    ${savingDirector || !directorFormData.area ?
+                                        'bg-gray-900 text-gray-500 cursor-not-allowed border border-gray-800' :
+                                        'bg-gradient-to-r from-yellow-600 to-yellow-500 text-black font-medium hover:shadow-lg hover:shadow-yellow-500/20'}`}
+                            >
+                                {savingDirector ? (
+                                    <RefreshCw className="h-4 w-4 animate-spin" />
+                                ) : (
+                                    <Save className="h-4 w-4" />
+                                )}
+                                {savingDirector ? 'Guardando...' : 'Guardar y Continuar'}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
 
             {/* Estilos CSS adicionales */}
             <style jsx>{`

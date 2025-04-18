@@ -35,7 +35,20 @@ interface FilterOptions {
     estatus: string[];
     areas: string[];
     rubros: string[];
+    formadq: string[];
     directores: { nombre: string; area: string }[];
+}
+
+interface Directorio {
+    id_directorio: number;
+    nombre: string;
+    area: string | null;
+    puesto: string | null;
+}
+
+interface Message {
+    type: 'success' | 'error' | 'info' | 'warning';
+    text: string;
 }
 
 const ImagePreview = ({ imagePath }: { imagePath: string | null }) => {
@@ -152,13 +165,148 @@ export default function ConsultasIneaGeneral() {
         estatus: [],
         areas: [],
         rubros: [],
+        formadq: [],
         directores: []
     });
     const [showFilters, setShowFilters] = useState(false);
     const [selectedItem, setSelectedItem] = useState<Mueble | null>(null);
     const [isEditing, setIsEditing] = useState(false);
     const [editFormData, setEditFormData] = useState<Mueble | null>(null);
+    const [message, setMessage] = useState<Message | null>(null);
+
+    // Estados para el modal del director
+    const [showDirectorModal, setShowDirectorModal] = useState(false);
+    const [incompleteDirector, setIncompleteDirector] = useState<Directorio | null>(null);
+    const [directorFormData, setDirectorFormData] = useState({ area: '' });
+    const [savingDirector, setSavingDirector] = useState(false);
+    const [directorio, setDirectorio] = useState<Directorio[]>([]);
+
     const detailRef = useRef<HTMLDivElement>(null);
+
+    // Función para obtener el directorio
+    const fetchDirectorio = useCallback(async () => {
+        try {
+            const { data: directorioData, error } = await supabase.from('directorio').select('*');
+            if (error) throw error;
+
+            setDirectorio(directorioData || []);
+
+            // Actualizar la lista de directores en filterOptions
+            if (directorioData) {
+                const directores = directorioData.map(item => ({
+                    nombre: item.nombre?.trim().toUpperCase() || '',
+                    area: item.area?.trim().toUpperCase() || ''
+                }));
+
+                setFilterOptions(prev => ({
+                    ...prev,
+                    directores: directores
+                }));
+            }
+        } catch (err) {
+            console.error('Error al cargar directorio:', err);
+            setMessage({
+                type: 'error',
+                text: 'Error al cargar la lista de directores'
+            });
+        }
+    }, []);
+
+    // Función para manejar la selección del director/jefe de área
+    const handleSelectDirector = (nombre: string) => {
+        const selected = directorio.find(d => d.nombre === nombre);
+
+        if (!selected) return;
+
+        // Si el director no tiene área asignada, mostramos el modal
+        if (!selected.area) {
+            setIncompleteDirector(selected);
+            setDirectorFormData({ area: '' });
+            setShowDirectorModal(true);
+            return;
+        }
+
+        // Si tiene área, actualizamos el formulario
+        if (editFormData) {
+            setEditFormData(prev => ({
+                ...prev!,
+                usufinal: nombre,
+                area: selected.area || ''
+            }));
+        } else if (selectedItem) {
+            setSelectedItem(prev => ({
+                ...prev!,
+                usufinal: nombre,
+                area: selected.area || ''
+            }));
+        }
+    };
+
+    // Función para guardar la información del director
+    const saveDirectorInfo = async () => {
+        if (!incompleteDirector || !directorFormData.area) return;
+
+        setSavingDirector(true);
+        try {
+            const { error: updateError } = await supabase
+                .from('directorio')
+                .update({
+                    area: directorFormData.area
+                })
+                .eq('id_directorio', incompleteDirector.id_directorio);
+
+            if (updateError) throw updateError;
+
+            // Actualizar estado local
+            const updatedDirectorio = directorio.map(d =>
+                d.id_directorio === incompleteDirector.id_directorio
+                    ? { ...d, area: directorFormData.area }
+                    : d
+            );
+
+            setDirectorio(updatedDirectorio);
+
+            // Actualizar filterOptions.directores
+            const updatedDirectores = updatedDirectorio.map(item => ({
+                nombre: item.nombre?.trim().toUpperCase() || '',
+                area: item.area?.trim().toUpperCase() || ''
+            }));
+
+            setFilterOptions(prev => ({
+                ...prev,
+                directores: updatedDirectores
+            }));
+
+            // Actualizar el formulario o el item seleccionado
+            if (editFormData) {
+                setEditFormData(prev => ({
+                    ...prev!,
+                    usufinal: incompleteDirector.nombre,
+                    area: directorFormData.area
+                }));
+            } else if (selectedItem) {
+                setSelectedItem(prev => ({
+                    ...prev!,
+                    usufinal: incompleteDirector.nombre,
+                    area: directorFormData.area
+                }));
+            }
+
+            setShowDirectorModal(false);
+            setMessage({
+                type: 'success',
+                text: 'Información del director actualizada correctamente'
+            });
+        } catch (err) {
+            setMessage({
+                type: 'error',
+                text: 'Error al actualizar la información del director'
+            });
+            console.error(err);
+        } finally {
+            setSavingDirector(false);
+        }
+    };
 
     const fetchMuebles = useCallback(async () => {
         setLoading(true);
@@ -226,49 +374,45 @@ export default function ConsultasIneaGeneral() {
 
     const fetchFilterOptions = useCallback(async () => {
         try {
-            // Obtener estados únicos
+            // Obtener estados únicos (se mantiene igual)
             const { data: estados } = await supabase
                 .from('muebles')
                 .select('estado')
                 .filter('estado', 'not.is', null)
                 .limit(1000);
 
-            // Obtener estatus únicos
-            const { data: estatus } = await supabase
-                .from('muebles')
-                .select('estatus')
-                .filter('estatus', 'not.is', null)
-                .limit(1000);
+            // Obtener rubros desde la tabla config
+            const { data: rubrosData } = await supabase
+                .from('config')
+                .select('concepto')
+                .eq('tipo', 'rubro');
 
-            // Obtener rubros únicos
-            const { data: rubros } = await supabase
-                .from('muebles')
-                .select('rubro')
-                .filter('rubro', 'not.is', null)
-                .limit(1000);
+            // Obtener formas de adquisición desde la tabla config
+            const { data: formadqData } = await supabase
+                .from('config')
+                .select('concepto')
+                .eq('tipo', 'formadq');
 
-            // Obtener áreas desde la tabla areas
+            // Obtener estatus desde la tabla config
+            const { data: estatusData } = await supabase
+                .from('config')
+                .select('concepto')
+                .eq('tipo', 'estatus');
+
+            // Obtener áreas desde la tabla areas (se mantiene igual)
             const { data: areasData } = await supabase
                 .from('areas')
                 .select('itea')
                 .not('itea', 'is', null);
 
-            // Obtener directores/jefes de área desde la tabla directorio
-            const { data: directoresData } = await supabase
-                .from('directorio')
-                .select('nombre, area')
-                .not('nombre', 'is', null);
-
-            setFilterOptions({
+            setFilterOptions(prev => ({
+                ...prev,
                 estados: [...new Set(estados?.map(item => item.estado).filter(Boolean))] as string[],
-                estatus: [...new Set(estatus?.map(item => item.estatus).filter(Boolean))] as string[],
-                areas: [...new Set(areasData?.map(item => item.itea).filter(Boolean))] as string[],
-                rubros: [...new Set(rubros?.map(item => item.rubro).filter(Boolean))] as string[],
-                directores: directoresData?.map(item => ({
-                    nombre: item.nombre?.trim().toUpperCase() || '',
-                    area: item.area?.trim().toUpperCase() || ''
-                })) || []
-            });
+                rubros: rubrosData?.map(item => item.concepto).filter(Boolean) || [],
+                formadq: formadqData?.map(item => item.concepto).filter(Boolean) || [],
+                estatus: estatusData?.map(item => item.concepto).filter(Boolean) || [],
+                areas: [...new Set(areasData?.map(item => item.itea).filter(Boolean))] as string[]
+            }));
         } catch (error) {
             console.error('Error al cargar opciones de filtro:', error);
         }
@@ -325,17 +469,14 @@ export default function ConsultasIneaGeneral() {
     };
 
     useEffect(() => {
+        fetchDirectorio();
         fetchFilterOptions();
         fetchMuebles();
-    }, [fetchFilterOptions, fetchMuebles]);
+    }, [fetchDirectorio, fetchFilterOptions, fetchMuebles]);
 
     useEffect(() => {
         setCurrentPage(1);
     }, [searchTerm, filters, sortField, sortDirection, rowsPerPage]);
-
-    useEffect(() => {
-        fetchMuebles();
-    }, [currentPage, fetchMuebles]);
 
     const handleSelectItem = (item: Mueble) => {
         setSelectedItem(item);
@@ -390,9 +531,16 @@ export default function ConsultasIneaGeneral() {
             setEditFormData(null);
             setImageFile(null);
             setImagePreview(null);
+            setMessage({
+                type: 'success',
+                text: 'Cambios guardados correctamente'
+            });
         } catch (error) {
             console.error('Error al guardar cambios:', error);
-            setError('Error al guardar los cambios. Por favor, intente nuevamente.');
+            setMessage({
+                type: 'error',
+                text: 'Error al guardar los cambios. Por favor, intente nuevamente.'
+            });
         } finally {
             setLoading(false);
             setUploading(false);
@@ -414,9 +562,16 @@ export default function ConsultasIneaGeneral() {
 
             fetchMuebles();
             setSelectedItem(null);
+            setMessage({
+                type: 'success',
+                text: 'Artículo marcado como INACTIVO correctamente'
+            });
         } catch (error) {
             console.error('Error al marcar como inactivo:', error);
-            setError('Error al cambiar el estatus. Por favor, intente nuevamente.');
+            setMessage({
+                type: 'error',
+                text: 'Error al cambiar el estatus. Por favor, intente nuevamente.'
+            });
         } finally {
             setLoading(false);
         }
@@ -561,8 +716,38 @@ export default function ConsultasIneaGeneral() {
         return text.length > length ? `${text.substring(0, length)}...` : text;
     };
 
+    // Efecto para mostrar mensajes temporales
+    useEffect(() => {
+        if (message) {
+            const timer = setTimeout(() => {
+                setMessage(null);
+            }, 5000);
+            return () => clearTimeout(timer);
+        }
+    }, [message]);
+
     return (
         <div className="bg-black text-white min-h-screen p-2 sm:p-4 md:p-6 lg:p-8">
+            {/* Notificación de mensaje */}
+            {message && (
+                <div className={`fixed top-6 right-6 z-50 p-4 rounded-lg shadow-lg flex items-center gap-3 animate-fadeIn ${message.type === 'success' ? 'bg-green-900/90 border border-green-700' :
+                    message.type === 'error' ? 'bg-red-900/90 border border-red-700' :
+                        message.type === 'warning' ? 'bg-yellow-900/90 border border-yellow-700' :
+                            'bg-blue-900/90 border border-blue-700'}`}>
+                    {message.type === 'success' && <CheckCircle className="h-5 w-5 text-green-300" />}
+                    {message.type === 'error' && <XCircle className="h-5 w-5 text-red-300" />}
+                    {message.type === 'warning' && <AlertTriangle className="h-5 w-5 text-yellow-300" />}
+                    <span className="text-white">{message.text}</span>
+                    <button
+                        title='Cerrar mensaje'
+                        onClick={() => setMessage(null)}
+                        className="ml-2 text-gray-300 hover:text-white"
+                    >
+                        <X className="h-4 w-4" />
+                    </button>
+                </div>
+            )}
+
             <div className="w-full mx-auto bg-black rounded-lg sm:rounded-xl shadow-2xl overflow-hidden transition-all duration-500 transform border border-gray-800">
                 {/* Header con título */}
                 <div className="bg-black p-4 sm:p-6 flex flex-col sm:flex-row justify-between items-start sm:items-center border-b border-gray-800 gap-2 sm:gap-0">
@@ -1151,14 +1336,19 @@ export default function ConsultasIneaGeneral() {
 
                                             <div className="form-group">
                                                 <label className="block text-sm font-medium text-gray-400 mb-2">Forma de Adquisición</label>
-                                                <input
-                                                    type="text"
-                                                    value={editFormData?.formadq || ''}
-                                                    onChange={(e) => handleEditFormChange(e, 'formadq')}
-                                                    className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2.5 text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
-                                                    title="Ingrese la forma de adquisición"
-                                                    placeholder="Forma de adquisición"
-                                                />
+                                                <div className="relative">
+                                                    <select
+                                                        value={editFormData?.formadq || ''}
+                                                        onChange={(e) => handleEditFormChange(e, 'formadq')}
+                                                        className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2.5 text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                                                        title="Ingrese la forma de adquisición"
+                                                    >
+                                                        <option value="">Seleccionar forma de adquisición</option>
+                                                        {filterOptions.formadq.map((forma) => (
+                                                            <option key={forma} value={forma}>{forma}</option>
+                                                        ))}
+                                                    </select>
+                                                </div>
                                             </div>
 
                                             <div className="form-group">
@@ -1272,18 +1462,13 @@ export default function ConsultasIneaGeneral() {
                                             <div className="form-group">
                                                 <label className="block text-sm font-medium text-gray-400 mb-2">Área</label>
                                                 <div className="relative">
-                                                    <select
-                                                        aria-label="Área"
+                                                    <input
+                                                        type="text"
                                                         value={editFormData?.area || ''}
-                                                        onChange={(e) => handleEditFormChange(e, 'area')}
-                                                        className="appearance-none w-full bg-gray-800 border border-gray-700 rounded-lg pl-4 pr-10 py-2.5 text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
-                                                    >
-                                                        <option value="">Seleccionar Área</option>
-                                                        {filterOptions.areas.map((area) => (
-                                                            <option key={area} value={area}>{area}</option>
-                                                        ))}
-                                                    </select>
-                                                    <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />
+                                                        readOnly
+                                                        className="w-full bg-gray-700 border border-gray-600 rounded-lg pl-4 pr-10 py-2.5 text-white cursor-not-allowed"
+                                                        aria-label="Área (se autocompleta al seleccionar un director/jefe)"
+                                                    />
                                                 </div>
                                             </div>
 
@@ -1294,7 +1479,7 @@ export default function ConsultasIneaGeneral() {
                                                         title='Seleccione el Director/Jefe de Área'
                                                         name="usufinal"
                                                         value={editFormData?.usufinal || ''}
-                                                        onChange={(e) => handleEditFormChange(e, 'usufinal')}
+                                                        onChange={(e) => handleSelectDirector(e.target.value)}
                                                         className="w-full bg-gray-800 border border-gray-700 rounded-lg pl-4 pr-10 py-2.5 text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all appearance-none"
                                                     >
                                                         <option value="">Seleccionar Director/Jefe</option>
@@ -1499,6 +1684,85 @@ export default function ConsultasIneaGeneral() {
                     )}
                 </div>
             </div>
+
+            {/* Modal para completar información del director */}
+            {showDirectorModal && (
+                <div className="fixed inset-0 bg-black/90 flex items-center justify-center z-50 px-4 animate-fadeIn">
+                    <div className="bg-black rounded-2xl shadow-2xl border border-yellow-600/30 w-full max-w-md overflow-hidden transition-all duration-300 transform">
+                        <div className="relative p-6 bg-gradient-to-b from-black to-gray-900">
+                            <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-yellow-500/60 via-yellow-400 to-yellow-500/60"></div>
+
+                            <div className="flex flex-col items-center text-center mb-4">
+                                <div className="p-3 bg-yellow-500/10 rounded-full border border-yellow-500/30 mb-3">
+                                    <AlertCircle className="h-8 w-8 text-yellow-500" />
+                                </div>
+                                <h3 className="text-2xl font-bold text-white">Información requerida</h3>
+                                <p className="text-gray-400 mt-2">
+                                    Por favor complete el área del director/jefe de área seleccionado
+                                </p>
+                            </div>
+
+                            <div className="space-y-5 mt-6">
+                                <div className="rounded-lg border border-gray-800 bg-gray-900/50 p-4">
+                                    <label className="block text-xs uppercase tracking-wider text-gray-500 mb-1">Director/Jefe seleccionado</label>
+                                    <div className="flex items-center gap-3">
+                                        <div className="p-2 bg-gray-800 rounded-lg">
+                                            <User className="h-4 w-4 text-yellow-400" />
+                                        </div>
+                                        <span className="text-white font-medium">{incompleteDirector?.nombre || 'Director'}</span>
+                                    </div>
+                                </div>
+
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-300 mb-2 flex items-center gap-2">
+                                        <LayoutGrid className="h-4 w-4 text-gray-400" />
+                                        Área
+                                    </label>
+                                    <input
+                                        type="text"
+                                        value={directorFormData.area}
+                                        onChange={(e) => setDirectorFormData({ area: e.target.value })}
+                                        placeholder="Ej: Administración, Recursos Humanos, Contabilidad..."
+                                        className="block w-full bg-gray-900 border border-gray-700 rounded-lg py-3 px-4 text-white placeholder-gray-500 focus:outline-none focus:border-yellow-500 focus:ring-1 focus:ring-yellow-500 transition-colors"
+                                        required
+                                    />
+                                    {!directorFormData.area && (
+                                        <p className="text-xs text-yellow-500/80 mt-2 flex items-center gap-1">
+                                            <AlertCircle className="h-3 w-3" />
+                                            Este campo es obligatorio
+                                        </p>
+                                    )}
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="p-5 bg-black border-t border-gray-800 flex justify-end gap-3">
+                            <button
+                                onClick={() => setShowDirectorModal(false)}
+                                className="px-5 py-2.5 bg-gray-900 text-white rounded-lg text-sm hover:bg-gray-800 border border-gray-800 transition-colors flex items-center gap-2"
+                            >
+                                <X className="h-4 w-4" />
+                                Cancelar
+                            </button>
+                            <button
+                                onClick={saveDirectorInfo}
+                                disabled={savingDirector || !directorFormData.area}
+                                className={`px-5 py-2.5 rounded-lg text-sm flex items-center gap-2 transition-all duration-300 
+                                    ${savingDirector || !directorFormData.area ?
+                                        'bg-gray-900 text-gray-500 cursor-not-allowed border border-gray-800' :
+                                        'bg-gradient-to-r from-yellow-600 to-yellow-500 text-black font-medium hover:shadow-lg hover:shadow-yellow-500/20'}`}
+                            >
+                                {savingDirector ? (
+                                    <RefreshCw className="h-4 w-4 animate-spin" />
+                                ) : (
+                                    <Save className="h-4 w-4" />
+                                )}
+                                {savingDirector ? 'Guardando...' : 'Guardar y Continuar'}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }
