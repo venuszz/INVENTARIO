@@ -9,6 +9,7 @@ import {
     Trash2, ListChecks, FileDigit, Users
 } from 'lucide-react';
 import supabase from '@/app/lib/supabase/client';
+import Cookies from 'js-cookie';
 
 interface Mueble {
     id: number;
@@ -18,7 +19,8 @@ interface Mueble {
     estatus: string | null;
     resguardante: string | null;
     rubro: string | null;
-    usufinal?: string | null;
+    usufinal: string | null;
+    area?: string | null;
 }
 
 interface Directorio {
@@ -37,7 +39,6 @@ interface ResguardoForm {
 }
 
 export default function CrearResguardos() {
-    // const [muebles, setMuebles] = useState<Mueble[]>([]);
     const [filteredMuebles, setFilteredMuebles] = useState<Mueble[]>([]);
     const [directorio, setDirectorio] = useState<Directorio[]>([]);
     const [selectedMuebles, setSelectedMuebles] = useState<Mueble[]>([]);
@@ -65,21 +66,44 @@ export default function CrearResguardos() {
     const detailRef = useRef<HTMLDivElement>(null);
     const [showUsufinalModal, setShowUsufinalModal] = useState(false);
     const [conflictUsufinal, setConflictUsufinal] = useState<string | null>(null);
+    const [areaFilter, setAreaFilter] = useState<string>('');
+    const [responsableFilter, setResponsableFilter] = useState<string>('');
+    const [uniqueAreas, setUniqueAreas] = useState<string[]>([]);
+    const [uniqueResponsables, setUniqueResponsables] = useState<string[]>([]);
 
     // Fetch data with pagination directly from database
-    const fetchData = useCallback(async (page = 1, rowsPerPage = 10, searchQuery = '', sortField = 'id_inv', sortDir = 'asc') => {
+    const fetchData = useCallback(async (
+        page = 1,
+        rowsPerPage = 10,
+        searchQuery = '',
+        sortField = 'id_inv',
+        sortDir = 'asc',
+        areaFilter = '',
+        responsableFilter = ''
+    ) => {
         setLoading(true);
         try {
             // Fetch total counts first (solo de muebles activos)
             const mueblesCountQuery = supabase
                 .from('muebles')
                 .select('*', { count: 'exact', head: true })
-                .ilike('estatus', 'ACTIVO');  // Esto capturará todas las variantes de "activo"
+                .ilike('estatus', 'ACTIVO');
 
             const mueblesIteaCountQuery = supabase
                 .from('mueblesitea')
                 .select('*', { count: 'exact', head: true })
                 .ilike('estatus', 'ACTIVO');
+
+            // Aplicar filtros adicionales al conteo si están presentes
+            if (areaFilter) {
+                mueblesCountQuery.ilike('area', `%${areaFilter}%`);
+                mueblesIteaCountQuery.ilike('area', `%${areaFilter}%`);
+            }
+
+            if (responsableFilter) {
+                mueblesCountQuery.ilike('usufinal', `%${responsableFilter}%`);
+                mueblesIteaCountQuery.ilike('usufinal', `%${responsableFilter}%`);
+            }
 
             const [mueblesCountResult, mueblesIteaCountResult] = await Promise.all([
                 mueblesCountQuery,
@@ -96,14 +120,14 @@ export default function CrearResguardos() {
             // Build base queries with estado filter
             let mueblesQuery = supabase
                 .from('muebles')
-                .select('id, id_inv, descripcion, estatus, resguardante, rubro, estado, usufinal')
+                .select('id, id_inv, descripcion, estatus, resguardante, rubro, estado, usufinal, area')
                 .eq('estatus', 'ACTIVO')
                 .range(from, to)
                 .order(sortField, { ascending: sortDir === 'asc' });
 
             let mueblesIteaQuery = supabase
                 .from('mueblesitea')
-                .select('id, id_inv, descripcion, estatus, resguardante, rubro, estado, usufinal')
+                .select('id, id_inv, descripcion, estatus, resguardante, rubro, estado, usufinal, area')
                 .eq('estatus', 'ACTIVO')
                 .range(from, to)
                 .order(sortField, { ascending: sortDir === 'asc' });
@@ -112,7 +136,7 @@ export default function CrearResguardos() {
             if (searchQuery) {
                 mueblesQuery = supabase
                     .from('muebles')
-                    .select('id, id_inv, descripcion, estatus, resguardante, rubro, estado, usufinal')
+                    .select('id, id_inv, descripcion, estatus, resguardante, rubro, estado, usufinal, area')
                     .eq('estatus', 'ACTIVO')
                     .or(`id_inv.ilike.%${searchQuery}%,descripcion.ilike.%${searchQuery}%`)
                     .range(from, to)
@@ -120,11 +144,22 @@ export default function CrearResguardos() {
 
                 mueblesIteaQuery = supabase
                     .from('mueblesitea')
-                    .select('id, id_inv, descripcion, estatus, resguardante, rubro, estado, usufinal')
+                    .select('id, id_inv, descripcion, estatus, resguardante, rubro, estado, usufinal, area')
                     .eq('estatus', 'ACTIVO')
                     .or(`id_inv.ilike.%${searchQuery}%,descripcion.ilike.%${searchQuery}%`)
                     .range(from, to)
                     .order(sortField, { ascending: sortDir === 'asc' });
+            }
+
+            // Aplicar filtros adicionales
+            if (areaFilter) {
+                mueblesQuery = mueblesQuery.ilike('area', `%${areaFilter}%`);
+                mueblesIteaQuery = mueblesIteaQuery.ilike('area', `%${areaFilter}%`);
+            }
+
+            if (responsableFilter) {
+                mueblesQuery = mueblesQuery.ilike('usufinal', `%${responsableFilter}%`);
+                mueblesIteaQuery = mueblesIteaQuery.ilike('usufinal', `%${responsableFilter}%`);
             }
 
             // Execute queries
@@ -151,12 +186,29 @@ export default function CrearResguardos() {
             // Limit to rowsPerPage
             const paginatedResults = combinedData.slice(0, rowsPerPage);
 
-            // setMuebles(paginatedResults as Mueble[]);
             setFilteredMuebles(paginatedResults as Mueble[]);
 
             // Fetch directorio
             const { data: directorioData } = await supabase.from('directorio').select('*');
             setDirectorio(directorioData || []);
+
+            // Obtener valores únicos para los filtros - desde tablas completas
+            const allDataQuery = supabase.from('muebles').select('area, usufinal').eq('estatus', 'ACTIVO');
+            const allDataIteaQuery = supabase.from('mueblesitea').select('area, usufinal').eq('estatus', 'ACTIVO');
+
+            const [allData, allDataItea] = await Promise.all([allDataQuery, allDataIteaQuery]);
+
+            const allAreas = new Set<string>();
+            const allResponsables = new Set<string>();
+
+            // Procesar datos para obtener valores únicos
+            [...(allData.data || []), ...(allDataItea.data || [])].forEach(item => {
+                if (item.area) allAreas.add(item.area);
+                if (item.usufinal) allResponsables.add(item.usufinal);
+            });
+
+            setUniqueAreas(Array.from(allAreas).sort());
+            setUniqueResponsables(Array.from(allResponsables).sort());
 
             setError(null);
         } catch (err) {
@@ -168,8 +220,8 @@ export default function CrearResguardos() {
     }, []);
 
     useEffect(() => {
-        fetchData(currentPage, rowsPerPage, searchTerm, sortField, sortDirection);
-    }, [fetchData, currentPage, rowsPerPage, searchTerm, sortField, sortDirection]);
+        fetchData(currentPage, rowsPerPage, searchTerm, sortField, sortDirection, areaFilter, responsableFilter);
+    }, [fetchData, currentPage, rowsPerPage, searchTerm, sortField, sortDirection, areaFilter, responsableFilter]);
 
     // Generate unique folio
     const generateFolio = useCallback(async () => {
@@ -220,23 +272,20 @@ export default function CrearResguardos() {
         );
 
         if (matchingDirector) {
-            // Intentar preseleccionar este director
+            // Siempre actualizar el directorId aunque falte información
+            setFormData(prev => ({
+                ...prev,
+                directorId: matchingDirector.id_directorio.toString(),
+                area: matchingDirector.area || '',
+                puesto: matchingDirector.puesto || ''
+            }));
             if (!matchingDirector.area || !matchingDirector.puesto) {
-                // Si faltan datos, abre modal
                 setIncompleteDirector(matchingDirector);
                 setDirectorFormData({
                     area: matchingDirector.area || '',
                     puesto: matchingDirector.puesto || ''
                 });
                 setShowDirectorModal(true);
-            } else {
-                // Si tiene todos los datos, selecciónalo
-                setFormData(prev => ({
-                    ...prev,
-                    directorId: matchingDirector.id_directorio.toString(),
-                    area: matchingDirector.area || '',
-                    puesto: matchingDirector.puesto || ''
-                }));
             }
         }
     }, [directorio]);
@@ -288,9 +337,10 @@ export default function CrearResguardos() {
         // Check if already selected
         const isAlreadySelected = selectedMuebles.some(m => m.id === mueble.id);
 
+        let newSelectedMuebles: Mueble[];
         if (isAlreadySelected) {
             // If already selected, remove it
-            setSelectedMuebles(prev => prev.filter(m => m.id !== mueble.id));
+            newSelectedMuebles = selectedMuebles.filter(m => m.id !== mueble.id);
         } else {
             // Validar que todos los seleccionados tengan el mismo usufinal
             const currentUsufinal = selectedMuebles[0]?.usufinal?.trim().toUpperCase();
@@ -300,11 +350,26 @@ export default function CrearResguardos() {
                 setShowUsufinalModal(true);
                 return;
             }
-            setSelectedMuebles(prev => [...prev, mueble]);
-            // Si este es el primer seleccionado, intentar seleccionar director
-            if (selectedMuebles.length === 0 && !formData.directorId) {
-                checkDirectorMatch(mueble);
-            }
+            newSelectedMuebles = [...selectedMuebles, mueble];
+        }
+
+        setSelectedMuebles(newSelectedMuebles);
+
+        // Si la lista queda vacía, limpiar datos del director
+        if (newSelectedMuebles.length === 0) {
+            setFormData(prev => ({
+                ...prev,
+                directorId: '',
+                area: '',
+                puesto: ''
+            }));
+        } else if (!isAlreadySelected && newSelectedMuebles.length === 1) {
+            // Si es el primer seleccionado, intentar seleccionar director
+            checkDirectorMatch(mueble);
+        } else if (!isAlreadySelected && newSelectedMuebles.length > 1) {
+            // Si hay más de un artículo, asegurar que el director corresponde al usufinal
+            const first = newSelectedMuebles[0];
+            checkDirectorMatch(first);
         }
 
         if (window.innerWidth < 768 && detailRef.current) {
@@ -321,7 +386,7 @@ export default function CrearResguardos() {
             return;
         }
 
-        if (!formData.directorId || !formData.resguardante) {
+        if (!formData.directorId) {
             setError('Complete todos los campos obligatorios');
             return;
         }
@@ -331,6 +396,16 @@ export default function CrearResguardos() {
             folioToUse = await generateFolio() || '';
             if (!folioToUse) return;
         }
+
+        // Obtener usuario logueado de la cookie
+        let createdBy = '';
+        try {
+            const userDataCookie = Cookies.get('userData');
+            if (userDataCookie) {
+                const userData = JSON.parse(userDataCookie);
+                createdBy = `${userData.firstName || ''}${userData.lastName ? ' ' + userData.lastName : ''}`.trim();
+            }
+        } catch {}
 
         try {
             setLoading(true);
@@ -358,6 +433,7 @@ export default function CrearResguardos() {
                     rubro: mueble.rubro,
                     condicion: mueble.estado,
                     usufinal: formData.resguardante,
+                    created_by: createdBy,
                 });
 
                 if (insertError) throw insertError;
@@ -376,7 +452,7 @@ export default function CrearResguardos() {
             setTimeout(() => setSuccessMessage(null), 3000);
 
             // Refresh data
-            fetchData(currentPage, rowsPerPage, searchTerm, sortField, sortDirection);
+            fetchData(currentPage, rowsPerPage, searchTerm, sortField, sortDirection, areaFilter, responsableFilter);
 
         } catch (err) {
             setError('Error al guardar el resguardo');
@@ -409,7 +485,6 @@ export default function CrearResguardos() {
 
     // Calculate total pages
     const totalPages = Math.ceil(totalCount / rowsPerPage);
-
 
     return (
         <div className="bg-black text-white min-h-screen p-2 sm:p-4 md:p-6 lg:p-8">
@@ -488,7 +563,8 @@ export default function CrearResguardos() {
 
                         {/* Search and filters */}
                         <div className="mb-6 bg-gray-900/20 p-4 rounded-xl border border-gray-800 shadow-inner">
-                            <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-4">
+                            <div className="flex flex-col gap-4">
+                                {/* Búsqueda */}
                                 <div className="relative flex-grow">
                                     <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                                         <Search className="h-5 w-5 text-blue-400/80" />
@@ -502,12 +578,70 @@ export default function CrearResguardos() {
                                     />
                                 </div>
 
-                                <div className="flex items-center gap-2 text-sm text-gray-400">
-                                    <RefreshCw
-                                        className={`h-4 w-4 text-blue-400 cursor-pointer hover:text-blue-300 ${loading ? 'animate-spin' : ''}`}
-                                        onClick={() => fetchData(currentPage, rowsPerPage, searchTerm, sortField, sortDirection)}
-                                    />
-                                    <span>Total: {totalCount} registros</span>
+                                {/* Filtros */}
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    {/* Filtro por Área */}
+                                    <div className="relative">
+                                        <label className="block text-xs font-medium text-gray-400 mb-1">Filtrar por Área</label>
+                                        <select
+                                            title='Filtro para Áreas'
+                                            value={areaFilter}
+                                            onChange={(e) => setAreaFilter(e.target.value)}
+                                            className="w-full bg-black border border-gray-800 rounded-xl text-white py-2.5 px-3 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                        >
+                                            <option value="">Todas las áreas</option>
+                                            {uniqueAreas.map((area) => (
+                                                <option key={area} value={area}>{area}</option>
+                                            ))}
+                                        </select>
+                                    </div>
+
+                                    {/* Filtro por Responsable */}
+                                    <div className="relative">
+                                        <label className="block text-xs font-medium text-gray-400 mb-1">Filtrar por Responsable</label>
+                                        <select
+                                            title='Filtro de los Responsables'
+                                            value={responsableFilter}
+                                            onChange={(e) => setResponsableFilter(e.target.value)}
+                                            className="w-full bg-black border border-gray-800 rounded-xl text-white py-2.5 px-3 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                        >
+                                            <option value="">Todos los responsables</option>
+                                            {uniqueResponsables.map((resp) => (
+                                                <option key={resp} value={resp}>{resp}</option>
+                                            ))}
+                                        </select>
+                                    </div>
+                                </div>
+
+                                {/* Botones y conteo */}
+                                <div className="flex flex-col sm:flex-row justify-between items-center gap-2">
+                                    <div className="flex items-center gap-2">
+                                        <button
+                                            onClick={() => {
+                                                setSearchTerm('');
+                                                setAreaFilter('');
+                                                setResponsableFilter('');
+                                            }}
+                                            className="px-4 py-2 bg-black border border-gray-800 text-gray-400 rounded-lg hover:bg-gray-900 transition-colors flex items-center gap-2 text-sm"
+                                        >
+                                            <X className="h-4 w-4" />
+                                            Limpiar filtros
+                                        </button>
+                                        <button
+                                            onClick={() => fetchData(1, rowsPerPage, searchTerm, sortField, sortDirection, areaFilter, responsableFilter)}
+                                            className="px-4 py-2 bg-blue-600/20 border border-blue-800 text-blue-400 rounded-lg hover:bg-blue-600/30 transition-colors flex items-center gap-2 text-sm"
+                                        >
+                                            <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
+                                            Actualizar
+                                        </button>
+                                    </div>
+                                    <div className="flex items-center gap-2 text-sm text-gray-400">
+                                        <RefreshCw
+                                            className={`h-4 w-4 text-blue-400 cursor-pointer hover:text-blue-300 ${loading ? 'animate-spin' : ''}`}
+                                            onClick={() => fetchData(currentPage, rowsPerPage, searchTerm, sortField, sortDirection, areaFilter, responsableFilter)}
+                                        />
+                                        <span>Total: {totalCount} registros</span>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -542,12 +676,30 @@ export default function CrearResguardos() {
                                                 </div>
                                             </th>
                                             <th
-                                                onClick={() => handleSort('estatus')}
+                                                onClick={() => handleSort('area')}
+                                                className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider cursor-pointer hover:bg-gray-900 transition-colors"
+                                            >
+                                                <div className="flex items-center gap-1">
+                                                    Área
+                                                    <ArrowUpDown className={`h-3.5 w-3.5 ${sortField === 'area' ? 'text-blue-400' : 'text-gray-500'}`} />
+                                                </div>
+                                            </th>
+                                            <th
+                                                onClick={() => handleSort('usufinal')}
+                                                className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider cursor-pointer hover:bg-gray-900 transition-colors"
+                                            >
+                                                <div className="flex items-center gap-1">
+                                                    Responsable
+                                                    <ArrowUpDown className={`h-3.5 w-3.5 ${sortField === 'usufinal' ? 'text-blue-400' : 'text-gray-500'}`} />
+                                                </div>
+                                            </th>
+                                            <th
+                                                onClick={() => handleSort('estado')}
                                                 className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider cursor-pointer hover:bg-gray-900 transition-colors"
                                             >
                                                 <div className="flex items-center gap-1">
                                                     Estado
-                                                    <ArrowUpDown className={`h-3.5 w-3.5 ${sortField === 'estatus' ? 'text-blue-400' : 'text-gray-500'}`} />
+                                                    <ArrowUpDown className={`h-3.5 w-3.5 ${sortField === 'estado' ? 'text-blue-400' : 'text-gray-500'}`} />
                                                 </div>
                                             </th>
                                         </tr>
@@ -555,7 +707,7 @@ export default function CrearResguardos() {
                                     <tbody className="bg-transparent divide-y divide-gray-800/50">
                                         {loading && !isLoadingMore ? (
                                             <tr className="h-96">
-                                                <td colSpan={4} className="px-6 py-24 text-center text-gray-400">
+                                                <td colSpan={6} className="px-6 py-24 text-center text-gray-400">
                                                     <div className="flex flex-col items-center justify-center space-y-4">
                                                         <RefreshCw className="h-12 w-12 animate-spin text-blue-500" />
                                                         <p className="text-lg font-medium">Cargando datos...</p>
@@ -564,13 +716,13 @@ export default function CrearResguardos() {
                                             </tr>
                                         ) : error ? (
                                             <tr className="h-96">
-                                                <td colSpan={4} className="px-6 py-24 text-center">
+                                                <td colSpan={6} className="px-6 py-24 text-center">
                                                     <div className="flex flex-col items-center justify-center space-y-4 text-red-400">
                                                         <AlertCircle className="h-12 w-12" />
                                                         <p className="text-lg font-medium">Error al cargar datos</p>
                                                         <p className="text-sm text-gray-400">{error}</p>
                                                         <button
-                                                            onClick={() => fetchData(currentPage, rowsPerPage, searchTerm, sortField, sortDirection)}
+                                                            onClick={() => fetchData(currentPage, rowsPerPage, searchTerm, sortField, sortDirection, areaFilter, responsableFilter)}
                                                             className="px-4 py-2 bg-black text-blue-300 rounded-lg text-sm hover:bg-gray-900 transition-colors border border-gray-800"
                                                         >
                                                             Intentar nuevamente
@@ -580,7 +732,7 @@ export default function CrearResguardos() {
                                             </tr>
                                         ) : filteredMuebles.length === 0 ? (
                                             <tr className="h-96">
-                                                <td colSpan={4} className="px-6 py-24 text-center text-gray-400">
+                                                <td colSpan={6} className="px-6 py-24 text-center text-gray-400">
                                                     <div className="flex flex-col items-center justify-center space-y-4">
                                                         <Search className="h-12 w-12 text-gray-500" />
                                                         <p className="text-lg font-medium">No se encontraron resultados</p>
@@ -622,12 +774,15 @@ export default function CrearResguardos() {
                                                         </td>
                                                         <td className="px-4 py-4">
                                                             <div className="text-sm text-white">{mueble.descripcion}</div>
-                                                            {mueble.usufinal && (
-                                                                <div className="text-xs text-gray-500 mt-1 flex items-center gap-1">
-                                                                    <User className="h-3 w-3" />
-                                                                    Usuario: {mueble.usufinal}
-                                                                </div>
-                                                            )}
+                                                        </td>
+                                                        <td className="px-4 py-4">
+                                                            <div className="text-sm text-white">{mueble.area || 'No especificada'}</div>
+                                                        </td>
+                                                        <td className="px-4 py-4">
+                                                            <div className="text-sm text-white flex items-center gap-1">
+                                                                <User className="h-3.5 w-3.5 text-blue-400" />
+                                                                {mueble.usufinal || 'No asignado'}
+                                                            </div>
                                                         </td>
                                                         <td className="px-4 py-4">
                                                             <div className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium 
@@ -645,7 +800,7 @@ export default function CrearResguardos() {
                                         )}
                                         {isLoadingMore && (
                                             <tr>
-                                                <td colSpan={4} className="px-6 py-4 text-center text-gray-400">
+                                                <td colSpan={6} className="px-6 py-4 text-center text-gray-400">
                                                     <div className="flex justify-center items-center space-x-2">
                                                         <RefreshCw className="h-5 w-5 animate-spin text-blue-500" />
                                                         <span>Cargando más resultados...</span>
@@ -705,58 +860,85 @@ export default function CrearResguardos() {
                     {/* Right panel - Details */}
                     <div ref={detailRef} className="flex-1 bg-black p-4 border-t lg:border-t-0 lg:border-l border-gray-800 flex flex-col lg:col-span-2">
                         <div className="bg-gray-900/20 rounded-xl border border-gray-800 p-4 mb-4 shadow-inner">
-                            <h2 className="flex items-center gap-2 text-lg font-semibold mb-4">
+                            <h2 className="text-lg font-medium text-gray-100 mb-4 flex items-center gap-2">
                                 <ActivitySquare className="h-5 w-5 text-blue-400" />
                                 Información del Resguardo
                             </h2>
 
-                            {/* Director de Área (solo lectura) */}
+                            {/* Director selection */}
                             <div className="mb-4">
                                 <label className="block text-sm font-medium text-gray-400 mb-1">Director de Área</label>
+                                <div className="relative">
+                                    <input
+                                        type="text"
+                                        value={formData.directorId ? directorio.find(d => d.id_directorio.toString() === formData.directorId)?.nombre || '' : ''}
+                                        readOnly
+                                        className="block w-full bg-black border border-gray-800 rounded-lg py-2.5 px-4 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 appearance-none"
+                                        placeholder="Director de Área"
+                                    />
+                                </div>
+                                {/* Advertencia de área o puesto solo si hay artículos seleccionados y falta info */}
+                                {selectedMuebles.length > 0 && formData.directorId && (
+                                    <>
+                                        {(!formData.area || !formData.puesto) && (
+                                            <div className="mt-2 text-yellow-400 text-xs flex items-center gap-2">
+                                                <AlertCircle className="h-4 w-4" />
+                                                Falta información de área o puesto del director.
+                                                <button
+                                                    type="button"
+                                                    className="ml-2 underline text-yellow-300 hover:text-yellow-200"
+                                                    onClick={() => {
+                                                        const dir = directorio.find(d => d.id_directorio.toString() === formData.directorId);
+                                                        if (dir) {
+                                                            setIncompleteDirector(dir);
+                                                            setDirectorFormData({ area: dir.area || '', puesto: dir.puesto || '' });
+                                                            setShowDirectorModal(true);
+                                                        }
+                                                    }}
+                                                >
+                                                    Completar datos
+                                                </button>
+                                            </div>
+                                        )}
+                                    </>
+                                )}
+                            </div>
+
+                            {/* Resguardante */}
+                            <div className="mb-4">
+                                <label className="block text-sm font-medium text-gray-400 mb-1">Resguardante</label>
                                 <input
                                     type="text"
-                                    value={selectedMuebles.length > 0 ? selectedMuebles[0].usufinal || '' : ''}
-                                    readOnly
-                                    className="block w-full bg-black border border-gray-800 rounded-lg py-2.5 px-4 text-white placeholder-gray-500 focus:outline-none cursor-not-allowed"
-                                    placeholder="Director de área"
+                                    value={formData.resguardante}
+                                    onChange={(e) => setFormData({ ...formData, resguardante: e.target.value })}
+                                    placeholder="Nombre del resguardante"
+                                    className="block w-full bg-black border border-gray-800 rounded-lg py-2.5 px-4 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
                                 />
                             </div>
 
-                            {/* Área y Puesto (solo lectura) */}
+                            {/* Area and Puesto */}
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                 <div>
                                     <label className="block text-sm font-medium text-gray-400 mb-1">Área</label>
                                     <input
                                         type="text"
                                         value={formData.area}
-                                        readOnly
-                                        className="block w-full bg-black border border-gray-800 rounded-lg py-2.5 px-4 text-white placeholder-gray-500 focus:outline-none cursor-not-allowed"
+                                        readOnly={true}
+                                        onChange={(e) => setFormData({ ...formData, area: e.target.value })}
                                         placeholder="Área"
+                                        className="block w-full bg-black border border-gray-800 rounded-lg py-2.5 px-4 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-gray-300"
                                     />
-                                    {/* Advertencia si falta información y hay artículos seleccionados */}
-                                    {selectedMuebles.length > 0 && !formData.area && (
-                                        <div className="mt-2 text-yellow-400 text-xs flex items-center gap-2">
-                                            <AlertTriangle className="h-4 w-4" />
-                                            <span>Falta información del área. <button type="button" className="underline text-yellow-300 hover:text-yellow-200" onClick={() => setShowDirectorModal(true)}>Completar ahora</button></span>
-                                        </div>
-                                    )}
                                 </div>
                                 <div>
                                     <label className="block text-sm font-medium text-gray-400 mb-1">Puesto</label>
                                     <input
                                         type="text"
                                         value={formData.puesto}
-                                        readOnly
-                                        className="block w-full bg-black border border-gray-800 rounded-lg py-2.5 px-4 text-white placeholder-gray-500 focus:outline-none cursor-not-allowed"
+                                        readOnly={true}
+                                        onChange={(e) => setFormData({ ...formData, puesto: e.target.value })}
                                         placeholder="Puesto"
+                                        className="block w-full bg-black border border-gray-800 rounded-lg py-2.5 px-4 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-gray-300"
                                     />
-                                    {/* Advertencia si falta información y hay artículos seleccionados */}
-                                    {selectedMuebles.length > 0 && !formData.puesto && (
-                                        <div className="mt-2 text-yellow-400 text-xs flex items-center gap-2">
-                                            <AlertTriangle className="h-4 w-4" />
-                                            <span>Falta información del puesto. <button type="button" className="underline text-yellow-300 hover:text-yellow-200" onClick={() => setShowDirectorModal(true)}>Completar ahora</button></span>
-                                        </div>
-                                    )}
                                 </div>
                             </div>
                         </div>
@@ -784,9 +966,11 @@ export default function CrearResguardos() {
                                                         {mueble.id_inv}
                                                     </div>
                                                     <div className={`inline-flex items-center px-1.5 py-0.5 rounded-full text-xs font-medium 
-                                                        ${mueble.estado === 'BUENO' ? 'bg-green-900/20 text-green-300 border border-green-900' :
-                                                            mueble.estado === 'REGULAR' ? 'bg-yellow-900/20 text-yellow-300 border border-yellow-900' :
-                                                                'bg-red-900/20 text-red-300 border border-red-900'}`}>
+                                                        ${mueble.estado === 'B' ? 'bg-green-900/20 text-green-300 border border-green-900' :
+                                                            mueble.estado === 'R' ? 'bg-yellow-900/20 text-yellow-300 border border-yellow-900' :
+                                                                mueble.estado === 'M' ? 'bg-red-900/20 text-red-300 border border-red-900' :
+                                                                    mueble.estado === 'N' ? 'bg-blue-900/20 text-blue-300 border border-blue-900' :
+                                                                        'bg-gray-900/20 text-gray-300 border border-gray-900'}`}>
                                                         {mueble.estado}
                                                     </div>
                                                 </div>
@@ -833,9 +1017,9 @@ export default function CrearResguardos() {
                             </button>
                             <button
                                 onClick={handleSubmit}
-                                disabled={selectedMuebles.length === 0 || !formData.directorId || !formData.resguardante || loading}
+                                disabled={selectedMuebles.length === 0 || !formData.directorId || loading}
                                 className={`px-4 py-2 rounded-lg text-sm flex items-center justify-center gap-2 flex-grow sm:flex-grow-0 
-                                    ${selectedMuebles.length === 0 || !formData.directorId || !formData.resguardante || loading ?
+                                    ${selectedMuebles.length === 0 || !formData.directorId || loading ?
                                         'bg-blue-900/10 text-blue-300/50 border border-blue-900/20 cursor-not-allowed' :
                                         'bg-blue-600 text-white hover:bg-blue-500'}`}
                             >
