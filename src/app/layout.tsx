@@ -15,7 +15,7 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: "INVENTARIO | INICIO",
-  description: "Software de Gestión de Inventario",
+  description: "Software de Gestión de Inventario @by Antony",
   icons: {
     icon: "/favicon.ico",
     shortcut: "/favicon.ico",

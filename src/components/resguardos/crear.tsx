@@ -38,6 +38,30 @@ interface ResguardoForm {
     puesto: string;
 }
 
+// Utilidad para asignar color a áreas y responsables
+const colorPalette = [
+    'bg-blue-900/30 text-blue-200 border-blue-700',
+    'bg-green-900/30 text-green-200 border-green-700',
+    'bg-yellow-900/30 text-yellow-200 border-yellow-700',
+    'bg-purple-900/30 text-purple-200 border-purple-700',
+    'bg-pink-900/30 text-pink-200 border-pink-700',
+    'bg-red-900/30 text-red-200 border-red-700',
+    'bg-cyan-900/30 text-cyan-200 border-cyan-700',
+    'bg-orange-900/30 text-orange-200 border-orange-700',
+    'bg-teal-900/30 text-teal-200 border-teal-700',
+    'bg-indigo-900/30 text-indigo-200 border-indigo-700',
+    'bg-gray-900/30 text-gray-200 border-gray-700',
+];
+function getColorClass(value: string | null | undefined) {
+    if (!value) return 'bg-gray-900/20 text-gray-300 border border-gray-900';
+    let hash = 0;
+    for (let i = 0; i < value.length; i++) {
+        hash = value.charCodeAt(i) + ((hash << 5) - hash);
+    }
+    const idx = Math.abs(hash) % colorPalette.length;
+    return colorPalette[idx];
+}
+
 export default function CrearResguardos() {
     const [filteredMuebles, setFilteredMuebles] = useState<Mueble[]>([]);
     const [directorio, setDirectorio] = useState<Directorio[]>([]);
@@ -776,10 +800,10 @@ export default function CrearResguardos() {
                                                             <div className="text-sm text-white">{mueble.descripcion}</div>
                                                         </td>
                                                         <td className="px-4 py-4">
-                                                            <div className="text-sm text-white">{mueble.area || 'No especificada'}</div>
+                                                            <div className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border ${getColorClass(mueble.area)}`}>{mueble.area || 'No especificada'}</div>
                                                         </td>
                                                         <td className="px-4 py-4">
-                                                            <div className="text-sm text-white flex items-center gap-1">
+                                                            <div className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border gap-1 ${getColorClass(mueble.usufinal)}`}>
                                                                 <User className="h-3.5 w-3.5 text-blue-400" />
                                                                 {mueble.usufinal || 'No asignado'}
                                                             </div>
