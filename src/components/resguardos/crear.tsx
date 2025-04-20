@@ -284,17 +284,22 @@ export default function CrearResguardos() {
             const day = String(today.getDate()).padStart(2, '0');
             const datePart = `${year}${month}${day}`;
 
-            // Obtener los resguardos creados hoy para calcular el secuencial
+            // Obtener los folios únicos creados hoy para calcular el secuencial
             const startOfDay = new Date(today.setHours(0, 0, 0, 0)).toISOString();
             const endOfDay = new Date(today.setHours(23, 59, 59, 999)).toISOString();
 
-            const { count } = await supabase
+            // Traer todos los folios del día
+            const { data, error } = await supabase
                 .from('resguardos')
-                .select('*', { count: 'exact', head: true })
+                .select('folio')
                 .gte('f_resguardo', startOfDay)
                 .lte('f_resguardo', endOfDay);
 
-            const sequential = String((count || 0) + 1).padStart(3, '0');
+            if (error) throw error;
+
+            // Contar folios únicos
+            const foliosUnicos = Array.from(new Set((data || []).map(r => r.folio)));
+            const sequential = String(foliosUnicos.length + 1).padStart(3, '0');
             const newFolio = `RES-${datePart}-${sequential}`;
 
             setFormData(prev => ({ ...prev, folio: newFolio }));
