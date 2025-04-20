@@ -321,18 +321,6 @@ export default function LoginPage() {
                                         {isLoading ? 'Procesando...' : 'Iniciar Sesión'}
                                     </button>
                                 </div>
-
-                                <div className="text-center mt-4 md:mt-6">
-                                    <p className="text-gray-400 text-sm md:text-base">
-                                        ¿No tiene una cuenta?
-                                        <a
-                                            href="/register"
-                                            className="text-blue-400 ml-2 hover:underline"
-                                        >
-                                            Registrarse
-                                        </a>
-                                    </p>
-                                </div>
                             </form>
                         </div>
                     </div>

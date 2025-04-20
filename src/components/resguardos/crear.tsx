@@ -940,7 +940,7 @@ export default function CrearResguardos() {
                                         type="text"
                                         value={formData.directorId ? directorio.find(d => d.id_directorio.toString() === formData.directorId)?.nombre || '' : ''}
                                         readOnly
-                                        className="block w-full bg-black border border-gray-800 rounded-lg py-2.5 px-4 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 appearance-none"
+                                        className="block w-full bg-black border border-gray-800 rounded-lg py-2.5 px-4 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-gray-300 appearance-none"
                                         placeholder="Director de Área"
                                     />
                                 </div>
