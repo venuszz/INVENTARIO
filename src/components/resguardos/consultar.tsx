@@ -76,12 +76,8 @@ export default function ConsultarResguardos() {
             let countQuery = supabase.from('resguardos').select('*', { count: 'exact', head: true });
 
             if (filterDate) {
-                const [year, month, day] = filterDate.split('-').map(Number);
-                const startDate = new Date(year, month - 1, day, 0, 0, 0, 0);
-                const endDate = new Date(year, month - 1, day, 23, 59, 59, 999);
-                countQuery = countQuery
-                    .gte('f_resguardo', startDate.toISOString())
-                    .lte('f_resguardo', endDate.toISOString());
+                // Aplicar casting a DATE para comparación exacta
+                countQuery = countQuery.eq('f_resguardo::date', filterDate);
             }
 
             if (filterDirector) {
@@ -100,12 +96,8 @@ export default function ConsultarResguardos() {
             let dataQuery = supabase.from('resguardos').select('*');
 
             if (filterDate) {
-                const [year, month, day] = filterDate.split('-').map(Number);
-                const startDate = new Date(year, month - 1, day, 0, 0, 0, 0);
-                const endDate = new Date(year, month - 1, day, 23, 59, 59, 999);
-                dataQuery = dataQuery
-                    .gte('f_resguardo', startDate.toISOString())
-                    .lte('f_resguardo', endDate.toISOString());
+                // Aplicar casting a DATE para comparación exacta
+                dataQuery = dataQuery.eq('f_resguardo::date', filterDate);
             }
 
             if (filterDirector) {
@@ -449,7 +441,7 @@ export default function ConsultarResguardos() {
                                                         </td>
                                                         <td className="px-4 py-4">
                                                             <div className="text-sm text-white">
-                                                                {new Date(resguardo.f_resguardo).toLocaleDateString()}
+                                                                {resguardo.f_resguardo.slice(0, 10).split('-').reverse().join('/')}
                                                             </div>
                                                         </td>
                                                         <td className="px-4 py-4">
@@ -538,7 +530,7 @@ export default function ConsultarResguardos() {
                                                 <label className="block text-xs uppercase tracking-wider text-gray-500 mb-1">Fecha</label>
                                                 <div className="text-sm text-white flex items-center gap-2">
                                                     <Calendar className="h-4 w-4" />
-                                                    {new Date(selectedResguardo.f_resguardo).toLocaleDateString()}
+                                                    {selectedResguardo.f_resguardo.slice(0, 10).split('-').reverse().join('/')}
                                                 </div>
                                             </div>
                                             <div>
