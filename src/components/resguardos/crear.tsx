@@ -6,10 +6,16 @@ import {
     LayoutGrid, TagIcon, Building2,
     User, AlertTriangle, Calendar, Info,
     CheckCircle, RefreshCw, UserCheck, Briefcase,
-    Trash2, ListChecks, FileDigit, Users
+    Trash2, ListChecks, FileDigit, Users, FileText, Download
 } from 'lucide-react';
 import supabase from '@/app/lib/supabase/client';
 import Cookies from 'js-cookie';
+import dynamic from 'next/dynamic';
+import { PDFDownloadLink } from '@react-pdf/renderer';
+import { ResguardoPDF } from './ResguardoPDFReport';
+
+// Importar el componente PDF de forma dinámica para evitar SSR
+const ResguardoPDFReport = dynamic(() => import('./ResguardoPDFReport'), { ssr: false });
 
 interface Mueble {
     id: number;
@@ -94,6 +100,27 @@ export default function CrearResguardos() {
     const [responsableFilter, setResponsableFilter] = useState<string>('');
     const [uniqueAreas, setUniqueAreas] = useState<string[]>([]);
     const [uniqueResponsables, setUniqueResponsables] = useState<string[]>([]);
+    const [showWarningModal, setShowWarningModal] = useState(false);
+
+    interface PdfArticulo {
+        id_inv: string | null;
+        descripcion: string | null;
+        rubro: string | null;
+        estado: string | null;
+    }
+
+    interface PdfData {
+        folio: string;
+        fecha: string;
+        director: string | undefined;
+        area: string;
+        puesto: string;
+        resguardante: string;
+        articulos: PdfArticulo[];
+    }
+
+    const [pdfData, setPdfData] = useState<PdfData | null>(null);
+    const [showPDFButton, setShowPDFButton] = useState(false);
 
     // Fetch data with pagination directly from database
     const fetchData = useCallback(async (
@@ -429,7 +456,7 @@ export default function CrearResguardos() {
                 const userData = JSON.parse(userDataCookie);
                 createdBy = `${userData.firstName || ''}${userData.lastName ? ' ' + userData.lastName : ''}`.trim();
             }
-        } catch {}
+        } catch { }
 
         try {
             setLoading(true);
@@ -463,8 +490,24 @@ export default function CrearResguardos() {
                 if (insertError) throw insertError;
             });
 
-            // Wait for all updates to complete
             await Promise.all(resguardoPromises);
+
+            // Guardar datos para el PDF
+            setPdfData({
+                folio: folioToUse,
+                fecha: new Date().toLocaleDateString(),
+                director: directorio.find(d => d.id_directorio.toString() === formData.directorId)?.nombre,
+                area: formData.area,
+                puesto: formData.puesto,
+                resguardante: formData.resguardante,
+                articulos: selectedMuebles.map(m => ({
+                    id_inv: m.id_inv,
+                    descripcion: m.descripcion,
+                    rubro: m.rubro,
+                    estado: m.estado
+                }))
+            });
+            setShowPDFButton(true);
 
             // Reset form but keep the folio for next group if needed
             setFormData(prev => ({
@@ -1198,6 +1241,126 @@ export default function CrearResguardos() {
                                 <X className="h-4 w-4" />
                                 Cerrar
                             </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Modal para descargar PDF tras guardar */}
+            {showPDFButton && pdfData && (
+                <div className="fixed inset-0 bg-black/90 flex items-center justify-center z-50 px-4 animate-fadeIn">
+                    <div className="bg-black rounded-2xl shadow-2xl border border-green-600/30 w-full max-w-md overflow-hidden transition-all duration-300 transform">
+                        <div className="relative p-6 bg-gradient-to-b from-black to-gray-900">
+                            {/* Línea decorativa superior */}
+                            <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-green-500/60 via-green-400 to-green-500/60"></div>
+
+                            {/* Botón de cerrar con advertencia mejorada */}
+                            <button
+                                onClick={() => {
+                                    // Verificar si el PDF ya fue descargado
+                                    const hasPdfBeenDownloaded = sessionStorage.getItem('pdfDownloaded') === 'true';
+
+                                    if (!hasPdfBeenDownloaded) {
+                                        // Si no se ha descargado, mostrar modal de advertencia personalizado
+                                        setShowWarningModal(true);
+                                    } else {
+                                        // Si ya se descargó, cerrar directamente
+                                        setShowPDFButton(false);
+                                    }
+                                }}
+                                className="absolute top-3 right-3 p-2 rounded-full bg-black/60 hover:bg-gray-900 text-green-400 hover:text-green-500 border border-green-500/30 transition-colors"
+                                title="Cerrar"
+                            >
+                                <X className="h-4 w-4" />
+                            </button>
+
+                            {/* Encabezado con icono */}
+                            <div className="flex flex-col items-center text-center mb-4">
+                                <div className="p-3 bg-green-500/10 rounded-full border border-green-500/30 mb-3">
+                                    <FileDigit className="h-8 w-8 text-green-500" />
+                                </div>
+                                <h3 className="text-2xl font-bold text-white">Resguardo generado</h3>
+                                <p className="text-gray-400 mt-2">
+                                    Descarga el PDF del resguardo para imprimir o compartir
+                                </p>
+                            </div>
+
+                            {/* Contenido del PDF */}
+                            <div className="space-y-5 mt-6">
+                                <div className="rounded-lg border border-gray-800 bg-gray-900/50 p-4">
+                                    <label className="block text-xs uppercase tracking-wider text-gray-500 mb-1">Documento generado</label>
+                                    <div className="flex items-center gap-3">
+                                        <div className="p-2 bg-gray-800 rounded-lg">
+                                            <FileText className="h-4 w-4 text-green-400" />
+                                        </div>
+                                        <span className="text-white font-medium">Resguardo de equipo</span>
+                                    </div>
+                                </div>
+
+                                {/* Componente PDF con visualización y botón de descarga */}
+                                <div className="w-full flex flex-col items-center gap-4">
+                                    <div className="w-full rounded-lg overflow-hidden border border-gray-700">
+                                        <ResguardoPDFReport data={pdfData as PdfData} onClose={() => setShowPDFButton(false)} />
+                                    </div>
+                                    {/* Botón verde de descarga usando PDFDownloadLink */}
+                                    <div className="w-full">
+                                        <PDFDownloadLink
+                                            document={<ResguardoPDF data={pdfData as PdfData} />}
+                                            fileName={`resguardo_${pdfData.folio}.pdf`}
+                                            className="w-full py-3 px-4 bg-gradient-to-r from-green-600 to-green-500 hover:from-green-500 hover:to-green-400 text-black font-medium rounded-lg flex items-center justify-center gap-2 transition-all transform hover:scale-[1.02] shadow-lg"
+                                            onClick={() => {
+                                                // Marcar que se ha descargado el PDF
+                                                sessionStorage.setItem('pdfDownloaded', 'true');
+                                            }}
+                                        >
+                                            {({ loading }) => (
+                                                <>
+                                                    <Download className="h-5 w-5" />
+                                                    {loading ? 'Generando PDF...' : 'Descargar PDF'}
+                                                </>
+                                            )}
+                                        </PDFDownloadLink>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Modal de advertencia personalizado */}
+            {showWarningModal && (
+                <div className="fixed inset-0 bg-black/95 flex items-center justify-center z-[60] px-4 animate-fadeIn">
+                    <div className="bg-gray-900 rounded-xl shadow-2xl border border-red-500/30 w-full max-w-sm p-6">
+                        <div className="flex flex-col items-center text-center gap-4">
+                            <div className="p-3 bg-red-500/10 rounded-full border border-red-500/30">
+                                <AlertTriangle className="h-7 w-7 text-red-500" />
+                            </div>
+
+                            <div>
+                                <h3 className="text-xl font-bold text-white mb-2">¿Cerrar sin descargar?</h3>
+                                <p className="text-gray-400 text-sm">
+                                    No has descargado el PDF. Si cierras esta ventana, no podrás volver a generar este documento por ahora. 
+                                </p>
+                            </div>
+
+                            <div className="flex gap-3 w-full mt-2">
+                                <button
+                                    onClick={() => setShowWarningModal(false)}
+                                    className="flex-1 py-2 px-4 border border-gray-700 text-gray-300 hover:bg-gray-800 rounded-lg transition-colors"
+                                >
+                                    Cancelar
+                                </button>
+                                <button
+                                    onClick={() => {
+                                        setShowWarningModal(false);
+                                        setShowPDFButton(false);
+                                    }}
+                                    className="flex-1 py-2 px-4 bg-red-600 hover:bg-red-500 text-white rounded-lg transition-colors"
+                                >
+                                    Cerrar
+                                </button>
+                            </div>
                         </div>
                     </div>
                 </div>
