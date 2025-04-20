@@ -8,7 +8,7 @@ export const metadata: Metadata = {
 
 export default function Page() {
     return (
-        <div className="flex flex-col h-full w-full overflow-auto">
+        <div className="w-full h-full overflow-auto">
             <Consultar />
         </div>
     )

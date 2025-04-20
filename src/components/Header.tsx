@@ -143,6 +143,10 @@ export default function NavigationBar() {
                         { title: 'Vista general', path: '/consultas/itea/general' },
                         { title: 'Bienes obsoletos', path: '/consultas/itea/obsoletos' }
                     ]
+                },
+                {
+                    title: 'Levantamiento',
+                    path: '/consultas/levantamiento',
                 }
             ]
         },
@@ -153,8 +157,6 @@ export default function NavigationBar() {
             submenu: [
                 { title: 'Crear resguardo', path: '/resguardos/crear' },
                 { title: 'Consultar resguardos', path: '/resguardos/consultar' },
-                { title: 'Levantamiento de inventario', path: '/resguardos/levantamiento' },
-                { title: 'Liberación de resguardos', path: '/resguardos/liberacion' }
             ]
         },
         {

@@ -442,6 +442,12 @@ export default function CrearResguardos() {
             return;
         }
 
+        // Validación: área y puesto deben estar presentes
+        if (!formData.area || !formData.puesto) {
+            setError('No se puede crear el resguardo: el área y el puesto del director son obligatorios.');
+            return;
+        }
+
         let folioToUse = formData.folio;
         if (!folioToUse) {
             folioToUse = await generateFolio() || '';
@@ -1085,9 +1091,9 @@ export default function CrearResguardos() {
                             </button>
                             <button
                                 onClick={handleSubmit}
-                                disabled={selectedMuebles.length === 0 || !formData.directorId || loading}
+                                disabled={selectedMuebles.length === 0 || !formData.directorId || !formData.area || !formData.puesto || loading}
                                 className={`px-4 py-2 rounded-lg text-sm flex items-center justify-center gap-2 flex-grow sm:flex-grow-0 
-                                    ${selectedMuebles.length === 0 || !formData.directorId || loading ?
+                                    ${selectedMuebles.length === 0 || !formData.directorId || !formData.area || !formData.puesto || loading ?
                                         'bg-blue-900/10 text-blue-300/50 border border-blue-900/20 cursor-not-allowed' :
                                         'bg-blue-600 text-white hover:bg-blue-500'}`}
                             >
