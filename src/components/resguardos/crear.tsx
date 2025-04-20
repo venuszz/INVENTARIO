@@ -508,6 +508,7 @@ export default function CrearResguardos() {
                 }))
             });
             setShowPDFButton(true);
+            sessionStorage.setItem('pdfDownloaded', 'false'); // <-- Limpia el flag al generar nuevo PDF
 
             // Reset form but keep the folio for next group if needed
             setFormData(prev => ({
@@ -1248,8 +1249,22 @@ export default function CrearResguardos() {
 
             {/* Modal para descargar PDF tras guardar */}
             {showPDFButton && pdfData && (
-                <div className="fixed inset-0 bg-black/90 flex items-center justify-center z-50 px-4 animate-fadeIn">
-                    <div className="bg-black rounded-2xl shadow-2xl border border-green-600/30 w-full max-w-md overflow-hidden transition-all duration-300 transform">
+                <div
+                    className="fixed inset-0 bg-black/90 flex items-center justify-center z-50 px-4 animate-fadeIn"
+                    tabIndex={-1} // Previene cierre por Escape
+                    onKeyDown={e => {
+                        // Previene cierre con Escape
+                        if (e.key === 'Escape') {
+                            e.stopPropagation();
+                            e.preventDefault();
+                        }
+                    }}
+                    onClick={e => e.stopPropagation()} // Previene cierre por clic fuera
+                >
+                    <div
+                        className="bg-black rounded-2xl shadow-2xl border border-green-600/30 w-full max-w-md overflow-hidden transition-all duration-300 transform"
+                        onClick={e => e.stopPropagation()} // Previene propagación de clics internos
+                    >
                         <div className="relative p-6 bg-gradient-to-b from-black to-gray-900">
                             {/* Línea decorativa superior */}
                             <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-green-500/60 via-green-400 to-green-500/60"></div>
@@ -1274,7 +1289,6 @@ export default function CrearResguardos() {
                                 <X className="h-4 w-4" />
                             </button>
 
-                            {/* Encabezado con icono */}
                             <div className="flex flex-col items-center text-center mb-4">
                                 <div className="p-3 bg-green-500/10 rounded-full border border-green-500/30 mb-3">
                                     <FileDigit className="h-8 w-8 text-green-500" />
@@ -1285,7 +1299,6 @@ export default function CrearResguardos() {
                                 </p>
                             </div>
 
-                            {/* Contenido del PDF */}
                             <div className="space-y-5 mt-6">
                                 <div className="rounded-lg border border-gray-800 bg-gray-900/50 p-4">
                                     <label className="block text-xs uppercase tracking-wider text-gray-500 mb-1">Documento generado</label>
