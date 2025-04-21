@@ -184,6 +184,8 @@ export default function ConsultasIteaGeneral() {
     const [directorFormData, setDirectorFormData] = useState({ area: '' });
     const [savingDirector, setSavingDirector] = useState(false);
     const [message, setMessage] = useState<Message | null>(null);
+    const [showBajaModal, setShowBajaModal] = useState(false);
+    const [bajaCause, setBajaCause] = useState('');
     const detailRef = useRef<HTMLDivElement>(null);
 
     const fetchAreas = useCallback(async () => {
@@ -360,58 +362,48 @@ export default function ConsultasIteaGeneral() {
 
     const fetchMuebles = useCallback(async () => {
         setLoading(true);
-
         try {
             let countQuery = supabase
                 .from('mueblesitea')
-                .select('*', { count: 'exact', head: false });
+                .select('*', { count: 'exact', head: false })
+                .neq('estatus', 'BAJA');
 
-            let dataQuery = supabase.from('mueblesitea').select('*');
+            let dataQuery = supabase.from('mueblesitea').select('*').neq('estatus', 'BAJA');
 
             if (searchTerm) {
                 const searchFilter = `id_inv.ilike.%${searchTerm}%,descripcion.ilike.%${searchTerm}%,resguardante.ilike.%${searchTerm}%,usufinal.ilike.%${searchTerm}%`;
                 countQuery = countQuery.or(searchFilter);
                 dataQuery = dataQuery.or(searchFilter);
             }
-
             if (filters.estado) {
                 countQuery = countQuery.eq('estado', filters.estado);
                 dataQuery = dataQuery.eq('estado', filters.estado);
             }
-
             if (filters.estatus) {
                 countQuery = countQuery.eq('estatus', filters.estatus);
                 dataQuery = dataQuery.eq('estatus', filters.estatus);
             }
-
             if (filters.area) {
                 countQuery = countQuery.eq('area', filters.area);
                 dataQuery = dataQuery.eq('area', filters.area);
             }
-
             if (filters.rubro) {
                 countQuery = countQuery.eq('rubro', filters.rubro);
                 dataQuery = dataQuery.eq('rubro', filters.rubro);
             }
-
             const { count } = await countQuery;
             setFilteredCount(count || 0);
-
             const { data, error } = await dataQuery
                 .order(sortField, { ascending: sortDirection === 'asc' })
                 .range((currentPage - 1) * rowsPerPage, currentPage * rowsPerPage - 1);
-
             if (error) throw error;
-
             const mueblesData = (data as Mueble[]) || [];
             setMuebles(mueblesData);
-
             if (selectedItem && !mueblesData.some(item => item.id === selectedItem.id)) {
                 setSelectedItem(null);
                 setIsEditing(false);
                 setEditFormData(null);
             }
-
             setError(null);
         } catch (error) {
             console.error('Error fetching data:', error);
@@ -575,6 +567,34 @@ export default function ConsultasIteaGeneral() {
         } catch (error) {
             console.error('Error al marcar como inactivo:', error);
             setError('Error al cambiar el estatus. Por favor, intente nuevamente.');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const markAsBaja = async () => {
+        if (!selectedItem) return;
+        setShowBajaModal(true);
+    };
+
+    const confirmBaja = async () => {
+        if (!selectedItem || !bajaCause) return;
+        setShowBajaModal(false);
+        setLoading(true);
+        try {
+            const today = '2025-04-21'; // Fecha actual fija
+            const { error } = await supabase
+                .from('mueblesitea')
+                .update({ estatus: 'BAJA', causadebaja: bajaCause, fechabaja: today })
+                .eq('id', selectedItem.id);
+            if (error) throw error;
+            fetchMuebles();
+            setSelectedItem(null);
+            setMessage({ type: 'success', text: 'Artículo dado de baja correctamente' });
+            setBajaCause('');
+        } catch (error) {
+            console.error('Error al dar de baja:', error);
+            setMessage({ type: 'error', text: 'Error al dar de baja. Por favor, intente nuevamente.' });
         } finally {
             setLoading(false);
         }
@@ -1676,10 +1696,17 @@ export default function ConsultasIteaGeneral() {
                                             </button>
                                             <button
                                                 onClick={markAsInactive}
+                                                className="px-5 py-2.5 bg-yellow-500 text-black rounded-lg font-medium flex items-center gap-2 hover:bg-yellow-400 transition-colors focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:ring-offset-2 focus:ring-offset-gray-900"
+                                            >
+                                                <AlertTriangle className="h-4 w-4" />
+                                                Marcar como Inactivo
+                                            </button>
+                                            <button
+                                                onClick={markAsBaja}
                                                 className="px-5 py-2.5 bg-red-900 text-red-200 rounded-lg font-medium flex items-center gap-2 hover:bg-red-800 transition-colors focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 focus:ring-offset-gray-900"
                                             >
                                                 <Trash2 className="h-4 w-4" />
-                                                Marcar como Inactivo
+                                                Dar de Baja
                                             </button>
                                         </div>
                                     </div>
@@ -1763,6 +1790,70 @@ export default function ConsultasIteaGeneral() {
                                     <Save className="h-4 w-4" />
                                 )}
                                 {savingDirector ? 'Guardando...' : 'Guardar y Continuar'}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Modal de confirmación de baja */}
+            {showBajaModal && selectedItem && (
+                <div className="fixed inset-0 bg-black/90 flex items-center justify-center z-50 px-4 animate-fadeIn">
+                    <div className="bg-black rounded-2xl shadow-2xl border border-red-600/30 w-full max-w-md overflow-hidden transition-all duration-300 transform">
+                        <div className="relative p-6 bg-gradient-to-b from-black to-gray-900">
+                            <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-red-500/60 via-red-400 to-red-500/60"></div>
+                            <div className="flex flex-col items-center text-center mb-4">
+                                <div className="p-3 bg-red-500/10 rounded-full border border-red-500/30 mb-3">
+                                    <AlertTriangle className="h-8 w-8 text-red-500" />
+                                </div>
+                                <h3 className="text-2xl font-bold text-white">¿Dar de baja este artículo?</h3>
+                            </div>
+                            <div className="rounded-lg border border-gray-800 bg-gray-900/50 p-4 mb-4">
+                                <div className="text-left text-sm text-gray-300">
+                                    <div><span className="font-bold text-white">ID:</span> {selectedItem.id_inv}</div>
+                                    <div><span className="font-bold text-white">Descripción:</span> {selectedItem.descripcion}</div>
+                                    <div><span className="font-bold text-white">Área:</span> {selectedItem.area}</div>
+                                </div>
+                            </div>
+                            <div>
+                                <label className="flex items-center gap-2 text-sm font-medium text-gray-300 mb-2">
+                                    <Info className="h-4 w-4 text-gray-400" />
+                                    Causa de Baja
+                                </label>
+                                <textarea
+                                    value={bajaCause}
+                                    onChange={(e) => setBajaCause(e.target.value)}
+                                    placeholder="Ingrese la causa de baja"
+                                    className="block w-full bg-gray-900 border border-gray-700 rounded-lg py-3 px-4 text-white placeholder-gray-500 focus:outline-none focus:border-red-500 focus:ring-1 focus:ring-red-500 transition-colors"
+                                    rows={3}
+                                    required
+                                />
+                                {!bajaCause && (
+                                    <p className="text-xs text-red-500/80 mt-2 flex items-center gap-1">
+                                        <AlertCircle className="h-3 w-3" />
+                                        Este campo es obligatorio
+                                    </p>
+                                )}
+                            </div>
+                        </div>
+                        <div className="p-5 bg-black border-t border-gray-800 flex justify-end gap-3">
+                            <button
+                                onClick={() => setShowBajaModal(false)}
+                                className="px-5 py-2.5 bg-gray-900 text-white rounded-lg text-sm hover:bg-gray-800 border border-gray-800 transition-colors flex items-center gap-2"
+                            >
+                                <X className="h-4 w-4" />
+                                Cancelar
+                            </button>
+                            <button
+                                onClick={confirmBaja}
+                                disabled={!bajaCause}
+                                className={`px-5 py-2.5 rounded-lg text-sm flex items-center gap-2 transition-all duration-300 
+                                    ${!bajaCause ?
+                                        'bg-gray-900 text-gray-500 cursor-not-allowed border border-gray-800' :
+                                        'bg-gradient-to-r from-red-600 to-red-500 text-white font-medium hover:shadow-lg hover:shadow-red-500/20'}`}
+                            >
+                                <Trash2 className="h-4 w-4" />
+                                Dar de Baja
                             </button>
                         </div>
                     </div>

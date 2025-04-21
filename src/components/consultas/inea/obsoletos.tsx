@@ -2,8 +2,11 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import {
     Search, RefreshCw, Filter, ChevronLeft, ChevronRight,
-    ArrowUpDown, AlertCircle, X, Save, Trash2, Check, CircleSlash2,
-    ActivitySquare, LayoutGrid, TagIcon, ChevronDown, Building2, BookOpen, FileText, User, Shield, AlertTriangle, Calendar, Info, Edit, Receipt, ClipboardList, Store, CheckCircle, XCircle, Plus
+    ArrowUpDown, AlertCircle, X, Save, CircleSlash2,
+    LayoutGrid, TagIcon, ChevronDown, Building2, BookOpen, 
+    FileText, User, Shield, AlertTriangle, Calendar, Info,
+    Edit, Receipt, ClipboardList, Store, CheckCircle, XCircle,
+    Plus, RotateCw
 } from 'lucide-react';
 import supabase from '@/app/lib/supabase/client';
 
@@ -141,7 +144,7 @@ const ImagePreview = ({ imagePath }: { imagePath: string | null }) => {
     );
 };
 
-export default function ConsultasIneaGeneral() {
+export default function ConsultasIneaBajas() {
     const [muebles, setMuebles] = useState<Mueble[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
@@ -156,7 +159,6 @@ export default function ConsultasIneaGeneral() {
     const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
     const [filters, setFilters] = useState({
         estado: '',
-        estatus: '',
         area: '',
         rubro: ''
     });
@@ -181,8 +183,8 @@ export default function ConsultasIneaGeneral() {
     const [savingDirector, setSavingDirector] = useState(false);
     const [directorio, setDirectorio] = useState<Directorio[]>([]);
 
-    const [showBajaModal, setShowBajaModal] = useState(false);
-    const [bajaCause, setBajaCause] = useState('');
+    const [showReactivarModal, setShowReactivarModal] = useState(false);
+    const [reactivating, setReactivating] = useState(false);
 
     const detailRef = useRef<HTMLDivElement>(null);
 
@@ -311,34 +313,33 @@ export default function ConsultasIneaGeneral() {
         }
     };
 
-    const markAsBaja = async () => {
+    const reactivarArticulo = async () => {
         if (!selectedItem) return;
-        setShowBajaModal(true);
-    };
-
-    const confirmBaja = async () => {
-        if (!selectedItem || !bajaCause) return;
-        setShowBajaModal(false);
-        setLoading(true);
+        setReactivating(true);
         try {
-            const today = new Date().toISOString().split('T')[0];
             const { error } = await supabase
                 .from('muebles')
-                .update({ estatus: 'BAJA', causadebaja: bajaCause, fechabaja: today })
+                .update({
+                    estatus: 'ACTIVO',
+                    fechabaja: null,
+                    causadebaja: null
+                })
                 .eq('id', selectedItem.id);
             if (error) throw error;
             fetchMuebles();
             setSelectedItem(null);
-            setMessage({ type: 'success', text: 'Artículo dado de baja correctamente' });
+            setMessage({ type: 'success', text: 'Artículo reactivado correctamente' });
         } catch (error) {
-            console.error('Error al dar de baja:', error);
-            setMessage({ type: 'error', text: 'Error al dar de baja. Por favor, intente nuevamente.' });
+            console.error('Error al reactivar:', error);
+            setMessage({ type: 'error', text: 'Error al reactivar el artículo. Por favor, intente nuevamente.' });
         } finally {
+            setReactivating(false);
+            setShowReactivarModal(false);
             setLoading(false);
         }
     };
 
-    // Cambia el filtro para excluir los registros con estatus 'BAJA'
+    // Cambia el filtro para incluir solo los registros con estatus 'BAJA'
     const fetchMuebles = useCallback(async () => {
         setLoading(true);
 
@@ -346,10 +347,10 @@ export default function ConsultasIneaGeneral() {
             let countQuery = supabase
                 .from('muebles')
                 .select('id, id_inv, rubro, descripcion, valor, f_adq, formadq, proveedor, factura, ubicacion_es, ubicacion_mu, ubicacion_no, estado, estatus, area, usufinal, fechabaja, causadebaja, resguardante, image_path', { count: 'exact', head: false })
-                .neq('estatus', 'BAJA');
+                .eq('estatus', 'BAJA');
 
             let dataQuery = supabase.from('muebles').select('id, id_inv, rubro, descripcion, valor, f_adq, formadq, proveedor, factura, ubicacion_es, ubicacion_mu, ubicacion_no, estado, estatus, area, usufinal, fechabaja, causadebaja, resguardante, image_path')
-                .neq('estatus', 'BAJA');
+                .eq('estatus', 'BAJA');
 
             if (searchTerm) {
                 const searchFilter = `id_inv.ilike.%${searchTerm}%,descripcion.ilike.%${searchTerm}%,resguardante.ilike.%${searchTerm}%,usufinal.ilike.%${searchTerm}%`;
@@ -360,11 +361,6 @@ export default function ConsultasIneaGeneral() {
             if (filters.estado) {
                 countQuery = countQuery.eq('estado', filters.estado);
                 dataQuery = dataQuery.eq('estado', filters.estado);
-            }
-
-            if (filters.estatus) {
-                countQuery = countQuery.eq('estatus', filters.estatus);
-                dataQuery = dataQuery.eq('estatus', filters.estatus);
             }
 
             if (filters.area) {
@@ -580,36 +576,6 @@ export default function ConsultasIneaGeneral() {
         }
     };
 
-    const markAsInactive = async () => {
-        if (!selectedItem) return;
-        if (!confirm('¿Está seguro de que desea marcar este artículo como INACTIVO?')) return;
-
-        setLoading(true);
-        try {
-            const { error } = await supabase
-                .from('muebles')
-                .update({ estatus: 'INACTIVO' })
-                .eq('id', selectedItem.id);
-
-            if (error) throw error;
-
-            fetchMuebles();
-            setSelectedItem(null);
-            setMessage({
-                type: 'success',
-                text: 'Artículo marcado como INACTIVO correctamente'
-            });
-        } catch (error) {
-            console.error('Error al marcar como inactivo:', error);
-            setMessage({
-                type: 'error',
-                text: 'Error al cambiar el estatus. Por favor, intente nuevamente.'
-            });
-        } finally {
-            setLoading(false);
-        }
-    };
-
     const handleEditFormChange = (
         e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>,
         field: keyof Mueble
@@ -664,7 +630,6 @@ export default function ConsultasIneaGeneral() {
         setSearchTerm('');
         setFilters({
             estado: '',
-            estatus: '',
             area: '',
             rubro: ''
         });
@@ -683,8 +648,17 @@ export default function ConsultasIneaGeneral() {
 
     const formatDate = (dateStr: string | null) => {
         if (!dateStr) return '';
+        // Si el string es YYYY-MM-DD, mostrarlo tal cual
+        if (/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) return dateStr.split('-').reverse().join('/');
+        // Si no, intentar parsear y mostrar en formato local
         const date = new Date(dateStr);
-        return date.toLocaleDateString('es-MX');
+        if (!isNaN(date.getTime())) {
+            // Ajuste para compensar desfase por zona horaria
+            const userTimezoneOffset = date.getTimezoneOffset() * 60000;
+            const localDate = new Date(date.getTime() + userTimezoneOffset);
+            return localDate.toLocaleDateString('es-MX');
+        }
+        return dateStr;
     };
 
     const totalPages = Math.ceil(filteredCount / rowsPerPage);
@@ -761,14 +735,34 @@ export default function ConsultasIneaGeneral() {
 
     return (
         <div className="bg-black text-white min-h-screen p-2 sm:p-4 md:p-6 lg:p-8">
-            {/* Header con título */}
+            {/* Notificación de mensaje */}
+            {message && (
+                <div className={`fixed top-6 right-6 z-50 p-4 rounded-lg shadow-lg flex items-center gap-3 animate-fadeIn ${message.type === 'success' ? 'bg-green-900/90 border border-green-700' :
+                    message.type === 'error' ? 'bg-red-900/90 border border-red-700' :
+                        message.type === 'warning' ? 'bg-yellow-900/90 border border-yellow-700' :
+                            'bg-blue-900/90 border border-blue-700'}`}>
+                    {message.type === 'success' && <CheckCircle className="h-5 w-5 text-green-300" />}
+                    {message.type === 'error' && <XCircle className="h-5 w-5 text-red-300" />}
+                    {message.type === 'warning' && <AlertTriangle className="h-5 w-5 text-yellow-300" />}
+                    <span className="text-white">{message.text}</span>
+                    <button
+                        title='Cerrar mensaje'
+                        onClick={() => setMessage(null)}
+                        className="ml-2 text-gray-300 hover:text-white"
+                    >
+                        <X className="h-4 w-4" />
+                    </button>
+                </div>
+            )}
+
             <div className="w-full mx-auto bg-black rounded-lg sm:rounded-xl shadow-2xl overflow-hidden transition-all duration-500 transform border border-gray-800">
-                <div className="bg-black p-4 sm:p-6 flex flex-col sm:flex-row justify-between items-start sm:items-center border-b border-gray-800 gap-2 sm:gap-0">
+                {/* Header con título */}
+                <div className="bg-gradient-to-r from-red-900/50 to-red-900/30 p-4 sm:p-6 flex flex-col sm:flex-row justify-between items-start sm:items-center border-b border-red-800 gap-2 sm:gap-0">
                     <h1 className="text-xl sm:text-2xl md:text-3xl font-bold flex items-center">
-                        <span className="mr-2 sm:mr-3 bg-gray-900 text-white p-1 sm:p-2 rounded-lg border border-gray-700 text-sm sm:text-base">INV</span>
-                        Consulta de Inventario INEA
+                        <span className="mr-2 sm:mr-3 bg-red-900 text-white p-1 sm:p-2 rounded-lg border border-red-700 text-sm sm:text-base">INV</span>
+                        Artículos dados de Baja
                     </h1>
-                    <p className="text-gray-400 text-sm sm:text-base">Vista general de todos los bienes registrados en el sistema.</p>
+                    <p className="text-red-300 text-sm sm:text-base">Vista de todos los bienes dados de baja en el sistema.</p>
                 </div>
 
                 {/* Contenedor principal */}
@@ -787,7 +781,7 @@ export default function ConsultasIneaGeneral() {
                                         value={searchTerm}
                                         onChange={(e) => setSearchTerm(e.target.value)}
                                         placeholder="Buscar por ID, descripción o usuario..."
-                                        className="pl-10 pr-4 py-2 w-full bg-black border border-gray-700 rounded-md text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:border-gray-500"
+                                        className="pl-10 pr-4 py-2 w-full bg-black border border-gray-700 rounded-md text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500"
                                     />
                                 </div>
 
@@ -795,7 +789,7 @@ export default function ConsultasIneaGeneral() {
                                     <button
                                         onClick={() => setShowFilters(!showFilters)}
                                         className={`px-4 py-2 rounded-md font-medium flex items-center gap-2 transition-colors ${Object.values(filters).some(value => value !== '')
-                                            ? 'bg-gray-900 text-blue-200 hover:bg-gray-800'
+                                            ? 'bg-gray-900 text-red-200 hover:bg-gray-800'
                                             : 'bg-gray-800 text-gray-300 hover:bg-gray-700'
                                             }`}
                                     >
@@ -837,7 +831,7 @@ export default function ConsultasIneaGeneral() {
                                     </div>
 
                                     <div className="p-5">
-                                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5">
+                                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
                                             {/* Estado */}
                                             <div className="filter-group">
                                                 <label className="flex items-center gap-2 text-sm font-medium text-gray-300 mb-2">
@@ -846,38 +840,15 @@ export default function ConsultasIneaGeneral() {
                                                 </label>
                                                 <div className="relative">
                                                     <select
-                                                        title='Filtrar por estado'
+                                                        id="estado-select-filtros"
+                                                        title='Estado'
                                                         value={filters.estado}
                                                         onChange={(e) => setFilters({ ...filters, estado: e.target.value })}
-                                                        className="w-full bg-gray-700 border border-gray-600 rounded-lg px-3 py-2.5 text-white focus:outline-none focus:ring-2 focus:ring-gray-500 focus:border-gray-500 appearance-none transition-all duration-200"
+                                                        className="w-full bg-gray-700 border border-gray-600 rounded-lg px-3 py-2.5 text-white focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500 appearance-none transition-all duration-200"
                                                     >
                                                         <option value="">Todos los estados</option>
                                                         {filterOptions.estados.map((estado) => (
                                                             <option key={estado} value={estado}>{estado}</option>
-                                                        ))}
-                                                    </select>
-                                                    <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
-                                                        <ChevronDown className="h-4 w-4 text-gray-400" />
-                                                    </div>
-                                                </div>
-                                            </div>
-
-                                            {/* Estatus */}
-                                            <div className="filter-group">
-                                                <label className="flex items-center gap-2 text-sm font-medium text-gray-300 mb-2">
-                                                    <ActivitySquare className="h-4 w-4 text-gray-400" />
-                                                    Estatus
-                                                </label>
-                                                <div className="relative">
-                                                    <select
-                                                        title='Filtrar por estatus'
-                                                        value={filters.estatus}
-                                                        onChange={(e) => setFilters({ ...filters, estatus: e.target.value })}
-                                                        className="w-full bg-gray-700 border border-gray-600 rounded-lg px-3 py-2.5 text-white focus:outline-none focus:ring-2 focus:ring-gray-500 focus:border-gray-500 appearance-none transition-all duration-200"
-                                                    >
-                                                        <option value="">Todos los estatus</option>
-                                                        {filterOptions.estatus.map((status) => (
-                                                            <option key={status} value={status}>{status}</option>
                                                         ))}
                                                     </select>
                                                     <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
@@ -894,10 +865,11 @@ export default function ConsultasIneaGeneral() {
                                                 </label>
                                                 <div className="relative">
                                                     <select
-                                                        title='Filtrar por área'
+                                                        id="area-select"
+                                                        title='Área'
                                                         value={filters.area}
                                                         onChange={(e) => setFilters({ ...filters, area: e.target.value })}
-                                                        className="w-full bg-gray-700 border border-gray-600 rounded-lg px-3 py-2.5 text-white focus:outline-none focus:ring-2 focus:ring-gray-500 focus:border-gray-500 appearance-none transition-all duration-200"
+                                                        className="w-full bg-gray-700 border border-gray-600 rounded-lg px-3 py-2.5 text-white focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500 appearance-none transition-all duration-200"
                                                     >
                                                         <option value="">Todas las áreas</option>
                                                         {filterOptions.areas.map((area) => (
@@ -918,10 +890,11 @@ export default function ConsultasIneaGeneral() {
                                                 </label>
                                                 <div className="relative">
                                                     <select
-                                                        title='Filtrar por rubro'
+                                                        id="rubro-select-filtros"
+                                                        title='Rubro'
                                                         value={filters.rubro}
                                                         onChange={(e) => setFilters({ ...filters, rubro: e.target.value })}
-                                                        className="w-full bg-gray-700 border border-gray-600 rounded-lg px-3 py-2.5 text-white focus:outline-none focus:ring-2 focus:ring-gray-500 focus:border-gray-500 appearance-none transition-all duration-200"
+                                                        className="w-full bg-gray-700 border border-gray-600 rounded-lg px-3 py-2.5 text-white focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500 appearance-none transition-all duration-200"
                                                     >
                                                         <option value="">Todos los rubros</option>
                                                         {filterOptions.rubros.map((rubro) => (
@@ -982,11 +955,11 @@ export default function ConsultasIneaGeneral() {
                                                 </div>
                                             </th>
                                             <th
-                                                onClick={() => handleSort('estatus')}
+                                                onClick={() => handleSort('fechabaja')}
                                                 className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider cursor-pointer hover:bg-gray-700"
                                             >
                                                 <div className="flex items-center gap-1">
-                                                    Estado
+                                                    Fecha de Baja
                                                     <ArrowUpDown className="h-3 w-3" />
                                                 </div>
                                             </th>
@@ -999,7 +972,7 @@ export default function ConsultasIneaGeneral() {
                                                     <div className="flex flex-col items-center justify-center space-y-4">
                                                         <RefreshCw className="h-12 w-12 animate-spin text-gray-500" />
                                                         <p className="text-lg font-medium">Cargando datos...</p>
-                                                        <p className="text-sm text-gray-500">Por favor espere mientras se cargan los registros de inventario</p>
+                                                        <p className="text-sm text-gray-500">Por favor espere mientras se cargan los registros de bajas</p>
                                                     </div>
                                                 </td>
                                             </tr>
@@ -1024,7 +997,7 @@ export default function ConsultasIneaGeneral() {
                                                 <td colSpan={5} className="px-6 py-24 text-center text-gray-400">
                                                     <div className="flex flex-col items-center justify-center space-y-4">
                                                         <Search className="h-12 w-12 text-gray-500" />
-                                                        <p className="text-lg font-medium">No se encontraron resultados</p>
+                                                        <p className="text-lg font-medium">No se encontraron bajas</p>
                                                         {(searchTerm || Object.values(filters).some(value => value !== '')) ? (
                                                             <>
                                                                 <p className="text-sm text-gray-500 max-w-lg mx-auto">
@@ -1032,14 +1005,14 @@ export default function ConsultasIneaGeneral() {
                                                                 </p>
                                                                 <button
                                                                     onClick={clearFilters}
-                                                                    className="px-4 py-2 bg-gray-800 text-blue-400 rounded-md text-sm hover:bg-gray-700 transition-colors flex items-center gap-2"
+                                                                    className="px-4 py-2 bg-gray-800 text-red-400 rounded-md text-sm hover:bg-gray-700 transition-colors flex items-center gap-2"
                                                                 >
                                                                     <X className="h-4 w-4" />
                                                                     Limpiar filtros
                                                                 </button>
                                                             </>
                                                         ) : (
-                                                            <p className="text-sm text-gray-500">No hay registros disponibles en el inventario</p>
+                                                            <p className="text-sm text-gray-500">No hay registros de bajas en el inventario</p>
                                                         )}
                                                     </div>
                                                 </td>
@@ -1049,7 +1022,7 @@ export default function ConsultasIneaGeneral() {
                                                 <tr
                                                     key={item.id}
                                                     onClick={() => handleSelectItem(item)}
-                                                    className={`hover:bg-gray-800 cursor-pointer transition-colors ${selectedItem?.id === item.id ? 'bg-blue-900/20 border-l-4 border-blue-600' : ''}`}
+                                                    className={`hover:bg-gray-800 cursor-pointer transition-colors ${selectedItem?.id === item.id ? 'bg-red-900/20 border-l-4 border-red-600' : ''}`}
                                                 >
                                                     <td className="px-4 py-3 whitespace-nowrap text-sm font-medium text-white">
                                                         {item.id_inv}
@@ -1063,17 +1036,8 @@ export default function ConsultasIneaGeneral() {
                                                     <td className="px-4 py-3 text-sm text-gray-300">
                                                         {truncateText(item.usufinal, 20)}
                                                     </td>
-                                                    <td className="px-4 py-3 text-sm">
-                                                        <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium ${item.estatus === 'ACTIVO' ? 'bg-green-900/70 text-green-200 border border-green-700' :
-                                                            item.estatus === 'INACTIVO' ? 'bg-red-900/70 text-red-200 border border-red-700' :
-                                                                item.estatus === 'NO LOCALIZADO' ? 'bg-yellow-900/70 text-yellow-200 border border-yellow-700' :
-                                                                    'bg-gray-700 text-gray-300 border border-gray-600'
-                                                            }`}>
-                                                            {item.estatus === 'ACTIVO' && <CheckCircle className="h-3.5 w-3.5 mr-1.5" />}
-                                                            {item.estatus === 'INACTIVO' && <XCircle className="h-3.5 w-3.5 mr-1.5" />}
-                                                            {item.estatus === 'NO LOCALIZADO' && <AlertTriangle className="h-3.5 w-3.5 mr-1.5" />}
-                                                            {truncateText(item.estatus, 20)}
-                                                        </span>
+                                                    <td className="px-4 py-3 text-sm text-gray-300">
+                                                        {formatDate(item.fechabaja) || 'No especificada'}
                                                     </td>
                                                 </tr>
                                             ))
@@ -1184,7 +1148,7 @@ export default function ConsultasIneaGeneral() {
                                                 setRowsPerPage(Number(e.target.value));
                                                 setCurrentPage(1);
                                             }}
-                                            className="bg-gray-800 border border-gray-700 rounded-md px-2 py-1 text-sm text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                            className="bg-gray-800 border border-gray-700 rounded-md px-2 py-1 text-sm text-white focus:ring-2 focus:ring-red-500 focus:border-transparent"
                                         >
                                             <option value={10}>10</option>
                                             <option value={25}>25</option>
@@ -1205,14 +1169,14 @@ export default function ConsultasIneaGeneral() {
                         >
                             <div className="sticky top-0 z-10 bg-black border-b border-gray-800 px-6 py-4 flex justify-between items-center">
                                 <h2 className="text-xl font-semibold text-white flex items-center gap-2">
-                                    <ClipboardList className="h-5 w-5 text-blue-400" />
-                                    Detalle del Artículo
+                                    <ClipboardList className="h-5 w-5 text-red-400" />
+                                    Detalle del Artículo (BAJA)
                                 </h2>
                                 <button
                                     type="button"
                                     onClick={closeDetail}
                                     title="Cerrar detalle"
-                                    className="text-gray-400 hover:text-white rounded-full p-2 focus:outline-none focus:ring-2 focus:ring-blue-500 hover:bg-gray-800 transition-colors"
+                                    className="text-gray-400 hover:text-white rounded-full p-2 focus:outline-none focus:ring-2 focus:ring-red-500 hover:bg-gray-800 transition-colors"
                                 >
                                     <X className="h-5 w-5" />
                                 </button>
@@ -1258,7 +1222,7 @@ export default function ConsultasIneaGeneral() {
                                                     </div>
 
                                                     <div className="flex-shrink-0 w-64 space-y-2">
-                                                        <label className="flex flex-col items-center justify-center h-32 border-2 border-dashed border-gray-700 rounded-lg cursor-pointer hover:border-blue-500 transition-colors p-4">
+                                                        <label className="flex flex-col items-center justify-center h-32 border-2 border-dashed border-gray-700 rounded-lg cursor-pointer hover:border-red-500 transition-colors p-4">
                                                             <div className="text-center">
                                                                 <Plus className="h-6 w-6 mx-auto text-gray-400 mb-1" />
                                                                 <span className="text-xs text-gray-400">Cambiar imagen</span>
@@ -1273,7 +1237,7 @@ export default function ConsultasIneaGeneral() {
                                                         <div className="text-xs text-gray-400 p-2 bg-gray-800/50 rounded-lg">
                                                             <p>Formatos: JPG, PNG, GIF, WebP</p>
                                                             <p>Tamaño máximo: 5MB</p>
-                                                            {uploading && <p className="text-blue-400 mt-1">Subiendo imagen...</p>}
+                                                            {uploading && <p className="text-red-400 mt-1">Subiendo imagen...</p>}
                                                         </div>
                                                     </div>
                                                 </div>
@@ -1285,7 +1249,7 @@ export default function ConsultasIneaGeneral() {
                                                     type="text"
                                                     value={editFormData?.id_inv || ''}
                                                     onChange={(e) => handleEditFormChange(e, 'id_inv')}
-                                                    className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2.5 text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                                                    className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2.5 text-white focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent transition-all"
                                                     placeholder="Ingrese el ID de inventario"
                                                 />
                                             </div>
@@ -1294,10 +1258,11 @@ export default function ConsultasIneaGeneral() {
                                                 <label className="flex items-center gap-2 text-sm font-medium text-gray-300 mb-2">Rubro</label>
                                                 <div className="relative">
                                                     <select
+                                                        id="rubro-select-edicion"
                                                         title='Seleccione el rubro'
                                                         value={editFormData?.rubro || ''}
                                                         onChange={(e) => handleEditFormChange(e, 'rubro')}
-                                                        className="appearance-none w-full bg-gray-800 border border-gray-700 rounded-lg pl-4 pr-10 py-2.5 text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                                                        className="appearance-none w-full bg-gray-800 border border-gray-700 rounded-lg pl-4 pr-10 py-2.5 text-white focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent transition-all"
                                                     >
                                                         {filterOptions.rubros.map((rubro) => (
                                                             <option key={rubro} value={rubro}>{rubro}</option>
@@ -1312,7 +1277,7 @@ export default function ConsultasIneaGeneral() {
                                                 <textarea
                                                     value={editFormData?.descripcion || ''}
                                                     onChange={(e) => handleEditFormChange(e, 'descripcion')}
-                                                    className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2.5 text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                                                    className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2.5 text-white focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent transition-all"
                                                     rows={3}
                                                     placeholder="Ingrese la descripción"
                                                 />
@@ -1326,7 +1291,7 @@ export default function ConsultasIneaGeneral() {
                                                         type="number"
                                                         value={editFormData?.valor || 0}
                                                         onChange={(e) => handleEditFormChange(e, 'valor')}
-                                                        className="w-full bg-gray-800 border border-gray-700 rounded-lg pl-8 pr-4 py-2.5 text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                                                        className="w-full bg-gray-800 border border-gray-700 rounded-lg pl-8 pr-4 py-2.5 text-white focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent transition-all"
                                                         title="Ingrese el valor"
                                                         placeholder="0.00"
                                                     />
@@ -1341,7 +1306,7 @@ export default function ConsultasIneaGeneral() {
                                                         type="date"
                                                         value={editFormData?.f_adq || ''}
                                                         onChange={(e) => handleEditFormChange(e, 'f_adq')}
-                                                        className="w-full bg-gray-800 border border-gray-700 rounded-lg pl-10 pr-4 py-2.5 text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                                                        className="w-full bg-gray-800 border border-gray-700 rounded-lg pl-10 pr-4 py-2.5 text-white focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent transition-all"
                                                         title="Seleccione la fecha de adquisición"
                                                     />
                                                 </div>
@@ -1353,7 +1318,7 @@ export default function ConsultasIneaGeneral() {
                                                     <select
                                                         value={editFormData?.formadq || ''}
                                                         onChange={(e) => handleEditFormChange(e, 'formadq')}
-                                                        className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2.5 text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                                                        className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2.5 text-white focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent transition-all"
                                                         title="Ingrese la forma de adquisición"
                                                     >
                                                         <option value="">Seleccionar forma de adquisición</option>
@@ -1372,7 +1337,7 @@ export default function ConsultasIneaGeneral() {
                                                         type="text"
                                                         value={editFormData?.proveedor || ''}
                                                         onChange={(e) => handleEditFormChange(e, 'proveedor')}
-                                                        className="w-full bg-gray-800 border border-gray-700 rounded-lg pl-10 pr-4 py-2.5 text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                                                        className="w-full bg-gray-800 border border-gray-700 rounded-lg pl-10 pr-4 py-2.5 text-white focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent transition-all"
                                                         title="Ingrese el nombre del proveedor"
                                                         placeholder="Nombre del proveedor"
                                                     />
@@ -1387,7 +1352,7 @@ export default function ConsultasIneaGeneral() {
                                                         type="text"
                                                         value={editFormData?.factura || ''}
                                                         onChange={(e) => handleEditFormChange(e, 'factura')}
-                                                        className="w-full bg-gray-800 border border-gray-700 rounded-lg pl-10 pr-4 py-2.5 text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                                                        className="w-full bg-gray-800 border border-gray-700 rounded-lg pl-10 pr-4 py-2.5 text-white focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent transition-all"
                                                         title="Ingrese el número de factura"
                                                         placeholder="Número de factura"
                                                     />
@@ -1404,7 +1369,7 @@ export default function ConsultasIneaGeneral() {
                                                         placeholder="Ubicación (Edificio)"
                                                         value={editFormData?.ubicacion_es || ''}
                                                         onChange={(e) => handleEditFormChange(e, 'ubicacion_es')}
-                                                        className="w-full bg-gray-800 border border-gray-700 rounded-lg pl-10 pr-4 py-2.5 text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                                                        className="w-full bg-gray-800 border border-gray-700 rounded-lg pl-10 pr-4 py-2.5 text-white focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent transition-all"
                                                     />
                                                 </div>
                                             </div>
@@ -1419,7 +1384,7 @@ export default function ConsultasIneaGeneral() {
                                                         placeholder="Ubicación (Mueble)"
                                                         value={editFormData?.ubicacion_mu || ''}
                                                         onChange={(e) => handleEditFormChange(e, 'ubicacion_mu')}
-                                                        className="w-full bg-gray-800 border border-gray-700 rounded-lg pl-10 pr-4 py-2.5 text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                                                        className="w-full bg-gray-800 border border-gray-700 rounded-lg pl-10 pr-4 py-2.5 text-white focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent transition-all"
                                                     />
                                                 </div>
                                             </div>
@@ -1430,7 +1395,7 @@ export default function ConsultasIneaGeneral() {
                                                     type="text"
                                                     value={editFormData?.ubicacion_no || ''}
                                                     onChange={(e) => handleEditFormChange(e, 'ubicacion_no')}
-                                                    className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2.5 text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                                                    className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2.5 text-white focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent transition-all"
                                                     title="Ingrese notas de ubicación"
                                                     placeholder="Notas de ubicación"
                                                 />
@@ -1440,30 +1405,14 @@ export default function ConsultasIneaGeneral() {
                                                 <label className="flex items-center gap-2 text-sm font-medium text-gray-300 mb-2">Estado</label>
                                                 <div className="relative">
                                                     <select
+                                                        id="estado-select-edicion"
                                                         title="Seleccione el estado"
                                                         value={editFormData?.estado || ''}
                                                         onChange={(e) => handleEditFormChange(e, 'estado')}
-                                                        className="appearance-none w-full bg-gray-800 border border-gray-700 rounded-lg pl-4 pr-10 py-2.5 text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                                                        className="appearance-none w-full bg-gray-800 border border-gray-700 rounded-lg pl-4 pr-10 py-2.5 text-white focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent transition-all"
                                                     >
                                                         {filterOptions.estados.map((estado) => (
                                                             <option key={estado} value={estado}>{estado}</option>
-                                                        ))}
-                                                    </select>
-                                                    <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />
-                                                </div>
-                                            </div>
-
-                                            <div className="form-group">
-                                                <label className="flex items-center gap-2 text-sm font-medium text-gray-300 mb-2">Estatus</label>
-                                                <div className="relative">
-                                                    <select
-                                                        title="Seleccione el estatus"
-                                                        value={editFormData?.estatus || ''}
-                                                        onChange={(e) => handleEditFormChange(e, 'estatus')}
-                                                        className="appearance-none w-full bg-gray-800 border border-gray-700 rounded-lg pl-4 pr-10 py-2.5 text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
-                                                    >
-                                                        {filterOptions.estatus.map((status) => (
-                                                            <option key={status} value={status}>{status}</option>
                                                         ))}
                                                     </select>
                                                     <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />
@@ -1491,7 +1440,7 @@ export default function ConsultasIneaGeneral() {
                                                         name="usufinal"
                                                         value={editFormData?.usufinal || ''}
                                                         onChange={(e) => handleSelectDirector(e.target.value)}
-                                                        className="w-full bg-gray-800 border border-gray-700 rounded-lg pl-4 pr-10 py-2.5 text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all appearance-none"
+                                                        className="w-full bg-gray-800 border border-gray-700 rounded-lg pl-4 pr-10 py-2.5 text-white focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent transition-all appearance-none"
                                                     >
                                                         <option value="">Seleccionar Director/Jefe</option>
                                                         {filterOptions.directores.map((director, index) => (
@@ -1510,18 +1459,43 @@ export default function ConsultasIneaGeneral() {
                                                         type="text"
                                                         value={editFormData?.resguardante || ''}
                                                         onChange={(e) => handleEditFormChange(e, 'resguardante')}
-                                                        className="w-full bg-gray-800 border border-gray-700 rounded-lg pl-10 pr-4 py-2.5 text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                                                        className="w-full bg-gray-800 border border-gray-700 rounded-lg pl-10 pr-4 py-2.5 text-white focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent transition-all"
                                                         title="Ingrese el Usuario Final"
                                                         placeholder="Ingrese el Usuario Final"
                                                     />
                                                 </div>
+                                            </div>
+
+                                            <div className="form-group col-span-2">
+                                                <label className="flex items-center gap-2 text-sm font-medium text-gray-300 mb-2">Fecha de Baja</label>
+                                                <div className="relative">
+                                                    <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500 pointer-events-none" />
+                                                    <input
+                                                        type="date"
+                                                        value={editFormData?.fechabaja || ''}
+                                                        onChange={(e) => handleEditFormChange(e, 'fechabaja')}
+                                                        className="w-full bg-gray-800 border border-gray-700 rounded-lg pl-10 pr-4 py-2.5 text-white focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent transition-all"
+                                                        title="Seleccione la fecha de baja"
+                                                    />
+                                                </div>
+                                            </div>
+
+                                            <div className="form-group col-span-2">
+                                                <label className="flex items-center gap-2 text-sm font-medium text-gray-300 mb-2">Causa de Baja</label>
+                                                <textarea
+                                                    value={editFormData?.causadebaja || ''}
+                                                    onChange={(e) => handleEditFormChange(e, 'causadebaja')}
+                                                    className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2.5 text-white focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent transition-all"
+                                                    rows={2}
+                                                    placeholder="Ingrese la causa de la baja"
+                                                />
                                             </div>
                                         </div>
 
                                         <div className="flex items-center space-x-4 pt-6 border-t border-gray-800">
                                             <button
                                                 onClick={saveChanges}
-                                                className="px-5 py-2.5 bg-blue-600 text-white rounded-lg font-medium flex items-center gap-2 hover:bg-blue-700 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:ring-offset-gray-900"
+                                                className="px-5 py-2.5 bg-red-700 text-white rounded-lg font-medium flex items-center gap-2 hover:bg-red-800 transition-colors focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 focus:ring-offset-gray-900"
                                             >
                                                 <Save className="h-4 w-4" />
                                                 Guardar Cambios
@@ -1569,7 +1543,7 @@ export default function ConsultasIneaGeneral() {
                                             <div className="detail-card bg-gray-800/50 rounded-lg p-4 hover:bg-gray-800/80 transition-all">
                                                 <h3 className="text-xs font-medium uppercase tracking-wider text-gray-400">Fecha de Adquisición</h3>
                                                 <p className="mt-2 text-white flex items-center gap-2">
-                                                    <Calendar className="h-4 w-4 text-blue-400" />
+                                                    <Calendar className="h-4 w-4 text-red-400" />
                                                     {formatDate(selectedItem.f_adq) || 'No especificado'}
                                                 </p>
                                             </div>
@@ -1580,14 +1554,14 @@ export default function ConsultasIneaGeneral() {
                                             <div className="detail-card bg-gray-800/50 rounded-lg p-4 hover:bg-gray-800/80 transition-all">
                                                 <h3 className="text-xs font-medium uppercase tracking-wider text-gray-400">Proveedor</h3>
                                                 <p className="mt-2 text-white flex items-center gap-2">
-                                                    <Store className="h-4 w-4 text-blue-400" />
+                                                    <Store className="h-4 w-4 text-red-400" />
                                                     {selectedItem.proveedor || 'No especificado'}
                                                 </p>
                                             </div>
                                             <div className="detail-card bg-gray-800/50 rounded-lg p-4 hover:bg-gray-800/80 transition-all">
                                                 <h3 className="text-xs font-medium uppercase tracking-wider text-gray-400">Factura</h3>
                                                 <p className="mt-2 text-white flex items-center gap-2">
-                                                    <Receipt className="h-4 w-4 text-blue-400" />
+                                                    <Receipt className="h-4 w-4 text-red-400" />
                                                     {selectedItem.factura || 'No especificado'}
                                                 </p>
                                             </div>
@@ -1598,12 +1572,8 @@ export default function ConsultasIneaGeneral() {
                                             <div className="detail-card bg-gray-800/50 rounded-lg p-4 hover:bg-gray-800/80 transition-all">
                                                 <h3 className="text-xs font-medium uppercase tracking-wider text-gray-400">Estatus</h3>
                                                 <div className="mt-2">
-                                                    <span className={`inline-flex items-center px-3 py-1 text-sm font-medium rounded-full ${selectedItem.estatus === 'ACTIVO' ? 'bg-green-900/70 text-green-200 border border-green-700' :
-                                                        selectedItem.estatus === 'INACTIVO' ? 'bg-red-900/70 text-red-200 border border-red-700' :
-                                                            'bg-gray-700 text-gray-300 border border-gray-600'
-                                                        }`}>
-                                                        {selectedItem.estatus === 'ACTIVO' && <Check className="h-3.5 w-3.5 mr-1.5" />}
-                                                        {selectedItem.estatus === 'INACTIVO' && <AlertCircle className="h-3.5 w-3.5 mr-1.5" />}
+                                                    <span className={`inline-flex items-center px-3 py-1 text-sm font-medium rounded-full bg-red-900/70 text-red-200 border border-red-700`}>
+                                                        <AlertCircle className="h-3.5 w-3.5 mr-1.5" />
                                                         {selectedItem.estatus || 'No especificado'}
                                                     </span>
                                                 </div>
@@ -1613,19 +1583,19 @@ export default function ConsultasIneaGeneral() {
                                                 <div className="mt-2 grid grid-cols-1 md:grid-cols-3 gap-3">
                                                     {selectedItem.ubicacion_es && (
                                                         <div className="flex items-center gap-2 bg-gray-900/60 p-2 rounded-md">
-                                                            <Building2 className="h-4 w-4 text-blue-400 flex-shrink-0" />
+                                                            <Building2 className="h-4 w-4 text-red-400 flex-shrink-0" />
                                                             <span className="text-white">{selectedItem.ubicacion_es}</span>
                                                         </div>
                                                     )}
                                                     {selectedItem.ubicacion_mu && (
                                                         <div className="flex items-center gap-2 bg-gray-900/60 p-2 rounded-md">
-                                                            <BookOpen className="h-4 w-4 text-blue-400 flex-shrink-0" />
+                                                            <BookOpen className="h-4 w-4 text-red-400 flex-shrink-0" />
                                                             <span className="text-white">{selectedItem.ubicacion_mu}</span>
                                                         </div>
                                                     )}
                                                     {selectedItem.ubicacion_no && (
                                                         <div className="flex items-center gap-2 bg-gray-900/60 p-2 rounded-md">
-                                                            <FileText className="h-4 w-4 text-blue-400 flex-shrink-0" />
+                                                            <FileText className="h-4 w-4 text-red-400 flex-shrink-0" />
                                                             <span className="text-white">{selectedItem.ubicacion_no}</span>
                                                         </div>
                                                     )}
@@ -1641,57 +1611,48 @@ export default function ConsultasIneaGeneral() {
                                             <div className="detail-card bg-gray-800/50 rounded-lg p-4 hover:bg-gray-800/80 transition-all">
                                                 <h3 className="text-xs font-medium uppercase tracking-wider text-gray-400">Director/Jefe de Área</h3>
                                                 <p className="mt-2 text-white flex items-center gap-2">
-                                                    <User className="h-4 w-4 text-blue-400" />
+                                                    <User className="h-4 w-4 text-red-400" />
                                                     {selectedItem.usufinal || 'No especificado'}
                                                 </p>
                                             </div>
                                             <div className="detail-card bg-gray-800/50 rounded-lg p-4 hover:bg-gray-800/80 transition-all">
                                                 <h3 className="text-xs font-medium uppercase tracking-wider text-gray-400">Usuario Final</h3>
                                                 <p className="mt-2 text-white flex items-center gap-2">
-                                                    <Shield className="h-4 w-4 text-blue-400" />
+                                                    <Shield className="h-4 w-4 text-red-400" />
                                                     {selectedItem.resguardante || 'No especificado'}
                                                 </p>
                                             </div>
-                                            {selectedItem.fechabaja && (
-                                                <div className="detail-card bg-red-900/20 border border-red-800/50 rounded-lg p-4 col-span-2">
-                                                    <h3 className="text-xs font-medium uppercase tracking-wider text-red-400 flex items-center gap-2">
-                                                        <AlertTriangle className="h-4 w-4" />
-                                                        Información de Baja
-                                                    </h3>
-                                                    <div className="mt-2 flex flex-col sm:flex-row sm:items-center sm:gap-4">
-                                                        <div className="flex items-center gap-2 text-gray-300">
-                                                            <Calendar className="h-4 w-4 text-red-400" />
-                                                            <span>Fecha: {formatDate(selectedItem.fechabaja)}</span>
-                                                        </div>
-                                                        <div className="flex items-center gap-2 text-gray-300">
-                                                            <Info className="h-4 w-4 text-red-400" />
-                                                            <span>Causa: {selectedItem.causadebaja}</span>
-                                                        </div>
+                                            <div className="detail-card bg-red-900/20 border border-red-800/50 rounded-lg p-4 col-span-2">
+                                                <h3 className="text-xs font-medium uppercase tracking-wider text-red-400 flex items-center gap-2">
+                                                    <AlertTriangle className="h-4 w-4" />
+                                                    Información de Baja
+                                                </h3>
+                                                <div className="mt-2 flex flex-col sm:flex-row sm:items-center sm:gap-4">
+                                                    <div className="flex items-center gap-2 text-gray-300">
+                                                        <Calendar className="h-4 w-4 text-red-400" />
+                                                        <span>Fecha: {formatDate(selectedItem.fechabaja) || 'No especificada'}</span>
+                                                    </div>
+                                                    <div className="flex items-center gap-2 text-gray-300">
+                                                        <Info className="h-4 w-4 text-red-400" />
+                                                        <span>Causa: {selectedItem.causadebaja || 'No especificada'}</span>
                                                     </div>
                                                 </div>
-                                            )}
+                                            </div>
                                         </div>
                                         <div className="flex items-center space-x-4 pt-6 border-t border-gray-800">
                                             <button
                                                 onClick={handleStartEdit}
-                                                className="px-5 py-2.5 bg-blue-600 text-white rounded-lg font-medium flex items-center gap-2 hover:bg-blue-700 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:ring-offset-gray-900"
+                                                className="px-5 py-2.5 bg-red-700 text-white rounded-lg font-medium flex items-center gap-2 hover:bg-red-800 transition-colors focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 focus:ring-offset-gray-900"
                                             >
                                                 <Edit className="h-4 w-4" />
                                                 Editar
                                             </button>
                                             <button
-                                                onClick={markAsInactive}
-                                                className="px-5 py-2.5 bg-yellow-500 text-black rounded-lg font-medium flex items-center gap-2 hover:bg-yellow-400 transition-colors focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:ring-offset-2 focus:ring-offset-gray-900"
+                                                onClick={() => setShowReactivarModal(true)}
+                                                className="px-5 py-2.5 bg-green-700 text-white rounded-lg font-medium flex items-center gap-2 hover:bg-green-800 transition-colors focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 focus:ring-offset-gray-900"
                                             >
-                                                <AlertTriangle className="h-4 w-4" />
-                                                Marcar como Inactivo
-                                            </button>
-                                            <button
-                                                onClick={markAsBaja}
-                                                className="px-5 py-2.5 bg-red-900 text-red-200 rounded-lg font-medium flex items-center gap-2 hover:bg-red-800 transition-colors focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 focus:ring-offset-gray-900"
-                                            >
-                                                <Trash2 className="h-4 w-4" />
-                                                Dar de Baja
+                                                <RotateCw className="h-4 w-4" />
+                                                Reactivar Artículo
                                             </button>
                                         </div>
                                     </div>
@@ -1779,64 +1740,41 @@ export default function ConsultasIneaGeneral() {
                         </div>
                     )}
 
-                    {/* Modal de confirmación de baja */}
-                    {showBajaModal && selectedItem && (
+                    {/* Modal de confirmación para reactivar */}
+                    {showReactivarModal && selectedItem && (
                         <div className="fixed inset-0 bg-black/90 flex items-center justify-center z-50 px-4 animate-fadeIn">
-                            <div className="bg-black rounded-2xl shadow-2xl border border-red-600/30 w-full max-w-md overflow-hidden transition-all duration-300 transform">
+                            <div className="bg-black rounded-2xl shadow-2xl border border-green-600/30 w-full max-w-md overflow-hidden transition-all duration-300 transform">
                                 <div className="relative p-6 bg-gradient-to-b from-black to-gray-900">
-                                    <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-red-500/60 via-red-400 to-red-500/60"></div>
+                                    <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-green-500/60 via-green-400 to-green-500/60"></div>
                                     <div className="flex flex-col items-center text-center mb-4">
-                                        <div className="p-3 bg-red-500/10 rounded-full border border-red-500/30 mb-3">
-                                            <AlertTriangle className="h-8 w-8 text-red-500" />
+                                        <div className="p-3 bg-green-500/10 rounded-full border border-green-500/30 mb-3">
+                                            <RotateCw className="h-8 w-8 text-green-500" />
                                         </div>
-                                        <h3 className="text-2xl font-bold text-white">¿Dar de baja este artículo?</h3>
+                                        <h3 className="text-2xl font-bold text-white">¿Reactivar este artículo?</h3>
+                                        <p className="text-gray-400 mt-2">El artículo volverá a estar <span className="text-green-400 font-semibold">ACTIVO</span> en el inventario.</p>
                                     </div>
-                                    <div className="rounded-lg border border-gray-800 bg-gray-900/50 p-4 mb-4">
-                                        <div className="text-left text-sm text-gray-300">
-                                            <div><span className="font-bold text-white">ID:</span> {selectedItem.id_inv}</div>
-                                            <div><span className="font-bold text-white">Descripción:</span> {selectedItem.descripcion}</div>
-                                            <div><span className="font-bold text-white">Área:</span> {selectedItem.area}</div>
-                                        </div>
-                                    </div>
-                                    <div>
-                                        <label className="flex items-center gap-2 text-sm font-medium text-gray-300 mb-2">
-                                            <Info className="h-4 w-4 text-gray-400" />
-                                            Causa de Baja
-                                        </label>
-                                        <textarea
-                                            value={bajaCause}
-                                            onChange={(e) => setBajaCause(e.target.value)}
-                                            placeholder="Ingrese la causa de baja"
-                                            className="block w-full bg-gray-900 border border-gray-700 rounded-lg py-3 px-4 text-white placeholder-gray-500 focus:outline-none focus:border-red-500 focus:ring-1 focus:ring-red-500 transition-colors"
-                                            rows={3}
-                                            required
-                                        />
-                                        {!bajaCause && (
-                                            <p className="text-xs text-red-500/80 mt-2 flex items-center gap-1">
-                                                <AlertCircle className="h-3 w-3" />
-                                                Este campo es obligatorio
-                                            </p>
-                                        )}
+                                    <div className="rounded-lg border border-gray-800 bg-gray-900/50 p-4 mb-4 text-left text-sm text-gray-300">
+                                        <div><span className="font-bold text-white">ID:</span> {selectedItem.id_inv}</div>
+                                        <div><span className="font-bold text-white">Descripción:</span> {selectedItem.descripcion}</div>
+                                        <div><span className="font-bold text-white">Área:</span> {selectedItem.area}</div>
                                     </div>
                                 </div>
                                 <div className="p-5 bg-black border-t border-gray-800 flex justify-end gap-3">
                                     <button
-                                        onClick={() => setShowBajaModal(false)}
+                                        onClick={() => setShowReactivarModal(false)}
                                         className="px-5 py-2.5 bg-gray-900 text-white rounded-lg text-sm hover:bg-gray-800 border border-gray-800 transition-colors flex items-center gap-2"
+                                        disabled={reactivating}
                                     >
                                         <X className="h-4 w-4" />
                                         Cancelar
                                     </button>
                                     <button
-                                        onClick={confirmBaja}
-                                        disabled={!bajaCause}
-                                        className={`px-5 py-2.5 rounded-lg text-sm flex items-center gap-2 transition-all duration-300 
-                                            ${!bajaCause ?
-                                                'bg-gray-900 text-gray-500 cursor-not-allowed border border-gray-800' :
-                                                'bg-gradient-to-r from-red-600 to-red-500 text-white font-medium hover:shadow-lg hover:shadow-red-500/20'}`}
+                                        onClick={reactivarArticulo}
+                                        disabled={reactivating}
+                                        className={`px-5 py-2.5 bg-green-700 text-white rounded-lg text-sm font-semibold flex items-center gap-2 hover:bg-green-800 border border-green-700 transition-colors ${reactivating ? 'opacity-60 cursor-not-allowed' : ''}`}
                                     >
-                                        <Trash2 className="h-4 w-4" />
-                                        Dar de Baja
+                                        {reactivating ? <RefreshCw className="h-4 w-4 animate-spin" /> : <RotateCw className="h-4 w-4" />}
+                                        {reactivating ? 'Reactivando...' : 'Reactivar'}
                                     </button>
                                 </div>
                             </div>

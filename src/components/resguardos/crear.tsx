@@ -27,6 +27,7 @@ interface Mueble {
     rubro: string | null;
     usufinal: string | null;
     area?: string | null;
+    origen?: string; // Nuevo campo para identificar el origen
 }
 
 interface Directorio {
@@ -101,6 +102,7 @@ export default function CrearResguardos() {
     const [uniqueAreas, setUniqueAreas] = useState<string[]>([]);
     const [uniqueResponsables, setUniqueResponsables] = useState<string[]>([]);
     const [showWarningModal, setShowWarningModal] = useState(false);
+    const [directorInputDisabled, setDirectorInputDisabled] = useState(false);
 
     interface PdfArticulo {
         id_inv: string | null;
@@ -134,6 +136,13 @@ export default function CrearResguardos() {
     ) => {
         setLoading(true);
         try {
+            // 1. Obtener todos los id_inv que ya están en resguardos
+            const { data: resguardosData, error: resguardosError } = await supabase
+                .from('resguardos')
+                .select('num_inventario');
+            if (resguardosError) throw resguardosError;
+            const idsResguardados = new Set((resguardosData || []).map(r => r.num_inventario));
+
             // Fetch total counts first (solo de muebles activos)
             const mueblesCountQuery = supabase
                 .from('muebles')
@@ -219,10 +228,16 @@ export default function CrearResguardos() {
                 mueblesIteaQuery
             ]);
 
-            const combinedData = [
-                ...(mueblesResult.data || []),
-                ...(mueblesIteaResult.data || [])
+            // Agregar origen a cada mueble
+            const mueblesWithOrigen = (mueblesResult.data || []).map(m => ({ ...m, origen: 'INEA' }));
+            const mueblesIteaWithOrigen = (mueblesIteaResult.data || []).map(m => ({ ...m, origen: 'ITEA' }));
+            let combinedData = [
+                ...mueblesWithOrigen,
+                ...mueblesIteaWithOrigen
             ];
+
+            // 2. Filtrar los que ya están en resguardos
+            combinedData = combinedData.filter(m => m.id_inv && !idsResguardados.has(m.id_inv));
 
             // Apply client-side sorting for combined results
             combinedData.sort((a, b) => {
@@ -318,33 +333,95 @@ export default function CrearResguardos() {
         }
     }, [formData.folio, generateFolio]);
 
-    // Check if director from usufinal exists and select them
-    const checkDirectorMatch = useCallback((mueble: Mueble) => {
-        if (!mueble.usufinal || !directorio.length) return;
+    // Select/deselect mueble
+    const toggleMuebleSelection = (mueble: Mueble) => {
+        // Check if already selected
+        const isAlreadySelected = selectedMuebles.some(m => m.id === mueble.id);
 
-        // Buscar si el usufinal coincide con algún nombre del directorio
-        const matchingDirector = directorio.find(dir =>
-            dir.nombre.toLowerCase() === mueble.usufinal?.toLowerCase()
-        );
+        let newSelectedMuebles: Mueble[];
+        if (isAlreadySelected) {
+            // If already selected, remove it
+            newSelectedMuebles = selectedMuebles.filter(m => m.id !== mueble.id);
+        } else {
+            // Validar que todos los seleccionados tengan el mismo usufinal
+            const currentUsufinal = selectedMuebles[0]?.usufinal?.trim().toUpperCase();
+            const newUsufinal = mueble.usufinal?.trim().toUpperCase();
+            if (selectedMuebles.length > 0 && currentUsufinal && newUsufinal && currentUsufinal !== newUsufinal) {
+                setConflictUsufinal(newUsufinal || '');
+                setShowUsufinalModal(true);
+                return;
+            }
+            newSelectedMuebles = [...selectedMuebles, mueble];
+        }
 
-        if (matchingDirector) {
-            // Siempre actualizar el directorId aunque falte información
-            setFormData(prev => ({
-                ...prev,
-                directorId: matchingDirector.id_directorio.toString(),
-                area: matchingDirector.area || '',
-                puesto: matchingDirector.puesto || ''
-            }));
-            if (!matchingDirector.area || !matchingDirector.puesto) {
-                setIncompleteDirector(matchingDirector);
-                setDirectorFormData({
+        setSelectedMuebles(newSelectedMuebles);
+
+        if (newSelectedMuebles.length === 0) {
+            setFormData({ folio: formData.folio, directorId: '', resguardante: '', area: '', puesto: '' });
+            setDirectorInputDisabled(false);
+        } else if (!isAlreadySelected && newSelectedMuebles.length === 1) {
+            // Si es el primer seleccionado, intentar seleccionar director
+            const matchingDirector = directorio.find(dir => dir.nombre.toLowerCase() === mueble.usufinal?.toLowerCase());
+            if (matchingDirector) {
+                setFormData(prev => ({
+                    ...prev,
+                    directorId: matchingDirector.id_directorio.toString(),
                     area: matchingDirector.area || '',
                     puesto: matchingDirector.puesto || ''
-                });
-                setShowDirectorModal(true);
+                }));
+                setDirectorInputDisabled(true);
+            } else {
+                setFormData(prev => ({ ...prev, directorId: '', area: '', puesto: '' }));
+                setDirectorInputDisabled(false);
+            }
+        } else if (!isAlreadySelected && newSelectedMuebles.length > 1) {
+            // Si hay más de un artículo, asegurar que el director corresponde al usufinal
+            const first = newSelectedMuebles[0];
+            const matchingDirector = directorio.find(dir => dir.nombre.toLowerCase() === first.usufinal?.toLowerCase());
+            if (matchingDirector) {
+                setFormData(prev => ({
+                    ...prev,
+                    directorId: matchingDirector.id_directorio.toString(),
+                    area: matchingDirector.area || '',
+                    puesto: matchingDirector.puesto || ''
+                }));
+                setDirectorInputDisabled(true);
+            } else {
+                setFormData(prev => ({ ...prev, directorId: '', area: '', puesto: '' }));
+                setDirectorInputDisabled(false);
             }
         }
-    }, [directorio]);
+
+        if (window.innerWidth < 768 && detailRef.current) {
+            setTimeout(() => {
+                detailRef.current?.scrollIntoView({ behavior: 'smooth' });
+            }, 100);
+        }
+    };
+
+    // Handle director input
+    const handleDirectorInput = (value: string) => {
+        if (directorInputDisabled) return;
+
+        // Buscar coincidencia exacta en el directorio
+        const found = directorio.find(d => d.nombre.trim().toLowerCase() === value.trim().toLowerCase());
+        if (found) {
+            setFormData(prev => ({
+                ...prev,
+                directorId: found.id_directorio.toString(),
+                area: found.area || '',
+                puesto: found.puesto || ''
+            }));
+            if (!found.area || !found.puesto) {
+                setIncompleteDirector(found);
+                setDirectorFormData({ area: found.area || '', puesto: found.puesto || '' });
+                setShowDirectorModal(true);
+            }
+        } else {
+            // Si no hay coincidencia, limpiar selección y no dejar seleccionar
+            setFormData(prev => ({ ...prev, directorId: '', area: '', puesto: '' }));
+        }
+    };
 
     // Save director info
     const saveDirectorInfo = async () => {
@@ -388,53 +465,6 @@ export default function CrearResguardos() {
         }
     };
 
-    // Select/deselect mueble
-    const toggleMuebleSelection = (mueble: Mueble) => {
-        // Check if already selected
-        const isAlreadySelected = selectedMuebles.some(m => m.id === mueble.id);
-
-        let newSelectedMuebles: Mueble[];
-        if (isAlreadySelected) {
-            // If already selected, remove it
-            newSelectedMuebles = selectedMuebles.filter(m => m.id !== mueble.id);
-        } else {
-            // Validar que todos los seleccionados tengan el mismo usufinal
-            const currentUsufinal = selectedMuebles[0]?.usufinal?.trim().toUpperCase();
-            const newUsufinal = mueble.usufinal?.trim().toUpperCase();
-            if (selectedMuebles.length > 0 && currentUsufinal && newUsufinal && currentUsufinal !== newUsufinal) {
-                setConflictUsufinal(newUsufinal || '');
-                setShowUsufinalModal(true);
-                return;
-            }
-            newSelectedMuebles = [...selectedMuebles, mueble];
-        }
-
-        setSelectedMuebles(newSelectedMuebles);
-
-        // Si la lista queda vacía, limpiar datos del director
-        if (newSelectedMuebles.length === 0) {
-            setFormData(prev => ({
-                ...prev,
-                directorId: '',
-                area: '',
-                puesto: ''
-            }));
-        } else if (!isAlreadySelected && newSelectedMuebles.length === 1) {
-            // Si es el primer seleccionado, intentar seleccionar director
-            checkDirectorMatch(mueble);
-        } else if (!isAlreadySelected && newSelectedMuebles.length > 1) {
-            // Si hay más de un artículo, asegurar que el director corresponde al usufinal
-            const first = newSelectedMuebles[0];
-            checkDirectorMatch(first);
-        }
-
-        if (window.innerWidth < 768 && detailRef.current) {
-            setTimeout(() => {
-                detailRef.current?.scrollIntoView({ behavior: 'smooth' });
-            }, 100);
-        }
-    };
-
     // Handle form submit
     const handleSubmit = async () => {
         if (selectedMuebles.length === 0) {
@@ -442,14 +472,9 @@ export default function CrearResguardos() {
             return;
         }
 
-        if (!formData.directorId) {
+        // Validación: directorId, área y puesto
+        if (!formData.directorId || !formData.area || !formData.puesto) {
             setError('Complete todos los campos obligatorios');
-            return;
-        }
-
-        // Validación: área y puesto deben estar presentes
-        if (!formData.area || !formData.puesto) {
-            setError('No se puede crear el resguardo: el área y el puesto del director son obligatorios.');
             return;
         }
 
@@ -473,13 +498,18 @@ export default function CrearResguardos() {
             setLoading(true);
 
             const resguardoPromises = selectedMuebles.map(async (mueble) => {
-                // Determine which table to update
-                const tableName = mueble.id_inv?.startsWith('ITEA') ? 'mueblesitea' : 'muebles';
+                // Usar el campo origen para determinar la tabla
+                const tableName = mueble.origen === 'ITEA' ? 'mueblesitea' : 'muebles';
+                const directorNombre = directorio.find(d => d.id_directorio.toString() === formData.directorId)?.nombre;
 
-                // Update mueble
+                // Update mueble: ahora también actualiza usufinal y area
                 const { error: updateError } = await supabase
                     .from(tableName)
-                    .update({ resguardante: formData.resguardante })
+                    .update({
+                        resguardante: formData.resguardante,
+                        usufinal: directorNombre,
+                        area: formData.area
+                    })
                     .eq('id', mueble.id);
 
                 if (updateError) throw updateError;
@@ -489,7 +519,7 @@ export default function CrearResguardos() {
                     folio: folioToUse,
                     f_resguardo: new Date().toISOString(),
                     area_resguardo: formData.area,
-                    dir_area: directorio.find(d => d.id_directorio.toString() === formData.directorId)?.nombre,
+                    dir_area: directorNombre,
                     num_inventario: mueble.id_inv,
                     descripcion: mueble.descripcion,
                     rubro: mueble.rubro,
@@ -519,7 +549,7 @@ export default function CrearResguardos() {
                 }))
             });
             setShowPDFButton(true);
-            sessionStorage.setItem('pdfDownloaded', 'false'); // <-- Limpia el flag al generar nuevo PDF
+            sessionStorage.setItem('pdfDownloaded', 'false');
 
             // Reset form but keep the folio for next group if needed
             setFormData(prev => ({
@@ -564,6 +594,8 @@ export default function CrearResguardos() {
 
     // Calculate total pages
     const totalPages = Math.ceil(totalCount / rowsPerPage);
+
+    const inputsDisabled = selectedMuebles.length === 0;
 
     return (
         <div className="bg-black text-white min-h-screen p-2 sm:p-4 md:p-6 lg:p-8">
@@ -951,10 +983,18 @@ export default function CrearResguardos() {
                                     <input
                                         type="text"
                                         value={formData.directorId ? directorio.find(d => d.id_directorio.toString() === formData.directorId)?.nombre || '' : ''}
-                                        readOnly
+                                        onChange={e => handleDirectorInput(e.target.value)}
+                                        placeholder="Director de Área (buscar)"
                                         className="block w-full bg-black border border-gray-800 rounded-lg py-2.5 px-4 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-gray-300 appearance-none"
-                                        placeholder="Director de Área"
+                                        list="directores-list"
+                                        disabled={inputsDisabled || directorInputDisabled}
                                     />
+                                    {/* Lista de sugerencias para autocompletar */}
+                                    <datalist id="directores-list">
+                                        {directorio.map(d => (
+                                            <option key={d.id_directorio} value={d.nombre} />
+                                        ))}
+                                    </datalist>
                                 </div>
                                 {/* Advertencia de área o puesto solo si hay artículos seleccionados y falta info */}
                                 {selectedMuebles.length > 0 && formData.directorId && (
@@ -992,6 +1032,7 @@ export default function CrearResguardos() {
                                     onChange={(e) => setFormData({ ...formData, resguardante: e.target.value })}
                                     placeholder="Nombre del resguardante"
                                     className="block w-full bg-black border border-gray-800 rounded-lg py-2.5 px-4 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                    disabled={inputsDisabled}
                                 />
                             </div>
 
@@ -1002,10 +1043,10 @@ export default function CrearResguardos() {
                                     <input
                                         type="text"
                                         value={formData.area}
-                                        readOnly={true}
-                                        onChange={(e) => setFormData({ ...formData, area: e.target.value })}
+                                        readOnly
                                         placeholder="Área"
                                         className="block w-full bg-black border border-gray-800 rounded-lg py-2.5 px-4 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-gray-300"
+                                        disabled={inputsDisabled}
                                     />
                                 </div>
                                 <div>
@@ -1013,10 +1054,10 @@ export default function CrearResguardos() {
                                     <input
                                         type="text"
                                         value={formData.puesto}
-                                        readOnly={true}
-                                        onChange={(e) => setFormData({ ...formData, puesto: e.target.value })}
+                                        readOnly
                                         placeholder="Puesto"
                                         className="block w-full bg-black border border-gray-800 rounded-lg py-2.5 px-4 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-gray-300"
+                                        disabled={inputsDisabled}
                                     />
                                 </div>
                             </div>

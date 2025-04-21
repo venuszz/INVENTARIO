@@ -120,7 +120,6 @@ export default function NavigationBar() {
             path: '/inventario',
             submenu: [
                 { title: 'Registro de nuevos bienes', path: '/inventario/registro' },
-                { title: 'Bienes obsoletos', path: '/inventario/obsoletos' },
             ]
         },
         {
@@ -167,25 +166,10 @@ export default function NavigationBar() {
                 {
                     title: 'Reportes INEA',
                     path: '/reportes/inea',
-                    children: [
-                        { title: 'General', path: '/reportes/inea/general' },
-                        { title: 'Activos', path: '/reportes/inea/activos' },
-                        { title: 'Inactivos', path: '/reportes/inea/inactivos' },
-                        { title: 'No localizados', path: '/reportes/inea/no-localizados' },
-                        { title: 'Obsoletos', path: '/reportes/inea/obsoletos' }
-                    ]
                 },
                 {
                     title: 'Reportes ITEA',
                     path: '/reportes/itea',
-                    children: [
-                        { title: 'General', path: '/reportes/itea/general' },
-                        { title: 'Activos', path: '/reportes/itea/activos' },
-                        { title: 'Inactivos', path: '/reportes/itea/inactivos' },
-                        { title: 'No localizados', path: '/reportes/itea/no-localizados' },
-                        { title: 'Obsoletos', path: '/reportes/itea/obsoletos' },
-                        { title: 'Denuncias', path: '/reportes/itea/denuncias' }
-                    ]
                 }
             ]
         },
