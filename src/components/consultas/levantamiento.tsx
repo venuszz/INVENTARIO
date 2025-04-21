@@ -3,7 +3,8 @@ import React from 'react';
 import { useState, useEffect, useCallback } from 'react';
 import {
     Search, RefreshCw, ChevronLeft, ChevronRight,
-    ArrowUpDown, AlertCircle, X, Edit, XCircle
+    ArrowUpDown, AlertCircle, X, FileText, Download, 
+    FileDigit, FileDown, FileUp
 } from 'lucide-react';
 import supabase from '@/app/lib/supabase/client';
 
@@ -82,9 +83,10 @@ export default function LevantamientoUnificado() {
         formadq: []
     });
     const [selectedItem, setSelectedItem] = useState<LevMueble | null>(null);
-    const [isEditing, setIsEditing] = useState(false);
-    const [editFormData, setEditFormData] = useState<LevMueble | null>(null);
     const [message, setMessage] = useState<Message | null>(null);
+    const [showFilters, setShowFilters] = useState(false);
+    const [showExportModal, setShowExportModal] = useState(false);
+    const [exportType, setExportType] = useState<'pdf' | 'excel' | null>(null);
 
     // Obtener opciones de filtro unificadas
     const fetchFilterOptions = useCallback(async () => {
@@ -195,7 +197,7 @@ export default function LevantamientoUnificado() {
             }
             if (toGlobal >= totalInea) {
                 fromItea = Math.max(0, fromGlobal - totalInea);
-                toItea = toGlobal - totalInea;
+                toItea = toGlobal - totalItea;
             }
 
             // 6. Consultar datos paginados
@@ -228,8 +230,6 @@ export default function LevantamientoUnificado() {
                 item.id === selectedItem.id && item.origen === selectedItem.origen
             )) {
                 setSelectedItem(null);
-                setIsEditing(false);
-                setEditFormData(null);
             }
         } catch (error) {
             console.error('Error al cargar muebles:', error);
@@ -259,106 +259,6 @@ export default function LevantamientoUnificado() {
         }
     }, [message]);
 
-    // Manejar selección de item
-    const handleSelectItem = (item: LevMueble) => {
-        setSelectedItem(item);
-        setIsEditing(false);
-        setEditFormData(null);
-    };
-
-    // Iniciar edición
-    const handleStartEdit = () => {
-        if (!selectedItem) return;
-        setIsEditing(true);
-        setEditFormData({ ...selectedItem });
-    };
-
-    // Cancelar edición
-    const cancelEdit = () => {
-        setIsEditing(false);
-        setEditFormData(null);
-    };
-
-    // Guardar cambios
-    const saveChanges = async () => {
-        if (!editFormData) return;
-
-        setLoading(true);
-        try {
-            const tableName = editFormData.origen === 'INEA' ? 'muebles' : 'mueblesitea';
-
-            const { error } = await supabase
-                .from(tableName)
-                .update(editFormData)
-                .eq('id', editFormData.id);
-
-            if (error) throw error;
-
-            setMessage({
-                type: 'success',
-                text: 'Cambios guardados correctamente'
-            });
-            fetchMuebles();
-            setSelectedItem(editFormData);
-            setIsEditing(false);
-            setEditFormData(null);
-        } catch (error) {
-            console.error('Error al guardar cambios:', error);
-            setMessage({
-                type: 'error',
-                text: 'Error al guardar los cambios. Por favor, intente nuevamente.'
-            });
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    // Marcar como inactivo
-    const markAsInactive = async () => {
-        if (!selectedItem) return;
-        if (!confirm('¿Está seguro de que desea marcar este artículo como INACTIVO?')) return;
-
-        setLoading(true);
-        try {
-            const tableName = selectedItem.origen === 'INEA' ? 'muebles' : 'mueblesitea';
-
-            const { error } = await supabase
-                .from(tableName)
-                .update({ estatus: 'INACTIVO' })
-                .eq('id', selectedItem.id);
-
-            if (error) throw error;
-
-            setMessage({
-                type: 'success',
-                text: 'Artículo marcado como INACTIVO correctamente'
-            });
-            fetchMuebles();
-            setSelectedItem(null);
-        } catch (error) {
-            console.error('Error al marcar como inactivo:', error);
-            setMessage({
-                type: 'error',
-                text: 'Error al cambiar el estatus. Por favor, intente nuevamente.'
-            });
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    // Manejar cambios en el formulario de edición
-    const handleEditFormChange = (
-        e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>,
-        field: keyof LevMueble
-    ) => {
-        if (!editFormData) return;
-
-        setEditFormData({
-            ...editFormData,
-            [field]: e.target.value || null
-        });
-    };
-
     // Limpiar filtros
     const clearFilters = () => {
         setFilters({
@@ -370,13 +270,6 @@ export default function LevantamientoUnificado() {
         });
         setSearchTerm('');
         setCurrentPage(1);
-    };
-
-    // Formatear fecha
-    const formatDate = (dateStr: string | null) => {
-        if (!dateStr) return '';
-        const date = new Date(dateStr);
-        return date.toLocaleDateString('es-MX');
     };
 
     // Calcular total de páginas
@@ -392,6 +285,12 @@ export default function LevantamientoUnificado() {
     const truncateText = (text: string | null, length: number = 50) => {
         if (!text) return '';
         return text.length > length ? `${text.substring(0, length)}...` : text;
+    };
+
+    // Manejar exportación
+    const handleExport = (type: 'pdf' | 'excel') => {
+        setExportType(type);
+        setShowExportModal(true);
     };
 
     return (
@@ -425,6 +324,22 @@ export default function LevantamientoUnificado() {
                         </div>
                         <div className="flex gap-2">
                             <button
+                                onClick={() => handleExport('pdf')}
+                                className="px-4 py-2 bg-red-700 text-white rounded-md font-medium flex items-center gap-2 hover:bg-red-800 transition-colors border border-red-800"
+                                title="Exportar a PDF"
+                            >
+                                <FileText className="h-4 w-4" />
+                                <span className="hidden sm:inline">PDF</span>
+                            </button>
+                            <button
+                                onClick={() => handleExport('excel')}
+                                className="px-4 py-2 bg-green-700 text-white rounded-md font-medium flex items-center gap-2 hover:bg-green-800 transition-colors border border-green-800"
+                                title="Exportar a Excel"
+                            >
+                                <FileUp className="h-4 w-4" />
+                                <span className="hidden sm:inline">Excel</span>
+                            </button>
+                            <button
                                 onClick={() => { setLoading(true); fetchMuebles(); }}
                                 className="px-4 py-2 bg-black text-gray-300 rounded-md font-medium flex items-center gap-2 hover:bg-gray-700 transition-colors"
                                 title="Actualizar"
@@ -433,103 +348,113 @@ export default function LevantamientoUnificado() {
                                 <span className="hidden sm:inline">Actualizar</span>
                             </button>
                             <button
+                                onClick={() => setShowFilters(!showFilters)}
+                                className="px-4 py-2 bg-gray-800 text-blue-400 rounded-md text-sm hover:bg-gray-700 transition-colors flex items-center gap-2"
+                                title={showFilters ? "Ocultar filtros" : "Mostrar filtros"}
+                            >
+                                {showFilters ? <X className="h-4 w-4" /> : <Search className="h-4 w-4" />}
+                                {showFilters ? "Ocultar filtros" : "Filtrar"}
+                            </button>
+                            <button
                                 onClick={clearFilters}
                                 className="px-4 py-2 bg-gray-800 text-blue-400 rounded-md text-sm hover:bg-gray-700 transition-colors flex items-center gap-2"
                                 title="Limpiar filtros"
                             >
-                                <X className="h-4 w-4" /> Limpiar filtros
+                                <X className="h-4 w-4" /> Limpiar
                             </button>
                         </div>
                     </div>
 
-                    {/* Filtros */}
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
-                        <div>
-                            <label className="block text-sm font-medium text-gray-300 mb-1">Estado</label>
-                            <select
-                                value={filters.estado}
-                                onChange={e => {
-                                    setFilters(f => ({ ...f, estado: e.target.value }));
-                                    setCurrentPage(1);
-                                }}
-                                className="w-full bg-gray-700 border border-gray-600 rounded-lg px-3 py-2.5 text-white"
-                                title="Filtrar por estado"
-                            >
-                                <option value="">Todos</option>
-                                {filterOptions.estados.map(e => (
-                                    <option key={e} value={e}>{e}</option>
-                                ))}
-                            </select>
+                    {/* Filtros (condicional) */}
+                    {showFilters && (
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+                            <div>
+                                <label className="block text-sm font-medium text-gray-300 mb-1">Estado</label>
+                                <select
+                                    value={filters.estado}
+                                    onChange={e => {
+                                        setFilters(f => ({ ...f, estado: e.target.value }));
+                                        setCurrentPage(1);
+                                    }}
+                                    className="w-full bg-gray-700 border border-gray-600 rounded-lg px-3 py-2.5 text-white"
+                                    title="Filtrar por estado"
+                                >
+                                    <option value="">Todos</option>
+                                    {filterOptions.estados.map(e => (
+                                        <option key={e} value={e}>{e}</option>
+                                    ))}
+                                </select>
+                            </div>
+                            <div>
+                                <label className="block text-sm font-medium text-gray-300 mb-1">Estatus</label>
+                                <select
+                                    value={filters.estatus}
+                                    onChange={e => {
+                                        setFilters(f => ({ ...f, estatus: e.target.value }));
+                                        setCurrentPage(1);
+                                    }}
+                                    className="w-full bg-gray-700 border border-gray-600 rounded-lg px-3 py-2.5 text-white"
+                                    title="Filtrar por estatus"
+                                >
+                                    <option value="">Todos</option>
+                                    {filterOptions.estatus.map(e => (
+                                        <option key={e} value={e}>{e}</option>
+                                    ))}
+                                </select>
+                            </div>
+                            <div>
+                                <label className="block text-sm font-medium text-gray-300 mb-1">Área</label>
+                                <select
+                                    value={filters.area}
+                                    onChange={e => {
+                                        setFilters(f => ({ ...f, area: e.target.value }));
+                                        setCurrentPage(1);
+                                    }}
+                                    className="w-full bg-gray-700 border border-gray-600 rounded-lg px-3 py-2.5 text-white"
+                                    title="Filtrar por área"
+                                >
+                                    <option value="">Todas</option>
+                                    {filterOptions.areas.map(e => (
+                                        <option key={e} value={e}>{e}</option>
+                                    ))}
+                                </select>
+                            </div>
+                            <div>
+                                <label className="block text-sm font-medium text-gray-300 mb-1">Rubro</label>
+                                <select
+                                    value={filters.rubro}
+                                    onChange={e => {
+                                        setFilters(f => ({ ...f, rubro: e.target.value }));
+                                        setCurrentPage(1);
+                                    }}
+                                    className="w-full bg-gray-700 border border-gray-600 rounded-lg px-3 py-2.5 text-white"
+                                    title="Filtrar por rubro"
+                                >
+                                    <option value="">Todos</option>
+                                    {filterOptions.rubros.map(e => (
+                                        <option key={e} value={e}>{e}</option>
+                                    ))}
+                                </select>
+                            </div>
+                            <div>
+                                <label className="block text-sm font-medium text-gray-300 mb-1">Forma Adq.</label>
+                                <select
+                                    value={filters.formadq}
+                                    onChange={e => {
+                                        setFilters(f => ({ ...f, formadq: e.target.value }));
+                                        setCurrentPage(1);
+                                    }}
+                                    className="w-full bg-gray-700 border border-gray-600 rounded-lg px-3 py-2.5 text-white"
+                                    title="Filtrar por forma de adquisición"
+                                >
+                                    <option value="">Todas</option>
+                                    {filterOptions.formadq.map(e => (
+                                        <option key={e} value={e}>{e}</option>
+                                    ))}
+                                </select>
+                            </div>
                         </div>
-                        <div>
-                            <label className="block text-sm font-medium text-gray-300 mb-1">Estatus</label>
-                            <select
-                                value={filters.estatus}
-                                onChange={e => {
-                                    setFilters(f => ({ ...f, estatus: e.target.value }));
-                                    setCurrentPage(1);
-                                }}
-                                className="w-full bg-gray-700 border border-gray-600 rounded-lg px-3 py-2.5 text-white"
-                                title="Filtrar por estatus"
-                            >
-                                <option value="">Todos</option>
-                                {filterOptions.estatus.map(e => (
-                                    <option key={e} value={e}>{e}</option>
-                                ))}
-                            </select>
-                        </div>
-                        <div>
-                            <label className="block text-sm font-medium text-gray-300 mb-1">Área</label>
-                            <select
-                                value={filters.area}
-                                onChange={e => {
-                                    setFilters(f => ({ ...f, area: e.target.value }));
-                                    setCurrentPage(1);
-                                }}
-                                className="w-full bg-gray-700 border border-gray-600 rounded-lg px-3 py-2.5 text-white"
-                                title="Filtrar por área"
-                            >
-                                <option value="">Todas</option>
-                                {filterOptions.areas.map(e => (
-                                    <option key={e} value={e}>{e}</option>
-                                ))}
-                            </select>
-                        </div>
-                        <div>
-                            <label className="block text-sm font-medium text-gray-300 mb-1">Rubro</label>
-                            <select
-                                value={filters.rubro}
-                                onChange={e => {
-                                    setFilters(f => ({ ...f, rubro: e.target.value }));
-                                    setCurrentPage(1);
-                                }}
-                                className="w-full bg-gray-700 border border-gray-600 rounded-lg px-3 py-2.5 text-white"
-                                title="Filtrar por rubro"
-                            >
-                                <option value="">Todos</option>
-                                {filterOptions.rubros.map(e => (
-                                    <option key={e} value={e}>{e}</option>
-                                ))}
-                            </select>
-                        </div>
-                        <div>
-                            <label className="block text-sm font-medium text-gray-300 mb-1">Forma Adq.</label>
-                            <select
-                                value={filters.formadq}
-                                onChange={e => {
-                                    setFilters(f => ({ ...f, formadq: e.target.value }));
-                                    setCurrentPage(1);
-                                }}
-                                className="w-full bg-gray-700 border border-gray-600 rounded-lg px-3 py-2.5 text-white"
-                                title="Filtrar por forma de adquisición"
-                            >
-                                <option value="">Todas</option>
-                                {filterOptions.formadq.map(e => (
-                                    <option key={e} value={e}>{e}</option>
-                                ))}
-                            </select>
-                        </div>
-                    </div>
+                    )}
 
                     {/* Mensajes */}
                     {message && (
@@ -542,10 +467,95 @@ export default function LevantamientoUnificado() {
                         </div>
                     )}
 
+                    {/* Modal de exportación diferenciado */}
+                    {showExportModal && (
+                        <div className="fixed inset-0 bg-black/90 flex items-center justify-center z-50 px-4 animate-fadeIn">
+                            <div className={`bg-black rounded-2xl shadow-2xl border w-full max-w-md overflow-hidden transition-all duration-300 transform
+                                ${exportType === 'pdf' ? 'border-red-600/30' : 'border-green-600/30'}`}
+                            >
+                                <div className={`relative p-6 bg-gradient-to-b from-black to-gray-900
+                                    ${exportType === 'pdf' ? 'from-red-950 to-red-900' : 'from-green-950 to-green-900'}`}
+                                >
+                                    <div className={`absolute top-0 left-0 w-full h-1 
+                                        ${exportType === 'pdf'
+                                            ? 'bg-gradient-to-r from-red-500/60 via-red-400 to-red-500/60'
+                                            : 'bg-gradient-to-r from-green-500/60 via-green-400 to-green-500/60'}
+                                    `}></div>
+
+                                    <button
+                                        onClick={() => setShowExportModal(false)}
+                                        className={`absolute top-3 right-3 p-2 rounded-full bg-black/60 hover:bg-gray-900 
+                                            ${exportType === 'pdf' ? 'text-red-400 hover:text-red-500 border border-red-500/30' : 'text-green-400 hover:text-green-500 border border-green-500/30'}
+                                            transition-colors`}
+                                        title="Cerrar"
+                                    >
+                                        <X className="h-4 w-4" />
+                                    </button>
+
+                                    <div className="flex flex-col items-center text-center mb-4">
+                                        <div className={`p-3 rounded-full border mb-3 
+                                            ${exportType === 'pdf' ? 'bg-red-500/10 border-red-500/30' : 'bg-green-500/10 border-green-500/30'}`}
+                                        >
+                                            {exportType === 'pdf' ? (
+                                                <FileDigit className="h-8 w-8 text-red-500" />
+                                            ) : (
+                                                <FileDown className="h-8 w-8 text-green-500" />
+                                            )}
+                                        </div>
+                                        <h3 className={`text-2xl font-bold ${exportType === 'pdf' ? 'text-red-400' : 'text-green-400'}`}
+                                        >
+                                            {exportType === 'pdf' ? 'Exportar a PDF' : 'Exportar a Excel'}
+                                        </h3>
+                                        <p className="text-gray-400 mt-2">
+                                            {exportType === 'pdf' 
+                                                ? 'Generar un documento PDF con los resultados actuales' 
+                                                : 'Exportar los datos a un archivo Excel para su análisis'}
+                                        </p>
+                                    </div>
+
+                                    <div className="space-y-5 mt-6">
+                                        <div className="rounded-lg border border-gray-800 bg-gray-900/50 p-4">
+                                            <label className="block text-xs uppercase tracking-wider text-gray-500 mb-1">Documento a generar</label>
+                                            <div className="flex items-center gap-3">
+                                                <div className="p-2 bg-gray-800 rounded-lg">
+                                                    {exportType === 'pdf' ? (
+                                                        <FileText className="h-4 w-4 text-red-400" />
+                                                    ) : (
+                                                        <FileUp className="h-4 w-4 text-green-400" />
+                                                    )}
+                                                </div>
+                                                <span className="text-white font-medium">
+                                                    {exportType === 'pdf'
+                                                        ? `Reporte de inventario_${new Date().toISOString().slice(0, 10)}.pdf`
+                                                        : `Reporte_inventario_${new Date().toISOString().slice(0, 10)}.xlsx`}
+                                                </span>
+                                            </div>
+                                        </div>
+
+                                        <div className="w-full flex flex-col items-center gap-4">
+                                            <div className="w-full">
+                                                <button
+                                                    className={`w-full py-3 px-4 font-medium rounded-lg flex items-center justify-center gap-2 transition-all transform hover:scale-[1.02] shadow-lg
+                                                        ${exportType === 'pdf'
+                                                            ? 'bg-gradient-to-r from-red-600 to-red-500 hover:from-red-500 hover:to-red-400 text-white'
+                                                            : 'bg-gradient-to-r from-green-600 to-green-500 hover:from-green-500 hover:to-green-400 text-black'}
+                                                    `}
+                                                >
+                                                    <Download className="h-5 w-5" />
+                                                    {exportType === 'pdf' ? 'Generar PDF' : 'Descargar Excel'}
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
                     {/* Contenido principal */}
                     <div className="flex flex-col lg:flex-row gap-6">
                         {/* Tabla */}
-                        <div className={`${selectedItem ? 'lg:w-2/3' : 'w-full'}`}>
+                        <div className="w-full">
                             <div className="bg-black rounded-lg border border-gray-800 overflow-x-auto overflow-y-auto flex flex-col flex-grow max-h-[70vh]">
                                 <table className="min-w-full divide-y divide-gray-800">
                                     <thead className="bg-black sticky top-0 z-10">
@@ -626,9 +636,9 @@ export default function LevantamientoUnificado() {
                                             muebles.map((item) => (
                                                 <tr
                                                     key={`${item.origen}-${item.id}`}
-                                                    className={`hover:bg-gray-800 cursor-pointer transition-colors ${selectedItem?.id === item.id && selectedItem?.origen === item.origen ? 'bg-gray-800' : ''
-                                                        }`}
-                                                    onClick={() => handleSelectItem(item)}
+                                                    className={
+                                                        `transition-colors`
+                                                    }
                                                 >
                                                     <td className="px-4 py-3 text-xs">
                                                         <span className={`inline-flex items-center px-2.5 py-1 rounded-full font-bold ${ORIGEN_COLORS[item.origen]}`}>
@@ -753,311 +763,6 @@ export default function LevantamientoUnificado() {
                                 </div>
                             </div>
                         </div>
-
-                        {/* Detalle del item seleccionado */}
-                        {selectedItem && (
-                            <div className="lg:w-1/3 bg-gray-900 rounded-lg border border-gray-800 p-4">
-                                <div className="flex justify-between items-center mb-4">
-                                    <h2 className="text-xl font-bold">
-                                        Detalle del Bien
-                                    </h2>
-                                    <button
-                                        onClick={() => setSelectedItem(null)}
-                                        className="text-gray-400 hover:text-white"
-                                        title="Cerrar detalle"
-                                    >
-                                        <X className="h-5 w-5" />
-                                    </button>
-                                </div>
-
-                                {isEditing ? (
-                                    <div className="space-y-4">
-                                        <div className="grid grid-cols-1 gap-4">
-                                            <div>
-                                                <label className="block text-sm font-medium text-gray-300 mb-1">ID Inventario</label>
-                                                <input
-                                                    type="text"
-                                                    value={editFormData?.id_inv || ''}
-                                                    onChange={e => handleEditFormChange(e, 'id_inv')}
-                                                    className="w-full bg-gray-800 border border-gray-700 rounded-md px-3 py-2 text-white"
-                                                    placeholder="ID Inventario"
-                                                    title="ID Inventario"
-                                                />
-                                            </div>
-                                            <div>
-                                                <label className="block text-sm font-medium text-gray-300 mb-1">Descripción</label>
-                                                <textarea
-                                                    value={editFormData?.descripcion || ''}
-                                                    onChange={e => handleEditFormChange(e, 'descripcion')}
-                                                    className="w-full bg-gray-800 border border-gray-700 rounded-md px-3 py-2 text-white"
-                                                    rows={3}
-                                                    placeholder="Descripción"
-                                                    title="Descripción"
-                                                />
-                                            </div>
-                                            <div>
-                                                <label className="block text-sm font-medium text-gray-300 mb-1">Rubro</label>
-                                                <select
-                                                    value={editFormData?.rubro || ''}
-                                                    onChange={e => handleEditFormChange(e, 'rubro')}
-                                                    className="w-full bg-gray-800 border border-gray-700 rounded-md px-3 py-2 text-white"
-                                                    title="Rubro"
-                                                >
-                                                    <option value="">Seleccionar rubro</option>
-                                                    {filterOptions.rubros.map(rubro => (
-                                                        <option key={rubro} value={rubro}>{rubro}</option>
-                                                    ))}
-                                                </select>
-                                            </div>
-                                            <div>
-                                                <label className="block text-sm font-medium text-gray-300 mb-1">Valor</label>
-                                                <input
-                                                    type="text"
-                                                    value={editFormData?.valor?.toString() || ''}
-                                                    onChange={e => handleEditFormChange(e, 'valor')}
-                                                    className="w-full bg-gray-800 border border-gray-700 rounded-md px-3 py-2 text-white"
-                                                    placeholder="Valor"
-                                                    title="Valor"
-                                                />
-                                            </div>
-                                            <div>
-                                                <label className="block text-sm font-medium text-gray-300 mb-1">Fecha Adquisición</label>
-                                                <input
-                                                    type="date"
-                                                    value={editFormData?.f_adq || ''}
-                                                    onChange={e => handleEditFormChange(e, 'f_adq')}
-                                                    className="w-full bg-gray-800 border border-gray-700 rounded-md px-3 py-2 text-white"
-                                                    placeholder="Fecha de adquisición"
-                                                    title="Fecha de adquisición"
-                                                />
-                                            </div>
-                                            <div>
-                                                <label className="block text-sm font-medium text-gray-300 mb-1">Forma Adquisición</label>
-                                                <select
-                                                    value={editFormData?.formadq || ''}
-                                                    onChange={e => handleEditFormChange(e, 'formadq')}
-                                                    className="w-full bg-gray-800 border border-gray-700 rounded-md px-3 py-2 text-white"
-                                                    title="Forma de adquisición"
-                                                >
-                                                    <option value="">Seleccionar forma</option>
-                                                    {filterOptions.formadq.map(formadq => (
-                                                        <option key={formadq} value={formadq}>{formadq}</option>
-                                                    ))}
-                                                </select>
-                                            </div>
-                                            <div>
-                                                <label className="block text-sm font-medium text-gray-300 mb-1">Proveedor</label>
-                                                <input
-                                                    type="text"
-                                                    value={editFormData?.proveedor || ''}
-                                                    onChange={e => handleEditFormChange(e, 'proveedor')}
-                                                    className="w-full bg-gray-800 border border-gray-700 rounded-md px-3 py-2 text-white"
-                                                    placeholder="Proveedor"
-                                                    title="Proveedor"
-                                                />
-                                            </div>
-                                            <div>
-                                                <label className="block text-sm font-medium text-gray-300 mb-1">Factura</label>
-                                                <input
-                                                    type="text"
-                                                    value={editFormData?.factura || ''}
-                                                    onChange={e => handleEditFormChange(e, 'factura')}
-                                                    className="w-full bg-gray-800 border border-gray-700 rounded-md px-3 py-2 text-white"
-                                                    placeholder="Factura"
-                                                    title="Factura"
-                                                />
-                                            </div>
-                                            <div>
-                                                <label className="block text-sm font-medium text-gray-300 mb-1">Estado</label>
-                                                <select
-                                                    value={editFormData?.estado || ''}
-                                                    onChange={e => handleEditFormChange(e, 'estado')}
-                                                    className="w-full bg-gray-800 border border-gray-700 rounded-md px-3 py-2 text-white"
-                                                    title="Estado"
-                                                >
-                                                    <option value="">Seleccionar estado</option>
-                                                    {filterOptions.estados.map(estado => (
-                                                        <option key={estado} value={estado}>{estado}</option>
-                                                    ))}
-                                                </select>
-                                            </div>
-                                            <div>
-                                                <label className="block text-sm font-medium text-gray-300 mb-1">Estatus</label>
-                                                <select
-                                                    value={editFormData?.estatus || ''}
-                                                    onChange={e => handleEditFormChange(e, 'estatus')}
-                                                    className="w-full bg-gray-800 border border-gray-700 rounded-md px-3 py-2 text-white"
-                                                    title="Estatus"
-                                                >
-                                                    <option value="">Seleccionar estatus</option>
-                                                    {filterOptions.estatus.map(estatus => (
-                                                        <option key={estatus} value={estatus}>{estatus}</option>
-                                                    ))}
-                                                </select>
-                                            </div>
-                                            <div>
-                                                <label className="block text-sm font-medium text-gray-300 mb-1">Área</label>
-                                                <input
-                                                    type="text"
-                                                    value={editFormData?.area || ''}
-                                                    onChange={e => handleEditFormChange(e, 'area')}
-                                                    className="w-full bg-gray-800 border border-gray-700 rounded-md px-3 py-2 text-white"
-                                                    placeholder="Área"
-                                                    title="Área"
-                                                />
-                                            </div>
-                                            <div>
-                                                <label className="block text-sm font-medium text-gray-300 mb-1">Usuario Final</label>
-                                                <input
-                                                    type="text"
-                                                    value={editFormData?.usufinal || ''}
-                                                    onChange={e => handleEditFormChange(e, 'usufinal')}
-                                                    className="w-full bg-gray-800 border border-gray-700 rounded-md px-3 py-2 text-white"
-                                                    placeholder="Usuario final"
-                                                    title="Usuario final"
-                                                />
-                                            </div>
-                                            <div>
-                                                <label className="block text-sm font-medium text-gray-300 mb-1">Resguardante</label>
-                                                <input
-                                                    type="text"
-                                                    value={editFormData?.resguardante || ''}
-                                                    onChange={e => handleEditFormChange(e, 'resguardante')}
-                                                    className="w-full bg-gray-800 border border-gray-700 rounded-md px-3 py-2 text-white"
-                                                    placeholder="Resguardante"
-                                                    title="Resguardante"
-                                                />
-                                            </div>
-                                        </div>
-
-                                        <div className="flex justify-end gap-2 pt-4">
-                                            <button
-                                                onClick={cancelEdit}
-                                                className="px-4 py-2 bg-gray-700 text-gray-300 rounded-md hover:bg-gray-600 transition-colors"
-                                                title="Cancelar edición"
-                                            >
-                                                Cancelar
-                                            </button>
-                                            <button
-                                                onClick={saveChanges}
-                                                disabled={loading}
-                                                className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors disabled:opacity-50"
-                                                title="Guardar cambios"
-                                            >
-                                                {loading ? 'Guardando...' : 'Guardar Cambios'}
-                                            </button>
-                                        </div>
-                                    </div>
-                                ) : (
-                                    <div className="space-y-4">
-                                        <div className="flex justify-between items-center">
-                                            <div>
-                                                <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold ${ORIGEN_COLORS[selectedItem.origen]}`}>
-                                                    {selectedItem.origen}
-                                                </span>
-                                            </div>
-                                            <div className="flex gap-2">
-                                                <button
-                                                    onClick={handleStartEdit}
-                                                    className="p-2 text-gray-400 hover:text-blue-400 hover:bg-gray-800 rounded-md transition-colors"
-                                                    title="Editar"
-                                                >
-                                                    <Edit className="h-4 w-4" />
-                                                </button>
-                                                <button
-                                                    onClick={markAsInactive}
-                                                    className="p-2 text-gray-400 hover:text-red-400 hover:bg-gray-800 rounded-md transition-colors"
-                                                    title="Marcar como inactivo"
-                                                >
-                                                    <XCircle className="h-4 w-4" />
-                                                </button>
-                                            </div>
-                                        </div>
-
-                                        <div className="grid grid-cols-2 gap-4">
-                                            <div>
-                                                <p className="text-sm text-gray-400">ID Inventario</p>
-                                                <p className="text-white font-medium">{selectedItem.id_inv}</p>
-                                            </div>
-                                            <div>
-                                                <p className="text-sm text-gray-400">Rubro</p>
-                                                <p className="text-white font-medium">{selectedItem.rubro || 'N/A'}</p>
-                                            </div>
-                                            <div className="col-span-2">
-                                                <p className="text-sm text-gray-400">Descripción</p>
-                                                <p className="text-white font-medium">{selectedItem.descripcion || 'N/A'}</p>
-                                            </div>
-                                            <div>
-                                                <p className="text-sm text-gray-400">Valor</p>
-                                                <p className="text-white font-medium">
-                                                    {selectedItem.valor ?
-                                                        typeof selectedItem.valor === 'number' ?
-                                                            `$${selectedItem.valor.toLocaleString('es-MX')}` :
-                                                            selectedItem.valor
-                                                        : 'N/A'}
-                                                </p>
-                                            </div>
-                                            <div>
-                                                <p className="text-sm text-gray-400">Fecha Adquisición</p>
-                                                <p className="text-white font-medium">{formatDate(selectedItem.f_adq) || 'N/A'}</p>
-                                            </div>
-                                            <div>
-                                                <p className="text-sm text-gray-400">Forma Adquisición</p>
-                                                <p className="text-white font-medium">{selectedItem.formadq || 'N/A'}</p>
-                                            </div>
-                                            <div>
-                                                <p className="text-sm text-gray-400">Proveedor</p>
-                                                <p className="text-white font-medium">{selectedItem.proveedor || 'N/A'}</p>
-                                            </div>
-                                            <div>
-                                                <p className="text-sm text-gray-400">Factura</p>
-                                                <p className="text-white font-medium">{selectedItem.factura || 'N/A'}</p>
-                                            </div>
-                                            <div>
-                                                <p className="text-sm text-gray-400">Estado</p>
-                                                <p className="text-white font-medium">{selectedItem.estado || 'N/A'}</p>
-                                            </div>
-                                            <div>
-                                                <p className="text-sm text-gray-400">Estatus</p>
-                                                <p className="text-white font-medium">
-                                                    <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs ${selectedItem.estatus === 'ACTIVO' ? ESTATUS_COLORS.ACTIVO :
-                                                            selectedItem.estatus === 'INACTIVO' ? ESTATUS_COLORS.INACTIVO :
-                                                                selectedItem.estatus === 'NO LOCALIZADO' ? ESTATUS_COLORS['NO LOCALIZADO'] :
-                                                                    ESTATUS_COLORS.DEFAULT
-                                                        }`}>
-                                                        {selectedItem.estatus || 'N/A'}
-                                                    </span>
-                                                </p>
-                                            </div>
-                                            <div>
-                                                <p className="text-sm text-gray-400">Área</p>
-                                                <p className="text-white font-medium">{selectedItem.area || 'N/A'}</p>
-                                            </div>
-                                            <div>
-                                                <p className="text-sm text-gray-400">Usuario Final</p>
-                                                <p className="text-white font-medium">{selectedItem.usufinal || 'N/A'}</p>
-                                            </div>
-                                            <div>
-                                                <p className="text-sm text-gray-400">Resguardante</p>
-                                                <p className="text-white font-medium">{selectedItem.resguardante || 'N/A'}</p>
-                                            </div>
-                                            {selectedItem.fechabaja && (
-                                                <div>
-                                                    <p className="text-sm text-gray-400">Fecha de Baja</p>
-                                                    <p className="text-white font-medium">{formatDate(selectedItem.fechabaja)}</p>
-                                                </div>
-                                            )}
-                                            {selectedItem.causadebaja && (
-                                                <div>
-                                                    <p className="text-sm text-gray-400">Causa de Baja</p>
-                                                    <p className="text-white font-medium">{selectedItem.causadebaja}</p>
-                                                </div>
-                                            )}
-                                        </div>
-                                    </div>
-                                )}
-                            </div>
-                        )}
                     </div>
                 </div>
             </div>
