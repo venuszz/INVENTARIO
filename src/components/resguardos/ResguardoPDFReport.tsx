@@ -31,7 +31,7 @@ const styles = StyleSheet.create({
         color: '#222',
     },
     header: {
-        fontSize: 20,
+        fontSize: 12,
         fontWeight: 'bold',
         marginBottom: 12,
         color: '#1e293b',
@@ -88,13 +88,16 @@ const styles = StyleSheet.create({
 export const ResguardoPDF = ({ data }: { data: PdfData }) => (
     <Document>
         <Page size="A4" style={styles.page}>
-            <Text style={styles.header}>Resguardo de Bienes</Text>
+            <Text style={styles.header}>INSTITUTO TLAXCALTECA PARA LA EDUCACIÓN DE LOS ADULTOS</Text>
+            <Text style={styles.header}>DIRECCIÓN DE ADMINISTRACIÓN Y FINANZAS</Text>
+            <Text style={styles.header}>OFICINA DE RECURSOS MATERIALES</Text>
+
             <View style={styles.section}>
-                <Text><Text style={styles.label}>Folio:</Text> {data.folio}</Text>
-                <Text><Text style={styles.label}>Fecha:</Text> {data.fecha}</Text>
+                <Text><Text style={styles.label}>Folio:</Text> {data.folio}</Text>                
                 <Text><Text style={styles.label}>Director:</Text> {data.director}</Text>
                 <Text><Text style={styles.label}>Área:</Text> {data.area}</Text>
                 <Text><Text style={styles.label}>Puesto:</Text> {data.puesto}</Text>
+                <Text><Text style={styles.label}>Fecha:</Text> {data.fecha}</Text>
                 <Text><Text style={styles.label}>Resguardante:</Text> {data.resguardante}</Text>
             </View>
             <View style={styles.table}>
@@ -115,10 +118,15 @@ export const ResguardoPDF = ({ data }: { data: PdfData }) => (
             </View>
             <View style={styles.signature}>
                 <View style={styles.signatureBox}>
-                    <Text>Firma Director</Text>
+                    <Text>AUTORIZA</Text>
                 </View>
                 <View style={styles.signatureBox}>
-                    <Text>Firma Resguardante</Text>
+                    <Text>CONOCIMIENTO</Text>
+                </View>
+                <View style={styles.signatureBox}>
+                    <Text>RESGUARDANTE</Text>
+                    <Text><Text style={styles.label}></Text> {data.director}</Text>
+                    <Text><Text style={styles.label}></Text> {data.puesto}</Text>
                 </View>
             </View>
         </Page>
