@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from 'react';
 import {
     Search, RefreshCw, ChevronLeft, ChevronRight,
     ArrowUpDown, AlertCircle, X, FileText, Download, 
-    FileDigit, FileDown, FileUp
+    FileDigit, FileDown, FileUp, DollarSign
 } from 'lucide-react';
 import supabase from '@/app/lib/supabase/client';
 
@@ -87,6 +87,8 @@ export default function LevantamientoUnificado() {
     const [showFilters, setShowFilters] = useState(false);
     const [showExportModal, setShowExportModal] = useState(false);
     const [exportType, setExportType] = useState<'pdf' | 'excel' | null>(null);
+    const [totalValue, setTotalValue] = useState(0);
+    const [totalValueAllItems, setTotalValueAllItems] = useState(0);
 
     // Obtener opciones de filtro unificadas
     const fetchFilterOptions = useCallback(async () => {
@@ -148,18 +150,89 @@ export default function LevantamientoUnificado() {
         }
     }, []);
 
+    // Función para sumar valores filtrados (ambas tablas)
+    const sumFilteredValues = async (filters: {
+        estado?: string;
+        estatus?: string;
+        area?: string;
+        rubro?: string;
+        formadq?: string;
+    }) => {
+        let total = 0;
+        const sumTable = async (table: 'muebles' | 'mueblesitea') => {
+            let from = 0;
+            const pageSize = 1000;
+            let keepGoing = true;
+            while (keepGoing) {
+                let query = supabase
+                    .from(table)
+                    .select('valor')
+                    .neq('estatus', 'BAJA');
+                if (filters.estado) query = query.eq('estado', filters.estado);
+                if (filters.estatus) query = query.eq('estatus', filters.estatus);
+                if (filters.area) query = query.eq('area', filters.area);
+                if (filters.rubro) query = query.eq('rubro', filters.rubro);
+                if (filters.formadq) query = query.eq('formadq', filters.formadq);
+                const { data, error } = await query.range(from, from + pageSize - 1);
+                if (error) break;
+                if (data && data.length > 0) {
+                    total += data.reduce((sum, item) => sum + (parseFloat(item.valor) || 0), 0);
+                    if (data.length < pageSize) {
+                        keepGoing = false;
+                    } else {
+                        from += pageSize;
+                    }
+                } else {
+                    keepGoing = false;
+                }
+            }
+        };
+        await sumTable('muebles');
+        await sumTable('mueblesitea');
+        return total;
+    };
+
+    // Función para sumar todos los valores (sin filtros)
+    const sumAllValues = async () => {
+        let total = 0;
+        const sumTable = async (table: 'muebles' | 'mueblesitea') => {
+            let from = 0;
+            const pageSize = 1000;
+            let keepGoing = true;
+            while (keepGoing) {
+                const { data, error } = await supabase
+                    .from(table)
+                    .select('valor')
+                    .neq('estatus', 'BAJA')
+                    .range(from, from + pageSize - 1);
+                if (error) break;
+                if (data && data.length > 0) {
+                    total += data.reduce((sum, item) => sum + (parseFloat(item.valor) || 0), 0);
+                    if (data.length < pageSize) {
+                        keepGoing = false;
+                    } else {
+                        from += pageSize;
+                    }
+                } else {
+                    keepGoing = false;
+                }
+            }
+        };
+        await sumTable('muebles');
+        await sumTable('mueblesitea');
+        return total;
+    };
+
     // Obtener muebles unificados con paginación real
     const fetchMuebles = useCallback(async () => {
         setLoading(true);
         setError(null);
         try {
-            // 1. Construir queries base para count y data
             let countInea = supabase.from('muebles').select('*', { count: 'exact', head: true });
             let countItea = supabase.from('mueblesitea').select('*', { count: 'exact', head: true });
             let dataInea = supabase.from('muebles').select('*');
             let dataItea = supabase.from('mueblesitea').select('*');
 
-            // 2. Aplicar filtros de búsqueda
             if (searchTerm) {
                 const search = `%${searchTerm}%`;
                 countInea = countInea.or(`id_inv.ilike.${search},descripcion.ilike.${search},resguardante.ilike.${search},usufinal.ilike.${search}`);
@@ -168,7 +241,6 @@ export default function LevantamientoUnificado() {
                 dataItea = dataItea.or(`id_inv.ilike.${search},descripcion.ilike.${search},resguardante.ilike.${search},usufinal.ilike.${search}`);
             }
 
-            // 3. Aplicar filtros seleccionados
             Object.entries(filters).forEach(([key, value]) => {
                 if (value) {
                     countInea = countInea.eq(key, value);
@@ -178,18 +250,15 @@ export default function LevantamientoUnificado() {
                 }
             });
 
-            // 4. Obtener conteos reales
             const [countResInea, countResItea] = await Promise.all([countInea, countItea]);
             const totalInea = countResInea.count || 0;
             const totalItea = countResItea.count || 0;
             const total = totalInea + totalItea;
             setFilteredCount(total);
 
-            // 5. Calcular rangos para paginación combinada
             const fromGlobal = (currentPage - 1) * rowsPerPage;
             const toGlobal = fromGlobal + rowsPerPage - 1;
 
-            // Determinar cuántos registros pedir a cada tabla
             let fromInea = 0, toInea = -1, fromItea = 0, toItea = -1;
             if (fromGlobal < totalInea) {
                 fromInea = fromGlobal;
@@ -200,19 +269,16 @@ export default function LevantamientoUnificado() {
                 toItea = toGlobal - totalItea;
             }
 
-            // 6. Consultar datos paginados
             const [dataResInea, dataResItea] = await Promise.all([
                 toInea >= fromInea ? dataInea.order(sortField, { ascending: sortDirection === 'asc' }).range(fromInea, toInea) : { data: [] },
                 toItea >= fromItea ? dataItea.order(sortField, { ascending: sortDirection === 'asc' }).range(fromItea, toItea) : { data: [] },
             ]);
 
-            // 7. Unir resultados y agregar origen
             let pageMuebles: LevMueble[] = [
                 ...(dataResInea.data?.map(item => ({ ...item, origen: 'INEA' as const })) || []),
                 ...(dataResItea.data?.map(item => ({ ...item, origen: 'ITEA' as const })) || [])
             ];
 
-            // 8. Ordenar resultados combinados (si ambos tienen datos)
             if (dataResInea.data && dataResItea.data && dataResInea.data.length > 0 && dataResItea.data.length > 0) {
                 pageMuebles = pageMuebles.sort((a, b) => {
                     const aVal = a[sortField] || '';
@@ -225,11 +291,22 @@ export default function LevantamientoUnificado() {
 
             setMuebles(pageMuebles);
 
-            // Resetear item seleccionado si no está en los resultados
             if (selectedItem && !pageMuebles.some(item =>
                 item.id === selectedItem.id && item.origen === selectedItem.origen
             )) {
                 setSelectedItem(null);
+            }
+
+            const totalFilteredItems = await sumFilteredValues(filters);
+            setTotalValue(totalFilteredItems);
+            if (!Object.values(filters).some(value => value !== '')) {
+                const totalAllItems = await sumAllValues();
+                setTotalValueAllItems(totalAllItems);
+            } else {
+                if (totalValueAllItems === 0) {
+                    const totalAllItems = await sumAllValues();
+                    setTotalValueAllItems(totalAllItems);
+                }
             }
         } catch (error) {
             console.error('Error al cargar muebles:', error);
@@ -238,20 +315,17 @@ export default function LevantamientoUnificado() {
         } finally {
             setLoading(false);
         }
-    }, [searchTerm, filters, sortField, sortDirection, currentPage, rowsPerPage, selectedItem]);
+    }, [searchTerm, filters, sortField, sortDirection, currentPage, rowsPerPage, selectedItem, totalValueAllItems]);
 
-    // Inicializar
     useEffect(() => {
         fetchFilterOptions();
         fetchMuebles();
     }, [fetchFilterOptions, fetchMuebles]);
 
-    // Resetear página cuando cambian los filtros
     useEffect(() => {
         setCurrentPage(1);
     }, [searchTerm, filters, sortField, sortDirection, rowsPerPage]);
 
-    // Mensajes temporales
     useEffect(() => {
         if (message) {
             const timer = setTimeout(() => setMessage(null), 5000);
@@ -259,7 +333,6 @@ export default function LevantamientoUnificado() {
         }
     }, [message]);
 
-    // Limpiar filtros
     const clearFilters = () => {
         setFilters({
             estado: '',
@@ -272,22 +345,18 @@ export default function LevantamientoUnificado() {
         setCurrentPage(1);
     };
 
-    // Calcular total de páginas
     const totalPages = Math.ceil(filteredCount / rowsPerPage);
 
-    // Cambiar página
     const changePage = (page: number) => {
         if (page < 1 || page > totalPages) return;
         setCurrentPage(page);
     };
 
-    // Acortar texto
     const truncateText = (text: string | null, length: number = 50) => {
         if (!text) return '';
         return text.length > length ? `${text.substring(0, length)}...` : text;
     };
 
-    // Manejar exportación
     const handleExport = (type: 'pdf' | 'excel') => {
         setExportType(type);
         setShowExportModal(true);
@@ -296,7 +365,6 @@ export default function LevantamientoUnificado() {
     return (
         <div className="bg-black text-white min-h-screen p-2 sm:p-4 md:p-6 lg:p-8">
             <div className="w-full mx-auto bg-black rounded-lg sm:rounded-xl shadow-2xl overflow-hidden border border-gray-800">
-                {/* Encabezado */}
                 <div className="bg-black p-4 sm:p-6 flex flex-col sm:flex-row justify-between items-start sm:items-center border-b border-gray-800 gap-2 sm:gap-0">
                     <h1 className="text-xl sm:text-2xl md:text-3xl font-bold flex items-center">
                         <span className="mr-2 sm:mr-3 bg-gray-900 text-white p-1 sm:p-2 rounded-lg border border-gray-700 text-sm sm:text-base">LEV</span>
@@ -304,10 +372,22 @@ export default function LevantamientoUnificado() {
                     </h1>
                     <p className="text-gray-400 text-sm sm:text-base">Vista unificada de todos los bienes registrados</p>
                 </div>
-
-                {/* Controles y filtros */}
+                <div className="bg-black p-4 border-b border-gray-800 flex justify-center items-center">
+                    <div className="flex justify-between items-center">
+                        <div className="flex items-center gap-3">
+                            <div className="p-2 bg-blue-500/20 rounded-lg border border-blue-500/30">
+                                <DollarSign className="h-6 w-6 text-blue-400" />
+                            </div>
+                            <div className="flex flex-col items-center justify-center text-center">
+                                <h3 className="text-sm font-medium text-gray-400">Valor Total del Inventario</h3>
+                                <p className="text-2xl font-bold text-white">
+                                    ${(Object.values(filters).some(value => value !== '') ? totalValue : totalValueAllItems).toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
                 <div className="flex flex-col gap-4 p-4">
-                    {/* Barra de búsqueda y botones */}
                     <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-4">
                         <div className="relative flex-grow">
                             <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -364,8 +444,6 @@ export default function LevantamientoUnificado() {
                             </button>
                         </div>
                     </div>
-
-                    {/* Filtros (condicional) */}
                     {showFilters && (
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
                             <div>
@@ -455,8 +533,6 @@ export default function LevantamientoUnificado() {
                             </div>
                         </div>
                     )}
-
-                    {/* Mensajes */}
                     {message && (
                         <div className={`p-3 rounded-md ${message.type === 'success' ? 'bg-green-900/50 text-green-300 border border-green-800' :
                                 message.type === 'error' ? 'bg-red-900/50 text-red-300 border border-red-800' :
@@ -466,8 +542,6 @@ export default function LevantamientoUnificado() {
                             {message.text}
                         </div>
                     )}
-
-                    {/* Modal de exportación diferenciado */}
                     {showExportModal && (
                         <div className="fixed inset-0 bg-black/90 flex items-center justify-center z-50 px-4 animate-fadeIn">
                             <div className={`bg-black rounded-2xl shadow-2xl border w-full max-w-md overflow-hidden transition-all duration-300 transform
@@ -551,10 +625,7 @@ export default function LevantamientoUnificado() {
                             </div>
                         </div>
                     )}
-
-                    {/* Contenido principal */}
                     <div className="flex flex-col lg:flex-row gap-6">
-                        {/* Tabla */}
                         <div className="w-full">
                             <div className="bg-black rounded-lg border border-gray-800 overflow-x-auto overflow-y-auto flex flex-col flex-grow max-h-[70vh]">
                                 <table className="min-w-full divide-y divide-gray-800">
@@ -672,8 +743,6 @@ export default function LevantamientoUnificado() {
                                     </tbody>
                                 </table>
                             </div>
-
-                            {/* Paginación */}
                             <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mt-4">
                                 <div className="text-sm text-gray-400 font-medium">
                                     Mostrando <span className="text-white">{(currentPage - 1) * rowsPerPage + 1}-{Math.min(currentPage * rowsPerPage, filteredCount)}</span> de <span className="text-white">{filteredCount}</span> registros
