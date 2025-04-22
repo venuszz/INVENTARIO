@@ -321,7 +321,11 @@ export default function ConsultasIneaGeneral() {
         setShowBajaModal(false);
         setLoading(true);
         try {
-            const today = new Date().toISOString().split('T')[0];
+            // Obtener la fecha local en formato YYYY-MM-DD
+            const todayDate = new Date();
+            const today = todayDate.getFullYear() + '-' +
+                String(todayDate.getMonth() + 1).padStart(2, '0') + '-' +
+                String(todayDate.getDate()).padStart(2, '0');
             const { error } = await supabase
                 .from('muebles')
                 .update({ estatus: 'BAJA', causadebaja: bajaCause, fechabaja: today })

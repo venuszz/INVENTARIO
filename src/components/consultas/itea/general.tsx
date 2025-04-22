@@ -191,12 +191,17 @@ export default function ConsultasIteaGeneral() {
     const fetchAreas = useCallback(async () => {
         try {
             const { data, error } = await supabase
-                .from('areas')
-                .select('*')
-                .order('itea', { ascending: true });
+                .from('mueblesitea')
+                .select('area')
+                .neq('area', null);
 
             if (error) throw error;
-            setAreas(data || []);
+            // Extrae áreas únicas y limpias
+            const uniqueAreas = Array.from(
+                new Set((data || []).map(item => item.area?.trim()).filter(Boolean))
+            ).map((area, idx) => ({ id_area: idx + 1, itea: area }));
+
+            setAreas(uniqueAreas);
         } catch (error) {
             console.error('Error fetching areas:', error);
         }
