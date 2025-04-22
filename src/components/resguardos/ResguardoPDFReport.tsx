@@ -162,14 +162,18 @@ export const ResguardoPDF = ({ data }: { data: PdfData }) => {
                             <Text> </Text>
                             <Text> </Text>
                             <Text> </Text>                       
-                            <Text>_________________________</Text>
+                            <Text>_______________________________</Text>
+                            <Text> </Text>
+                            <Text> DIRECTOR(A) ADMIN. Y FINANZAS</Text>
                         </View>
                         <View style={styles.signatureBox}>
                             <Text>       CONOCIMIENTO</Text>
                             <Text> </Text>
                             <Text> </Text>
                             <Text> </Text>                        
-                            <Text>_________________________</Text>
+                            <Text>________________________________</Text>
+                            <Text> </Text>
+                            <Text> DIRECTOR(A) RECURSOS MATERIALES</Text>
                         </View>
                         <View style={styles.signatureBox}>
                             <Text>           RESGUARDANTE</Text>
