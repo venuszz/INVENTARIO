@@ -92,7 +92,6 @@ export default function CrearResguardos() {
     const [savingDirector, setSavingDirector] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [successMessage, setSuccessMessage] = useState<string | null>(null);
-    const [totalCount, setTotalCount] = useState(0);
     const [isLoadingMore] = useState(false);
     const detailRef = useRef<HTMLDivElement>(null);
     const [showUsufinalModal, setShowUsufinalModal] = useState(false);
@@ -103,6 +102,7 @@ export default function CrearResguardos() {
     const [uniqueResponsables, setUniqueResponsables] = useState<string[]>([]);
     const [showWarningModal, setShowWarningModal] = useState(false);
     const [directorInputDisabled, setDirectorInputDisabled] = useState(false);
+    const [directorSearchTerm, setDirectorSearchTerm] = useState('');
 
     interface PdfArticulo {
         id_inv: string | null;
@@ -143,92 +143,34 @@ export default function CrearResguardos() {
             if (resguardosError) throw resguardosError;
             const idsResguardados = new Set((resguardosData || []).map(r => r.num_inventario));
 
-            // Fetch total counts first (solo de muebles activos)
-            const mueblesCountQuery = supabase
-                .from('muebles')
-                .select('*', { count: 'exact', head: true })
-                .ilike('estatus', 'ACTIVO');
-
-            const mueblesIteaCountQuery = supabase
-                .from('mueblesitea')
-                .select('*', { count: 'exact', head: true })
-                .ilike('estatus', 'ACTIVO');
-
-            // Aplicar filtros adicionales al conteo si están presentes
-            if (areaFilter) {
-                mueblesCountQuery.ilike('area', `%${areaFilter}%`);
-                mueblesIteaCountQuery.ilike('area', `%${areaFilter}%`);
-            }
-
-            if (responsableFilter) {
-                mueblesCountQuery.ilike('usufinal', `%${responsableFilter}%`);
-                mueblesIteaCountQuery.ilike('usufinal', `%${responsableFilter}%`);
-            }
-
-            const [mueblesCountResult, mueblesIteaCountResult] = await Promise.all([
-                mueblesCountQuery,
-                mueblesIteaCountQuery
-            ]);
-
-            const totalItems = (mueblesCountResult.count || 0) + (mueblesIteaCountResult.count || 0);
-            setTotalCount(totalItems);
-
-            // Calculate range for pagination
-            const from = (page - 1) * rowsPerPage;
-            const to = from + rowsPerPage - 1;
-
-            // Build base queries with estado filter
+            // Traer todos los muebles activos de ambas tablas (sin paginar aún)
             let mueblesQuery = supabase
                 .from('muebles')
                 .select('id, id_inv, descripcion, estatus, resguardante, rubro, estado, usufinal, area')
-                .eq('estatus', 'ACTIVO')
-                .range(from, to)
-                .order(sortField, { ascending: sortDir === 'asc' });
-
+                .eq('estatus', 'ACTIVO');
             let mueblesIteaQuery = supabase
                 .from('mueblesitea')
                 .select('id, id_inv, descripcion, estatus, resguardante, rubro, estado, usufinal, area')
-                .eq('estatus', 'ACTIVO')
-                .range(from, to)
-                .order(sortField, { ascending: sortDir === 'asc' });
+                .eq('estatus', 'ACTIVO');
 
-            // Apply search if provided
             if (searchQuery) {
-                mueblesQuery = supabase
-                    .from('muebles')
-                    .select('id, id_inv, descripcion, estatus, resguardante, rubro, estado, usufinal, area')
-                    .eq('estatus', 'ACTIVO')
-                    .or(`id_inv.ilike.%${searchQuery}%,descripcion.ilike.%${searchQuery}%`)
-                    .range(from, to)
-                    .order(sortField, { ascending: sortDir === 'asc' });
-
-                mueblesIteaQuery = supabase
-                    .from('mueblesitea')
-                    .select('id, id_inv, descripcion, estatus, resguardante, rubro, estado, usufinal, area')
-                    .eq('estatus', 'ACTIVO')
-                    .or(`id_inv.ilike.%${searchQuery}%,descripcion.ilike.%${searchQuery}%`)
-                    .range(from, to)
-                    .order(sortField, { ascending: sortDir === 'asc' });
+                mueblesQuery = mueblesQuery.or(`id_inv.ilike.%${searchQuery}%,descripcion.ilike.%${searchQuery}%`);
+                mueblesIteaQuery = mueblesIteaQuery.or(`id_inv.ilike.%${searchQuery}%,descripcion.ilike.%${searchQuery}%`);
             }
-
-            // Aplicar filtros adicionales
             if (areaFilter) {
                 mueblesQuery = mueblesQuery.ilike('area', `%${areaFilter}%`);
                 mueblesIteaQuery = mueblesIteaQuery.ilike('area', `%${areaFilter}%`);
             }
-
             if (responsableFilter) {
                 mueblesQuery = mueblesQuery.ilike('usufinal', `%${responsableFilter}%`);
                 mueblesIteaQuery = mueblesIteaQuery.ilike('usufinal', `%${responsableFilter}%`);
             }
 
-            // Execute queries
             const [mueblesResult, mueblesIteaResult] = await Promise.all([
                 mueblesQuery,
                 mueblesIteaQuery
             ]);
 
-            // Agregar origen a cada mueble
             const mueblesWithOrigen = (mueblesResult.data || []).map(m => ({ ...m, origen: 'INEA' }));
             const mueblesIteaWithOrigen = (mueblesIteaResult.data || []).map(m => ({ ...m, origen: 'ITEA' }));
             let combinedData = [
@@ -236,22 +178,20 @@ export default function CrearResguardos() {
                 ...mueblesIteaWithOrigen
             ];
 
-            // 2. Filtrar los que ya están en resguardos
+            // Filtrar los que ya están en resguardos
             combinedData = combinedData.filter(m => m.id_inv && !idsResguardados.has(m.id_inv));
 
-            // Apply client-side sorting for combined results
+            // Ordenar
             combinedData.sort((a, b) => {
                 const aValue = a[sortField as keyof Mueble] || '';
                 const bValue = b[sortField as keyof Mueble] || '';
-
                 if (aValue < bValue) return sortDir === 'asc' ? -1 : 1;
                 if (aValue > bValue) return sortDir === 'asc' ? 1 : -1;
                 return 0;
             });
 
-            // Limit to rowsPerPage
-            const paginatedResults = combinedData.slice(0, rowsPerPage);
-
+            // Paginar después de filtrar
+            const paginatedResults = combinedData.slice((page - 1) * rowsPerPage, page * rowsPerPage);
             setFilteredMuebles(paginatedResults as Mueble[]);
 
             // Fetch directorio
@@ -399,30 +339,6 @@ export default function CrearResguardos() {
         }
     };
 
-    // Handle director input
-    const handleDirectorInput = (value: string) => {
-        if (directorInputDisabled) return;
-
-        // Buscar coincidencia exacta en el directorio
-        const found = directorio.find(d => d.nombre.trim().toLowerCase() === value.trim().toLowerCase());
-        if (found) {
-            setFormData(prev => ({
-                ...prev,
-                directorId: found.id_directorio.toString(),
-                area: found.area || '',
-                puesto: found.puesto || ''
-            }));
-            if (!found.area || !found.puesto) {
-                setIncompleteDirector(found);
-                setDirectorFormData({ area: found.area || '', puesto: found.puesto || '' });
-                setShowDirectorModal(true);
-            }
-        } else {
-            // Si no hay coincidencia, limpiar selección y no dejar seleccionar
-            setFormData(prev => ({ ...prev, directorId: '', area: '', puesto: '' }));
-        }
-    };
-
     // Save director info
     const saveDirectorInfo = async () => {
         if (!incompleteDirector) return;
@@ -517,7 +433,7 @@ export default function CrearResguardos() {
                 // Create resguardo
                 const { error: insertError } = await supabase.from('resguardos').insert({
                     folio: folioToUse,
-                    f_resguardo: new Date().toISOString(),
+                    f_resguardo: new Date(new Date().getFullYear(), new Date().getMonth(), new Date().getDate()).toISOString(),
                     area_resguardo: formData.area,
                     dir_area: directorNombre,
                     num_inventario: mueble.id_inv,
@@ -526,6 +442,7 @@ export default function CrearResguardos() {
                     condicion: mueble.estado,
                     usufinal: formData.resguardante,
                     created_by: createdBy,
+                    puesto: formData.puesto,
                 });
 
                 if (insertError) throw insertError;
@@ -593,7 +510,7 @@ export default function CrearResguardos() {
     };
 
     // Calculate total pages
-    const totalPages = Math.ceil(totalCount / rowsPerPage);
+    const totalPages = Math.ceil(filteredMuebles.length / rowsPerPage);
 
     const inputsDisabled = selectedMuebles.length === 0;
 
@@ -706,7 +623,6 @@ export default function CrearResguardos() {
                                             ))}
                                         </select>
                                     </div>
-
                                     {/* Filtro por Responsable */}
                                     <div className="relative">
                                         <label className="block text-xs font-medium text-gray-400 mb-1">Filtrar por Responsable</label>
@@ -751,7 +667,7 @@ export default function CrearResguardos() {
                                             className={`h-4 w-4 text-blue-400 cursor-pointer hover:text-blue-300 ${loading ? 'animate-spin' : ''}`}
                                             onClick={() => fetchData(currentPage, rowsPerPage, searchTerm, sortField, sortDirection, areaFilter, responsableFilter)}
                                         />
-                                        <span>Total: {totalCount} registros</span>
+                                        <span>Total: {filteredMuebles.length} registros</span>
                                     </div>
                                 </div>
                             </div>
@@ -882,6 +798,13 @@ export default function CrearResguardos() {
                                                             <div className="text-xs text-gray-500">
                                                                 {mueble.rubro}
                                                             </div>
+                                                            <div className={`text-[10px] mt-1 font-mono px-2 py-0.5 rounded-full border inline-block
+                                                                ${mueble.origen === 'INEA' ? 'bg-blue-900/30 text-blue-300 border-blue-700' :
+                                                                  mueble.origen === 'ITEA' ? 'bg-pink-900/30 text-pink-200 border-pink-700' :
+                                                                  'bg-gray-900/40 text-gray-400 border-gray-800'}`}
+                                                            >
+                                                                {mueble.origen}
+                                                            </div>
                                                         </td>
                                                         <td className="px-4 py-4">
                                                             <div className="text-sm text-white">{mueble.descripcion}</div>
@@ -982,16 +905,36 @@ export default function CrearResguardos() {
                                 <div className="relative">
                                     <input
                                         type="text"
-                                        value={formData.directorId ? directorio.find(d => d.id_directorio.toString() === formData.directorId)?.nombre || '' : ''}
-                                        onChange={e => handleDirectorInput(e.target.value)}
-                                        placeholder="Director de Área (buscar)"
+                                        value={formData.directorId ? directorio.find(d => d.id_directorio.toString() === formData.directorId)?.nombre || directorSearchTerm : directorSearchTerm}
+                                        onChange={e => {
+                                            setDirectorSearchTerm(e.target.value);
+                                            // Buscar coincidencia exacta
+                                            const found = directorio.find(d => d.nombre.trim().toLowerCase() === e.target.value.trim().toLowerCase());
+                                            if (found) {
+                                                setFormData(prev => ({
+                                                    ...prev,
+                                                    directorId: found.id_directorio.toString(),
+                                                    area: found.area || '',
+                                                    puesto: found.puesto || ''
+                                                }));
+                                                if (!found.area || !found.puesto) {
+                                                    setIncompleteDirector(found);
+                                                    setDirectorFormData({ area: found.area || '', puesto: found.puesto || '' });
+                                                    setShowDirectorModal(true);
+                                                }
+                                            } else {
+                                                setFormData(prev => ({ ...prev, directorId: '', area: '', puesto: '' }));
+                                            }
+                                        }}
+                                        placeholder="Buscar director por nombre..."
                                         className="block w-full bg-black border border-gray-800 rounded-lg py-2.5 px-4 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-gray-300 appearance-none"
                                         list="directores-list"
                                         disabled={inputsDisabled || directorInputDisabled}
+                                        autoComplete="off"
                                     />
-                                    {/* Lista de sugerencias para autocompletar */}
+                                    {/* Lista de sugerencias filtrada por el término de búsqueda */}
                                     <datalist id="directores-list">
-                                        {directorio.map(d => (
+                                        {directorio.filter(d => d.nombre.toLowerCase().includes(directorSearchTerm.toLowerCase())).map(d => (
                                             <option key={d.id_directorio} value={d.nombre} />
                                         ))}
                                     </datalist>
@@ -1064,7 +1007,7 @@ export default function CrearResguardos() {
                         </div>
 
                         {/* Selected Items */}
-                        <div className="bg-gray-900/20 rounded-xl border border-gray-800 p-4 flex-grow overflow-y-auto shadow-inner relative">
+                        <div className="bg-gray-900/20 rounded-xl border border-gray-800 p-4 flex-grow overflow-y-hidden shadow-inner relative max-h-[70vh]">
                             <h2 className="text-lg font-medium text-gray-100 mb-2 flex items-center gap-2 sticky top-0 z-20 bg-black/80 p-2 -m-2 backdrop-blur-md">
                                 <LayoutGrid className="h-5 w-5 text-blue-400" />
                                 Artículos Seleccionados ({selectedMuebles.length})
@@ -1077,7 +1020,7 @@ export default function CrearResguardos() {
                                     <p className="text-xs mt-1">Haga clic en un artículo para agregarlo</p>
                                 </div>
                             ) : (
-                                <div className="space-y-3 mt-2">
+                                <div className="space-y-3 mt-2 max-h-[60vh] overflow-y-auto pr-1">
                                     {selectedMuebles.map((mueble) => (
                                         <div key={`selected-${mueble.id}`} className="bg-black rounded-lg p-3 flex justify-between items-start border border-gray-800 shadow-sm hover:shadow-md transition-shadow">
                                             <div className="flex-1 min-w-0">
@@ -1100,6 +1043,13 @@ export default function CrearResguardos() {
                                                 <div className="text-xs text-gray-500 mt-1 flex items-center gap-1">
                                                     <Briefcase className="h-3 w-3" />
                                                     {mueble.rubro}
+                                                </div>
+                                                <div className={`text-[10px] mt-1 font-mono px-2 py-0.5 rounded-full border inline-block
+                                                    ${mueble.origen === 'INEA' ? 'bg-blue-900/30 text-blue-300 border-blue-700' :
+                                                      mueble.origen === 'ITEA' ? 'bg-pink-900/30 text-pink-200 border-pink-700' :
+                                                      'bg-gray-900/40 text-gray-400 border-gray-800'}`}
+                                                >
+                                                    {mueble.origen}
                                                 </div>
                                             </div>
                                             <button

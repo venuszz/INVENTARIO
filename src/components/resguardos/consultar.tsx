@@ -155,7 +155,7 @@ export default function ConsultarResguardos() {
                     fecha: new Date(detalles.f_resguardo).toLocaleDateString(),
                     director: detalles.dir_area,
                     area: detalles.area_resguardo || '',
-                    puesto: '',
+                    puesto: firstItem.puesto, // <-- ahora se pasa el puesto correcto
                     resguardante: detalles.usufinal || '',
                     articulos: detalles.articulos.map(art => ({
                         id_inv: art.num_inventario,
@@ -185,11 +185,51 @@ export default function ConsultarResguardos() {
         if (!selectedResguardo) return;
         setDeleting(true);
         try {
+            // 1. Obtener todos los artículos de este resguardo
+            const { data: articulos, error: fetchError } = await supabase
+                .from('resguardos')
+                .select('num_inventario')
+                .eq('folio', selectedResguardo.folio);
+            if (fetchError) throw fetchError;
+
+            // 2. Eliminar los resguardos
             const { error } = await supabase
                 .from('resguardos')
                 .delete()
                 .eq('folio', selectedResguardo.folio);
             if (error) throw error;
+
+            // 3. Limpiar área y usufinal en muebles/mueblesitea
+            if (articulos && articulos.length > 0) {
+                for (const art of articulos) {
+                    const numInv = art.num_inventario;
+                    // Buscar en muebles
+                    const { data: mueble } = await supabase
+                        .from('muebles')
+                        .select('id')
+                        .eq('id_inv', numInv)
+                        .maybeSingle();
+                    if (mueble && mueble.id) {
+                        await supabase
+                            .from('muebles')
+                            .update({ area: '', usufinal: '' })
+                            .eq('id', mueble.id);
+                    } else {
+                        // Buscar en mueblesitea
+                        const { data: muebleItea } = await supabase
+                            .from('mueblesitea')
+                            .select('id')
+                            .eq('id_inv', numInv)
+                            .maybeSingle();
+                        if (muebleItea && muebleItea.id) {
+                            await supabase
+                                .from('mueblesitea')
+                                .update({ area: '', usufinal: '' })
+                                .eq('id', muebleItea.id);
+                        }
+                    }
+                }
+            }
             setSelectedResguardo(null);
             setPdfData(null);
             setShowDeleteAllModal(false);
@@ -206,12 +246,40 @@ export default function ConsultarResguardos() {
         if (!selectedResguardo) return;
         setDeleting(true);
         try {
+            // 1. Eliminar el artículo del resguardo
             const { error } = await supabase
                 .from('resguardos')
                 .delete()
                 .eq('folio', selectedResguardo.folio)
                 .eq('num_inventario', articulo.num_inventario);
             if (error) throw error;
+
+            // 2. Limpiar área y usufinal en muebles/mueblesitea
+            // Buscar en muebles
+            const { data: mueble } = await supabase
+                .from('muebles')
+                .select('id')
+                .eq('id_inv', articulo.num_inventario)
+                .maybeSingle();
+            if (mueble && mueble.id) {
+                await supabase
+                    .from('muebles')
+                    .update({ area: '', usufinal: '' })
+                    .eq('id', mueble.id);
+            } else {
+                // Buscar en mueblesitea
+                const { data: muebleItea } = await supabase
+                    .from('mueblesitea')
+                    .select('id')
+                    .eq('id_inv', articulo.num_inventario)
+                    .maybeSingle();
+                if (muebleItea && muebleItea.id) {
+                    await supabase
+                        .from('mueblesitea')
+                        .update({ area: '', usufinal: '' })
+                        .eq('id', muebleItea.id);
+                }
+            }
             // Refrescar detalles
             await fetchResguardoDetails(selectedResguardo.folio);
             setShowDeleteItemModal(null);
@@ -634,14 +702,14 @@ export default function ConsultarResguardos() {
                         </div>
 
                         {/* Selected Items */}
-                        <div className="bg-gray-900/20 rounded-xl border border-gray-800 p-4 flex-grow overflow-y-auto shadow-inner relative">
+                        <div className="bg-gray-900/20 rounded-xl border border-gray-800 p-4 flex-grow shadow-inner relative max-h-[50vh] overflow-hidden">
                             <h2 className="text-lg font-medium text-gray-100 mb-2 flex items-center gap-2 sticky top-0 z-20 bg-black/80 p-2 -m-2 backdrop-blur-md">
                                 <ListChecks className="h-5 w-5 text-blue-400" />
                                 Artículos del Resguardo ({selectedResguardo?.articulos.length || 0})
                             </h2>
 
                             {selectedResguardo ? (
-                                <div className="space-y-3 mt-2">
+                                <div className="space-y-3 mt-2 overflow-auto max-h-[30vh]">
                                     {selectedResguardo.articulos.map((articulo, index) => (
                                         <div key={`${selectedResguardo.folio}-${index}`} className="bg-black rounded-lg p-3 border border-gray-800 shadow-sm flex items-start">
                                             <div className="flex-1 min-w-0">
@@ -668,8 +736,7 @@ export default function ConsultarResguardos() {
                                             <button
                                                 title="Eliminar artículo"
                                                 onClick={() => setShowDeleteItemModal({ index, articulo })}
-                                                className="ml-2 p-1 text-gray-400 hover:text-red-400 rounded-full hover:bg-gray-900/50 self-center ml-auto"
-                                                style={{ marginLeft: 'auto' }}
+                                                className="p-1 text-gray-400 hover:text-red-400 rounded-full hover:bg-gray-900/50 self-center ml-auto btn-delete-articulo"
                                             >
                                                 <CircleX className="h-4 w-4" />
                                             </button>
