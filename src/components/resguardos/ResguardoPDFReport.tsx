@@ -110,7 +110,7 @@ export const ResguardoPDF = ({ data }: { data: PdfData }) => {
         <Document>
             <Page size="A4" style={styles.page}>
                 <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <Image src="/images/LOGO-ITEA.png" style={{ width: 70, height: 30, objectFit: "contain" }} />
+                    <Image src="/images/LOGO-ITEA.png" style={{ width: 100, height: 50, objectFit: "contain" }} />
                     <View style={{ flex: 1, alignItems: 'center', paddingHorizontal: 10 }}>
                         <Text style={[styles.header, { textAlign: 'center' }]}>INSTITUTO TLAXCALTECA PARA LA EDUCACIÓN DE LOS ADULTOS</Text>
                         <Text style={[styles.header, { textAlign: 'center' }]}>DIRECCIÓN DE ADMINISTRACIÓN Y FINANZAS</Text>
@@ -138,17 +138,17 @@ export const ResguardoPDF = ({ data }: { data: PdfData }) => {
                             )}
                             <View style={styles.table}>
                                 <View style={[styles.tableRow, styles.tableHeader]}>
-                                    <Text style={[styles.tableCell, styles.tableCellHeader, { flex: 2 }]}>ID Inventario</Text>
+                                    <Text style={[styles.tableCell, styles.tableCellHeader, { flex: 2.5 }]}>ID Inventario</Text>
                                     <Text style={[styles.tableCell, styles.tableCellHeader, { flex: 5.5 }]}>Descripción</Text>
-                                    <Text style={[styles.tableCell, styles.tableCellHeader, { flex: 1.5 }]}>Rubro</Text>
-                                    <Text style={[styles.tableCell, styles.tableCellHeader, { flex: 1 }]}>Estado</Text>
+                                    <Text style={[styles.tableCell, styles.tableCellHeader, { flex: 1.6 }]}>Rubro</Text>
+                                    <Text style={[styles.tableCell, styles.tableCellHeader, { flex: .7 }]}>Estado</Text>
                                 </View>
                                 {grupo.articulos.map((art: PdfArticulo, idx2: number) => (
                                     <View style={styles.tableRow} key={idx2}>
-                                        <Text style={{ ...styles.tableCell, flex: 2 }}>{art.id_inv}</Text>
+                                        <Text style={{ ...styles.tableCell, flex: 2.5 }}>{art.id_inv}</Text>
                                         <Text style={{ ...styles.tableCell, flex: 5.5 }}>{art.descripcion}</Text>
-                                        <Text style={{ ...styles.tableCell, flex: 1.5 }}>{art.rubro}</Text>
-                                        <Text style={{ ...styles.tableCell, flex: 1 }}>{art.estado}</Text>
+                                        <Text style={{ ...styles.tableCell, flex: 1.6 }}>{art.rubro}</Text>
+                                        <Text style={{ ...styles.tableCell, flex: .7 }}>{art.estado}</Text>
                                     </View>
                                 ))}
                             </View>
@@ -208,10 +208,5 @@ const ResguardoPDFReport: React.FC<ResguardoPDFReportProps> = ({ data }) => {
         </div>
     );
 };
-
-export default ResguardoPDFReport;
-        </Document>
-    );
-
 
 export default ResguardoPDFReport;
