@@ -3,7 +3,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import {
     Search, RefreshCw, Filter, ChevronLeft, ChevronRight,
     ArrowUpDown, AlertCircle, X, Save, Trash2, Check, CircleSlash2,
-    ActivitySquare, LayoutGrid, TagIcon, ChevronDown, Building2, BookOpen, FileText, User, Shield, AlertTriangle, Calendar, Info, Edit, Receipt, ClipboardList, Store, CheckCircle, XCircle, Plus
+    ActivitySquare, LayoutGrid, TagIcon, ChevronDown, Building2, BookOpen, FileText, User, Shield, AlertTriangle, Calendar, Info, Edit, Receipt, ClipboardList, Store, CheckCircle, XCircle, Plus, DollarSign
 } from 'lucide-react';
 import supabase from '@/app/lib/supabase/client';
 
@@ -185,6 +185,10 @@ export default function ConsultasIneaGeneral() {
     const [bajaCause, setBajaCause] = useState('');
 
     const detailRef = useRef<HTMLDivElement>(null);
+
+    // Estados para totales
+    const [totalValue, setTotalValue] = useState(0); // Total de artículos filtrados
+    const [totalValueAllItems, setTotalValueAllItems] = useState(0); // Total de todos los artículos
 
     // Función para obtener el directorio
     const fetchDirectorio = useCallback(async () => {
@@ -400,6 +404,70 @@ export default function ConsultasIneaGeneral() {
             }
 
             setError(null);
+
+            // Función para sumar valores filtrados
+            async function sumFilteredMueblesValues(filters: { estado?: string; estatus?: string; area?: string; rubro?: string }) {
+                let total = 0;
+                let from = 0;
+                const pageSize = 1000;
+                let keepGoing = true;
+                while (keepGoing) {
+                    const { data, error } = await supabase
+                        .from('muebles')
+                        .select('valor')
+                        .neq('estatus', 'BAJA')
+                        .match({
+                            ...(filters.estado && { estado: filters.estado }),
+                            ...(filters.estatus && { estatus: filters.estatus }),
+                            ...(filters.area && { area: filters.area }),
+                            ...(filters.rubro && { rubro: filters.rubro })
+                        })
+                        .range(from, from + pageSize - 1);
+                    if (error) break;
+                    if (data && data.length > 0) {
+                        total += data.reduce((sum, item) => sum + (parseFloat(item.valor) || 0), 0);
+                        if (data.length < pageSize) {
+                            keepGoing = false;
+                        } else {
+                            from += pageSize;
+                        }
+                    } else {
+                        keepGoing = false;
+                    }
+                }
+                return total;
+            }
+            // Función para sumar todos los valores
+            async function sumAllMueblesValues() {
+                let total = 0;
+                let from = 0;
+                const pageSize = 1000;
+                let keepGoing = true;
+                while (keepGoing) {
+                    const { data, error } = await supabase
+                        .from('muebles')
+                        .select('valor')
+                        .neq('estatus', 'BAJA')
+                        .range(from, from + pageSize - 1);
+                    if (error) break;
+                    if (data && data.length > 0) {
+                        total += data.reduce((sum, item) => sum + (parseFloat(item.valor) || 0), 0);
+                        if (data.length < pageSize) {
+                            keepGoing = false;
+                        } else {
+                            from += pageSize;
+                        }
+                    } else {
+                        keepGoing = false;
+                    }
+                }
+                return total;
+            }
+            // Calcular totales
+            const totalFilteredItems = await sumFilteredMueblesValues(filters);
+            setTotalValue(totalFilteredItems);
+            const totalAllItems = await sumAllMueblesValues();
+            setTotalValueAllItems(totalAllItems);
         } catch (error) {
             console.error('Error fetching data:', error);
             setError('Error al cargar los datos. Por favor, intente nuevamente.');
@@ -773,6 +841,23 @@ export default function ConsultasIneaGeneral() {
                         Consulta de Inventario INEA
                     </h1>
                     <p className="text-gray-400 text-sm sm:text-base">Vista general de todos los bienes registrados en el sistema.</p>
+                </div>
+
+                {/* Nuevo componente de valor total */}
+                <div className="bg-black p-4 border-b border-gray-800 flex justify-center items-center">
+                    <div className="flex justify-between items-center">
+                        <div className="flex items-center gap-3">
+                            <div className="p-2 bg-blue-500/20 rounded-lg border border-blue-500/30">
+                                <DollarSign className="h-6 w-6 text-blue-400" />
+                            </div>
+                            <div className="flex flex-col items-center justify-center text-center">
+                                <h3 className="text-sm font-medium text-gray-400">Valor Total del Inventario</h3>
+                                <p className="text-2xl font-bold text-white">
+                                    ${(Object.values(filters).some(value => value !== '') ? totalValue : totalValueAllItems).toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                </p>
+                            </div>
+                        </div>
+                    </div>
                 </div>
 
                 {/* Contenedor principal */}

@@ -5,7 +5,7 @@ import {
     ArrowUpDown, AlertCircle, X, Save, CircleSlash2, LayoutGrid, 
     TagIcon, ChevronDown, Building2, BookOpen, FileText, User, 
     Shield, AlertTriangle, Calendar, Info, Edit, Receipt, 
-    ClipboardList, Store, CheckCircle, XCircle, Plus, RotateCw
+    ClipboardList, Store, CheckCircle, XCircle, Plus, RotateCw, DollarSign
 } from 'lucide-react';
 import supabase from '@/app/lib/supabase/client';
 
@@ -148,6 +148,7 @@ export default function ConsultasIteaBajas() {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [filteredCount, setFilteredCount] = useState(0);
+    const [totalValue, setTotalValue] = useState(0); // Nuevo estado para el total
     const [imageFile, setImageFile] = useState<File | null>(null);
     const [imagePreview, setImagePreview] = useState<string | null>(null);
     const [uploading, setUploading] = useState(false);
@@ -186,6 +187,65 @@ export default function ConsultasIteaBajas() {
     const [reactivating, setReactivating] = useState(false);
 
     const detailRef = useRef<HTMLDivElement>(null);
+
+    // --- Calcular el total de los valores filtrados (bajas) con paginación automática ---
+    async function sumFilteredBajasITEA(filters: { estado: string; area: string; rubro: string }) {
+        let total = 0;
+        let from = 0;
+        const pageSize = 1000;
+        let keepGoing = true;
+        while (keepGoing) {
+            const { data, error } = await supabase
+                .from('mueblesitea')
+                .select('valor')
+                .match({
+                    estatus: 'BAJA',
+                    ...(filters.estado && { estado: filters.estado }),
+                    ...(filters.area && { area: filters.area }),
+                    ...(filters.rubro && { rubro: filters.rubro })
+                })
+                .range(from, from + pageSize - 1);
+            if (error) break;
+            if (data && data.length > 0) {
+                total += data.reduce((sum, item) => sum + (parseFloat(item.valor) || 0), 0);
+                if (data.length < pageSize) {
+                    keepGoing = false;
+                } else {
+                    from += pageSize;
+                }
+            } else {
+                keepGoing = false;
+            }
+        }
+        return total;
+    }
+
+    // --- Calcular el total de todas las bajas (sin filtros) con paginación automática ---
+    async function sumAllBajasITEA() {
+        let total = 0;
+        let from = 0;
+        const pageSize = 1000;
+        let keepGoing = true;
+        while (keepGoing) {
+            const { data, error } = await supabase
+                .from('mueblesitea')
+                .select('valor')
+                .eq('estatus', 'BAJA')
+                .range(from, from + pageSize - 1);
+            if (error) break;
+            if (data && data.length > 0) {
+                total += data.reduce((sum, item) => sum + (parseFloat(item.valor) || 0), 0);
+                if (data.length < pageSize) {
+                    keepGoing = false;
+                } else {
+                    from += pageSize;
+                }
+            } else {
+                keepGoing = false;
+            }
+        }
+        return total;
+    }
 
     // Función para obtener el directorio
     const fetchDirectorio = useCallback(async () => {
@@ -383,6 +443,15 @@ export default function ConsultasIteaBajas() {
 
             const mueblesData = (data as MuebleITEA[]) || [];
             setMuebles(mueblesData);
+
+            // Calcular el total de los valores filtrados
+            let total;
+            if (Object.values(filters).some(v => v)) {
+                total = await sumFilteredBajasITEA(filters);
+            } else {
+                total = await sumAllBajasITEA();
+            }
+            setTotalValue(total);
 
             if (selectedItem && !mueblesData.some(item => item.id === selectedItem.id)) {
                 setSelectedItem(null);
@@ -753,6 +822,23 @@ export default function ConsultasIteaBajas() {
                         Artículos dados de Baja (ITEA)
                     </h1>
                     <p className="text-red-300 text-sm sm:text-base">Vista de todos los bienes dados de baja en el sistema ITEA.</p>
+                </div>
+
+                {/* Nuevo componente de valor total */}
+                <div className="bg-[#210101] p-4 border-b border-[#290101] flex items-center justify-center">
+                    <div className="flex justify-between items-center">
+                        <div className="flex items-center gap-3">
+                            <div className="p-2 bg-red-500/20 rounded-lg border border-red-500/30">
+                                <DollarSign className="h-6 w-6 text-red-400" />
+                            </div>
+                            <div>
+                                <h3 className="text-sm font-medium text-gray-400">Valor Total de Bajas</h3>
+                                <p className="text-2xl font-bold text-white">
+                                    ${totalValue.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                </p>
+                            </div>
+                        </div>
+                    </div>
                 </div>
 
                 {/* Contenedor principal */}
