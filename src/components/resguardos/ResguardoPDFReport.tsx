@@ -155,7 +155,7 @@ export const ResguardoPDF = ({ data }: { data: PdfData }) => {
                         </View>
                     )
                 ))}
-                <View style={{ position: 'absolute', bottom: 10, left: 25, right: 25 }}>
+                <View style={{ position: 'absolute', bottom: 20, left: 25, right: 25 }}>
                     <View style={styles.signature}>
                         <View style={styles.signatureBox}>
                             <Text>         AUTORIZA</Text>
@@ -183,7 +183,7 @@ export const ResguardoPDF = ({ data }: { data: PdfData }) => {
                     </View>
                     <Text
                         style={{
-                            fontSize: 6,
+                            fontSize: 8,
                             textAlign: 'right',
                             marginTop: 10,
                         }}
