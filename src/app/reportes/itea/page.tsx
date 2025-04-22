@@ -1,4 +1,4 @@
-import Reportes from "@/components/working"
+import Reportes from "@/components/reportes/itea";
 import { Metadata } from "next";
 
 export const metadata: Metadata = {
