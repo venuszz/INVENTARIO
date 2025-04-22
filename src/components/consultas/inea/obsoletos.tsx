@@ -6,7 +6,7 @@ import {
     LayoutGrid, TagIcon, ChevronDown, Building2, BookOpen, 
     FileText, User, Shield, AlertTriangle, Calendar, Info,
     Edit, Receipt, ClipboardList, Store, CheckCircle, XCircle,
-    Plus, RotateCw
+    Plus, RotateCw, DollarSign
 } from 'lucide-react';
 import supabase from '@/app/lib/supabase/client';
 
@@ -186,6 +186,8 @@ export default function ConsultasIneaBajas() {
     const [showReactivarModal, setShowReactivarModal] = useState(false);
     const [reactivating, setReactivating] = useState(false);
 
+    const [totalValue, setTotalValue] = useState(0);
+
     const detailRef = useRef<HTMLDivElement>(null);
 
     // Función para obtener el directorio
@@ -339,6 +341,65 @@ export default function ConsultasIneaBajas() {
         }
     };
 
+    // Función para sumar el valor total de bajas filtradas
+    async function sumFilteredBajas(filters: { estado: string; area: string; rubro: string }) {
+        let total = 0;
+        let from = 0;
+        const pageSize = 1000;
+        let keepGoing = true;
+        while (keepGoing) {
+            const { data, error } = await supabase
+                .from('muebles')
+                .select('valor')
+                .match({
+                    estatus: 'BAJA',
+                    ...(filters.estado && { estado: filters.estado }),
+                    ...(filters.area && { area: filters.area }),
+                    ...(filters.rubro && { rubro: filters.rubro })
+                })
+                .range(from, from + pageSize - 1);
+            if (error) break;
+            if (data && data.length > 0) {
+                total += data.reduce((sum, item) => sum + (item.valor || 0), 0);
+                if (data.length < pageSize) {
+                    keepGoing = false;
+                } else {
+                    from += pageSize;
+                }
+            } else {
+                keepGoing = false;
+            }
+        }
+        return total;
+    }
+
+    // Función para sumar el valor total de todas las bajas
+    async function sumAllBajas() {
+        let total = 0;
+        let from = 0;
+        const pageSize = 1000;
+        let keepGoing = true;
+        while (keepGoing) {
+            const { data, error } = await supabase
+                .from('muebles')
+                .select('valor')
+                .eq('estatus', 'BAJA')
+                .range(from, from + pageSize - 1);
+            if (error) break;
+            if (data && data.length > 0) {
+                total += data.reduce((sum, item) => sum + (item.valor || 0), 0);
+                if (data.length < pageSize) {
+                    keepGoing = false;
+                } else {
+                    from += pageSize;
+                }
+            } else {
+                keepGoing = false;
+            }
+        }
+        return total;
+    }
+
     // Cambia el filtro para incluir solo los registros con estatus 'BAJA'
     const fetchMuebles = useCallback(async () => {
         setLoading(true);
@@ -392,6 +453,15 @@ export default function ConsultasIneaBajas() {
             }
 
             setError(null);
+
+            // Calcular el total de valor de bajas
+            let total;
+            if (Object.values(filters).some(v => v)) {
+                total = await sumFilteredBajas(filters);
+            } else {
+                total = await sumAllBajas();
+            }
+            setTotalValue(total);
         } catch (error) {
             console.error('Error fetching data:', error);
             setError('Error al cargar los datos. Por favor, intente nuevamente.');
@@ -763,6 +833,23 @@ export default function ConsultasIneaBajas() {
                         Artículos dados de Baja
                     </h1>
                     <p className="text-red-300 text-sm sm:text-base">Vista de todos los bienes dados de baja en el sistema.</p>
+                </div>
+
+                {/* Nuevo componente de valor total */}
+                <div className="bg-[#210101] p-4 border-b border-[#290101] flex items-center justify-center">
+                    <div className="flex justify-between items-center">
+                        <div className="flex items-center gap-3">
+                            <div className="p-2 bg-red-500/20 rounded-lg border border-red-500/30">
+                                <DollarSign className="h-6 w-6 text-red-400" />
+                            </div>
+                            <div>
+                                <h3 className="text-sm font-medium text-gray-400">Valor Total de Bajas</h3>
+                                <p className="text-2xl font-bold text-white">
+                                    ${totalValue.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                </p>
+                            </div>
+                        </div>
+                    </div>
                 </div>
 
                 {/* Contenedor principal */}

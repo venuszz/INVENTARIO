@@ -109,6 +109,7 @@ export default function CrearResguardos() {
         descripcion: string | null;
         rubro: string | null;
         estado: string | null;
+        origen?: string | null;
     }
 
     interface PdfData {
@@ -416,7 +417,8 @@ export default function CrearResguardos() {
             const resguardoPromises = selectedMuebles.map(async (mueble) => {
                 // Usar el campo origen para determinar la tabla
                 const tableName = mueble.origen === 'ITEA' ? 'mueblesitea' : 'muebles';
-                const directorNombre = directorio.find(d => d.id_directorio.toString() === formData.directorId)?.nombre;
+                // CORREGIDO: buscar director por ID, no por nombre
+                const directorNombre = directorio.find(dir => dir.id_directorio.toString() === formData.directorId)?.nombre;
 
                 // Update mueble: ahora también actualiza usufinal y area
                 const { error: updateError } = await supabase
@@ -443,6 +445,7 @@ export default function CrearResguardos() {
                     usufinal: formData.resguardante,
                     created_by: createdBy,
                     puesto: formData.puesto,
+                    origen: mueble.origen || '', // Guardar el origen INEA o ITEA
                 });
 
                 if (insertError) throw insertError;
@@ -462,7 +465,8 @@ export default function CrearResguardos() {
                     id_inv: m.id_inv,
                     descripcion: m.descripcion,
                     rubro: m.rubro,
-                    estado: m.estado
+                    estado: m.estado,
+                    origen: m.origen || null
                 }))
             });
             setShowPDFButton(true);

@@ -3,7 +3,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import {
     Search, RefreshCw, Filter, ChevronLeft, ChevronRight,
     ArrowUpDown, AlertCircle, X, Save, Trash2, Check, CircleSlash2,
-    ActivitySquare, LayoutGrid, TagIcon, ChevronDown, Building2, BookOpen, FileText, User, Shield, AlertTriangle, Calendar, Info, Edit, Receipt, ClipboardList, Store, CheckCircle, XCircle, Plus, Clock
+    ActivitySquare, LayoutGrid, TagIcon, ChevronDown, Building2, BookOpen, FileText, User, Shield, AlertTriangle, Calendar, Info, Edit, Receipt, ClipboardList, Store, CheckCircle, XCircle, Plus, Clock, DollarSign
 } from 'lucide-react';
 import supabase from '@/app/lib/supabase/client';
 
@@ -151,6 +151,8 @@ export default function ConsultasIteaGeneral() {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [filteredCount, setFilteredCount] = useState(0);
+    const [totalValue, setTotalValue] = useState(0); // Nuevo estado para el total
+    const [totalValueAllItems, setTotalValueAllItems] = useState(0); // Total de todos los artículos
     const [imageFile, setImageFile] = useState<File | null>(null);
     const [imagePreview, setImagePreview] = useState<string | null>(null);
     const [uploading, setUploading] = useState(false);
@@ -370,10 +372,9 @@ export default function ConsultasIteaGeneral() {
         try {
             let countQuery = supabase
                 .from('mueblesitea')
-                .select('*', { count: 'exact', head: false })
-                .neq('estatus', 'BAJA');
+                .select('*', { count: 'exact', head: false });
 
-            let dataQuery = supabase.from('mueblesitea').select('*').neq('estatus', 'BAJA');
+            let dataQuery = supabase.from('mueblesitea').select('*');
 
             if (searchTerm) {
                 const searchFilter = `id_inv.ilike.%${searchTerm}%,descripcion.ilike.%${searchTerm}%,resguardante.ilike.%${searchTerm}%,usufinal.ilike.%${searchTerm}%`;
@@ -404,12 +405,75 @@ export default function ConsultasIteaGeneral() {
             if (error) throw error;
             const mueblesData = (data as Mueble[]) || [];
             setMuebles(mueblesData);
+
+            // --- Calcular el total de los valores filtrados sumando en frontend con paginación automática ---
+            async function sumFilteredMueblesiteaValues(filters: { estado?: string; estatus?: string; area?: string; rubro?: string }) {
+                let total = 0;
+                let from = 0;
+                const pageSize = 1000;
+                let keepGoing = true;
+                while (keepGoing) {
+                    const { data, error } = await supabase
+                        .from('mueblesitea')
+                        .select('valor')
+                        .match({
+                            ...(filters.estado && { estado: filters.estado }),
+                            ...(filters.estatus && { estatus: filters.estatus }),
+                            ...(filters.area && { area: filters.area }),
+                            ...(filters.rubro && { rubro: filters.rubro })
+                        })
+                        .range(from, from + pageSize - 1);
+                    if (error) break;
+                    if (data && data.length > 0) {
+                        total += data.reduce((sum, item) => sum + (parseFloat(item.valor) || 0), 0);
+                        if (data.length < pageSize) {
+                            keepGoing = false;
+                        } else {
+                            from += pageSize;
+                        }
+                    } else {
+                        keepGoing = false;
+                    }
+                }
+                return total;
+            }
+            const totalFilteredItems = await sumFilteredMueblesiteaValues(filters);
+            setTotalValue(totalFilteredItems);
+
             if (selectedItem && !mueblesData.some(item => item.id === selectedItem.id)) {
                 setSelectedItem(null);
                 setIsEditing(false);
                 setEditFormData(null);
             }
             setError(null);
+
+            // --- Calcular el total de todos los artículos (sin filtros, incluyendo BAJA) sumando en frontend con paginación automática ---
+            async function sumAllMueblesiteaValues() {
+                let total = 0;
+                let from = 0;
+                const pageSize = 1000;
+                let keepGoing = true;
+                while (keepGoing) {
+                    const { data, error } = await supabase
+                        .from('mueblesitea')
+                        .select('valor')
+                        .range(from, from + pageSize - 1);
+                    if (error) break;
+                    if (data && data.length > 0) {
+                        total += data.reduce((sum, item) => sum + (parseFloat(item.valor) || 0), 0);
+                        if (data.length < pageSize) {
+                            keepGoing = false;
+                        } else {
+                            from += pageSize;
+                        }
+                    } else {
+                        keepGoing = false;
+                    }
+                }
+                return total;
+            }
+            const totalAllItems = await sumAllMueblesiteaValues();
+            setTotalValueAllItems(totalAllItems);
         } catch (error) {
             console.error('Error fetching data:', error);
             setError('Error al cargar los datos. Por favor, intente nuevamente.');
@@ -774,6 +838,23 @@ export default function ConsultasIteaGeneral() {
                         Consulta de Inventario ITEA
                     </h1>
                     <p className="text-gray-400 text-sm sm:text-base">Vista general de todos los bienes registrados en el sistema.</p>
+                </div>
+
+                {/* Nuevo componente de valor total */}
+                <div className="bg-black p-4 border-b border-gray-800 flex justify-center items-center">
+                    <div className="flex justify-between items-center">
+                        <div className="flex items-center gap-3">
+                            <div className="p-2 bg-blue-500/20 rounded-lg border border-blue-500/30">
+                                <DollarSign className="h-6 w-6 text-blue-400" />
+                            </div>
+                            <div className="flex flex-col items-center justify-center text-center">
+                                <h3 className="text-sm font-medium text-gray-400">Valor Total del Inventario</h3>
+                                <p className="text-2xl font-bold text-white">
+                                    ${(Object.values(filters).some(value => value !== '') ? totalValue : totalValueAllItems).toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                </p>
+                            </div>
+                        </div>
+                    </div>
                 </div>
 
                 {/* Contenedor principal */}
@@ -1751,7 +1832,7 @@ export default function ConsultasIteaGeneral() {
                                 </div>
 
                                 <div>
-                                    <label className="block text-sm font-medium text-gray-300 mb-2 flex items-center gap-2">
+                                    <label className="flex text-sm font-medium text-gray-300 mb-2 gap-2">
                                         <LayoutGrid className="h-4 w-4 text-gray-400" />
                                         Área
                                     </label>

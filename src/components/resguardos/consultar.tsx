@@ -36,6 +36,7 @@ interface ResguardoArticulo {
     descripcion: string;
     rubro: string;
     condicion: string;
+    origen: string; // INEA o ITEA
 }
 
 interface PdfData {
@@ -50,6 +51,7 @@ interface PdfData {
         descripcion: string;
         rubro: string;
         estado: string;
+        origen?: string | null;
     }>;
 }
 
@@ -72,6 +74,7 @@ export default function ConsultarResguardos() {
     const [showDeleteAllModal, setShowDeleteAllModal] = useState(false);
     const [showDeleteItemModal, setShowDeleteItemModal] = useState<{ index: number, articulo: ResguardoArticulo } | null>(null);
     const [deleting, setDeleting] = useState(false);
+    const [allResguardos, setAllResguardos] = useState<Resguardo[]>([]);
 
     // Fetch resguardos with pagination and sorting
     const fetchResguardos = useCallback(async () => {
@@ -124,6 +127,26 @@ export default function ConsultarResguardos() {
         }
     }, [currentPage, rowsPerPage, sortField, sortDirection, filterDate, filterDirector]);
 
+    // Fetch all resguardos for counting articles by folio correctly
+    useEffect(() => {
+        const fetchAllResguardos = async () => {
+            try {
+                let dataQuery = supabase.from('resguardos').select('*');
+                if (filterDate) {
+                    dataQuery = dataQuery.eq('f_resguardo::date', filterDate);
+                }
+                if (filterDirector) {
+                    dataQuery = dataQuery.ilike('dir_area', `%${filterDirector}%`);
+                }
+                const { data, error } = await dataQuery;
+                if (!error) setAllResguardos(data || []);
+            } catch {
+                setAllResguardos([]);
+            }
+        };
+        fetchAllResguardos();
+    }, [filterDate, filterDirector, searchTerm]);
+
     // Fetch resguardos by folio
     const fetchResguardoDetails = async (folio: string) => {
         setLoading(true);
@@ -143,7 +166,8 @@ export default function ConsultarResguardos() {
                         num_inventario: item.num_inventario,
                         descripcion: item.descripcion,
                         rubro: item.rubro,
-                        condicion: item.condicion
+                        condicion: item.condicion,
+                        origen: item.origen // <-- aquí se agrega el origen
                     }))
                 };
 
@@ -161,7 +185,8 @@ export default function ConsultarResguardos() {
                         id_inv: art.num_inventario,
                         descripcion: art.descripcion,
                         rubro: art.rubro,
-                        estado: art.condicion
+                        estado: art.condicion,
+                        origen: art.origen
                     }))
                 });
 
@@ -344,6 +369,11 @@ export default function ConsultarResguardos() {
         new Map(resguardos.map(r => [r.folio, r])).values()
     );
 
+    // Función para contar artículos por folio usando todos los resguardos filtrados
+    const getArticuloCount = (folio: string) => {
+        return allResguardos.filter(r => r.folio === folio).length;
+    };
+
     return (
         <div className="bg-black text-white min-h-screen p-2 sm:p-4 md:p-6 lg:p-8">
             <div className="w-full mx-auto bg-black rounded-lg sm:rounded-xl shadow-2xl overflow-hidden transition-all duration-500 transform border border-gray-800">
@@ -400,7 +430,11 @@ export default function ConsultarResguardos() {
                                         </button>
                                     </div>
                                     <button
-                                        onClick={fetchResguardos}
+                                        onClick={() => {
+                                            setSelectedResguardo(null);
+                                            setPdfData(null);
+                                            fetchResguardos();
+                                        }}
                                         className="px-4 py-2 bg-gray-900/50 border border-gray-700 text-gray-300 rounded-lg hover:bg-gray-800 transition-colors flex items-center gap-2 text-sm"
                                     >
                                         <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
@@ -537,7 +571,7 @@ export default function ConsultarResguardos() {
                                         ) : (
                                             foliosUnicos.map((resguardo) => {
                                                 // Contar artículos por folio
-                                                const itemCount = resguardos.filter(r => r.folio === resguardo.folio).length;
+                                                const itemCount = getArticuloCount(resguardo.folio);
                                                 // Color azul más fuerte según cantidad
                                                 let bgColor = 'bg-blue-900/20';
                                                 if (itemCount >= 10) bgColor = 'bg-blue-700/60';
@@ -709,7 +743,7 @@ export default function ConsultarResguardos() {
                             </h2>
 
                             {selectedResguardo ? (
-                                <div className="space-y-3 mt-2 overflow-auto max-h-[30vh]">
+                                <div className="space-y-3 mt-2 overflow-auto max-h-[40vh]">
                                     {selectedResguardo.articulos.map((articulo, index) => (
                                         <div key={`${selectedResguardo.folio}-${index}`} className="bg-black rounded-lg p-3 border border-gray-800 shadow-sm flex items-start">
                                             <div className="flex-1 min-w-0">
@@ -724,6 +758,14 @@ export default function ConsultarResguardos() {
                                                                     'bg-gray-900/20 text-gray-300 border border-gray-900'}`}>
                                                         {articulo.condicion}
                                                     </div>
+                                                    {/* Badge de origen */}
+                                                    <span className={`ml-2 px-2 py-0.5 rounded-full text-xs font-semibold border 
+                                                        ${articulo.origen === 'INEA' ? 'bg-blue-900/30 text-blue-300 border-blue-700' :
+                                                            articulo.origen === 'ITEA' ? 'bg-pink-900/30 text-pink-200 border-pink-700' :
+                                                                'bg-gray-900/40 text-gray-400 border-gray-800'}`}
+                                                    >
+                                                        {articulo.origen}
+                                                    </span>
                                                 </div>
                                                 <p className="text-sm text-gray-300 mt-1">
                                                     {articulo.descripcion}
