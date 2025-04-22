@@ -94,7 +94,7 @@ export const ResguardoPDF = ({ data }: { data: PdfData }) => (
     <Document>
         <Page size="A4" style={styles.page}>
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-                <Image src="/images/LOGO-ITEA.png" style={{ width: 70, height: 30, objectFit: "contain" }} />
+                <Image src="/images/LOGO-ITEA.png" style={{ width: 80, height: 40, objectFit: "contain" }} />
                 <View style={{ flex: 1, alignItems: 'center', paddingHorizontal: 10 }}>
                     <Text style={[styles.header, { textAlign: 'center' }]}>INSTITUTO TLAXCALTECA PARA LA EDUCACIÓN DE LOS ADULTOS</Text>
                     <Text style={[styles.header, { textAlign: 'center' }]}>DIRECCIÓN DE ADMINISTRACIÓN Y FINANZAS</Text>
