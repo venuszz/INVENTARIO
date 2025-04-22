@@ -33,7 +33,7 @@ const styles = StyleSheet.create({
     header: {
         fontSize: 10,
         fontWeight: 'bold',
-        marginBottom: 2,
+        marginBottom: 1,
         color: '#1e293b',
         textAlign: 'center',
         marginTop: 5,
@@ -95,7 +95,7 @@ export const ResguardoPDF = ({ data }: { data: PdfData }) => (
         <Page size="A4" style={styles.page}>
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
                 <Image src="/images/LOGO-ITEA.png" style={{ width: 70, height: 30 }} />
-                <View style={{ flex: 1, alignItems: 'center' }}>
+                <View style={{ flex: .5, alignItems: 'center' }}>
                     <Text style={styles.header}>INSTITUTO TLAXCALTECA PARA LA EDUCACIÓN DE LOS ADULTOS</Text>
                     <Text style={styles.header}>DIRECCIÓN DE ADMINISTRACIÓN Y FINANZAS</Text>
                     <Text style={styles.header}>OFICINA DE RECURSOS MATERIALES</Text>
