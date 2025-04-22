@@ -33,7 +33,7 @@ const styles = StyleSheet.create({
     header: {
         fontSize: 10,
         fontWeight: 'bold',
-        marginBottom: 1,
+        marginBottom: 2,
         color: '#1e293b',
         textAlign: 'center',
         marginTop: 5,
@@ -95,11 +95,11 @@ export const ResguardoPDF = ({ data }: { data: PdfData }) => (
         <Page size="A4" style={styles.page}>
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
                 <Image src="/images/LOGO-ITEA.png" style={{ width: 70, height: 30, objectFit: "contain" }} />
-                <View style={{ flex: .5, alignItems: 'center' }}>
-                    <Text style={styles.header}>INSTITUTO TLAXCALTECA PARA LA EDUCACIÓN DE LOS ADULTOS</Text>
-                    <Text style={styles.header}>DIRECCIÓN DE ADMINISTRACIÓN Y FINANZAS</Text>
-                    <Text style={styles.header}>OFICINA DE RECURSOS MATERIALES</Text>
-                    <Text style={styles.header}>RESGUARDO DE BIENES MUEBLES</Text>
+                <View style={{ flex: 1, alignItems: 'center', paddingHorizontal: 10 }}>
+                    <Text style={[styles.header, { textAlign: 'center' }]}>INSTITUTO TLAXCALTECA PARA LA EDUCACIÓN DE LOS ADULTOS</Text>
+                    <Text style={[styles.header, { textAlign: 'center' }]}>DIRECCIÓN DE ADMINISTRACIÓN Y FINANZAS</Text>
+                    <Text style={[styles.header, { textAlign: 'center' }]}>OFICINA DE RECURSOS MATERIALES</Text>
+                    <Text style={[styles.header, { textAlign: 'center' }]}>RESGUARDO DE BIENES MUEBLES</Text>
                 </View>
                 <Image src="/images/INEA NACIONAL.png" style={{ width: 70, height: 30, objectFit: "contain" }} />
             </View>
