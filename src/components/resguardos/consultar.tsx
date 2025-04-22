@@ -36,6 +36,7 @@ interface ResguardoArticulo {
     descripcion: string;
     rubro: string;
     condicion: string;
+    origen: string; // INEA o ITEA
 }
 
 interface PdfData {
@@ -50,6 +51,7 @@ interface PdfData {
         descripcion: string;
         rubro: string;
         estado: string;
+        origen?: string | null;
     }>;
 }
 
@@ -164,7 +166,8 @@ export default function ConsultarResguardos() {
                         num_inventario: item.num_inventario,
                         descripcion: item.descripcion,
                         rubro: item.rubro,
-                        condicion: item.condicion
+                        condicion: item.condicion,
+                        origen: item.origen // <-- aquí se agrega el origen
                     }))
                 };
 
@@ -182,7 +185,8 @@ export default function ConsultarResguardos() {
                         id_inv: art.num_inventario,
                         descripcion: art.descripcion,
                         rubro: art.rubro,
-                        estado: art.condicion
+                        estado: art.condicion,
+                        origen: art.origen
                     }))
                 });
 
@@ -754,6 +758,14 @@ export default function ConsultarResguardos() {
                                                                     'bg-gray-900/20 text-gray-300 border border-gray-900'}`}>
                                                         {articulo.condicion}
                                                     </div>
+                                                    {/* Badge de origen */}
+                                                    <span className={`ml-2 px-2 py-0.5 rounded-full text-xs font-semibold border 
+                                                        ${articulo.origen === 'INEA' ? 'bg-blue-900/30 text-blue-300 border-blue-700' :
+                                                            articulo.origen === 'ITEA' ? 'bg-pink-900/30 text-pink-200 border-pink-700' :
+                                                                'bg-gray-900/40 text-gray-400 border-gray-800'}`}
+                                                    >
+                                                        {articulo.origen}
+                                                    </span>
                                                 </div>
                                                 <p className="text-sm text-gray-300 mt-1">
                                                     {articulo.descripcion}
