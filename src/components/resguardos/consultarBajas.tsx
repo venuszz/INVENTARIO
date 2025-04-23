@@ -82,6 +82,14 @@ const ConsultarBajasResguardos = () => {
     const [allBajas, setAllBajas] = useState<ResguardoBaja[]>([]);
     const [selectedItems, setSelectedItems] = useState<{ [key: string]: boolean }>({});
     const [groupedItems, setGroupedItems] = useState<{ [key: string]: ResguardoBajaArticulo[] }>({});
+    const [showDeleteModal, setShowDeleteModal] = useState(false);
+    const [deleteType, setDeleteType] = useState<'folio' | 'selected' | 'single' | null>(null);
+    const [itemToDelete, setItemToDelete] = useState<{
+        folioResguardo?: string;
+        folioBaja?: string;
+        articulos?: ResguardoBajaArticulo[];
+        singleArticulo?: ResguardoBajaArticulo;
+    } | null>(null);
 
     // Update loading state
     const isLoading = loading;
@@ -366,7 +374,7 @@ const ConsultarBajasResguardos = () => {
     };
 
     const getItemCountBgColor = (count: number) => {
-        switch(count) {
+        switch (count) {
             case 0:
                 return 'bg-gray-900/40 text-gray-400 border border-gray-800';
             case 1:
@@ -384,6 +392,76 @@ const ConsultarBajasResguardos = () => {
             default:
                 return 'bg-red-700/60 text-red-100 border border-red-600';
         }
+    };
+
+    // Función para manejar la eliminación
+    const handleDelete = async () => {
+        if (!itemToDelete) return;
+
+        setLoading(true);
+        try {
+            let result;
+
+            switch (deleteType) {
+                case 'folio':
+                    // Eliminar todo el folio
+                    if (itemToDelete.folioResguardo) {
+                        result = await supabase
+                            .from('resguardos_bajas')
+                            .delete()
+                            .eq('folio_resguardo', itemToDelete.folioResguardo);
+                    }
+                    break;
+
+                case 'selected':
+                    // Eliminar múltiples artículos seleccionados
+                    if (itemToDelete.articulos && itemToDelete.articulos.length > 0) {
+                        const ids = itemToDelete.articulos.map(art => art.id);
+                        result = await supabase
+                            .from('resguardos_bajas')
+                            .delete()
+                            .in('id', ids);
+                    }
+                    break;
+
+                case 'single':
+                    // Eliminar un solo artículo
+                    if (itemToDelete.singleArticulo) {
+                        result = await supabase
+                            .from('resguardos_bajas')
+                            .delete()
+                            .eq('id', itemToDelete.singleArticulo.id);
+                    }
+                    break;
+            }
+
+            if (result?.error) throw result.error;
+
+            // Refrescar la vista
+            await fetchBajas();
+            setSelectedBaja(null);
+            setSelectedItems({});
+            setShowDeleteModal(false);
+            setItemToDelete(null);
+            setDeleteType(null);
+        } catch (err) {
+            setError('Error al eliminar el registro');
+            console.error(err);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    // Función para iniciar el proceso de eliminación
+    const initiateDelete = (type: 'folio' | 'selected' | 'single', data: {
+        folioResguardo?: string;
+        folioBaja?: string;
+        articulos?: ResguardoBajaArticulo[];
+        singleArticulo?: ResguardoBajaArticulo;
+    }) => {
+        setDeleteType(type);
+        setItemToDelete(data);
+        setShowDeleteModal(true);
     };
 
     return (
@@ -745,6 +823,14 @@ const ConsultarBajasResguardos = () => {
                                         <Download className="h-4 w-4" />
                                         Generar PDF de {Object.values(selectedItems).filter(Boolean).length > 0 ? 'Artículos Seleccionados' : 'Baja Completa'}
                                     </button>
+                                    {/* Botón para eliminar folio completo */}
+                                    <button
+                                        onClick={() => initiateDelete('folio', { folioResguardo: selectedBaja.folio_resguardo })}
+                                        className="w-full py-2 bg-red-900/20 text-red-400 rounded-lg hover:bg-red-900/40 transition-colors border border-red-900/50 flex items-center justify-center gap-2 mt-2"
+                                    >
+                                        <X className="h-4 w-4" />
+                                        Eliminar Folio Completo
+                                    </button>
                                 </>
                             ) : (
                                 <div className="flex flex-col items-center justify-center h-full min-h-[200px] text-gray-500">
@@ -767,12 +853,26 @@ const ConsultarBajasResguardos = () => {
                                     {/* Selection controls */}
                                     <div className="sticky top-0 z-10 bg-black/90 backdrop-blur-sm p-2 -mx-2 mb-2 border-b border-gray-800">
                                         <div className="flex items-center justify-between gap-2">
-                                            <button
-                                                onClick={clearSelections}
-                                                className="px-3 py-1.5 bg-gray-900/20 text-gray-400 rounded-lg text-sm hover:bg-gray-900/40 transition-colors border border-gray-800"
-                                            >
-                                                Limpiar Selección
-                                            </button>
+                                            <div className="flex items-center gap-2">
+                                                <button
+                                                    onClick={clearSelections}
+                                                    className="px-3 py-1.5 bg-gray-900/20 text-gray-400 rounded-lg text-sm hover:bg-gray-900/40 transition-colors border border-gray-800"
+                                                >
+                                                    Limpiar Selección
+                                                </button>
+                                                {Object.values(selectedItems).filter(Boolean).length > 0 && (
+                                                    <button
+                                                        onClick={() => {
+                                                            const selectedArticulos = selectedBaja.articulos.filter(art => selectedItems[art.id]);
+                                                            initiateDelete('selected', { articulos: selectedArticulos });
+                                                        }}
+                                                        className="px-3 py-1.5 bg-red-900/20 text-red-400 rounded-lg text-sm hover:bg-red-900/40 transition-colors border border-red-900/50 flex items-center gap-2"
+                                                    >
+                                                        <X className="h-3 w-3" />
+                                                        Eliminar Seleccionados
+                                                    </button>
+                                                )}
+                                            </div>
                                             <span className="text-sm text-gray-400">
                                                 {Object.values(selectedItems).filter(Boolean).length} seleccionados
                                             </span>
@@ -798,40 +898,31 @@ const ConsultarBajasResguardos = () => {
                                                 {articulos.map((articulo, index) => (
                                                     <div
                                                         key={`${folioBaja}-${index}`}
-                                                        onClick={() => handleItemSelection(articulo.id)}
-                                                        className={`bg-black/40 rounded-lg p-4 border-2 transition-all duration-200 cursor-pointer hover:bg-gray-900/40 
-                                                            ${selectedItems[articulo.id] 
-                                                                ? 'border-red-500 bg-red-900/10 shadow-[0_0_15px_-3px_rgba(239,68,68,0.2)]' 
+                                                        className={`bg-black/40 rounded-lg p-4 border-2 transition-all duration-200 
+                                                            ${selectedItems[articulo.id]
+                                                                ? 'border-red-500 bg-red-900/10 shadow-[0_0_15px_-3px_rgba(239,68,68,0.2)]'
                                                                 : 'border-gray-800 hover:border-gray-700'}`}
                                                     >
-                                                        <div className="flex items-start gap-4">
-                                                            <div className={`mt-1 h-4 w-4 rounded border flex-shrink-0 transition-all duration-200
-                                                                ${selectedItems[articulo.id]
-                                                                    ? 'bg-red-500 border-red-400'
-                                                                    : 'border-gray-700 group-hover:border-gray-600'}`}
+                                                        <div className="flex items-start justify-between gap-4">
+                                                            <div
+                                                                onClick={() => handleItemSelection(articulo.id)}
+                                                                className="flex-1 cursor-pointer"
                                                             >
-                                                                {selectedItems[articulo.id] && (
-                                                                    <svg className="h-4 w-4 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                                                                    </svg>
-                                                                )}
-                                                            </div>
-                                                            <div className="flex-1 min-w-0">
                                                                 <div className="flex items-center gap-2 mb-1">
                                                                     <div className="text-sm font-medium text-white">
                                                                         {articulo.num_inventario}
                                                                     </div>
                                                                     <div className={`inline-flex items-center px-1.5 py-0.5 rounded-full text-xs font-medium 
                                                                         ${articulo.condicion === 'B' ? 'bg-green-900/20 text-green-300 border border-green-900' :
-                                                                        articulo.condicion === 'R' ? 'bg-yellow-900/20 text-yellow-300 border border-yellow-900' :
-                                                                        articulo.condicion === 'M' ? 'bg-red-900/20 text-red-300 border border-red-900' :
-                                                                        'bg-gray-900/20 text-gray-300 border border-gray-900'}`}>
+                                                                            articulo.condicion === 'R' ? 'bg-yellow-900/20 text-yellow-300 border border-yellow-900' :
+                                                                                articulo.condicion === 'M' ? 'bg-red-900/20 text-red-300 border border-red-900' :
+                                                                                    'bg-gray-900/20 text-gray-300 border border-gray-900'}`}>
                                                                         {articulo.condicion}
                                                                     </div>
                                                                     <span className={`px-2 py-0.5 rounded-full text-xs font-semibold border 
                                                                         ${articulo.origen === 'INEA' ? 'bg-blue-900/30 text-blue-300 border-blue-700' :
-                                                                        articulo.origen === 'ITEA' ? 'bg-pink-900/30 text-pink-200 border-pink-700' :
-                                                                        'bg-gray-900/40 text-gray-400 border-gray-800'}`}>
+                                                                            articulo.origen === 'ITEA' ? 'bg-pink-900/30 text-pink-200 border-pink-700' :
+                                                                                'bg-gray-900/40 text-gray-400 border-gray-800'}`}>
                                                                         {articulo.origen}
                                                                     </span>
                                                                 </div>
@@ -843,6 +934,16 @@ const ConsultarBajasResguardos = () => {
                                                                     {articulo.rubro}
                                                                 </div>
                                                             </div>
+                                                            <button
+                                                                onClick={(e) => {
+                                                                    e.stopPropagation();
+                                                                    initiateDelete('single', { singleArticulo: articulo });
+                                                                }}
+                                                                className="p-2 rounded-lg bg-red-900/20 text-red-400 hover:bg-red-900/40 transition-colors border border-red-900/50"
+                                                                title="Eliminar artículo"
+                                                            >
+                                                                <X className="h-4 w-4" />
+                                                            </button>
                                                         </div>
                                                     </div>
                                                 ))}
@@ -935,6 +1036,92 @@ const ConsultarBajasResguardos = () => {
                                             )}
                                         </PDFDownloadLink>
                                     </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Modal de confirmación de eliminación */}
+            {showDeleteModal && (
+                <div className="fixed inset-0 bg-black/90 flex items-center justify-center z-50 px-4 animate-fadeIn">
+                    <div className="bg-black rounded-2xl shadow-2xl border border-red-900/30 w-full max-w-md overflow-hidden">
+                        <div className="relative p-6 bg-gradient-to-b from-black to-gray-900">
+                            <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-red-800/60 via-red-600 to-red-800/60"></div>
+
+                            <div className="flex flex-col items-center text-center mb-4">
+                                <div className="p-3 bg-red-900/20 rounded-full border border-red-900/30 mb-3">
+                                    <AlertCircle className="h-8 w-8 text-red-500" />
+                                </div>
+                                <h3 className="text-2xl font-bold text-white">Confirmar eliminación</h3>
+                                <p className="text-gray-400 mt-2">
+                                    {deleteType === 'folio' && "¿Estás seguro de que deseas eliminar todo el folio de baja? Esta acción no se puede deshacer."}
+                                    {deleteType === 'selected' && "¿Estás seguro de que deseas eliminar los artículos seleccionados? Esta acción no se puede deshacer."}
+                                    {deleteType === 'single' && "¿Estás seguro de que deseas eliminar este artículo? Esta acción no se puede deshacer."}
+                                </p>
+                            </div>
+
+                            <div className="space-y-4 mt-6">
+                                {deleteType === 'folio' && itemToDelete?.folioResguardo && (
+                                    <div className="rounded-lg border border-gray-800 bg-gray-900/50 p-4">
+                                        <div className="flex items-center gap-3">
+                                            <div className="p-2 bg-gray-800 rounded-lg">
+                                                <FileDigit className="h-4 w-4 text-red-400" />
+                                            </div>
+                                            <div>
+                                                <span className="text-white font-medium">Folio: {itemToDelete.folioResguardo}</span>
+                                                <p className="text-sm text-gray-500">Se eliminarán todos los artículos asociados</p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                )}
+
+                                {deleteType === 'selected' && itemToDelete?.articulos && (
+                                    <div className="rounded-lg border border-gray-800 bg-gray-900/50 p-4">
+                                        <div className="flex items-center gap-3">
+                                            <div className="p-2 bg-gray-800 rounded-lg">
+                                                <ListChecks className="h-4 w-4 text-red-400" />
+                                            </div>
+                                            <div>
+                                                <span className="text-white font-medium">{itemToDelete.articulos.length} artículos seleccionados</span>
+                                                <p className="text-sm text-gray-500">Se eliminarán los artículos marcados</p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                )}
+
+                                {deleteType === 'single' && itemToDelete?.singleArticulo && (
+                                    <div className="rounded-lg border border-gray-800 bg-gray-900/50 p-4">
+                                        <div className="flex items-center gap-3">
+                                            <div className="p-2 bg-gray-800 rounded-lg">
+                                                <FileDigit className="h-4 w-4 text-red-400" />
+                                            </div>
+                                            <div>
+                                                <span className="text-white font-medium">{itemToDelete.singleArticulo.num_inventario}</span>
+                                                <p className="text-sm text-gray-500">{itemToDelete.singleArticulo.descripcion}</p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                )}
+
+                                <div className="flex gap-3 mt-6">
+                                    <button
+                                        onClick={() => {
+                                            setShowDeleteModal(false);
+                                            setItemToDelete(null);
+                                            setDeleteType(null);
+                                        }}
+                                        className="flex-1 py-2.5 px-4 bg-gray-900 text-gray-300 rounded-lg hover:bg-gray-800 transition-colors border border-gray-800"
+                                    >
+                                        Cancelar
+                                    </button>
+                                    <button
+                                        onClick={handleDelete}
+                                        className="flex-1 py-2.5 px-4 bg-red-600 text-white rounded-lg hover:bg-red-500 transition-colors"
+                                    >
+                                        Eliminar
+                                    </button>
                                 </div>
                             </div>
                         </div>
