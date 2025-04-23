@@ -181,11 +181,6 @@ export default function NavigationBar() {
                 { title: 'Configuración General', path: '/admin/areas' },
                 { title: 'Directorio de Personal', path: '/admin/personal' }
             ]
-        },
-        {
-            title: 'Dashboard',
-            icon: <Grid className="w-4 h-4" />,
-            path: '/dashboard',            
         }
     ];
 
@@ -209,7 +204,7 @@ export default function NavigationBar() {
                         <div className="hidden md:ml-8 md:flex md:space-x-1">
                             {menuItems.map((item) => (
                                 <div key={item.title} className="relative">
-                                    {item.submenu && item.title !== 'Dashboard' ? (
+                                    {item.submenu ? (
                                         <>
                                             <button
                                                 onClick={() => toggleMenu(item.title)}
@@ -283,6 +278,13 @@ export default function NavigationBar() {
                     <div className="hidden md:flex items-center">
                         <WelcomeMessage />
                         <div className="flex items-center space-x-3">
+                            <Link
+                                href="/dashboard"
+                                className={`p-2 text-gray-300 hover:text-white hover:bg-gray-800 rounded-full ${pathname === '/dashboard' ? 'text-blue-400 bg-blue-950' : ''}`}
+                                title="Dashboard"
+                            >
+                                <Grid className="h-5 w-5" />
+                            </Link>
                             <button onClick={handleLogout} className="p-2 text-gray-300 hover:text-white hover:bg-gray-800 rounded-full" title='Cerrar sesión'>
                                 <LogOut className="h-5 w-5" />
                             </button>
