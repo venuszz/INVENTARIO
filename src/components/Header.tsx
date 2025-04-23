@@ -2,7 +2,7 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { ChevronDown, ChevronRight, User, LogOut, Database, FileText, Settings, Menu, X } from 'lucide-react';
+import { ChevronDown, ChevronRight, User, LogOut, Database, FileText, Settings, Menu, X, Grid } from 'lucide-react';
 import Cookies from 'js-cookie';
 import { useRouter } from 'next/navigation';
 import supabase from '@/app/lib/supabase/client';
@@ -181,6 +181,11 @@ export default function NavigationBar() {
                 { title: 'Configuración General', path: '/admin/areas' },
                 { title: 'Directorio de Personal', path: '/admin/personal' }
             ]
+        },
+        {
+            title: 'Dashboard',
+            icon: <Grid className="w-4 h-4" />,
+            path: '/dashboard',            
         }
     ];
 
@@ -204,60 +209,71 @@ export default function NavigationBar() {
                         <div className="hidden md:ml-8 md:flex md:space-x-1">
                             {menuItems.map((item) => (
                                 <div key={item.title} className="relative">
-                                    <button
-                                        onClick={() => toggleMenu(item.title)}
-                                        className={`flex items-center px-4 py-2 rounded-md ${isActive(item.path) ? 'text-blue-400 bg-blue-950' : 'text-gray-300 hover:text-white hover:bg-gray-800'}`}
-                                    >
-                                        <span className="mr-2">{item.icon}</span>
-                                        {item.title}
-                                        <ChevronDown className={`ml-1 w-3 h-3 transition-transform ${openMenu === item.title ? 'rotate-180' : ''}`} />
-                                    </button>
-
-                                    {openMenu === item.title && item.submenu && (
-                                        <div className="absolute left-0 mt-1 w-56 rounded-md bg-black shadow-lg z-20">
-                                            <div className="py-1">
-                                                {item.submenu.map((subItem) => (
-                                                    <div key={subItem.title}>
-                                                        {subItem.children ? (
-                                                            <div className="relative">
-                                                                <button
-                                                                    onClick={(e) => toggleSubmenu(`${item.title}-${subItem.title}`, e)}
-                                                                    className={`flex justify-between w-full px-4 py-2 text-sm ${isActive(subItem.path) ? 'text-blue-400 bg-black' : 'text-gray-300 hover:bg-gray-800 hover:text-white'}`}
-                                                                >
-                                                                    {subItem.title}
-                                                                    <ChevronRight className="w-3 h-3" />
-                                                                </button>
-
-                                                                {openSubmenu === `${item.title}-${subItem.title}` && (
-                                                                    <div className="absolute left-full top-0 w-56 rounded-md bg-black shadow-lg z-30">
-                                                                        <div className="py-1">
-                                                                            {subItem.children.map((child) => (
-                                                                                <Link
-                                                                                    key={child.title}
-                                                                                    href={child.path}
-                                                                                    onClick={closeAll}
-                                                                                    className={`block px-4 py-2 text-sm ${pathname === child.path ? 'text-blue-400 bg-black' : 'text-gray-300 hover:bg-gray-800 hover:text-white'}`}
-                                                                                >
-                                                                                    {child.title}
-                                                                                </Link>
-                                                                            ))}
-                                                                        </div>
+                                    {item.submenu && item.title !== 'Dashboard' ? (
+                                        <>
+                                            <button
+                                                onClick={() => toggleMenu(item.title)}
+                                                className={`flex items-center px-4 py-2 rounded-md ${isActive(item.path) ? 'text-blue-400 bg-blue-950' : 'text-gray-300 hover:text-white hover:bg-gray-800'}`}
+                                            >
+                                                <span className="mr-2">{item.icon}</span>
+                                                {item.title}
+                                                <ChevronDown className={`ml-1 w-3 h-3 transition-transform ${openMenu === item.title ? 'rotate-180' : ''}`} />
+                                            </button>
+                                            {openMenu === item.title && (
+                                                <div className="absolute left-0 mt-1 w-56 rounded-md bg-black shadow-lg z-20">
+                                                    <div className="py-1">
+                                                        {item.submenu.map((subItem) => (
+                                                            <div key={subItem.title}>
+                                                                {subItem.children ? (
+                                                                    <div className="relative">
+                                                                        <button
+                                                                            onClick={(e) => toggleSubmenu(`${item.title}-${subItem.title}`, e)}
+                                                                            className={`flex justify-between w-full px-4 py-2 text-sm ${isActive(subItem.path) ? 'text-blue-400 bg-black' : 'text-gray-300 hover:bg-gray-800 hover:text-white'}`}
+                                                                        >
+                                                                            {subItem.title}
+                                                                            <ChevronRight className="w-3 h-3" />
+                                                                        </button>
+                                                                        {openSubmenu === `${item.title}-${subItem.title}` && (
+                                                                            <div className="absolute left-full top-0 w-56 rounded-md bg-black shadow-lg z-30">
+                                                                                <div className="py-1">
+                                                                                    {subItem.children.map((child) => (
+                                                                                        <Link
+                                                                                            key={child.title}
+                                                                                            href={child.path}
+                                                                                            onClick={closeAll}
+                                                                                            className={`block px-4 py-2 text-sm ${pathname === child.path ? 'text-blue-400 bg-black' : 'text-gray-300 hover:bg-gray-800 hover:text-white'}`}
+                                                                                        >
+                                                                                            {child.title}
+                                                                                        </Link>
+                                                                                    ))}
+                                                                                </div>
+                                                                            </div>
+                                                                        )}
                                                                     </div>
+                                                                ) : (
+                                                                    <Link
+                                                                        href={subItem.path}
+                                                                        onClick={closeAll}
+                                                                        className={`block px-4 py-2 text-sm ${pathname === subItem.path ? 'text-blue-400 bg-black' : 'text-gray-300 hover:bg-gray-800 hover:text-white'}`}
+                                                                    >
+                                                                        {subItem.title}
+                                                                    </Link>
                                                                 )}
                                                             </div>
-                                                        ) : (
-                                                            <Link
-                                                                href={subItem.path}
-                                                                onClick={closeAll}
-                                                                className={`block px-4 py-2 text-sm ${pathname === subItem.path ? 'text-blue-400 bg-black' : 'text-gray-300 hover:bg-gray-800 hover:text-white'}`}
-                                                            >
-                                                                {subItem.title}
-                                                            </Link>
-                                                        )}
+                                                        ))}
                                                     </div>
-                                                ))}
-                                            </div>
-                                        </div>
+                                                </div>
+                                            )}
+                                        </>
+                                    ) : (
+                                        <Link
+                                            href={item.path}
+                                            onClick={closeAll}
+                                            className={`flex items-center px-4 py-2 rounded-md ${isActive(item.path) ? 'text-blue-400 bg-blue-950' : 'text-gray-300 hover:text-white hover:bg-gray-800'}`}
+                                        >
+                                            <span className="mr-2">{item.icon}</span>
+                                            {item.title}
+                                        </Link>
                                     )}
                                 </div>
                             ))}
