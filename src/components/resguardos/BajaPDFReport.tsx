@@ -10,6 +10,12 @@ interface PdfArticulo {
     folio_baja?: string | null; // Añadimos el folio_baja opcional
 }
 
+interface PdfFirma {
+    concepto: string;
+    nombre: string;
+    puesto: string;
+}
+
 interface PdfDataBaja {
     folio_resguardo: string;
     folio_baja: string;
@@ -19,6 +25,7 @@ interface PdfDataBaja {
     puesto: string;
     resguardante: string;
     articulos: PdfArticulo[];
+    firmas?: PdfFirma[]; // Agregando campo opcional de firmas
 }
 
 interface BajaPDFReportProps {
@@ -109,17 +116,27 @@ export const BajaPDF = ({ data }: { data: PdfDataBaja }) => {
     // Verificar si hay diferentes folios de baja
     const hasMultipleFolios = data.articulos.some(a => a.folio_baja && a.folio_baja !== data.folio_baja);
 
+    const getFirma = (concepto: string) => {
+        return data.firmas?.find(f => f.concepto === concepto);
+    };
+
     return (
         <Document>
             <Page size="A4" style={styles.page}>
                 <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <Image src="/images/LOGO-ITEA.png" style={{ width: 100, height: 50, objectFit: "contain" }} />
+                    <Image 
+                        src="/images/LOGO-ITEA.png" 
+                        style={{ width: 100, height: 50, objectFit: "contain" }}
+                    />
                     <View style={{ flex: 1, alignItems: 'center', paddingHorizontal: 10 }}>
                         <Text style={[styles.header, { textAlign: 'center' }]}>INSTITUTO TLAXCALTECA PARA LA EDUCACIÓN DE LOS ADULTOS</Text>
                         <Text style={[styles.header, { textAlign: 'center', color: '#b91c1c' }]}>DOCUMENTO DE BAJA DE BIENES MUEBLES</Text>
                         <Text style={{ fontSize: 10, color: '#991b1b', textAlign: 'center', marginBottom: 2 }}>Este documento certifica la baja de un resguardo de los siguientes bienes del instituto</Text>
                     </View>
-                    <Image src="/images/INEA NACIONAL.png" style={{ width: 70, height: 30, objectFit: "contain" }} />
+                    <Image 
+                        src="/images/INEA NACIONAL.png" 
+                        style={{ width: 70, height: 30, objectFit: "contain" }}
+                    />
                 </View>
 
                 <View style={styles.section}>
@@ -170,28 +187,28 @@ export const BajaPDF = ({ data }: { data: PdfDataBaja }) => {
                             <Text>         AUTORIZA</Text>
                             <Text> </Text>
                             <Text> </Text>
-                            <Text> </Text>
                             <Text>_______________________________</Text>
                             <Text> </Text>
-                            <Text> DIRECTOR(A) ADMIN. Y FINANZAS</Text>
+                            <Text>{getFirma('Autoriza')?.nombre || ' '}</Text>
+                            <Text>{getFirma('Autoriza')?.puesto || 'DIRECTOR(A) ADMIN. Y FINANZAS'}</Text>
                         </View>
                         <View style={styles.signatureBox}>
                             <Text>       CONOCIMIENTO</Text>
                             <Text> </Text>
                             <Text> </Text>
-                            <Text> </Text>
                             <Text>________________________________</Text>
                             <Text> </Text>
-                            <Text> DIRECTOR(A) RECURSOS MATERIALES</Text>
+                            <Text>{getFirma('Conocimiento')?.nombre || ' '}</Text>
+                            <Text>{getFirma('Conocimiento')?.puesto || 'DIRECTOR(A) RECURSOS MATERIALES'}</Text>
                         </View>
                         <View style={styles.signatureBox}>
                             <Text>           EX-RESGUARDANTE</Text>
                             <Text> </Text>
                             <Text> </Text>
-                            <Text> </Text>
                             <Text>__________________________________</Text>
-                            <Text><Text style={styles.label}></Text> {data.director}</Text>
-                            <Text><Text style={styles.label}></Text> {data.puesto}</Text>
+                            <Text> </Text>
+                            <Text>{data.resguardante}</Text>
+                            <Text>{data.puesto}</Text>
                         </View>
                     </View>
                     <Text
@@ -210,7 +227,7 @@ export const BajaPDF = ({ data }: { data: PdfDataBaja }) => {
 
 const BajaPDFReport: React.FC<BajaPDFReportProps> = ({ data }) => {
     return (
-        <div style={{ width: '100%' }}>
+        <div className="w-full">
             <PDFDownloadLink
                 document={<BajaPDF data={data} />}
                 fileName={`baja_${data.folio_baja}.pdf`}

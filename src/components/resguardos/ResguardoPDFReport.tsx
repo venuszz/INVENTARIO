@@ -9,6 +9,12 @@ interface PdfArticulo {
     origen?: string | null; // INEA o ITEA
 }
 
+interface PdfFirma {
+    concepto: string;
+    nombre: string;
+    puesto: string;
+}
+
 interface PdfData {
     folio: string;
     fecha: string;
@@ -17,6 +23,7 @@ interface PdfData {
     puesto: string;
     resguardante: string;
     articulos: PdfArticulo[];
+    firmas?: PdfFirma[]; // Agregando campo opcional de firmas
 }
 
 interface ResguardoPDFReportProps {
@@ -106,6 +113,10 @@ export const ResguardoPDF = ({ data }: { data: PdfData }) => {
             { nombre: '', articulos: data.articulos }
         ];
 
+    const getFirma = (concepto: string) => {
+        return data.firmas?.find(f => f.concepto === concepto);
+    };
+
     return (
         <Document>
             <Page size="A4" style={styles.page}>
@@ -164,7 +175,8 @@ export const ResguardoPDF = ({ data }: { data: PdfData }) => {
                             <Text> </Text>
                             <Text>_______________________________</Text>
                             <Text> </Text>
-                            <Text> DIRECTOR(A) ADMIN. Y FINANZAS</Text>
+                            <Text>{getFirma('Autoriza')?.nombre || ' '}</Text>
+                            <Text>{getFirma('Autoriza')?.puesto || 'DIRECTOR(A) ADMIN. Y FINANZAS'}</Text>
                         </View>
                         <View style={styles.signatureBox}>
                             <Text>       CONOCIMIENTO</Text>
@@ -173,16 +185,18 @@ export const ResguardoPDF = ({ data }: { data: PdfData }) => {
                             <Text> </Text>
                             <Text>________________________________</Text>
                             <Text> </Text>
-                            <Text> DIRECTOR(A) RECURSOS MATERIALES</Text>
+                            <Text>{getFirma('Conocimiento')?.nombre || ' '}</Text>
+                            <Text>{getFirma('Conocimiento')?.puesto || 'DIRECTOR(A) RECURSOS MATERIALES'}</Text>
                         </View>
                         <View style={styles.signatureBox}>
-                            <Text>           RESGUARDANTE</Text>
+                            <Text>           RESPONSABLE</Text>
                             <Text> </Text>
                             <Text> </Text>
                             <Text> </Text>
                             <Text>__________________________________</Text>
-                            <Text><Text style={styles.label}></Text> {data.director}</Text>
-                            <Text><Text style={styles.label}></Text> {data.puesto}</Text>
+                            <Text> </Text>
+                            <Text>{data.resguardante}</Text>
+                            <Text>{data.puesto}</Text>
                         </View>
                     </View>
                     <Text

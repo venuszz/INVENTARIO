@@ -42,6 +42,12 @@ interface ResguardoArticulo {
     origen: string; // INEA o ITEA
 }
 
+interface PdfFirma {
+    concepto: string;
+    nombre: string;
+    puesto: string;
+}
+
 interface PdfData {
     folio: string;
     fecha: string;
@@ -56,6 +62,7 @@ interface PdfData {
         estado: string;
         origen?: string | null;
     }>;
+    firmas?: PdfFirma[];
 }
 
 interface PdfDataBaja {
@@ -321,6 +328,19 @@ export default function ConsultarResguardos() {
         fetchAllResguardos();
     }, [filterDate, filterDirector, searchTerm]);
 
+    // Función para obtener las firmas
+    const getFirmas = async () => {
+        const { data, error } = await supabase
+            .from('firmas')
+            .select('*');
+        
+        if (error) {
+            console.error('Error al obtener firmas:', error);
+            return null;
+        }
+        return data;
+    };
+
     // Fetch resguardos by folio
     const fetchResguardoDetails = async (folio: string) => {
         setLoading(true);
@@ -341,11 +361,14 @@ export default function ConsultarResguardos() {
                         descripcion: item.descripcion,
                         rubro: item.rubro,
                         condicion: item.condicion,
-                        origen: item.origen // <-- aquí se agrega el origen
+                        origen: item.origen
                     }))
                 };
 
                 setSelectedResguardo(detalles);
+
+                // Obtener firmas
+                const firmas = await getFirmas();
 
                 // Prepare PDF data
                 setPdfData({
@@ -353,7 +376,7 @@ export default function ConsultarResguardos() {
                     fecha: new Date(detalles.f_resguardo).toLocaleDateString(),
                     director: detalles.dir_area,
                     area: detalles.area_resguardo || '',
-                    puesto: firstItem.puesto, // <-- ahora se pasa el puesto correcto
+                    puesto: detalles.puesto,
                     resguardante: detalles.usufinal || '',
                     articulos: detalles.articulos.map(art => ({
                         id_inv: art.num_inventario,
@@ -361,7 +384,8 @@ export default function ConsultarResguardos() {
                         rubro: art.rubro,
                         estado: art.condicion,
                         origen: art.origen
-                    }))
+                    })),
+                    firmas: firmas || undefined
                 });
 
                 // Scroll to details on mobile
@@ -577,7 +601,7 @@ export default function ConsultarResguardos() {
         }, 100); // Pequeño delay para evitar demasiadas llamadas
 
         return () => clearTimeout(delayDebounceFn);
-    }, [searchTerm, sortField, sortDirection]);
+    }, [searchTerm, sortField, sortDirection, fetchResguardos]);
 
     useEffect(() => {
         fetchResguardos();

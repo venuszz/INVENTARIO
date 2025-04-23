@@ -3,7 +3,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import {
     Search, ChevronLeft, ChevronRight, ArrowUpDown,
     AlertCircle, X, FileText, Calendar,
-    User, Briefcase, Download, ListChecks,
+    User, Download, ListChecks,
     Info, RefreshCw, FileDigit, Building2
 } from 'lucide-react';
 import supabase from '@/app/lib/supabase/client';
@@ -61,6 +61,13 @@ interface PdfDataBaja {
         origen?: string | null;
         folio_baja: string;
     }>;
+    firmas?: Array<{
+        cargo: string;
+        nombre: string;
+        firma?: string;
+        concepto: string;
+        puesto: string;
+    }>;
 }
 
 const ConsultarBajasResguardos = () => {
@@ -98,42 +105,69 @@ const ConsultarBajasResguardos = () => {
     const fetchBajas = useCallback(async () => {
         setLoading(true);
         try {
-            // Obtener el conteo total de bajas con filtros
-            let countQuery = supabase.from('resguardos_bajas').select('*', { count: 'exact', head: true });
+            // Consulta base para obtener folios únicos
+            let baseQuery = supabase
+                .from('resguardos_bajas')
+                .select('*');
 
             if (filterDate) {
-                countQuery = countQuery.eq('f_resguardo::date', filterDate);
+                baseQuery = baseQuery.eq('f_resguardo::date', filterDate);
             }
 
             if (filterDirector) {
-                countQuery = countQuery.filter('dir_area', 'ilike', `%${filterDirector.trim().toUpperCase()}%`);
+                baseQuery = baseQuery.ilike('dir_area', `%${filterDirector?.trim().toUpperCase() || ''}%`);
             }
 
-            const { count, error: countError } = await countQuery;
-            if (countError) throw countError;
-            setTotalCount(count || 0);
+            // Obtener los datos con los filtros aplicados
+            const { data: allData, error: queryError } = await baseQuery;
+            
+            if (queryError) throw queryError;
+
+            // Agrupar por folio_resguardo y tomar el primer registro de cada grupo
+            const uniqueFolios = Array.from(
+                new Map(
+                    allData?.map(item => [item.folio_resguardo, item])
+                ).values()
+            );
+
+            const totalUniqueFolios = uniqueFolios.length;
+            setTotalCount(totalUniqueFolios);
+
+            // Calcular el número total de páginas basado en folios únicos
+            const totalPages = Math.ceil(totalUniqueFolios / rowsPerPage);
+            
+            // Asegurarse de que la página actual no exceda el total de páginas
+            const adjustedCurrentPage = Math.min(currentPage, totalPages || 1);
+            if (adjustedCurrentPage !== currentPage) {
+                setCurrentPage(adjustedCurrentPage);
+            }
 
             // Calcular rango para paginación
-            const from = (currentPage - 1) * rowsPerPage;
-            const to = from + rowsPerPage - 1;
-
-            // Obtener las bajas paginadas y ordenadas con filtros
-            let dataQuery = supabase.from('resguardos_bajas').select('*');
-
-            if (filterDate) {
-                dataQuery = dataQuery.eq('f_resguardo::date', filterDate);
-            }
-
-            if (filterDirector) {
-                dataQuery = dataQuery.filter('dir_area', 'ilike', `%${filterDirector.trim().toUpperCase()}%`);
-            }
-
-            const { data, error: queryError } = await dataQuery
-                .order(sortField, { ascending: sortDirection === 'asc' })
-                .range(from, to);
-
-            if (queryError) throw queryError;
-            setBajas(data || []);
+            const from = (adjustedCurrentPage - 1) * rowsPerPage;
+            
+            // Aplicar paginación a los folios únicos
+            const paginatedData = uniqueFolios
+                .sort((a, b) => {
+                    if (sortField === 'id') {
+                        return sortDirection === 'asc' ? a.id - b.id : b.id - a.id;
+                    }
+                    if (sortField === 'f_resguardo') {
+                        return sortDirection === 'asc' 
+                            ? new Date(a.f_resguardo).getTime() - new Date(b.f_resguardo).getTime()
+                            : new Date(b.f_resguardo).getTime() - new Date(a.f_resguardo).getTime();
+                    }
+                    if (sortField === 'dir_area' || sortField === 'folio_resguardo') {
+                        const aValue = a[sortField]?.toLowerCase() || '';
+                        const bValue = b[sortField]?.toLowerCase() || '';
+                        return sortDirection === 'asc' 
+                            ? aValue.localeCompare(bValue)
+                            : bValue.localeCompare(aValue);
+                    }
+                    return 0;
+                })
+                .slice(from, from + rowsPerPage);
+            
+            setBajas(paginatedData || []);
             setError(null);
         } catch (err) {
             setError('Error al cargar los resguardos dados de baja');
@@ -152,7 +186,7 @@ const ConsultarBajasResguardos = () => {
                     dataQuery = dataQuery.eq('f_resguardo::date', filterDate);
                 }
                 if (filterDirector) {
-                    dataQuery = dataQuery.filter('dir_area', 'ilike', `%${filterDirector.trim().toUpperCase()}%`);
+                    dataQuery = dataQuery.ilike('dir_area', `%${filterDirector.trim().toUpperCase()}%`);
                 }
                 const { data, error } = await dataQuery;
                 if (!error) setAllBajas(data || []);
@@ -244,6 +278,51 @@ const ConsultarBajasResguardos = () => {
             console.error(err);
         } finally {
             setLoading(false);
+        }
+    };
+
+    // Función para obtener las firmas
+    const getFirmas = async () => {
+        const { data, error } = await supabase
+            .from('firmas')
+            .select('*');
+        
+        if (error) {
+            console.error('Error al obtener firmas:', error);
+            return null;
+        }
+        return data;
+    };
+
+    // En la función que genera el PDF de baja, modificar para incluir las firmas
+    const handleBajaPDF = async () => {
+        if (selectedBaja) {
+            const groupedSelected = getSelectedItemsGroupedByFolio();
+            // Si hay más de un grupo, generar PDF por cada grupo
+            for (const group of groupedSelected) {
+                // Obtener firmas
+                const firmas = await getFirmas();
+                
+                setPdfBajaData({
+                    folio_resguardo: selectedBaja.folio_resguardo,
+                    folio_baja: group.folio_baja,
+                    fecha: new Date(selectedBaja.f_resguardo).toLocaleDateString(),
+                    director: selectedBaja.dir_area,
+                    area: selectedBaja.area_resguardo || '',
+                    puesto: selectedBaja.puesto,
+                    resguardante: selectedBaja.usufinal || '',
+                    articulos: group.articulos.map(art => ({
+                        id_inv: art.num_inventario,
+                        descripcion: art.descripcion,
+                        rubro: art.rubro,
+                        estado: art.condicion,
+                        origen: art.origen,
+                        folio_baja: art.folio_baja
+                    })),
+                    firmas: firmas || undefined
+                });
+                setShowPDFButton(true);
+            }
         }
     };
 
@@ -792,32 +871,7 @@ const ConsultarBajasResguardos = () => {
                                     </div>
 
                                     <button
-                                        onClick={() => {
-                                            if (selectedBaja) {
-                                                const groupedSelected = getSelectedItemsGroupedByFolio();
-                                                // Si hay más de un grupo, generar PDF por cada grupo
-                                                groupedSelected.forEach(group => {
-                                                    setPdfBajaData({
-                                                        folio_resguardo: selectedBaja.folio_resguardo,
-                                                        folio_baja: group.folio_baja,
-                                                        fecha: new Date(selectedBaja.f_resguardo).toLocaleDateString(),
-                                                        director: selectedBaja.dir_area,
-                                                        area: selectedBaja.area_resguardo || '',
-                                                        puesto: selectedBaja.puesto,
-                                                        resguardante: selectedBaja.usufinal || '',
-                                                        articulos: group.articulos.map(art => ({
-                                                            id_inv: art.num_inventario,
-                                                            descripcion: art.descripcion,
-                                                            rubro: art.rubro,
-                                                            estado: art.condicion,
-                                                            origen: art.origen,
-                                                            folio_baja: art.folio_baja
-                                                        }))
-                                                    });
-                                                    setShowPDFButton(true);
-                                                });
-                                            }
-                                        }}
+                                        onClick={handleBajaPDF}
                                         className="mt-6 w-full py-2.5 bg-red-600/20 border border-red-800 text-red-400 rounded-lg hover:bg-red-600/30 transition-colors flex items-center justify-center gap-2"
                                     >
                                         <Download className="h-4 w-4" />
@@ -912,26 +966,15 @@ const ConsultarBajasResguardos = () => {
                                                                     <div className="text-sm font-medium text-white">
                                                                         {articulo.num_inventario}
                                                                     </div>
-                                                                    <div className={`inline-flex items-center px-1.5 py-0.5 rounded-full text-xs font-medium 
-                                                                        ${articulo.condicion === 'B' ? 'bg-green-900/20 text-green-300 border border-green-900' :
-                                                                            articulo.condicion === 'R' ? 'bg-yellow-900/20 text-yellow-300 border border-yellow-900' :
-                                                                                articulo.condicion === 'M' ? 'bg-red-900/20 text-red-300 border border-red-900' :
-                                                                                    'bg-gray-900/20 text-gray-300 border border-gray-900'}`}>
-                                                                        {articulo.condicion}
-                                                                    </div>
-                                                                    <span className={`px-2 py-0.5 rounded-full text-xs font-semibold border 
-                                                                        ${articulo.origen === 'INEA' ? 'bg-blue-900/30 text-blue-300 border-blue-700' :
-                                                                            articulo.origen === 'ITEA' ? 'bg-pink-900/30 text-pink-200 border-pink-700' :
-                                                                                'bg-gray-900/40 text-gray-400 border-gray-800'}`}>
-                                                                        {articulo.origen}
+                                                                    <span className="text-xs bg-gray-800 text-gray-400 px-2 py-0.5 rounded">
+                                                                        {articulo.rubro}
                                                                     </span>
                                                                 </div>
                                                                 <p className="text-sm text-gray-300">
                                                                     {articulo.descripcion}
                                                                 </p>
-                                                                <div className="text-xs text-gray-500 mt-1 flex items-center gap-1">
-                                                                    <Briefcase className="h-3 w-3" />
-                                                                    {articulo.rubro}
+                                                                <div className="text-xs text-gray-500 mt-1">
+                                                                    Condición: {articulo.condicion}
                                                                 </div>
                                                             </div>
                                                             <button
@@ -1098,7 +1141,7 @@ const ConsultarBajasResguardos = () => {
                                                 <FileDigit className="h-4 w-4 text-red-400" />
                                             </div>
                                             <div>
-                                                <span className="text-white font-medium">{itemToDelete.singleArticulo.num_inventario}</span>
+                                                <span className="text-white font-medium">Artículo: {itemToDelete.singleArticulo.num_inventario}</span>
                                                 <p className="text-sm text-gray-500">{itemToDelete.singleArticulo.descripcion}</p>
                                             </div>
                                         </div>
