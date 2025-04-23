@@ -957,15 +957,24 @@ export default function ConsultarResguardos() {
 
                             {selectedResguardo ? (
                                 <>
-                                <div className="flex items-center justify-end mb-2">
+                                <div className="flex items-center justify-end mb-2 gap-2">
                                     {selectedArticulos.length > 0 && (
-                                        <button
-                                            className="px-3 py-1.5 bg-red-700/80 text-white rounded-lg text-xs font-semibold flex items-center gap-2 hover:bg-red-800/80 border border-red-900/50 transition-colors backdrop-blur-sm shadow-lg"
-                                            onClick={() => setShowDeleteSelectedModal(true)}
-                                        >
-                                            <XOctagon className="h-4 w-4" />
-                                            Eliminar seleccionados ({selectedArticulos.length})
-                                        </button>
+                                        <>
+                                            <button
+                                                className="px-3 py-1.5 bg-gray-800/80 text-white rounded-lg text-xs font-semibold flex items-center gap-2 hover:bg-gray-700/80 border border-gray-700/50 transition-colors backdrop-blur-sm shadow-lg"
+                                                onClick={() => setSelectedArticulos([])}
+                                            >
+                                                <X className="h-4 w-4" />
+                                                Cancelar selección
+                                            </button>
+                                            <button
+                                                className="px-3 py-1.5 bg-red-700/80 text-white rounded-lg text-xs font-semibold flex items-center gap-2 hover:bg-red-800/80 border border-red-900/50 transition-colors backdrop-blur-sm shadow-lg"
+                                                onClick={() => setShowDeleteSelectedModal(true)}
+                                            >
+                                                <XOctagon className="h-4 w-4" />
+                                                Eliminar seleccionados ({selectedArticulos.length})
+                                            </button>
+                                        </>
                                     )}
                                 </div>
                                 <div className="space-y-3 mt-2 overflow-auto max-h-[54vh]">

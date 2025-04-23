@@ -156,6 +156,7 @@ export default function NavigationBar() {
             submenu: [
                 { title: 'Crear resguardo', path: '/resguardos/crear' },
                 { title: 'Consultar resguardos', path: '/resguardos/consultar' },
+                {title: 'Consultar bajas', path: '/resguardos/consultar/bajas'},
             ]
         },
         {

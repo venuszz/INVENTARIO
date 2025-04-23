@@ -7,6 +7,7 @@ interface PdfArticulo {
     rubro: string | null;
     estado: string | null;
     origen?: string | null; // INEA o ITEA
+    folio_baja?: string | null; // Añadimos el folio_baja opcional
 }
 
 interface PdfDataBaja {
@@ -105,6 +106,9 @@ export const BajaPDF = ({ data }: { data: PdfDataBaja }) => {
             { nombre: '', articulos: data.articulos }
         ];
 
+    // Verificar si hay diferentes folios de baja
+    const hasMultipleFolios = data.articulos.some(a => a.folio_baja && a.folio_baja !== data.folio_baja);
+
     return (
         <Document>
             <Page size="A4" style={styles.page}>
@@ -141,6 +145,9 @@ export const BajaPDF = ({ data }: { data: PdfDataBaja }) => {
                                     <Text style={[styles.tableCell, styles.tableCellHeader, { flex: 5.5 }]}>Descripción</Text>
                                     <Text style={[styles.tableCell, styles.tableCellHeader, { flex: 1.6 }]}>Rubro</Text>
                                     <Text style={[styles.tableCell, styles.tableCellHeader, { flex: .7 }]}>Estado</Text>
+                                    {hasMultipleFolios && (
+                                        <Text style={[styles.tableCell, styles.tableCellHeader, { flex: 2 }]}>Folio Baja</Text>
+                                    )}
                                 </View>
                                 {grupo.articulos.map((art: PdfArticulo, idx2: number) => (
                                     <View style={styles.tableRow} key={idx2}>
@@ -148,6 +155,9 @@ export const BajaPDF = ({ data }: { data: PdfDataBaja }) => {
                                         <Text style={{ ...styles.tableCell, flex: 5.5 }}>{art.descripcion}</Text>
                                         <Text style={{ ...styles.tableCell, flex: 1.6 }}>{art.rubro}</Text>
                                         <Text style={{ ...styles.tableCell, flex: .7 }}>{art.estado}</Text>
+                                        {hasMultipleFolios && (
+                                            <Text style={{ ...styles.tableCell, flex: 2 }}>{art.folio_baja || data.folio_baja}</Text>
+                                        )}
                                     </View>
                                 ))}
                             </View>
