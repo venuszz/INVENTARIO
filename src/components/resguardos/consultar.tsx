@@ -9,10 +9,12 @@ import {
 import supabase from '@/app/lib/supabase/client';
 import { PDFDownloadLink } from '@react-pdf/renderer';
 import { ResguardoPDF } from './ResguardoPDFReport';
+import { BajaPDF } from './BajaPDFReport';
 import dynamic from 'next/dynamic';
 
 // Importar el componente PDF de forma dinámica para evitar SSR
 const ResguardoPDFReport = dynamic(() => import('./ResguardoPDFReport'), { ssr: false });
+const BajaPDFReport = dynamic(() => import('./BajaPDFReport'), { ssr: false });
 
 interface Resguardo {
     id: number;
@@ -29,6 +31,7 @@ interface Resguardo {
 
 interface ResguardoDetalle extends Resguardo {
     articulos: Array<ResguardoArticulo>;
+    puesto: string;
 }
 
 interface ResguardoArticulo {
@@ -41,6 +44,23 @@ interface ResguardoArticulo {
 
 interface PdfData {
     folio: string;
+    fecha: string;
+    director: string;
+    area: string;
+    puesto: string;
+    resguardante: string;
+    articulos: Array<{
+        id_inv: string;
+        descripcion: string;
+        rubro: string;
+        estado: string;
+        origen?: string | null;
+    }>;
+}
+
+interface PdfDataBaja {
+    folio_resguardo: string;
+    folio_baja: string;
     fecha: string;
     director: string;
     area: string;
@@ -80,6 +100,9 @@ export default function ConsultarResguardos() {
     const [selectedArticulos, setSelectedArticulos] = useState<string[]>([]); // num_inventario
     const [showDeleteSelectedModal, setShowDeleteSelectedModal] = useState(false);
 
+    const [pdfBajaData, setPdfBajaData] = useState<PdfDataBaja | null>(null);
+    const [showPDFBajaButton, setShowPDFBajaButton] = useState(false);
+
     // Seleccionar/deseleccionar un artículo
     const toggleArticuloSelection = (num_inventario: string) => {
         setSelectedArticulos(prev =>
@@ -89,19 +112,104 @@ export default function ConsultarResguardos() {
         );
     };
 
+    // Generar folio de baja
+    const generateFolioBaja = async () => {
+        try {
+            // Obtener el último folio de baja
+            const { data: lastFolio } = await supabase
+                .from('resguardos_bajas')
+                .select('folio_baja')
+                .order('id', { ascending: false })
+                .limit(1)
+                .single();
+
+            // Generar nuevo folio
+            const today = new Date();
+            const year = today.getFullYear().toString();
+            const prefix = 'BAJA-';
+
+            let sequence = 1;
+            if (lastFolio && lastFolio.folio_baja) {
+                const lastSequence = parseInt(lastFolio.folio_baja.split('-')[2]);
+                if (!isNaN(lastSequence)) {
+                    sequence = lastSequence + 1;
+                }
+            }
+
+            return `${prefix}${year}-${sequence.toString().padStart(4, '0')}`;
+        } catch (error) {
+            console.error('Error generando folio de baja:', error);
+            return `BAJA-${new Date().getFullYear()}-0001`;
+        }
+    };
+
+    // Mover registros a la tabla de bajas
+    const moveToResguardosBajas = async (articulos: Array<ResguardoArticulo>, folioBaja: string) => {
+        if (!selectedResguardo) return;
+
+        for (const articulo of articulos) {
+            await supabase
+                .from('resguardos_bajas')
+                .insert({
+                    folio_resguardo: selectedResguardo.folio,
+                    folio_baja: folioBaja,
+                    f_resguardo: selectedResguardo.f_resguardo,
+                    area_resguardo: selectedResguardo.area_resguardo,
+                    dir_area: selectedResguardo.dir_area,
+                    num_inventario: articulo.num_inventario,
+                    descripcion: articulo.descripcion,
+                    rubro: articulo.rubro,
+                    condicion: articulo.condicion,
+                    usufinal: selectedResguardo.usufinal,
+                    created_by: 'SISTEMA',
+                    puesto: selectedResguardo.puesto,
+                    origen: articulo.origen
+                });
+        }
+    };
+
     // Eliminar artículos seleccionados
     const handleDeleteSelected = async () => {
         if (!selectedResguardo || selectedArticulos.length === 0) return;
         setDeleting(true);
         try {
+            const folioBaja = await generateFolioBaja();
+
+            // Obtener artículos seleccionados
+            const articulosSeleccionados = selectedResguardo.articulos.filter(
+                art => selectedArticulos.includes(art.num_inventario)
+            );
+
+            // Mover registros a resguardos_bajas
+            await moveToResguardosBajas(articulosSeleccionados, folioBaja);
+
+            // Preparar datos para el PDF de baja
+            setPdfBajaData({
+                folio_resguardo: selectedResguardo.folio,
+                folio_baja: folioBaja,
+                fecha: new Date().toLocaleDateString(),
+                director: selectedResguardo.dir_area,
+                area: selectedResguardo.area_resguardo || '',
+                puesto: selectedResguardo.puesto,
+                resguardante: selectedResguardo.usufinal || '',
+                articulos: articulosSeleccionados.map(art => ({
+                    id_inv: art.num_inventario,
+                    descripcion: art.descripcion,
+                    rubro: art.rubro,
+                    estado: art.condicion,
+                    origen: art.origen
+                }))
+            });
+
+            // Eliminar registros originales
             for (const numInv of selectedArticulos) {
-                // 1. Eliminar el artículo del resguardo
                 await supabase
                     .from('resguardos')
                     .delete()
                     .eq('folio', selectedResguardo.folio)
                     .eq('num_inventario', numInv);
-                // 2. Limpiar área y usufinal en muebles/mueblesitea
+
+                // Limpiar área y usufinal en muebles/mueblesitea
                 const { data: mueble } = await supabase
                     .from('muebles')
                     .select('id')
@@ -126,13 +234,14 @@ export default function ConsultarResguardos() {
                     }
                 }
             }
-            // Refrescar detalles
+
             await fetchResguardoDetails(selectedResguardo.folio);
             setShowDeleteSelectedModal(false);
             setSelectedArticulos([]);
+            setShowPDFBajaButton(true);
             fetchResguardos();
         } catch {
-            setError('Error al borrar los artículos seleccionados');
+            setError('Error al procesar la baja de los artículos seleccionados');
         } finally {
             setDeleting(false);
         }
@@ -275,57 +384,71 @@ export default function ConsultarResguardos() {
         if (!selectedResguardo) return;
         setDeleting(true);
         try {
-            // 1. Obtener todos los artículos de este resguardo
-            const { data: articulos, error: fetchError } = await supabase
-                .from('resguardos')
-                .select('num_inventario')
-                .eq('folio', selectedResguardo.folio);
-            if (fetchError) throw fetchError;
+            const folioBaja = await generateFolioBaja();
 
-            // 2. Eliminar los resguardos
+            // Mover registros a resguardos_bajas antes de eliminarlos
+            await moveToResguardosBajas(selectedResguardo.articulos, folioBaja);
+
+            // Preparar datos para el PDF de baja
+            setPdfBajaData({
+                folio_resguardo: selectedResguardo.folio,
+                folio_baja: folioBaja,
+                fecha: new Date().toLocaleDateString(),
+                director: selectedResguardo.dir_area,
+                area: selectedResguardo.area_resguardo || '',
+                puesto: selectedResguardo.puesto,
+                resguardante: selectedResguardo.usufinal || '',
+                articulos: selectedResguardo.articulos.map(art => ({
+                    id_inv: art.num_inventario,
+                    descripcion: art.descripcion,
+                    rubro: art.rubro,
+                    estado: art.condicion,
+                    origen: art.origen
+                }))
+            });
+
+            // Eliminar registros originales y actualizar UI
             const { error } = await supabase
                 .from('resguardos')
                 .delete()
                 .eq('folio', selectedResguardo.folio);
+
             if (error) throw error;
 
-            // 3. Limpiar área y usufinal en muebles/mueblesitea
-            if (articulos && articulos.length > 0) {
-                for (const art of articulos) {
-                    const numInv = art.num_inventario;
-                    // Buscar en muebles
-                    const { data: mueble } = await supabase
+            // Limpiar área y usufinal en muebles/mueblesitea
+            for (const art of selectedResguardo.articulos) {
+                const { data: mueble } = await supabase
+                    .from('muebles')
+                    .select('id')
+                    .eq('id_inv', art.num_inventario)
+                    .maybeSingle();
+                if (mueble && mueble.id) {
+                    await supabase
                         .from('muebles')
+                        .update({ area: '', usufinal: '' })
+                        .eq('id', mueble.id);
+                } else {
+                    const { data: muebleItea } = await supabase
+                        .from('mueblesitea')
                         .select('id')
-                        .eq('id_inv', numInv)
+                        .eq('id_inv', art.num_inventario)
                         .maybeSingle();
-                    if (mueble && mueble.id) {
+                    if (muebleItea && muebleItea.id) {
                         await supabase
-                            .from('muebles')
-                            .update({ area: '', usufinal: '' })
-                            .eq('id', mueble.id);
-                    } else {
-                        // Buscar en mueblesitea
-                        const { data: muebleItea } = await supabase
                             .from('mueblesitea')
-                            .select('id')
-                            .eq('id_inv', numInv)
-                            .maybeSingle();
-                        if (muebleItea && muebleItea.id) {
-                            await supabase
-                                .from('mueblesitea')
-                                .update({ area: '', usufinal: '' })
-                                .eq('id', muebleItea.id);
-                        }
+                            .update({ area: '', usufinal: '' })
+                            .eq('id', muebleItea.id);
                     }
                 }
             }
+
             setSelectedResguardo(null);
-            setPdfData(null);
             setShowDeleteAllModal(false);
+            setShowPDFBajaButton(true);
             fetchResguardos();
-        } catch {
-            setError('Error al borrar el resguardo');
+        } catch (err) {
+            setError('Error al procesar la baja del resguardo');
+            console.error(err);
         } finally {
             setDeleting(false);
         }
@@ -336,16 +459,41 @@ export default function ConsultarResguardos() {
         if (!selectedResguardo) return;
         setDeleting(true);
         try {
-            // 1. Eliminar el artículo del resguardo
+            const folioBaja = await generateFolioBaja();
+
+            // Mover registro a resguardos_bajas
+            await moveToResguardosBajas([articulo], folioBaja);
+
+            // Preparar datos para el PDF de baja
+            setPdfBajaData({
+                folio_resguardo: selectedResguardo.folio,
+                folio_baja: folioBaja,
+                fecha: new Date().toLocaleDateString(),
+                director: selectedResguardo.dir_area,
+                area: selectedResguardo.area_resguardo || '',
+                puesto: selectedResguardo.puesto,
+                resguardante: selectedResguardo.usufinal || '',
+                articulos: [
+                    {
+                        id_inv: articulo.num_inventario,
+                        descripcion: articulo.descripcion,
+                        rubro: articulo.rubro,
+                        estado: articulo.condicion,
+                        origen: articulo.origen
+                    }
+                ]
+            });
+
+            // Eliminar registro original
             const { error } = await supabase
                 .from('resguardos')
                 .delete()
                 .eq('folio', selectedResguardo.folio)
                 .eq('num_inventario', articulo.num_inventario);
+
             if (error) throw error;
 
-            // 2. Limpiar área y usufinal en muebles/mueblesitea
-            // Buscar en muebles
+            // Limpiar área y usufinal en muebles/mueblesitea
             const { data: mueble } = await supabase
                 .from('muebles')
                 .select('id')
@@ -357,7 +505,6 @@ export default function ConsultarResguardos() {
                     .update({ area: '', usufinal: '' })
                     .eq('id', mueble.id);
             } else {
-                // Buscar en mueblesitea
                 const { data: muebleItea } = await supabase
                     .from('mueblesitea')
                     .select('id')
@@ -370,12 +517,14 @@ export default function ConsultarResguardos() {
                         .eq('id', muebleItea.id);
                 }
             }
-            // Refrescar detalles
+
             await fetchResguardoDetails(selectedResguardo.folio);
             setShowDeleteItemModal(null);
+            setShowPDFBajaButton(true);
             fetchResguardos();
-        } catch {
-            setError('Error al borrar el artículo');
+        } catch (err) {
+            setError('Error al procesar la baja del artículo');
+            console.error(err);
         } finally {
             setDeleting(false);
         }
@@ -392,35 +541,43 @@ export default function ConsultarResguardos() {
         setCurrentPage(1);
     };
 
-    // Search resguardos by folio
-    const handleSearch = async () => {
-        setLoading(true);
-        try {
-            const { data, error } = await supabase
-                .from('resguardos')
-                .select('*')
-                .ilike('folio', `%${searchTerm}%`)
-                .order(sortField, { ascending: sortDirection === 'asc' });
-
-            if (error) throw error;
-
-            setResguardos(data || []);
-            setTotalCount(data?.length || 0);
-            setCurrentPage(1);
-            setError(null);
-        } catch (err) {
-            setError('Error al buscar resguardos');
-            console.error(err);
-        } finally {
-            setLoading(false);
-        }
-    };
-
     // Reset search
     const resetSearch = () => {
         setSearchTerm('');
         fetchResguardos();
     };
+
+    // Efecto para búsqueda en tiempo real
+    useEffect(() => {
+        const delayDebounceFn = setTimeout(async () => {
+            if (searchTerm) {
+                setLoading(true);
+                try {
+                    const { data, error } = await supabase
+                        .from('resguardos')
+                        .select('*')
+                        .ilike('folio', `%${searchTerm}%`)
+                        .order(sortField, { ascending: sortDirection === 'asc' });
+
+                    if (error) throw error;
+
+                    setResguardos(data || []);
+                    setTotalCount(data?.length || 0);
+                    setCurrentPage(1);
+                    setError(null);
+                } catch (err) {
+                    setError('Error al buscar resguardos');
+                    console.error(err);
+                } finally {
+                    setLoading(false);
+                }
+            } else {
+                fetchResguardos();
+            }
+        }, 100); // Pequeño delay para evitar demasiadas llamadas
+
+        return () => clearTimeout(delayDebounceFn);
+    }, [searchTerm, sortField, sortDirection]);
 
     useEffect(() => {
         fetchResguardos();
@@ -469,7 +626,6 @@ export default function ConsultarResguardos() {
                                         type="text"
                                         value={searchTerm}
                                         onChange={(e) => setSearchTerm(e.target.value)}
-                                        onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
                                         placeholder="Buscar por folio..."
                                         className="pl-10 pr-4 py-3 w-full bg-black border border-gray-800 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                                     />
@@ -484,14 +640,6 @@ export default function ConsultarResguardos() {
                                         >
                                             <X className="h-4 w-4" />
                                             Limpiar búsqueda
-                                        </button>
-                                        <button
-                                            onClick={handleSearch}
-                                            disabled={!searchTerm}
-                                            className={`px-4 py-2 bg-blue-600/20 border border-blue-800 text-blue-400 rounded-lg hover:bg-blue-600/30 transition-colors flex items-center gap-2 text-sm ${!searchTerm ? 'opacity-50 cursor-not-allowed' : ''}`}
-                                        >
-                                            <Search className="h-4 w-4" />
-                                            Buscar
                                         </button>
                                     </div>
                                     <button
@@ -809,24 +957,15 @@ export default function ConsultarResguardos() {
 
                             {selectedResguardo ? (
                                 <>
-                                <div className="flex items-center justify-end mb-2 gap-2">
+                                <div className="flex items-center justify-end mb-2">
                                     {selectedArticulos.length > 0 && (
-                                        <>
-                                            <button
-                                                className="px-3 py-1.5 bg-gray-800/80 text-gray-300 rounded-lg text-xs font-semibold flex items-center gap-2 hover:bg-gray-700/80 border border-gray-700/50 transition-colors backdrop-blur-sm shadow-lg"
-                                                onClick={() => setSelectedArticulos([])}
-                                            >
-                                                <X className="h-4 w-4" />
-                                                Cancelar selección
-                                            </button>
-                                            <button
-                                                className="px-3 py-1.5 bg-red-700/80 text-white rounded-lg text-xs font-semibold flex items-center gap-2 hover:bg-red-800/80 border border-red-900/50 transition-colors backdrop-blur-sm shadow-lg"
-                                                onClick={() => setShowDeleteSelectedModal(true)}
-                                            >
-                                                <XOctagon className="h-4 w-4" />
-                                                Eliminar seleccionados ({selectedArticulos.length})
-                                            </button>
-                                        </>
+                                        <button
+                                            className="px-3 py-1.5 bg-red-700/80 text-white rounded-lg text-xs font-semibold flex items-center gap-2 hover:bg-red-800/80 border border-red-900/50 transition-colors backdrop-blur-sm shadow-lg"
+                                            onClick={() => setShowDeleteSelectedModal(true)}
+                                        >
+                                            <XOctagon className="h-4 w-4" />
+                                            Eliminar seleccionados ({selectedArticulos.length})
+                                        </button>
                                     )}
                                 </div>
                                 <div className="space-y-3 mt-2 overflow-auto max-h-[54vh]">
@@ -967,6 +1106,70 @@ export default function ConsultarResguardos() {
                                             document={<ResguardoPDF data={pdfData} />}
                                             fileName={`resguardo_${pdfData.folio}.pdf`}
                                             className="w-full py-3 px-4 bg-gradient-to-r from-green-600 to-green-500 hover:from-green-500 hover:to-green-400 text-black font-medium rounded-lg flex items-center justify-center gap-2 transition-all transform hover:scale-[1.02] shadow-lg"
+                                        >
+                                            {({ loading }) => (
+                                                <>
+                                                    <Download className="h-5 w-5" />
+                                                    {loading ? 'Generando PDF...' : 'Descargar PDF'}
+                                                </>
+                                            )}
+                                        </PDFDownloadLink>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Modal para PDF de baja */}
+            {showPDFBajaButton && pdfBajaData && (
+                <div className="fixed inset-0 bg-black/90 flex items-center justify-center z-50 px-4 animate-fadeIn">
+                    <div className="bg-black rounded-2xl shadow-2xl border border-red-600/30 w-full max-w-md overflow-hidden transition-all duration-300 transform">
+                        <div className="relative p-6 bg-gradient-to-b from-black to-gray-900">
+                            <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-red-500/60 via-red-400 to-red-500/60"></div>
+
+                            <button
+                                onClick={() => {
+                                    setShowPDFBajaButton(false);
+                                    setPdfBajaData(null);
+                                }}
+                                className="absolute top-3 right-3 p-2 rounded-full bg-black/60 hover:bg-gray-900 text-red-400 hover:text-red-500 border border-red-500/30 transition-colors"
+                                title="Cerrar"
+                            >
+                                <X className="h-4 w-4" />
+                            </button>
+
+                            <div className="flex flex-col items-center text-center mb-4">
+                                <div className="p-3 bg-red-500/10 rounded-full border border-red-500/30 mb-3">
+                                    <FileDigit className="h-8 w-8 text-red-500" />
+                                </div>
+                                <h3 className="text-2xl font-bold text-white">Baja procesada</h3>
+                                <p className="text-gray-400 mt-2">
+                                    Se ha generado el documento de baja con folio: <span className="text-red-300 font-bold">{pdfBajaData.folio_baja}</span>
+                                </p>
+                            </div>
+
+                            <div className="space-y-5 mt-6">
+                                <div className="rounded-lg border border-gray-800 bg-gray-900/50 p-4">
+                                    <label className="block text-xs uppercase tracking-wider text-gray-500 mb-1">Documento generado</label>
+                                    <div className="flex items-center gap-3">
+                                        <div className="p-2 bg-gray-800 rounded-lg">
+                                            <FileText className="h-4 w-4 text-red-400" />
+                                        </div>
+                                        <span className="text-white font-medium">Baja {pdfBajaData.folio_baja}</span>
+                                    </div>
+                                </div>
+
+                                <div className="w-full flex flex-col items-center gap-4">
+                                    <div className="w-full rounded-lg overflow-hidden border border-gray-700">
+                                        <BajaPDFReport data={pdfBajaData} onClose={() => setShowPDFBajaButton(false)} />
+                                    </div>
+                                    <div className="w-full">
+                                        <PDFDownloadLink
+                                            document={<BajaPDF data={pdfBajaData} />}
+                                            fileName={`baja_${pdfBajaData.folio_baja}.pdf`}
+                                            className="w-full py-3 px-4 bg-gradient-to-r from-red-600 to-red-500 hover:from-red-500 hover:to-red-400 text-white font-medium rounded-lg flex items-center justify-center gap-2 transition-all transform hover:scale-[1.02] shadow-lg"
                                         >
                                             {({ loading }) => (
                                                 <>

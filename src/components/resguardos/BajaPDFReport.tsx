@@ -9,8 +9,9 @@ interface PdfArticulo {
     origen?: string | null; // INEA o ITEA
 }
 
-interface PdfData {
-    folio: string;
+interface PdfDataBaja {
+    folio_resguardo: string;
+    folio_baja: string;
     fecha: string;
     director: string | undefined;
     area: string;
@@ -19,8 +20,8 @@ interface PdfData {
     articulos: PdfArticulo[];
 }
 
-interface ResguardoPDFReportProps {
-    data: PdfData;
+interface BajaPDFReportProps {
+    data: PdfDataBaja;
     onClose: () => void;
 }
 
@@ -32,10 +33,10 @@ const styles = StyleSheet.create({
         color: '#222',
     },
     header: {
-        fontSize: 10,
+        fontSize: 12,
         fontWeight: 'bold',
         marginBottom: 2,
-        color: '#1e293b',
+        color: '#b91c1c',
         textAlign: 'center',
         marginTop: 5,
     },
@@ -58,7 +59,7 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
     },
     tableHeader: {
-        backgroundColor: '#e0e7ef',
+        backgroundColor: '#fee2e2',
     },
     tableCell: {
         padding: 6,
@@ -72,14 +73,13 @@ const styles = StyleSheet.create({
     },
     tableCellHeader: {
         fontWeight: 'bold',
-        backgroundColor: '#e0e7ef',
+        backgroundColor: '#fee2e2',
         textAlign: 'center',
         fontSize: 10,
     },
     signature: {
         marginTop: 12,
         flexDirection: 'row',
-        //justifyContent: 'space-between',
     },
     signatureBox: {
         width: '40%',
@@ -91,11 +91,10 @@ const styles = StyleSheet.create({
     },
 });
 
-export const ResguardoPDF = ({ data }: { data: PdfData }) => {
+export const BajaPDF = ({ data }: { data: PdfDataBaja }) => {
     // Separar artículos por origen
     const articulosINEA = data.articulos.filter(a => a.origen === 'INEA');
     const articulosITEA = data.articulos.filter(a => a.origen === 'ITEA');
-    // Si no tienen campo origen, intentar deducirlo (compatibilidad)
     const hasOrigen = data.articulos.some(a => a.origen);
     const grupos = hasOrigen
         ? [
@@ -113,26 +112,26 @@ export const ResguardoPDF = ({ data }: { data: PdfData }) => {
                     <Image src="/images/LOGO-ITEA.png" style={{ width: 100, height: 50, objectFit: "contain" }} />
                     <View style={{ flex: 1, alignItems: 'center', paddingHorizontal: 10 }}>
                         <Text style={[styles.header, { textAlign: 'center' }]}>INSTITUTO TLAXCALTECA PARA LA EDUCACIÓN DE LOS ADULTOS</Text>
-                        <Text style={[styles.header, { textAlign: 'center' }]}>DIRECCIÓN DE ADMINISTRACIÓN Y FINANZAS</Text>
-                        <Text style={[styles.header, { textAlign: 'center' }]}>OFICINA DE RECURSOS MATERIALES</Text>
-                        <Text style={[styles.header, { textAlign: 'center' }]}>RESGUARDO DE BIENES MUEBLES</Text>
+                        <Text style={[styles.header, { textAlign: 'center', color: '#b91c1c' }]}>DOCUMENTO DE BAJA DE BIENES MUEBLES</Text>
+                        <Text style={{ fontSize: 10, color: '#991b1b', textAlign: 'center', marginBottom: 2 }}>Este documento certifica la baja de un resguardo de los siguientes bienes del instituto</Text>
                     </View>
                     <Image src="/images/INEA NACIONAL.png" style={{ width: 70, height: 30, objectFit: "contain" }} />
                 </View>
 
                 <View style={styles.section}>
-                    <Text><Text style={styles.label}>Folio:      </Text> {data.folio}</Text>
+                    <Text><Text style={styles.label}>Folio de Resguardo Original: </Text> {data.folio_resguardo}</Text>
+                    <Text><Text style={styles.label}>Folio de Baja: </Text> {data.folio_baja}</Text>
                     <Text><Text style={styles.label}>Director:</Text> {data.director}</Text>
-                    <Text><Text style={styles.label}>Área:      </Text> {data.area}</Text>
-                    <Text><Text style={styles.label}>Puesto:  </Text> {data.puesto}</Text>
-                    <Text><Text style={styles.label}>Fecha:    </Text> {data.fecha}</Text>
+                    <Text><Text style={styles.label}>Área: </Text> {data.area}</Text>
+                    <Text><Text style={styles.label}>Puesto: </Text> {data.puesto}</Text>
+                    <Text><Text style={styles.label}>Fecha de Baja: </Text> {data.fecha}</Text>
                     <Text><Text style={styles.label}>Resguardante:</Text> {data.resguardante}</Text>
                 </View>
                 {grupos.map((grupo) => (
                     grupo.articulos.length > 0 && (
                         <View key={grupo.nombre} wrap={false}>
                             {grupo.nombre && (
-                                <Text style={{ fontWeight: 'bold', fontSize: 11, marginTop: 12, marginBottom: 2 }}>
+                                <Text style={{ fontWeight: 'bold', fontSize: 11, marginTop: 12, marginBottom: 2, color: '#b91c1c' }}>
                                     Artículos de origen {grupo.nombre}
                                 </Text>
                             )}
@@ -176,7 +175,7 @@ export const ResguardoPDF = ({ data }: { data: PdfData }) => {
                             <Text> DIRECTOR(A) RECURSOS MATERIALES</Text>
                         </View>
                         <View style={styles.signatureBox}>
-                            <Text>           RESGUARDANTE</Text>
+                            <Text>           EX-RESGUARDANTE</Text>
                             <Text> </Text>
                             <Text> </Text>
                             <Text> </Text>
@@ -199,12 +198,12 @@ export const ResguardoPDF = ({ data }: { data: PdfData }) => {
     );
 };
 
-const ResguardoPDFReport: React.FC<ResguardoPDFReportProps> = ({ data }) => {
+const BajaPDFReport: React.FC<BajaPDFReportProps> = ({ data }) => {
     return (
         <div style={{ width: '100%' }}>
             <PDFDownloadLink
-                document={<ResguardoPDF data={data} />}
-                fileName={`resguardo_${data.folio}.pdf`}
+                document={<BajaPDF data={data} />}
+                fileName={`baja_${data.folio_baja}.pdf`}
                 style={{ display: 'none' }}
             >
                 {() => null}
@@ -213,4 +212,4 @@ const ResguardoPDFReport: React.FC<ResguardoPDFReportProps> = ({ data }) => {
     );
 };
 
-export default ResguardoPDFReport;
+export default BajaPDFReport;
