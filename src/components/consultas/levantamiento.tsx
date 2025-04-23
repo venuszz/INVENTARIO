@@ -1,4 +1,6 @@
 "use client";
+import { generatePDF } from '@/components/reportes/pdfgenerator';
+import { generateExcel } from '@/components/reportes/excelgenerator';
 import React from 'react';
 import { useState, useEffect, useCallback } from 'react';
 import {
@@ -223,6 +225,107 @@ export default function LevantamientoUnificado() {
         return total;
     };
 
+    // Función para obtener datos filtrados para exportación
+    const getFilteredData = async () => {
+        let allData: LevMueble[] = [];
+        
+        // Función auxiliar para obtener datos de una tabla
+        const getTableData = async (table: 'muebles' | 'mueblesitea') => {
+            let query = supabase.from(table).select('*');
+            
+            // Aplicar filtros si existen
+            if (searchTerm) {
+                const search = `%${searchTerm}%`;
+                query = query.or(`id_inv.ilike.${search},descripcion.ilike.${search},resguardante.ilike.${search},usufinal.ilike.${search}`);
+            }
+
+            Object.entries(filters).forEach(([key, value]) => {
+                if (value) query = query.eq(key, value);
+            });
+
+            let from = 0;
+            const pageSize = 1000;
+            let keepGoing = true;
+
+            while (keepGoing) {
+                const { data, error } = await query.range(from, from + pageSize - 1);
+                if (error) throw error;
+                if (data && data.length > 0) {
+                    allData = allData.concat(data.map(item => ({ ...item, origen: table === 'muebles' ? 'INEA' : 'ITEA' as const })));
+                    if (data.length < pageSize) {
+                        keepGoing = false;
+                    } else {
+                        from += pageSize;
+                    }
+                } else {
+                    keepGoing = false;
+                }
+            }
+        };
+
+        // Obtener datos de ambas tablas
+        await getTableData('muebles');
+        await getTableData('mueblesitea');
+
+        // Ordenar datos según configuración actual
+        return allData.sort((a, b) => {
+            const aVal = a[sortField] || '';
+            const bVal = b[sortField] || '';
+            if (aVal < bVal) return sortDirection === 'asc' ? -1 : 1;
+            if (aVal > bVal) return sortDirection === 'asc' ? 1 : -1;
+            return 0;
+        });
+    };
+
+    // Función para manejar la exportación
+    const handleExport = async () => {
+        try {
+            setMessage({ type: 'info', text: 'Preparando datos para exportación...' });
+            const exportData = await getFilteredData();
+
+            if (!exportData || exportData.length === 0) {
+                setMessage({ type: 'error', text: 'No hay datos para exportar.' });
+                return;
+            }
+
+            const title = `Levantamiento Unificado - Total: ${exportData.length} registros`;
+            const fileName = `levantamiento_unificado_${new Date().toISOString().slice(0,10)}`;
+            const worksheetName = 'Levantamiento';
+
+            // Convertir los datos para exportación
+            const formattedData = exportData.map(item => ({
+                ...item,
+                valor: item.valor?.toString() || '',
+                f_adq: item.f_adq || '',
+                fechabaja: item.fechabaja || ''
+            }));
+
+            if (exportType === 'pdf') {
+                // Columnas específicas para PDF
+                const pdfColumns = [
+                    { header: 'Origen', key: 'origen', width: 15 },
+                    { header: 'ID', key: 'id_inv', width: 25 },
+                    { header: 'Rubro', key: 'rubro', width: 20 },
+                    { header: 'Descripción', key: 'descripcion', width: 35 },
+                    { header: 'Valor', key: 'valor', width: 15 },
+                    { header: 'Estado', key: 'estado', width: 15 },
+                    { header: 'Estatus', key: 'estatus', width: 15 },
+                    { header: 'Área', key: 'area', width: 20 },
+                    { header: 'Usuario Final', key: 'usufinal', width: 20 }
+                ];
+                await generatePDF({ data: formattedData, columns: pdfColumns, title, fileName });
+            } else if (exportType === 'excel') {
+                await generateExcel({ data: formattedData, fileName, worksheetName });
+            }
+
+            setMessage({ type: 'success', text: 'Archivo generado exitosamente.' });
+            setShowExportModal(false);
+        } catch (error) {
+            console.error('Error al exportar:', error);
+            setMessage({ type: 'error', text: 'Error al generar el archivo.' });
+        }
+    };
+
     // Obtener muebles unificados con paginación real
     const fetchMuebles = useCallback(async () => {
         setLoading(true);
@@ -357,11 +460,6 @@ export default function LevantamientoUnificado() {
         return text.length > length ? `${text.substring(0, length)}...` : text;
     };
 
-    const handleExport = (type: 'pdf' | 'excel') => {
-        setExportType(type);
-        setShowExportModal(true);
-    };
-
     return (
         <div className="bg-black text-white min-h-screen p-2 sm:p-4 md:p-6 lg:p-8">
             <div className="w-full mx-auto bg-black rounded-lg sm:rounded-xl shadow-2xl overflow-hidden border border-gray-800">
@@ -404,7 +502,10 @@ export default function LevantamientoUnificado() {
                         </div>
                         <div className="flex gap-2">
                             <button
-                                onClick={() => handleExport('pdf')}
+                                onClick={() => {
+                                    setExportType('pdf');
+                                    setShowExportModal(true);
+                                }}
                                 className="px-4 py-2 bg-red-700 text-white rounded-md font-medium flex items-center gap-2 hover:bg-red-800 transition-colors border border-red-800"
                                 title="Exportar a PDF"
                             >
@@ -412,7 +513,10 @@ export default function LevantamientoUnificado() {
                                 <span className="hidden sm:inline">PDF</span>
                             </button>
                             <button
-                                onClick={() => handleExport('excel')}
+                                onClick={() => {
+                                    setExportType('excel');
+                                    setShowExportModal(true);
+                                }}
                                 className="px-4 py-2 bg-green-700 text-white rounded-md font-medium flex items-center gap-2 hover:bg-green-800 transition-colors border border-green-800"
                                 title="Exportar a Excel"
                             >
@@ -609,6 +713,7 @@ export default function LevantamientoUnificado() {
                                         <div className="w-full flex flex-col items-center gap-4">
                                             <div className="w-full">
                                                 <button
+                                                    onClick={handleExport}
                                                     className={`w-full py-3 px-4 font-medium rounded-lg flex items-center justify-center gap-2 transition-all transform hover:scale-[1.02] shadow-lg
                                                         ${exportType === 'pdf'
                                                             ? 'bg-gradient-to-r from-red-600 to-red-500 hover:from-red-500 hover:to-red-400 text-white'
