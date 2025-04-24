@@ -219,12 +219,15 @@ export default function CrearResguardos() {
     ) => {
         setLoading(true);
         try {
-            // 1. Obtener todos los id_inv que ya están en resguardos
+            // 1. Obtener los detalles de los artículos que ya están en resguardos
             const { data: resguardados } = await supabase
                 .from('resguardos')
-                .select('num_inventario');
-            const idsResguardadosArr = resguardados?.map(r => r.num_inventario) || [];
-            const idsResguardadosSet = new Set(idsResguardadosArr);
+                .select('num_inventario, descripcion, rubro, condicion');
+
+            // Crear un Set con la combinación de campos relevantes para búsqueda más eficiente
+            const resguardadosSet = new Set(
+                (resguardados || []).map(r => `${r.num_inventario}-${r.descripcion}-${r.rubro}-${r.condicion}`.toLowerCase())
+            );
 
             // 2. Obtener todos los muebles activos de ambas tablas (en lotes)
             const [dataInea, dataItea] = await Promise.all([
@@ -236,8 +239,11 @@ export default function CrearResguardos() {
                 ...((Array.isArray(dataItea) ? dataItea as Mueble[] : [] as Mueble[]).map((item: Mueble) => ({ ...item, origen: 'ITEA' })))
             ];
 
-            // 3. Filtrar en frontend: solo mostrar los que NO están en resguardos
-            combinedData = combinedData.filter(item => !idsResguardadosSet.has(item.id_inv));
+            // 3. Filtrar: solo mostrar los que NO están en resguardos, considerando todos los campos relevantes
+            combinedData = combinedData.filter(item => {
+                const itemKey = `${item.id_inv}-${item.descripcion}-${item.rubro}-${item.estado}`.toLowerCase();
+                return !resguardadosSet.has(itemKey);
+            });
 
             // 4. Aplicar filtros de búsqueda, área y responsable en frontend
             if (searchQuery) {
