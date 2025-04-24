@@ -195,7 +195,7 @@ export const generatePDF = async ({ data, columns, title, fileName, firmas = [] 
                 'INSTITUTO TLAXCALTECA PARA LA EDUCACIÓN DE LOS ADULTOS',
                 'DIRECCIÓN DE ADMINISTRACIÓN Y FINANZAS',
                 'OFICINA DE RECURSOS MATERIALES',
-                title
+                title.toUpperCase()
             ];
 
             // Dibujar cada línea del título
@@ -225,10 +225,10 @@ export const generatePDF = async ({ data, columns, title, fileName, firmas = [] 
 
             // Agregar la información adicional justificada a la izquierda
             const infoLines = [
-                `NOMBRE: ${directoraFirma.nombre}`,
+                `NOMBRE: ${directoraFirma.nombre.toUpperCase()}`,
                 'ADSCRIPCIÓN: DIRECCIÓN GENERAL',
-                `CARGO: ${directoraFirma.puesto}`,
-                `FECHA: ${currentDate}`
+                `CARGO: ${directoraFirma.puesto.toUpperCase()}`,
+                `FECHA: ${currentDate.toUpperCase()}`
             ];
 
             infoLines.forEach((line, index) => {
@@ -268,7 +268,7 @@ export const generatePDF = async ({ data, columns, title, fileName, firmas = [] 
                 const colWidth = col.width ?? 80;
                 if (col.isComposite && col.keys) {
                     const combinedValue = col.keys
-                        .map(key => row[key]?.toString() || '')
+                        .map(key => (row[key]?.toString() || '').toUpperCase())
                         .filter(Boolean)
                         .join(' / ');
 
@@ -286,7 +286,7 @@ export const generatePDF = async ({ data, columns, title, fileName, firmas = [] 
                         });
                     });
                 } else if (col.key) {
-                    const value = row[col.key]?.toString() || '';
+                    const value = (row[col.key]?.toString() || '').toUpperCase();
 
                     const lines = wrapText(value, colWidth - (2 * minCellPadding), regularFont, fontSize);
                     lines.forEach((line, lineIndex) => {
@@ -310,7 +310,7 @@ export const generatePDF = async ({ data, columns, title, fileName, firmas = [] 
         }
 
         // Agregar pie de página con número de página
-        const pageText = `Página ${pageIndex + 1} de ${totalPages}`;
+        const pageText = `PÁGINA ${pageIndex + 1} DE ${totalPages}`;
         const pageTextWidth = regularFont.widthOfTextAtSize(pageText, 10);
         
         page.drawText(normalizeText(pageText), {
@@ -392,8 +392,8 @@ export const generatePDF = async ({ data, columns, title, fileName, firmas = [] 
             });
 
             // Dibujar concepto arriba de la línea (aumentando el espacio a 25 puntos)
-            page.drawText(normalizeText(firma.concepto), {
-                x: xPos + (signatureBoxWidth / 2) - (regularFont.widthOfTextAtSize(firma.concepto, 10) / 2),
+            page.drawText(normalizeText(firma.concepto.toUpperCase()), {
+                x: xPos + (signatureBoxWidth / 2) - (regularFont.widthOfTextAtSize(firma.concepto.toUpperCase(), 10) / 2),
                 y: lineY + 25, // Cambiado de 15 a 25 para más espacio
                 size: 10,
                 font: regularFont,
@@ -401,8 +401,8 @@ export const generatePDF = async ({ data, columns, title, fileName, firmas = [] 
             });
 
             // Dibujar nombre debajo de la línea
-            page.drawText(normalizeText(firma.nombre), {
-                x: xPos + (signatureBoxWidth / 2) - (regularFont.widthOfTextAtSize(firma.nombre, 10) / 2),
+            page.drawText(normalizeText(firma.nombre.toUpperCase()), {
+                x: xPos + (signatureBoxWidth / 2) - (regularFont.widthOfTextAtSize(firma.nombre.toUpperCase(), 10) / 2),
                 y: lineY - 20,
                 size: 10,
                 font: regularFont,
@@ -410,8 +410,8 @@ export const generatePDF = async ({ data, columns, title, fileName, firmas = [] 
             });
 
             // Dibujar puesto debajo del nombre
-            page.drawText(normalizeText(firma.puesto), {
-                x: xPos + (signatureBoxWidth / 2) - (regularFont.widthOfTextAtSize(firma.puesto, 10) / 2),
+            page.drawText(normalizeText(firma.puesto.toUpperCase()), {
+                x: xPos + (signatureBoxWidth / 2) - (regularFont.widthOfTextAtSize(firma.puesto.toUpperCase(), 10) / 2),
                 y: lineY - 35,
                 size: 10,
                 font: regularFont,
@@ -481,7 +481,7 @@ export const generatePDF = async ({ data, columns, title, fileName, firmas = [] 
                 drawSignatureSection(newPage, summaryY);
 
                 // Agregar número de página a la nueva página
-                const pageText = `Página ${currentPage + 2} de ${totalPages}`;
+                const pageText = `PÁGINA ${currentPage + 2} DE ${totalPages}`;
                 const pageTextWidth = regularFont.widthOfTextAtSize(pageText, 10);
                 
                 newPage.drawText(normalizeText(pageText), {
