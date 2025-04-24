@@ -202,7 +202,7 @@ export const BajaPDF = ({ data }: { data: PdfDataBaja }) => {
                             <Text>{getFirma('Conocimiento')?.puesto || 'DIRECTOR(A) RECURSOS MATERIALES'}</Text>
                         </View>
                         <View style={styles.signatureBox}>
-                            <Text>           EX-RESGUARDANTE</Text>
+                            <Text>           EX-RESPONSABLE</Text>
                             <Text> </Text>
                             <Text> </Text>
                             <Text>__________________________________</Text>

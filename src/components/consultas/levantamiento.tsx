@@ -288,7 +288,7 @@ export default function LevantamientoUnificado() {
                 return;
             }
 
-            const title = `Levantamiento Unificado - Total: ${exportData.length} registros`;
+            const title = `INVENTARIO GENERAL DE BIENES MUEBLES`;
             const fileName = `levantamiento_unificado_${new Date().toISOString().slice(0,10)}`;
             const worksheetName = 'Levantamiento';
 
@@ -301,19 +301,43 @@ export default function LevantamientoUnificado() {
             }));
 
             if (exportType === 'pdf') {
-                // Columnas específicas para PDF
+                // Obtener firmas
+                const { data: firmasData, error: firmasError } = await supabase
+                    .from('firmas')
+                    .select('*')
+                    .order('id', { ascending: true });
+
+                if (firmasError) throw firmasError;
+
+                // Columnas específicas para PDF ajustadas al nuevo formato
                 const pdfColumns = [
-                    { header: 'Origen', key: 'origen', width: 15 },
-                    { header: 'ID', key: 'id_inv', width: 25 },
-                    { header: 'Rubro', key: 'rubro', width: 20 },
-                    { header: 'Descripción', key: 'descripcion', width: 35 },
-                    { header: 'Valor', key: 'valor', width: 15 },
-                    { header: 'Estado', key: 'estado', width: 15 },
-                    { header: 'Estatus', key: 'estatus', width: 15 },
-                    { header: 'Área', key: 'area', width: 20 },
-                    { header: 'Usuario Final', key: 'usufinal', width: 20 }
+                    { header: 'Id Inv', key: 'id_inv', width: 45 },
+                    { header: 'DESCRIPCIÓN', key: 'descripcion', width: 150 },
+                    { header: 'VALOR', key: 'valor', width: 45 },
+                    { header: 'PROVEEDOR', key: 'proveedor', width: 65 },
+                    { header: 'FACTURA', key: 'factura', width: 45 },
+                    { header: 'RUBRO', key: 'rubro', width: 65 },
+                    { header: 'ESTADO', key: 'estado', width: 40 },
+                    { header: 'ESTATUS', key: 'estatus', width: 40 },
+                    { header: 'FECHA ADQ.', key: 'f_adq', width: 40 },
+                    { header: 'FORMA ADQ.', key: 'formadq', width: 40 },
+                    { 
+                        header: 'UBICACIÓN',
+                        isComposite: true,
+                        keys: ['ubicacion_es', 'ubicacion_mu', 'ubicacion_no'],
+                        width: 66 
+                    },
+                    { header: 'AREA', key: 'area', width: 65 },
+                    { header: 'USUARIO FINAL', key: 'usufinal', width: 80 }
                 ];
-                await generatePDF({ data: formattedData, columns: pdfColumns, title, fileName });
+
+                await generatePDF({ 
+                    data: formattedData, 
+                    columns: pdfColumns, 
+                    title: title, 
+                    fileName,
+                    firmas: firmasData 
+                });
             } else if (exportType === 'excel') {
                 await generateExcel({ data: formattedData, fileName, worksheetName });
             }

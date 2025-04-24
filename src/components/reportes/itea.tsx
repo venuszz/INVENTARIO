@@ -122,6 +122,14 @@ export default function ReportesIteaDashboard() {
             const estatus = getEstatusFilter(selectedReport);
             if (estatus) query = query.eq('estatus', estatus);
 
+            // Obtener firmas
+            const { data: firmasData, error: firmasError } = await supabase
+                .from('firmas')
+                .select('*')
+                .order('id', { ascending: true });
+
+            if (firmasError) throw firmasError;
+
             // Traer todos los datos paginando manualmente
             interface MuebleItea {
                 id_inv: number;
@@ -167,7 +175,6 @@ export default function ReportesIteaDashboard() {
                 setError('No hay datos para exportar en este reporte.');
                 return;
             }
-            const title = `ITEA - ${selectedReport} (Total: ${allData.length} registros)`;
             // Nombre de hoja de Excel simple y seguro
             let worksheetName = selectedReport.replace(/[^a-zA-Z0-9 ]/g, '').slice(0, 28);
             if (!worksheetName) worksheetName = 'Reporte';
@@ -180,20 +187,47 @@ export default function ReportesIteaDashboard() {
                     worksheetName 
                 });
             } else if (format === 'PDF') {
+                // Determinar el título específico según el tipo de reporte
+                let reportTitle;
+                switch(selectedReport) {
+                    case 'Activos':
+                        reportTitle = 'INVENTARIO DE BIENES MUEBLES ACTIVOS';
+                        break;
+                    case 'Inactivos':
+                        reportTitle = 'INVENTARIO DE BIENES MUEBLES INACTIVOS';
+                        break;
+                    case 'No localizados':
+                        reportTitle = 'INVENTARIO DE BIENES MUEBLES NO LOCALIZADOS';
+                        break;
+                    case 'Obsoletos':
+                        reportTitle = 'INVENTARIO DE BIENES MUEBLES OBSOLETOS';
+                        break;
+                    default:
+                        reportTitle = 'INVENTARIO GENERAL DE BIENES MUEBLES';
+                }
+
                 const pdfColumns = [
-                    { header: 'Rubro', key: 'rubro', width: 20 },
-                    { header: 'Descripción', key: 'descripcion', width: 35 },
-                    { header: 'Valor', key: 'valor', width: 15 },
-                    { header: 'Estado', key: 'estado', width: 15 },
-                    { header: 'Estatus', key: 'estatus', width: 15 },
-                    { header: 'Área', key: 'area', width: 20 },
-                    { header: 'Usuario Final', key: 'usufinal', width: 20 }
+                    { header: 'Id Inv', key: 'id_inv', width: 45 },
+                    { header: 'DESCRIPCIÓN', key: 'descripcion', width: 150 },
+                    { header: 'VALOR', key: 'valor', width: 45 },
+                    { header: 'PROVEEDOR', key: 'proveedor', width: 65 },
+                    { header: 'FACTURA', key: 'factura', width: 45 },
+                    { header: 'RUBRO', key: 'rubro', width: 65 },
+                    { header: 'ESTADO', key: 'estado', width: 40 },
+                    { header: 'ESTATUS', key: 'estatus', width: 40 },
+                    { header: 'FECHA ADQ.', key: 'f_adq', width: 40 },
+                    { header: 'FORMA ADQ.', key: 'formadq', width: 40 },
+                    { header: 'UBICACIÓN', key: 'ubicacion_es', width: 66 },
+                    { header: 'AREA', key: 'area', width: 65 },
+                    { header: 'USUARIO FINAL', key: 'usufinal', width: 80 }
                 ];
+
                 await generatePDF({ 
-                    data: allData as Record<string, unknown>[], 
+                    data: allData, 
                     columns: pdfColumns, 
-                    title, 
-                    fileName 
+                    title: reportTitle, 
+                    fileName,
+                    firmas: firmasData 
                 });
             } else {
                 // CSV with type-safe key access
