@@ -159,8 +159,8 @@ export default function ConfigManagementComponent() {
                 throw new Error('El concepto es obligatorio');
             }
 
-            // Convertir a mayúsculas y trim
-            const conceptoValue = editValue.trim().toUpperCase();
+            // Ya no necesitamos convertir aquí porque se convierte en tiempo real
+            const conceptoValue = editValue;
 
             // Verificar si el nuevo concepto ya existe (excluyendo el item actual)
             const existingItem = configItems.find(item =>
@@ -205,8 +205,8 @@ export default function ConfigManagementComponent() {
                 throw new Error('El concepto es obligatorio');
             }
 
-            // Convertir a mayúsculas y trim
-            const conceptoValue = currentItem.concepto.trim().toUpperCase();
+            // Ya no necesitamos convertir aquí porque se convierte en tiempo real
+            const conceptoValue = currentItem.concepto;
 
             // Verificar si el concepto ya existe
             const existingItem = configItems.find(item =>
@@ -358,13 +358,9 @@ export default function ConfigManagementComponent() {
                                         ref={inputRef}
                                         type="text"
                                         value={currentItem.concepto || ''}
-                                        onChange={(e) => setCurrentItem({ ...currentItem, concepto: e.target.value })}
+                                        onChange={(e) => setCurrentItem({ ...currentItem, concepto: e.target.value.toUpperCase() })}
                                         className={`w-full bg-black border ${error ? 'border-red-500' : 'border-gray-700'} rounded-lg p-2 focus:border-white focus:ring focus:ring-gray-700 focus:ring-opacity-50 transition-all`}
                                         placeholder={`Nombre del ${getActiveTabLabel().toLowerCase()}`}
-                                        onBlur={(e) => {
-                                            // Convertir a mayúsculas al salir del campo
-                                            setCurrentItem({ ...currentItem, concepto: e.target.value.toUpperCase() });
-                                        }}
                                     />
                                     {error && <p className="text-red-500 text-xs mt-1">{error}</p>}
                                 </div>
@@ -440,11 +436,7 @@ export default function ConfigManagementComponent() {
                                                             ref={editInputRef}
                                                             type="text"
                                                             value={editValue}
-                                                            onChange={(e) => setEditValue(e.target.value)}
-                                                            onBlur={(e) => {
-                                                                // Convertir a mayúsculas en tiempo real
-                                                                setEditValue(e.target.value.toUpperCase());
-                                                            }}
+                                                            onChange={(e) => setEditValue(e.target.value.toUpperCase())}
                                                             className={`w-full bg-black border ${error && editingRow === item.id ? 'border-red-500' : 'border-gray-700'} rounded-lg p-1 focus:border-white focus:ring focus:ring-gray-700 focus:ring-opacity-50 transition-all text-sm`}
                                                             placeholder={`Nombre del ${getActiveTabLabel().toLowerCase()}`}
                                                             onKeyDown={(e) => {

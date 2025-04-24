@@ -115,10 +115,10 @@ export default function DirectorioManagementComponent() {
                 throw new Error('El nombre del empleado es obligatorio');
             }
 
-            // Convertir a mayúsculas y trim
-            const nombreEmployee = newEmployee.nombre.trim().toUpperCase();
-            const areaEmployee = newEmployee.area?.trim().toUpperCase() || '';
-            const puestoEmployee = newEmployee.puesto?.trim().toUpperCase() || '';
+            // Ya no necesitamos convertir aquí porque se convierte en tiempo real
+            const nombreEmployee = newEmployee.nombre;
+            const areaEmployee = newEmployee.area || '';
+            const puestoEmployee = newEmployee.puesto || '';
 
             // Verificar si el empleado ya existe
             const existingEmployee = directorio.find((item: Directorio) =>
@@ -159,15 +159,15 @@ export default function DirectorioManagementComponent() {
         setError('');
 
         try {
-            // Validación de campos
+            // Validación
             if (!editEmployee.nombre || editEmployee.nombre.trim() === '') {
                 throw new Error('El nombre del empleado es obligatorio');
             }
 
-            // Convertir a mayúsculas y trim
-            const nombreEmployee = editEmployee.nombre.trim().toUpperCase();
-            const areaEmployee = editEmployee.area?.trim().toUpperCase() || '';
-            const puestoEmployee = editEmployee.puesto?.trim().toUpperCase() || '';
+            // Ya no necesitamos convertir aquí porque se convierte en tiempo real
+            const nombreEmployee = editEmployee.nombre;
+            const areaEmployee = editEmployee.area || '';
+            const puestoEmployee = editEmployee.puesto || '';
 
             // Verificar si el nuevo nombre ya existe (excluyendo el empleado actual)
             const existingEmployee = directorio.find((item: Directorio) =>
@@ -324,7 +324,7 @@ export default function DirectorioManagementComponent() {
                                                 ref={addInputRef}
                                                 type="text"
                                                 value={newEmployee.nombre || ''}
-                                                onChange={(e) => setNewEmployee({ ...newEmployee, nombre: e.target.value })}
+                                                onChange={(e) => setNewEmployee({ ...newEmployee, nombre: e.target.value.toUpperCase() })}
                                                 placeholder="Nombre completo"
                                                 className="w-full bg-black border border-gray-700 rounded p-1.5 focus:border-white focus:ring focus:ring-gray-700 focus:ring-opacity-50 transition-all text-sm"
                                             />
@@ -333,7 +333,7 @@ export default function DirectorioManagementComponent() {
                                             <input
                                                 type="text"
                                                 value={newEmployee.area || ''}
-                                                onChange={(e) => setNewEmployee({ ...newEmployee, area: e.target.value })}
+                                                onChange={(e) => setNewEmployee({ ...newEmployee, area: e.target.value.toUpperCase() })}
                                                 placeholder="Área de adscripción"
                                                 className="w-full bg-black border border-gray-700 rounded p-1.5 focus:border-white focus:ring focus:ring-gray-700 focus:ring-opacity-50 transition-all text-sm"
                                             />
@@ -342,7 +342,7 @@ export default function DirectorioManagementComponent() {
                                             <input
                                                 type="text"
                                                 value={newEmployee.puesto || ''}
-                                                onChange={(e) => setNewEmployee({ ...newEmployee, puesto: e.target.value })}
+                                                onChange={(e) => setNewEmployee({ ...newEmployee, puesto: e.target.value.toUpperCase() })}
                                                 placeholder="Puesto a desempeñar"
                                                 className="w-full bg-black border border-gray-700 rounded p-1.5 focus:border-white focus:ring focus:ring-gray-700 focus:ring-opacity-50 transition-all text-sm"
                                             />
@@ -401,7 +401,7 @@ export default function DirectorioManagementComponent() {
                                                             ref={editInputRef}
                                                             type="text"
                                                             value={editEmployee.nombre || ''}
-                                                            onChange={(e) => setEditEmployee({ ...editEmployee, nombre: e.target.value })}
+                                                            onChange={(e) => setEditEmployee({ ...editEmployee, nombre: e.target.value.toUpperCase() })}
                                                             className="w-full bg-black border border-gray-700 rounded p-1.5 focus:border-white focus:ring focus:ring-gray-700 focus:ring-opacity-50 transition-all text-sm"
                                                         />
                                                     </td>
@@ -410,7 +410,7 @@ export default function DirectorioManagementComponent() {
                                                             title='Área'
                                                             type="text"
                                                             value={editEmployee.area || ''}
-                                                            onChange={(e) => setEditEmployee({ ...editEmployee, area: e.target.value })}
+                                                            onChange={(e) => setEditEmployee({ ...editEmployee, area: e.target.value.toUpperCase() })}
                                                             className="w-full bg-black border border-gray-700 rounded p-1.5 focus:border-white focus:ring focus:ring-gray-700 focus:ring-opacity-50 transition-all text-sm"
                                                         />
                                                     </td>
@@ -419,7 +419,7 @@ export default function DirectorioManagementComponent() {
                                                             title='Puesto'
                                                             type="text"
                                                             value={editEmployee.puesto || ''}
-                                                            onChange={(e) => setEditEmployee({ ...editEmployee, puesto: e.target.value })}
+                                                            onChange={(e) => setEditEmployee({ ...editEmployee, puesto: e.target.value.toUpperCase() })}
                                                             className="w-full bg-black border border-gray-700 rounded p-1.5 focus:border-white focus:ring focus:ring-gray-700 focus:ring-opacity-50 transition-all text-sm"
                                                         />
                                                     </td>
