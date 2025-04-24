@@ -29,12 +29,8 @@ export default function MaintenancePage({
         const calculateTimeLeft = () => {
             const endTime = new Date(maintenanceEndTime).getTime();
             const now = new Date().getTime();
-            const totalDuration = 3 * 60 * 60 * 1000; // Asumimos 3 horas de mantenimiento total
-            const elapsed = totalDuration - (endTime - now);
 
-            // Calcular progreso (0-100%)
-            const calculatedProgress = Math.min(Math.max(Math.floor((elapsed / totalDuration) * 100), 5), 95);
-            setProgress(calculatedProgress);
+            setProgress(60);
 
             // Si ya pasó la hora de finalización
             if (now >= endTime) {
