@@ -80,6 +80,7 @@ interface PdfDataBaja {
         estado: string;
         origen?: string | null;
     }>;
+    firmas?: PdfFirma[];
 }
 
 export default function ConsultarResguardos() {
@@ -182,6 +183,14 @@ export default function ConsultarResguardos() {
         try {
             const folioBaja = await generateFolioBaja();
 
+            // Obtener las firmas
+            const { data: firmas, error: firmasError } = await supabase
+                .from('firmas')
+                .select('*')
+                .order('id', { ascending: true });
+
+            if (firmasError) throw firmasError;
+
             // Obtener artículos seleccionados
             const articulosSeleccionados = selectedResguardo.articulos.filter(
                 art => selectedArticulos.includes(art.num_inventario)
@@ -205,7 +214,8 @@ export default function ConsultarResguardos() {
                     rubro: art.rubro,
                     estado: art.condicion,
                     origen: art.origen
-                }))
+                })),
+                firmas: firmas || undefined
             });
 
             // Eliminar registros originales
@@ -410,6 +420,14 @@ export default function ConsultarResguardos() {
         try {
             const folioBaja = await generateFolioBaja();
 
+            // Obtener las firmas antes de crear el PDF
+            const { data: firmas, error: firmasError } = await supabase
+                .from('firmas')
+                .select('*')
+                .order('id', { ascending: true });
+
+            if (firmasError) throw firmasError;
+
             // Mover registros a resguardos_bajas antes de eliminarlos
             await moveToResguardosBajas(selectedResguardo.articulos, folioBaja);
 
@@ -428,7 +446,8 @@ export default function ConsultarResguardos() {
                     rubro: art.rubro,
                     estado: art.condicion,
                     origen: art.origen
-                }))
+                })),
+                firmas: firmas || undefined
             });
 
             // Eliminar registros originales y actualizar UI
@@ -485,6 +504,14 @@ export default function ConsultarResguardos() {
         try {
             const folioBaja = await generateFolioBaja();
 
+            // Obtener las firmas
+            const { data: firmas, error: firmasError } = await supabase
+                .from('firmas')
+                .select('*')
+                .order('id', { ascending: true });
+
+            if (firmasError) throw firmasError;
+
             // Mover registro a resguardos_bajas
             await moveToResguardosBajas([articulo], folioBaja);
 
@@ -505,7 +532,8 @@ export default function ConsultarResguardos() {
                         estado: articulo.condicion,
                         origen: articulo.origen
                     }
-                ]
+                ],
+                firmas: firmas || undefined
             });
 
             // Eliminar registro original

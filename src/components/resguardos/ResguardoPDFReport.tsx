@@ -23,7 +23,9 @@ interface PdfData {
     puesto: string;
     resguardante: string;
     articulos: PdfArticulo[];
-    firmas?: PdfFirma[]; // Agregando campo opcional de firmas
+    firmas?: PdfFirma[];
+    usufinal?: string;
+    usufinalPuesto?: string;
 }
 
 interface ResguardoPDFReportProps {
@@ -113,8 +115,29 @@ export const ResguardoPDF = ({ data }: { data: PdfData }) => {
             { nombre: '', articulos: data.articulos }
         ];
 
+    // Si data.firmas está vacío, crear firmas por defecto
+    const defaultFirmas: PdfFirma[] = [
+        {
+            concepto: 'AUTORIZA',
+            nombre: 'Por asignar',
+            puesto: 'DIRECTOR(A) ADMIN. Y FINANZAS'
+        },
+        {
+            concepto: 'CONOCIMIENTO',
+            nombre: 'Por asignar',
+            puesto: 'DIRECTOR(A) RECURSOS MATERIALES'
+        },
+        {
+            concepto: 'RESPONSABLE',
+            nombre: data.director || '',
+            puesto: data.puesto || ''
+        }
+    ];
+
+    const firmasToUse = data.firmas?.length ? data.firmas : defaultFirmas;
+
     const getFirma = (concepto: string) => {
-        return data.firmas?.find(f => f.concepto === concepto);
+        return firmasToUse.find(f => f.concepto === concepto);
     };
 
     return (
@@ -189,14 +212,14 @@ export const ResguardoPDF = ({ data }: { data: PdfData }) => {
                             <Text>{getFirma('Conocimiento')?.puesto || 'DIRECTOR(A) RECURSOS MATERIALES'}</Text>
                         </View>
                         <View style={styles.signatureBox}>
-                            <Text>           RESPONSABLE</Text>
+                            <Text>RESGUARDANTE</Text>
                             <Text> </Text>
                             <Text> </Text>
                             <Text> </Text>
                             <Text>__________________________________</Text>
                             <Text> </Text>
-                            <Text>{data.resguardante}</Text>
-                            <Text>{data.puesto}</Text>
+                            <Text>{data.director}</Text>
+                            <Text>{data.puesto} DE {data.area}</Text>
                         </View>
                     </View>
                     <Text

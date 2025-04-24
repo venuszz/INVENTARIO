@@ -116,8 +116,29 @@ export const BajaPDF = ({ data }: { data: PdfDataBaja }) => {
     // Verificar si hay diferentes folios de baja
     const hasMultipleFolios = data.articulos.some(a => a.folio_baja && a.folio_baja !== data.folio_baja);
 
+    // Si data.firmas está vacío, crear firmas por defecto
+    const defaultFirmas: PdfFirma[] = [
+        {
+            concepto: 'Autoriza',
+            nombre: 'Por asignar',
+            puesto: 'DIRECTOR(A) ADMIN. Y FINANZAS'
+        },
+        {
+            concepto: 'Conocimiento',
+            nombre: 'Por asignar',
+            puesto: 'DIRECTOR(A) RECURSOS MATERIALES'
+        },
+        {
+            concepto: 'Responsable',
+            nombre: data.director || '',
+            puesto: data.puesto || ''
+        }
+    ];
+
+    const firmasToUse = data.firmas?.length ? data.firmas : defaultFirmas;
+
     const getFirma = (concepto: string) => {
-        return data.firmas?.find(f => f.concepto === concepto);
+        return firmasToUse.find(f => f.concepto === concepto);
     };
 
     return (
@@ -207,8 +228,8 @@ export const BajaPDF = ({ data }: { data: PdfDataBaja }) => {
                             <Text> </Text>
                             <Text>__________________________________</Text>
                             <Text> </Text>
-                            <Text>{data.resguardante}</Text>
-                            <Text>{data.puesto}</Text>
+                            <Text>{data.director}</Text>
+                            <Text>{data.puesto} DE {data.area}</Text>
                         </View>
                     </View>
                     <Text
