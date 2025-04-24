@@ -13,7 +13,7 @@ interface MaintenancePageProps {
 }
 
 export default function MaintenancePage({
-    pageTitle = "Sitio en Mantenimiento",
+    pageTitle = "Mantenimiento",
     maintenanceEndTime = "2025-04-24T18:30:00", // EDITA AQUÍ: Formato ISO "YYYY-MM-DDTHH:MM:SS"
     maintenanceReason = "Actualización de sistemas",
     showHomeButton = true,
@@ -76,93 +76,88 @@ export default function MaintenancePage({
     };
 
     return (
-        <div className="bg-slate-900 text-white min-h-screen p-2 sm:p-4 md:p-6 lg:p-8 flex flex-col">
-            <div className="w-full mx-auto bg-slate-800 rounded-lg sm:rounded-xl shadow-2xl overflow-hidden transition-all duration-500 transform border border-slate-700 flex-grow flex flex-col">
-                {/* Header con título */}
-                <div className="bg-slate-800 p-4 sm:p-6 border-b border-slate-700 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 sm:gap-0">
-                    <h1 className="text-xl sm:text-2xl md:text-3xl font-bold flex items-center">
-                        <span className="mr-2 sm:mr-3 bg-amber-600 text-white p-1 sm:p-2 rounded-lg text-sm sm:text-base">
-                            <AlertCircle size={20} />
-                        </span>
-                        {pageTitle}
-                    </h1>
+        <div className="bg-gray-950 text-gray-200 min-h-screen p-3 md:p-4 flex items-center justify-center">
+            <div className="w-full max-w-md mx-auto bg-gray-900 rounded-xl shadow-2xl overflow-hidden border border-gray-800">
+                {/* Header */}
+                <div className="bg-gray-900 p-3 border-b border-gray-800 flex items-center">
+                    <div className="bg-indigo-900/30 p-1.5 rounded-md mr-2">
+                        <Wrench size={16} className="text-indigo-400" />
+                    </div>
+                    <h1 className="text-lg font-medium">{pageTitle}</h1>
+                    <div className="ml-auto flex items-center">
+                        <div className="flex space-x-1">
+                            <div className="h-2 w-2 rounded-full bg-indigo-500 animate-pulse"></div>
+                            <div className="h-2 w-2 rounded-full bg-indigo-500 animate-pulse delay-75"></div>
+                            <div className="h-2 w-2 rounded-full bg-indigo-500 animate-pulse delay-150"></div>
+                        </div>
+                    </div>
                 </div>
 
                 {/* Contenido principal */}
-                <div className="px-4 sm:px-6 md:px-8 py-8 sm:py-12 flex-grow flex flex-col items-center justify-center">
-                    <div className="mb-8 p-6 relative">
-                        <div className="relative">
-                            <Wrench size={80} className="text-amber-500" />
-                            <div className="absolute -top-1 -right-1 animate-ping rounded-full h-3 w-3 bg-amber-400"></div>
-                        </div>
-                    </div>
-
-                    <div className="text-center mb-8 max-w-lg">
-                        <h2 className="text-2xl sm:text-3xl font-bold mb-4">Mantenimiento en Progreso</h2>
-                        <p className="text-slate-300 mb-6">
+                <div className="p-4">
+                    <div className="text-center mb-4">
+                        <p className="text-gray-400 text-sm mb-4">
                             Estamos realizando tareas de mantenimiento para mejorar nuestro servicio.
-                            El sistema estará disponible pronto. Gracias por tu paciencia.
+                            El sistema estará disponible pronto.
                         </p>
 
-                        <div className="mb-6">
-                            <div className="flex items-center justify-center text-amber-400 mb-2">
-                                <Clock size={20} className="mr-2" />
-                                <span className="font-medium">Motivo: {maintenanceReason}</span>
+                        <div className="mb-4 text-xs">
+                            <div className="flex items-center justify-center text-indigo-400 mb-1.5">
+                                <AlertCircle size={14} className="mr-1.5" />
+                                <span>{maintenanceReason}</span>
                             </div>
-                            <div className="flex items-center justify-center text-amber-400">
-                                <Clock size={20} className="mr-2" />
-                                <span className="font-medium">Finalización estimada: {formatEndTime()}</span>
+                            <div className="flex items-center justify-center text-indigo-400">
+                                <Clock size={14} className="mr-1.5" />
+                                <span>Finalización: {formatEndTime()}</span>
                             </div>
                         </div>
 
                         {showCountdown && (
-                            <div className="mb-6 bg-slate-700 p-4 rounded-lg border border-slate-600">
-                                <p className="text-sm text-slate-300 mb-1">Tiempo restante estimado:</p>
-                                <p className="text-2xl font-mono">{timeLeft}</p>
+                            <div className="mb-4 bg-gray-800/50 p-3 rounded-lg border border-gray-800">
+                                <p className="text-xs text-gray-400 mb-1">Tiempo restante:</p>
+                                <p className="text-xl font-mono">{timeLeft}</p>
                             </div>
                         )}
 
-                        <div className="w-full bg-slate-700 rounded-full h-6 mb-2 overflow-hidden">
+                        <div className="w-full bg-gray-800 rounded-full h-3 mb-1.5 overflow-hidden">
                             <div
-                                className="bg-amber-500 h-6 rounded-full transition-all duration-300 flex items-center justify-center text-xs font-bold text-slate-900"
+                                className="bg-indigo-500 h-3 rounded-full transition-all duration-300"
                                 style={{ width: `${progress}%` }}
-                            >
-                                {progress}%
-                            </div>
+                            ></div>
                         </div>
-                        <p className="text-sm text-slate-400">Progreso estimado del mantenimiento</p>
+                        <p className="text-xs text-gray-500">Progreso: {progress}%</p>
                     </div>
 
-                    <div className="flex flex-wrap gap-3 justify-center">
+                    <div className="flex gap-2 justify-center">
                         {showBackButton && (
                             <button
                                 onClick={() => window.history.back()}
-                                className="flex items-center px-4 py-2 bg-slate-700 hover:bg-slate-600 rounded-lg transition-colors text-sm">
-                                <ArrowLeft size={16} className="mr-2" />
-                                Regresar
+                                className="flex items-center px-3 py-1.5 bg-gray-800 hover:bg-gray-700 rounded-md transition-colors text-xs">
+                                <ArrowLeft size={14} className="mr-1.5" />
+                                Volver
                             </button>
                         )}
 
                         {showHomeButton && (
-                            <Link href="/" className="flex items-center px-4 py-2 bg-slate-700 hover:bg-slate-600 rounded-lg transition-colors text-sm">
-                                <Home size={16} className="mr-2" />
-                                Página alternativa
+                            <Link href="/" className="flex items-center px-3 py-1.5 bg-gray-800 hover:bg-gray-700 rounded-md transition-colors text-xs">
+                                <Home size={14} className="mr-1.5" />
+                                Inicio
                             </Link>
                         )}
 
                         <button
                             onClick={handleRefresh}
-                            className="flex items-center px-4 py-2 bg-amber-600 hover:bg-amber-500 rounded-lg transition-colors text-sm"
+                            className="flex items-center px-3 py-1.5 bg-indigo-700 hover:bg-indigo-600 rounded-md transition-colors text-xs"
                             disabled={isRefreshing}>
-                            <RefreshCw size={16} className={`mr-2 ${isRefreshing ? 'animate-spin' : ''}`} />
-                            Intentar acceder
+                            <RefreshCw size={14} className={`mr-1.5 ${isRefreshing ? 'animate-spin' : ''}`} />
+                            Verificar
                         </button>
                     </div>
                 </div>
 
                 {/* Footer */}
-                <div className="bg-slate-800 p-4 border-t border-slate-700 text-center text-sm text-slate-400">
-                    <p>Para más información sobre este mantenimiento, contacta al equipo de soporte técnico.</p>
+                <div className="bg-gray-900 p-3 border-t border-gray-800 text-center text-xs text-gray-500">
+                    <p>Disculpe las molestias. Gracias por su paciencia.</p>
                 </div>
             </div>
         </div>
