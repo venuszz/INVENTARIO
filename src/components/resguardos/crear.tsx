@@ -222,11 +222,11 @@ export default function CrearResguardos() {
             // 1. Obtener los detalles de los artículos que ya están en resguardos
             const { data: resguardados } = await supabase
                 .from('resguardos')
-                .select('num_inventario, descripcion, rubro, condicion');
+                .select('num_inventario, descripcion, rubro, condicion, area_resguardo');
 
             // Crear un Set con la combinación de campos relevantes para búsqueda más eficiente
             const resguardadosSet = new Set(
-                (resguardados || []).map(r => `${r.num_inventario}-${r.descripcion}-${r.rubro}-${r.condicion}`.toLowerCase())
+                (resguardados || []).map(r => `${r.num_inventario}-${r.descripcion}-${r.rubro}-${r.condicion}-${r.area_resguardo}`.toLowerCase())
             );
 
             // 2. Obtener todos los muebles activos de ambas tablas (en lotes)
@@ -241,7 +241,7 @@ export default function CrearResguardos() {
 
             // 3. Filtrar: solo mostrar los que NO están en resguardos, considerando todos los campos relevantes
             combinedData = combinedData.filter(item => {
-                const itemKey = `${item.id_inv}-${item.descripcion}-${item.rubro}-${item.estado}`.toLowerCase();
+                const itemKey = `${item.id_inv}-${item.descripcion}-${item.rubro}-${item.estado}-${item.area}`.toLowerCase();
                 return !resguardadosSet.has(itemKey);
             });
 

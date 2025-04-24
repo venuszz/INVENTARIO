@@ -11,6 +11,7 @@ import { PDFDownloadLink } from '@react-pdf/renderer';
 import { ResguardoPDF } from './ResguardoPDFReport';
 import { BajaPDF } from './BajaPDFReport';
 import dynamic from 'next/dynamic';
+import { SupabaseClient } from '@supabase/supabase-js';
 
 // Importar el componente PDF de forma dinámica para evitar SSR
 const ResguardoPDFReport = dynamic(() => import('./ResguardoPDFReport'), { ssr: false });
@@ -82,6 +83,52 @@ interface PdfDataBaja {
     }>;
     firmas?: PdfFirma[];
 }
+
+// Función auxiliar para obtener un artículo exacto de una tabla
+const getExactArticulo = async (
+    supabase: SupabaseClient,
+    tabla: string,
+    articulo: ResguardoArticulo,
+    area?: string
+) => {
+    const { data } = await supabase
+        .from(tabla)
+        .select('id')
+        .eq('id_inv', articulo.num_inventario)
+        // Asegurar que sea exactamente el mismo artículo
+        .eq('descripcion', articulo.descripcion)
+        .eq('rubro', articulo.rubro)
+        .eq('estado', articulo.condicion)
+        .eq('area', area || '');
+    
+    return data;
+};
+
+// Función para limpiar área y usufinal
+const limpiarDatosArticulo = async (
+    supabase: SupabaseClient,
+    articulo: ResguardoArticulo,
+    area: string
+) => {
+    // Buscar en muebles
+    const muebleInea = await getExactArticulo(supabase, 'muebles', articulo, area);
+    if (muebleInea && muebleInea.length > 0 && muebleInea[0].id) {
+        await supabase
+            .from('muebles')
+            .update({ area: '', usufinal: '' })
+            .eq('id', muebleInea[0].id);
+        return;
+    }
+
+    // Si no se encuentra en muebles, buscar en mueblesitea
+    const muebleItea = await getExactArticulo(supabase, 'mueblesitea', articulo, area);
+    if (muebleItea && muebleItea.length > 0 && muebleItea[0].id) {
+        await supabase
+            .from('mueblesitea')
+            .update({ area: '', usufinal: '' })
+            .eq('id', muebleItea[0].id);
+    }
+};
 
 export default function ConsultarResguardos() {
     const [resguardos, setResguardos] = useState<Resguardo[]>([]);
@@ -225,31 +272,11 @@ export default function ConsultarResguardos() {
                     .delete()
                     .eq('folio', selectedResguardo.folio)
                     .eq('num_inventario', numInv);
+            }
 
-                // Limpiar área y usufinal en muebles/mueblesitea
-                const { data: mueble } = await supabase
-                    .from('muebles')
-                    .select('id')
-                    .eq('id_inv', numInv)
-                    .maybeSingle();
-                if (mueble && mueble.id) {
-                    await supabase
-                        .from('muebles')
-                        .update({ area: '', usufinal: '' })
-                        .eq('id', mueble.id);
-                } else {
-                    const { data: muebleItea } = await supabase
-                        .from('mueblesitea')
-                        .select('id')
-                        .eq('id_inv', numInv)
-                        .maybeSingle();
-                    if (muebleItea && muebleItea.id) {
-                        await supabase
-                            .from('mueblesitea')
-                            .update({ area: '', usufinal: '' })
-                            .eq('id', muebleItea.id);
-                    }
-                }
+            // Limpiar área y usufinal para cada artículo seleccionado
+            for (const articulo of articulosSeleccionados) {
+                await limpiarDatosArticulo(supabase, articulo, selectedResguardo.area_resguardo || '');
             }
 
             await fetchResguardoDetails(selectedResguardo.folio);
@@ -458,31 +485,9 @@ export default function ConsultarResguardos() {
 
             if (error) throw error;
 
-            // Limpiar área y usufinal en muebles/mueblesitea
-            for (const art of selectedResguardo.articulos) {
-                const { data: mueble } = await supabase
-                    .from('muebles')
-                    .select('id')
-                    .eq('id_inv', art.num_inventario)
-                    .maybeSingle();
-                if (mueble && mueble.id) {
-                    await supabase
-                        .from('muebles')
-                        .update({ area: '', usufinal: '' })
-                        .eq('id', mueble.id);
-                } else {
-                    const { data: muebleItea } = await supabase
-                        .from('mueblesitea')
-                        .select('id')
-                        .eq('id_inv', art.num_inventario)
-                        .maybeSingle();
-                    if (muebleItea && muebleItea.id) {
-                        await supabase
-                            .from('mueblesitea')
-                            .update({ area: '', usufinal: '' })
-                            .eq('id', muebleItea.id);
-                    }
-                }
+            // Limpiar área y usufinal para cada artículo
+            for (const articulo of selectedResguardo.articulos) {
+                await limpiarDatosArticulo(supabase, articulo, selectedResguardo.area_resguardo || '');
             }
 
             setSelectedResguardo(null);
@@ -545,30 +550,8 @@ export default function ConsultarResguardos() {
 
             if (error) throw error;
 
-            // Limpiar área y usufinal en muebles/mueblesitea
-            const { data: mueble } = await supabase
-                .from('muebles')
-                .select('id')
-                .eq('id_inv', articulo.num_inventario)
-                .maybeSingle();
-            if (mueble && mueble.id) {
-                await supabase
-                    .from('muebles')
-                    .update({ area: '', usufinal: '' })
-                    .eq('id', mueble.id);
-            } else {
-                const { data: muebleItea } = await supabase
-                    .from('mueblesitea')
-                    .select('id')
-                    .eq('id_inv', articulo.num_inventario)
-                    .maybeSingle();
-                if (muebleItea && muebleItea.id) {
-                    await supabase
-                        .from('mueblesitea')
-                        .update({ area: '', usufinal: '' })
-                        .eq('id', muebleItea.id);
-                }
-            }
+            // Limpiar área y usufinal solo para este artículo
+            await limpiarDatosArticulo(supabase, articulo, selectedResguardo.area_resguardo || '');
 
             await fetchResguardoDetails(selectedResguardo.folio);
             setShowDeleteItemModal(null);

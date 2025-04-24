@@ -155,27 +155,27 @@ export const ResguardoPDF = ({ data }: { data: PdfData }) => {
                 </View>
 
                 <View style={styles.section}>
-                    <Text><Text style={styles.label}>Folio:      </Text> {data.folio}</Text>
-                    <Text><Text style={styles.label}>Director:</Text> {data.director}</Text>
-                    <Text><Text style={styles.label}>Área:      </Text> {data.area}</Text>
-                    <Text><Text style={styles.label}>Puesto:  </Text> {data.puesto}</Text>
-                    <Text><Text style={styles.label}>Fecha:    </Text> {data.fecha}</Text>
-                    <Text><Text style={styles.label}>Resguardante:</Text> {data.resguardante}</Text>
+                    <Text><Text style={styles.label}>FOLIO: </Text> {data.folio}</Text>
+                    <Text><Text style={styles.label}>DIRECTOR: </Text> {data.director}</Text>
+                    <Text><Text style={styles.label}>ÁREA: </Text> {data.area}</Text>
+                    <Text><Text style={styles.label}>PUESTO: </Text> {data.puesto}</Text>
+                    <Text><Text style={styles.label}>FECHA: </Text> {data.fecha}</Text>
+                    <Text><Text style={styles.label}>RESGUARDANTE: </Text> {data.resguardante}</Text>
                 </View>
                 {grupos.map((grupo) => (
                     grupo.articulos.length > 0 && (
                         <View key={grupo.nombre} wrap={false}>
                             {grupo.nombre && (
                                 <Text style={{ fontWeight: 'bold', fontSize: 11, marginTop: 12, marginBottom: 2 }}>
-                                    Artículos de origen {grupo.nombre}
+                                    ARTÍCULOS DE ORIGEN {grupo.nombre}
                                 </Text>
                             )}
                             <View style={styles.table}>
                                 <View style={[styles.tableRow, styles.tableHeader]}>
-                                    <Text style={[styles.tableCell, styles.tableCellHeader, { flex: 2.5 }]}>ID Inventario</Text>
-                                    <Text style={[styles.tableCell, styles.tableCellHeader, { flex: 5.5 }]}>Descripción</Text>
-                                    <Text style={[styles.tableCell, styles.tableCellHeader, { flex: 1.6 }]}>Rubro</Text>
-                                    <Text style={[styles.tableCell, styles.tableCellHeader, { flex: .7 }]}>Estado</Text>
+                                    <Text style={[styles.tableCell, styles.tableCellHeader, { flex: 2.5 }]}>ID INVENTARIO</Text>
+                                    <Text style={[styles.tableCell, styles.tableCellHeader, { flex: 5.5 }]}>DESCRIPCIÓN</Text>
+                                    <Text style={[styles.tableCell, styles.tableCellHeader, { flex: 1.6 }]}>RUBRO</Text>
+                                    <Text style={[styles.tableCell, styles.tableCellHeader, { flex: .7 }]}>ESTADO</Text>
                                 </View>
                                 {grupo.articulos.map((art: PdfArticulo, idx2: number) => (
                                     <View style={styles.tableRow} key={idx2}>
@@ -198,8 +198,8 @@ export const ResguardoPDF = ({ data }: { data: PdfData }) => {
                             <Text> </Text>
                             <Text>_______________________________</Text>
                             <Text> </Text>
-                            <Text>{getFirma('Autoriza')?.nombre || ' '}</Text>
-                            <Text>{getFirma('Autoriza')?.puesto || 'DIRECTOR(A) ADMIN. Y FINANZAS'}</Text>
+                            <Text>{getFirma('AUTORIZA')?.nombre || ' '}</Text>
+                            <Text>{getFirma('AUTORIZA')?.puesto || 'DIRECTOR(A) ADMIN. Y FINANZAS'}</Text>
                         </View>
                         <View style={styles.signatureBox}>
                             <Text>       CONOCIMIENTO</Text>
@@ -208,8 +208,8 @@ export const ResguardoPDF = ({ data }: { data: PdfData }) => {
                             <Text> </Text>
                             <Text>________________________________</Text>
                             <Text> </Text>
-                            <Text>{getFirma('Conocimiento')?.nombre || ' '}</Text>
-                            <Text>{getFirma('Conocimiento')?.puesto || 'DIRECTOR(A) RECURSOS MATERIALES'}</Text>
+                            <Text>{getFirma('CONOCIMIENTO')?.nombre || ' '}</Text>
+                            <Text>{getFirma('CONOCIMIENTO')?.puesto || 'DIRECTOR(A) RECURSOS MATERIALES'}</Text>
                         </View>
                         <View style={styles.signatureBox}>
                             <Text>RESGUARDANTE</Text>
@@ -228,7 +228,7 @@ export const ResguardoPDF = ({ data }: { data: PdfData }) => {
                             textAlign: 'right',
                             marginTop: 10,
                         }}
-                        render={({ pageNumber, totalPages }) => `Página ${pageNumber} de ${totalPages}`}
+                        render={({ pageNumber, totalPages }) => `PÁGINA ${pageNumber} DE ${totalPages}`}
                     />
                 </View>
             </Page>

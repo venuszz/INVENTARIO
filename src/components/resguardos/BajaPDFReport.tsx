@@ -152,7 +152,7 @@ export const BajaPDF = ({ data }: { data: PdfDataBaja }) => {
                     <View style={{ flex: 1, alignItems: 'center', paddingHorizontal: 10 }}>
                         <Text style={[styles.header, { textAlign: 'center' }]}>INSTITUTO TLAXCALTECA PARA LA EDUCACIÓN DE LOS ADULTOS</Text>
                         <Text style={[styles.header, { textAlign: 'center', color: '#b91c1c' }]}>DOCUMENTO DE BAJA DE BIENES MUEBLES</Text>
-                        <Text style={{ fontSize: 10, color: '#991b1b', textAlign: 'center', marginBottom: 2 }}>Este documento certifica la baja de un resguardo de los siguientes bienes del instituto</Text>
+                        <Text style={{ fontSize: 10, color: '#991b1b', textAlign: 'center', marginBottom: 2 }}>ESTE DOCUMENTO CERTIFICA LA BAJA DE UN RESGUARDO DE LOS SIGUIENTES BIENES DEL INSTITUTO</Text>
                     </View>
                     <Image 
                         src="/images/INEA NACIONAL.png" 
@@ -161,30 +161,30 @@ export const BajaPDF = ({ data }: { data: PdfDataBaja }) => {
                 </View>
 
                 <View style={styles.section}>
-                    <Text><Text style={styles.label}>Folio de Resguardo Original: </Text> {data.folio_resguardo}</Text>
-                    <Text><Text style={styles.label}>Folio de Baja: </Text> {data.folio_baja}</Text>
-                    <Text><Text style={styles.label}>Director:</Text> {data.director}</Text>
-                    <Text><Text style={styles.label}>Área: </Text> {data.area}</Text>
-                    <Text><Text style={styles.label}>Puesto: </Text> {data.puesto}</Text>
-                    <Text><Text style={styles.label}>Fecha de Baja: </Text> {data.fecha}</Text>
-                    <Text><Text style={styles.label}>Resguardante:</Text> {data.resguardante}</Text>
+                    <Text><Text style={styles.label}>FOLIO DE RESGUARDO ORIGINAL: </Text> {data.folio_resguardo}</Text>
+                    <Text><Text style={styles.label}>FOLIO DE BAJA: </Text> {data.folio_baja}</Text>
+                    <Text><Text style={styles.label}>DIRECTOR: </Text> {data.director}</Text>
+                    <Text><Text style={styles.label}>ÁREA: </Text> {data.area}</Text>
+                    <Text><Text style={styles.label}>PUESTO: </Text> {data.puesto}</Text>
+                    <Text><Text style={styles.label}>FECHA DE BAJA: </Text> {data.fecha}</Text>
+                    <Text><Text style={styles.label}>RESGUARDANTE: </Text> {data.resguardante}</Text>
                 </View>
                 {grupos.map((grupo) => (
                     grupo.articulos.length > 0 && (
                         <View key={grupo.nombre} wrap={false}>
                             {grupo.nombre && (
                                 <Text style={{ fontWeight: 'bold', fontSize: 11, marginTop: 12, marginBottom: 2, color: '#b91c1c' }}>
-                                    Artículos de origen {grupo.nombre}
+                                    ARTÍCULOS DE ORIGEN {grupo.nombre}
                                 </Text>
                             )}
                             <View style={styles.table}>
                                 <View style={[styles.tableRow, styles.tableHeader]}>
-                                    <Text style={[styles.tableCell, styles.tableCellHeader, { flex: 2.5 }]}>ID Inventario</Text>
-                                    <Text style={[styles.tableCell, styles.tableCellHeader, { flex: 5.5 }]}>Descripción</Text>
-                                    <Text style={[styles.tableCell, styles.tableCellHeader, { flex: 1.6 }]}>Rubro</Text>
-                                    <Text style={[styles.tableCell, styles.tableCellHeader, { flex: .7 }]}>Estado</Text>
+                                    <Text style={[styles.tableCell, styles.tableCellHeader, { flex: 2.5 }]}>ID INVENTARIO</Text>
+                                    <Text style={[styles.tableCell, styles.tableCellHeader, { flex: 5.5 }]}>DESCRIPCIÓN</Text>
+                                    <Text style={[styles.tableCell, styles.tableCellHeader, { flex: 1.6 }]}>RUBRO</Text>
+                                    <Text style={[styles.tableCell, styles.tableCellHeader, { flex: .7 }]}>ESTADO</Text>
                                     {hasMultipleFolios && (
-                                        <Text style={[styles.tableCell, styles.tableCellHeader, { flex: 2 }]}>Folio Baja</Text>
+                                        <Text style={[styles.tableCell, styles.tableCellHeader, { flex: 2 }]}>FOLIO BAJA</Text>
                                     )}
                                 </View>
                                 {grupo.articulos.map((art: PdfArticulo, idx2: number) => (
@@ -238,7 +238,7 @@ export const BajaPDF = ({ data }: { data: PdfDataBaja }) => {
                             textAlign: 'right',
                             marginTop: 10,
                         }}
-                        render={({ pageNumber, totalPages }) => `Página ${pageNumber} de ${totalPages}`}
+                        render={({ pageNumber, totalPages }) => `PÁGINA ${pageNumber} DE ${totalPages}`}
                     />
                 </View>
             </Page>
