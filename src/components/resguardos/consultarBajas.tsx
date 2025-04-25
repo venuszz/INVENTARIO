@@ -12,7 +12,10 @@ import { BajaPDF } from './BajaPDFReport';
 import dynamic from 'next/dynamic';
 
 // Importar el componente PDF de forma dinámica para evitar SSR
-const BajaPDFReport = dynamic(() => import('./BajaPDFReport'), { ssr: false });
+const BajaPDFReport = dynamic<{ data: PdfDataBaja; onClose: () => void }>(
+    () => import('./BajaPDFReport'),
+    { ssr: false }
+);
 
 interface ResguardoBaja {
     id: number;
@@ -43,6 +46,7 @@ interface ResguardoBajaArticulo {
     condicion: string;
     origen: string;
     folio_baja: string;
+    usufinal?: string | null;
 }
 
 interface PdfDataBaja {
@@ -60,6 +64,7 @@ interface PdfDataBaja {
         estado: string;
         origen?: string | null;
         folio_baja: string;
+        resguardante: string;
     }>;
     firmas?: Array<{
         cargo: string;
@@ -201,9 +206,24 @@ const ConsultarBajasResguardos = () => {
     const fetchBajaDetails = async (folioResguardo: string) => {
         setLoading(true);
         try {
+            // Modificar la consulta para incluir todos los campos necesarios
             const { data, error } = await supabase
                 .from('resguardos_bajas')
-                .select('*')
+                .select(`
+                    id,
+                    num_inventario,
+                    descripcion,
+                    rubro,
+                    condicion,
+                    origen,
+                    folio_baja,
+                    usufinal,
+                    folio_resguardo,
+                    f_resguardo,
+                    area_resguardo,
+                    dir_area,
+                    puesto
+                `)
                 .eq('folio_resguardo', folioResguardo);
 
             if (error) throw error;
@@ -217,7 +237,8 @@ const ConsultarBajasResguardos = () => {
                     rubro: item.rubro,
                     condicion: item.condicion,
                     origen: item.origen,
-                    folio_baja: item.folio_baja
+                    folio_baja: item.folio_baja,
+                    usufinal: item.usufinal || firstItem.usufinal // Usar el usufinal del artículo o el general
                 }));
 
                 // Group articles by folio_baja
@@ -242,27 +263,29 @@ const ConsultarBajasResguardos = () => {
                 // Update PDF data
                 const selectedArticles = getSelectedItemsForPDF();
                 setPdfBajaData({
-                    folio_resguardo: detalles.folio_resguardo,
-                    folio_baja: detalles.folio_baja,
-                    fecha: new Date(detalles.f_resguardo).toLocaleDateString(),
-                    director: detalles.dir_area,
-                    area: detalles.area_resguardo || '',
-                    puesto: detalles.puesto,
-                    resguardante: detalles.usufinal || '',
+                    folio_resguardo: firstItem.folio_resguardo,
+                    folio_baja: firstItem.folio_baja,
+                    fecha: new Date(firstItem.f_resguardo).toLocaleDateString(),
+                    director: firstItem.dir_area,
+                    area: firstItem.area_resguardo || '',
+                    puesto: firstItem.puesto,
+                    resguardante: firstItem.usufinal || '',
                     articulos: selectedArticles.length > 0 ? selectedArticles.map(art => ({
                         id_inv: art.num_inventario,
                         descripcion: art.descripcion,
                         rubro: art.rubro,
                         estado: art.condicion,
                         origen: art.origen,
-                        folio_baja: art.folio_baja
+                        folio_baja: art.folio_baja,
+                        resguardante: art.usufinal || firstItem.usufinal || '' // Usar el resguardante individual o el general
                     })) : articles.map(art => ({
                         id_inv: art.num_inventario,
                         descripcion: art.descripcion,
                         rubro: art.rubro,
                         estado: art.condicion,
                         origen: art.origen,
-                        folio_baja: art.folio_baja
+                        folio_baja: art.folio_baja,
+                        resguardante: art.usufinal || firstItem.usufinal || '' // Usar el resguardante individual o el general
                     }))
                 });
 
@@ -298,9 +321,7 @@ const ConsultarBajasResguardos = () => {
     const handleBajaPDF = async () => {
         if (selectedBaja) {
             const groupedSelected = getSelectedItemsGroupedByFolio();
-            // Si hay más de un grupo, generar PDF por cada grupo
             for (const group of groupedSelected) {
-                // Obtener firmas
                 const firmas = await getFirmas();
                 
                 setPdfBajaData({
@@ -317,7 +338,8 @@ const ConsultarBajasResguardos = () => {
                         rubro: art.rubro,
                         estado: art.condicion,
                         origen: art.origen,
-                        folio_baja: art.folio_baja
+                        folio_baja: art.folio_baja,
+                        resguardante: art.usufinal || selectedBaja.usufinal || '' // Use article's usufinal if available
                     })),
                     firmas: firmas || undefined
                 });

@@ -28,6 +28,7 @@ interface Mueble {
     usufinal: string | null;
     area?: string | null;
     origen?: string; // Nuevo campo para identificar el origen
+    resguardanteAsignado?: string; // Campo para el resguardante individual
 }
 
 interface Directorio {
@@ -40,9 +41,9 @@ interface Directorio {
 interface ResguardoForm {
     folio: string;
     directorId: string;
-    resguardante: string;
     area: string;
     puesto: string;
+    resguardante: string;
 }
 
 // Interfaces para PDF, igual que en consultar.tsx
@@ -65,6 +66,7 @@ interface PdfData {
         rubro: string | null;
         estado: string | null;
         origen?: string | null;
+        resguardante: string; // Incluir el resguardante individual
     }>;
     firmas?: PdfFirma[];
 }
@@ -107,9 +109,9 @@ export default function CrearResguardos() {
     const [formData, setFormData] = useState<ResguardoForm>({
         folio: '',
         directorId: '',
-        resguardante: '',
         area: '',
-        puesto: ''
+        puesto: '',
+        resguardante: '' // Añadiendo el campo resguardante con valor inicial
     });
     const [showDirectorModal, setShowDirectorModal] = useState(false);
     const [incompleteDirector, setIncompleteDirector] = useState<Directorio | null>(null);
@@ -236,7 +238,7 @@ export default function CrearResguardos() {
             ]);
             let combinedData = [
                 ...((Array.isArray(dataInea) ? dataInea as Mueble[] : [] as Mueble[]).map((item: Mueble) => ({ ...item, origen: 'INEA' }))),
-                ...((Array.isArray(dataItea) ? dataItea as Mueble[] : [] as Mueble[]).map((item: Mueble) => ({ ...item, origen: 'ITEA' })))
+                ...((Array.isArray(dataItea) ? dataItea as Mueble[] : [] as Mueble[]).map((item: Mueble) => ({ ...item, origen: 'ITEA' }))),
             ];
 
             // 3. Filtrar: solo mostrar los que NO están en resguardos, considerando todos los campos relevantes
@@ -352,7 +354,7 @@ export default function CrearResguardos() {
         setSelectedMuebles(newSelectedMuebles);
 
         if (newSelectedMuebles.length === 0) {
-            setFormData({ folio: formData.folio, directorId: '', resguardante: '', area: '', puesto: '' });
+            setFormData({ folio: formData.folio, directorId: '', area: '', puesto: '', resguardante: '' });
             setDirectorInputDisabled(false);
         } else if (!isAlreadySelected && newSelectedMuebles.length === 1) {
             // Si es el primer seleccionado, intentar seleccionar director
@@ -486,13 +488,10 @@ export default function CrearResguardos() {
                     descripcion: m.descripcion,
                     rubro: m.rubro,
                     estado: m.estado,
-                    origen: m.origen || null
+                    origen: m.origen || null,
+                    resguardante: m.resguardanteAsignado || ''
                 })),
-                firmas: (firmasData || []).map(f => ({
-                    concepto: String(f.concepto),
-                    nombre: String(f.nombre),
-                    puesto: String(f.puesto)
-                }))
+                firmas: firmasData || []
             });
 
             const resguardoPromises = selectedMuebles.map(async (mueble) => {
@@ -500,12 +499,15 @@ export default function CrearResguardos() {
                 const tableName = mueble.origen === 'ITEA' ? 'mueblesitea' : 'muebles';
                 // CORREGIDO: buscar director por ID, no por nombre
                 const directorNombre = directorio.find(dir => dir.id_directorio.toString() === formData.directorId)?.nombre;
+                
+                // Determinar el resguardante a usar (individual o general)
+                const resguardanteToUse = mueble.resguardanteAsignado || formData.resguardante;
 
-                // Update mueble: ahora también actualiza usufinal y area
+                // Update mueble: ahora también actualiza usufinal, area y resguardante
                 const { error: updateError } = await supabase
                     .from(tableName)
                     .update({
-                        resguardante: formData.resguardante,
+                        resguardante: resguardanteToUse, // Actualizar resguardante en tabla origen
                         usufinal: directorNombre,
                         area: formData.area
                     })
@@ -523,10 +525,10 @@ export default function CrearResguardos() {
                     descripcion: mueble.descripcion,
                     rubro: mueble.rubro,
                     condicion: mueble.estado,
-                    usufinal: formData.resguardante,
+                    usufinal: resguardanteToUse, // Usar el resguardante individual o general
                     created_by: createdBy,
                     puesto: formData.puesto,
-                    origen: mueble.origen || '', // Guardar el origen INEA o ITEA
+                    origen: mueble.origen || '',
                 });
 
                 if (insertError) throw insertError;
@@ -1118,6 +1120,22 @@ export default function CrearResguardos() {
                                                             'bg-gray-900/40 text-gray-400 border-gray-800'}`}
                                                 >
                                                     {mueble.origen}
+                                                </div>
+                                                
+                                                {/* Campo de resguardante individual */}
+                                                <div className="mt-3 flex items-center gap-2">
+                                                    <input
+                                                        type="text"
+                                                        value={mueble.resguardanteAsignado || ''}
+                                                        onChange={(e) => {
+                                                            const newSelectedMuebles = selectedMuebles.map(m =>
+                                                                m.id === mueble.id ? { ...m, resguardanteAsignado: e.target.value } : m
+                                                            );
+                                                            setSelectedMuebles(newSelectedMuebles);
+                                                        }}
+                                                        placeholder="Resguardante individual (opcional)"
+                                                        className="block w-full bg-gray-900/50 border border-gray-800 rounded-lg py-1.5 px-3 text-white placeholder-gray-500 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
+                                                    />
                                                 </div>
                                             </div>
                                             <button

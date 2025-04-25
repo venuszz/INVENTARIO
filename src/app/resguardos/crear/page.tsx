@@ -1,4 +1,4 @@
-import Crear from "@/components/maintainance"
+import Crear from "@/components/resguardos/crear"
 import { Metadata } from "next";
 
 export const metadata: Metadata = {

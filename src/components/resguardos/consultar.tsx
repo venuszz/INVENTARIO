@@ -41,6 +41,7 @@ interface ResguardoArticulo {
     rubro: string;
     condicion: string;
     origen: string; // INEA o ITEA
+    resguardante?: string; // Agregando el resguardante individual
 }
 
 interface PdfFirma {
@@ -62,6 +63,7 @@ interface PdfData {
         rubro: string;
         estado: string;
         origen?: string | null;
+        resguardante?: string; // Pasar el resguardante individual
     }>;
     firmas?: PdfFirma[];
 }
@@ -80,6 +82,7 @@ interface PdfDataBaja {
         rubro: string;
         estado: string;
         origen?: string | null;
+        resguardante?: string; // Pasar el resguardante individual
     }>;
     firmas?: PdfFirma[];
 }
@@ -104,7 +107,7 @@ const getExactArticulo = async (
     return data;
 };
 
-// Función para limpiar área y usufinal
+// Función para limpiar área, usufinal y resguardante
 const limpiarDatosArticulo = async (
     supabase: SupabaseClient,
     articulo: ResguardoArticulo,
@@ -115,7 +118,7 @@ const limpiarDatosArticulo = async (
     if (muebleInea && muebleInea.length > 0 && muebleInea[0].id) {
         await supabase
             .from('muebles')
-            .update({ area: '', usufinal: '' })
+            .update({ area: '', usufinal: '', resguardante: '' })
             .eq('id', muebleInea[0].id);
         return;
     }
@@ -125,7 +128,7 @@ const limpiarDatosArticulo = async (
     if (muebleItea && muebleItea.length > 0 && muebleItea[0].id) {
         await supabase
             .from('mueblesitea')
-            .update({ area: '', usufinal: '' })
+            .update({ area: '', usufinal: '', resguardante: '' })
             .eq('id', muebleItea[0].id);
     }
 };
@@ -202,6 +205,16 @@ export default function ConsultarResguardos() {
     const moveToResguardosBajas = async (articulos: Array<ResguardoArticulo>, folioBaja: string) => {
         if (!selectedResguardo) return;
 
+        // Obtener el nombre del usuario autenticado desde la cookie
+        let createdBy = 'SISTEMA';
+        try {
+            const userDataCookie = typeof window !== 'undefined' ? window.document.cookie.split('; ').find(row => row.startsWith('userData=')) : null;
+            if (userDataCookie) {
+                const userData = JSON.parse(decodeURIComponent(userDataCookie.split('=')[1]));
+                createdBy = `${userData.firstName || ''}${userData.lastName ? ' ' + userData.lastName : ''}`.trim();
+            }
+        } catch {}
+
         for (const articulo of articulos) {
             await supabase
                 .from('resguardos_bajas')
@@ -215,8 +228,8 @@ export default function ConsultarResguardos() {
                     descripcion: articulo.descripcion,
                     rubro: articulo.rubro,
                     condicion: articulo.condicion,
-                    usufinal: selectedResguardo.usufinal,
-                    created_by: 'SISTEMA',
+                    usufinal: articulo.resguardante || '',
+                    created_by: createdBy, // Ahora guarda el nombre del usuario
                     puesto: selectedResguardo.puesto,
                     origen: articulo.origen
                 });
@@ -260,7 +273,8 @@ export default function ConsultarResguardos() {
                     descripcion: art.descripcion,
                     rubro: art.rubro,
                     estado: art.condicion,
-                    origen: art.origen
+                    origen: art.origen,
+                    resguardante: art.resguardante
                 })),
                 firmas: firmas || undefined
             });
@@ -274,7 +288,7 @@ export default function ConsultarResguardos() {
                     .eq('num_inventario', numInv);
             }
 
-            // Limpiar área y usufinal para cada artículo seleccionado
+            // Limpiar área, usufinal y resguardante para cada artículo seleccionado
             for (const articulo of articulosSeleccionados) {
                 await limpiarDatosArticulo(supabase, articulo, selectedResguardo.area_resguardo || '');
             }
@@ -379,13 +393,20 @@ export default function ConsultarResguardos() {
     };
 
     // Fetch resguardos by folio
-    const fetchResguardoDetails = async (folio: string) => {
+    const fetchResguardoDetails = async (folio: string, specificResguardante?: string) => {
         setLoading(true);
         try {
-            const { data, error } = await supabase
+            let query = supabase
                 .from('resguardos')
                 .select('*')
                 .eq('folio', folio);
+
+            // Si se especifica un resguardante, filtrar solo sus artículos
+            if (specificResguardante) {
+                query = query.eq('usufinal', specificResguardante);
+            }
+
+            const { data, error } = await query;
 
             if (error) throw error;
 
@@ -398,8 +419,10 @@ export default function ConsultarResguardos() {
                         descripcion: item.descripcion,
                         rubro: item.rubro,
                         condicion: item.condicion,
-                        origen: item.origen
-                    }))
+                        origen: item.origen,
+                        resguardante: item.usufinal // Asegurar que se pase el resguardante individual
+                    })),
+                    puesto: firstItem.puesto
                 };
 
                 setSelectedResguardo(detalles);
@@ -407,20 +430,21 @@ export default function ConsultarResguardos() {
                 // Obtener firmas
                 const firmas = await getFirmas();
 
-                // Prepare PDF data
+                // Preparar datos para el PDF
                 setPdfData({
                     folio: detalles.folio,
                     fecha: new Date(detalles.f_resguardo).toLocaleDateString(),
                     director: detalles.dir_area,
                     area: detalles.area_resguardo || '',
                     puesto: detalles.puesto,
-                    resguardante: detalles.usufinal || '',
+                    resguardante: specificResguardante || detalles.usufinal || '',
                     articulos: detalles.articulos.map(art => ({
                         id_inv: art.num_inventario,
                         descripcion: art.descripcion,
                         rubro: art.rubro,
                         estado: art.condicion,
-                        origen: art.origen
+                        origen: art.origen,
+                        resguardante: art.resguardante // Pasar el resguardante individual
                     })),
                     firmas: firmas || undefined
                 });
@@ -472,7 +496,8 @@ export default function ConsultarResguardos() {
                     descripcion: art.descripcion,
                     rubro: art.rubro,
                     estado: art.condicion,
-                    origen: art.origen
+                    origen: art.origen,
+                    resguardante: art.resguardante
                 })),
                 firmas: firmas || undefined
             });
@@ -485,7 +510,7 @@ export default function ConsultarResguardos() {
 
             if (error) throw error;
 
-            // Limpiar área y usufinal para cada artículo
+            // Limpiar área, usufinal y resguardante para cada artículo
             for (const articulo of selectedResguardo.articulos) {
                 await limpiarDatosArticulo(supabase, articulo, selectedResguardo.area_resguardo || '');
             }
@@ -535,7 +560,8 @@ export default function ConsultarResguardos() {
                         descripcion: articulo.descripcion,
                         rubro: articulo.rubro,
                         estado: articulo.condicion,
-                        origen: articulo.origen
+                        origen: articulo.origen,
+                        resguardante: articulo.resguardante
                     }
                 ],
                 firmas: firmas || undefined
@@ -550,7 +576,7 @@ export default function ConsultarResguardos() {
 
             if (error) throw error;
 
-            // Limpiar área y usufinal solo para este artículo
+            // Limpiar área, usufinal y resguardante solo para este artículo
             await limpiarDatosArticulo(supabase, articulo, selectedResguardo.area_resguardo || '');
 
             await fetchResguardoDetails(selectedResguardo.folio);
@@ -951,10 +977,34 @@ export default function ConsultarResguardos() {
                                         </div>
 
                                         <div>
-                                            <label className="block text-xs uppercase tracking-wider text-gray-500 mb-1">Resguardante</label>
-                                            <div className="text-sm text-white flex items-center gap-2">
-                                                <User className="h-4 w-4" />
-                                                {selectedResguardo.usufinal}
+                                            <label className="block text-xs uppercase tracking-wider text-gray-500 mb-1">Resguardantes</label>
+                                            <div className="flex flex-wrap gap-2">
+                                                {Array.from(new Set(selectedResguardo.articulos.map(a => a.resguardante || 'Sin asignar'))).map((resguardante, idx) => {
+                                                    // Paleta de colores pastel bonitos
+                                                    const colorPalette = [
+                                                        'from-pink-500/80 to-pink-400/80 border-pink-400 text-pink-100',
+                                                        'from-blue-500/80 to-blue-400/80 border-blue-400 text-blue-100',
+                                                        'from-green-500/80 to-green-400/80 border-green-400 text-green-100',
+                                                        'from-yellow-500/80 to-yellow-400/80 border-yellow-400 text-yellow-900',
+                                                        'from-purple-500/80 to-purple-400/80 border-purple-400 text-purple-100',
+                                                        'from-fuchsia-500/80 to-fuchsia-400/80 border-fuchsia-400 text-fuchsia-100',
+                                                        'from-cyan-500/80 to-cyan-400/80 border-cyan-400 text-cyan-900',
+                                                        'from-orange-500/80 to-orange-400/80 border-orange-400 text-orange-900',
+                                                        'from-rose-500/80 to-rose-400/80 border-rose-400 text-rose-100',
+                                                        'from-emerald-500/80 to-emerald-400/80 border-emerald-400 text-emerald-100',
+                                                    ];
+                                                    const color = colorPalette[idx % colorPalette.length];
+                                                    return (
+                                                        <span
+                                                            key={idx}
+                                                            className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-gradient-to-r ${color} border shadow-md transition-all duration-200 hover:scale-105`}
+                                                            style={{ letterSpacing: '0.02em' }}
+                                                        >
+                                                            <User className="h-3.5 w-3.5 mr-1 opacity-80" />
+                                                            {resguardante}
+                                                        </span>
+                                                    );
+                                                })}
                                             </div>
                                         </div>
                                     </div>
@@ -992,87 +1042,139 @@ export default function ConsultarResguardos() {
 
                             {selectedResguardo ? (
                                 <>
-                                <div className="flex items-center justify-end mb-2 gap-2">
-                                    {selectedArticulos.length > 0 && (
-                                        <>
-                                            <button
-                                                className="px-3 py-1.5 bg-gray-800/80 text-white rounded-lg text-xs font-semibold flex items-center gap-2 hover:bg-gray-700/80 border border-gray-700/50 transition-colors backdrop-blur-sm shadow-lg"
-                                                onClick={() => setSelectedArticulos([])}
-                                            >
-                                                <X className="h-4 w-4" />
-                                                Cancelar selección
-                                            </button>
-                                            <button
-                                                className="px-3 py-1.5 bg-red-700/80 text-white rounded-lg text-xs font-semibold flex items-center gap-2 hover:bg-red-800/80 border border-red-900/50 transition-colors backdrop-blur-sm shadow-lg"
-                                                onClick={() => setShowDeleteSelectedModal(true)}
-                                            >
-                                                <XOctagon className="h-4 w-4" />
-                                                Eliminar seleccionados ({selectedArticulos.length})
-                                            </button>
-                                        </>
-                                    )}
-                                </div>
-                                <div className="space-y-3 mt-2 overflow-auto max-h-[54vh]">
-                                    {selectedResguardo.articulos.map((articulo, index) => (
-                                        <div 
-                                            key={`${selectedResguardo.folio}-${index}`} 
-                                            className={`bg-black rounded-lg p-3 border shadow-sm flex items-start transition-all duration-200 ${
-                                                selectedArticulos.includes(articulo.num_inventario)
-                                                    ? 'border-blue-500/50 bg-blue-500/5'
-                                                    : 'border-gray-800 hover:border-gray-700'
-                                            }`}
+                                {/* Botones de acciones para selección múltiple */}
+                                {selectedArticulos.length > 0 && (
+                                    <div className="flex justify-end items-center gap-2 mb-4">
+                                        <button
+                                            className="px-4 py-2 bg-gradient-to-r from-red-700 to-red-500 text-white rounded-lg text-sm font-semibold flex items-center gap-2 hover:from-red-800 hover:to-red-600 border border-red-900/50 transition-colors shadow-lg"
+                                            onClick={() => setShowDeleteSelectedModal(true)}
                                         >
-                                            <div 
-                                                onClick={() => toggleArticuloSelection(articulo.num_inventario)}
-                                                className={`flex items-center justify-center w-5 h-5 rounded border cursor-pointer transition-all duration-200 mr-3 mt-1 ${
-                                                    selectedArticulos.includes(articulo.num_inventario)
-                                                        ? 'bg-blue-500 border-blue-400'
-                                                        : 'border-gray-600 hover:border-blue-400 hover:bg-blue-500/10'
-                                                }`}
-                                                title="Seleccionar artículo"
-                                            >
-                                                {selectedArticulos.includes(articulo.num_inventario) && (
-                                                    <div className="w-2 h-2 bg-white rounded-full"></div>
-                                                )}
-                                            </div>
-                                            <div className="flex-1 min-w-0">
-                                                <div className="flex items-center gap-2">
-                                                    <div className="text-sm font-medium text-white truncate">
-                                                        {articulo.num_inventario}
-                                                    </div>
-                                                    <div className={`inline-flex items-center px-1.5 py-0.5 rounded-full text-xs font-medium 
-                                                        ${articulo.condicion === 'B' ? 'bg-green-900/20 text-green-300 border border-green-900' :
-                                                            articulo.condicion === 'R' ? 'bg-yellow-900/20 text-yellow-300 border border-yellow-900' :
-                                                                articulo.condicion === 'M' ? 'bg-red-900/20 text-red-300 border border-red-900' :
-                                                                    'bg-gray-900/20 text-gray-300 border border-gray-900'}`}>
-                                                        {articulo.condicion}
-                                                    </div>
-                                                    <span className={`ml-2 px-2 py-0.5 rounded-full text-xs font-semibold border 
-                                                        ${articulo.origen === 'INEA' ? 'bg-blue-900/30 text-blue-300 border-blue-700' :
-                                                            articulo.origen === 'ITEA' ? 'bg-pink-900/30 text-pink-200 border-pink-700' :
-                                                                'bg-gray-900/40 text-gray-400 border-gray-800'}`}
-                                                    >
-                                                        {articulo.origen}
-                                                    </span>
-                                                </div>
-                                                <p className="text-sm text-gray-300 mt-1">
-                                                    {articulo.descripcion}
-                                                </p>
-                                                <div className="text-xs text-gray-500 mt-1 flex items-center gap-1">
-                                                    <Briefcase className="h-3 w-3" />
-                                                    {articulo.rubro}
-                                                </div>
+                                            <XOctagon className="h-4 w-4" />
+                                            Eliminar seleccionados ({selectedArticulos.length})
+                                        </button>
+                                        <button
+                                            className="px-3 py-2 bg-gray-800 text-gray-200 rounded-lg text-xs font-medium flex items-center gap-2 hover:bg-gray-700 border border-gray-700 transition-colors"
+                                            onClick={() => setSelectedArticulos([])}
+                                        >
+                                            <X className="h-4 w-4" />
+                                            Limpiar selección
+                                        </button>
+                                    </div>
+                                )}
+                                {/* Agrupar artículos por resguardante */}
+                                {Object.entries(
+                                    selectedResguardo.articulos.reduce((groups: { [key: string]: ResguardoArticulo[] }, articulo) => {
+                                        const resguardante = articulo.resguardante || 'Sin asignar';
+                                        if (!groups[resguardante]) {
+                                            groups[resguardante] = [];
+                                        }
+                                        groups[resguardante].push(articulo);
+                                        return groups;
+                                    }, {})
+                                ).map(([resguardante, articulos]) => (
+                                    <div key={resguardante} className="mb-8 rounded-xl bg-gradient-to-br from-violet-950/40 to-black/70 shadow-sm overflow-hidden border border-violet-900/10">
+                                        {/* Cabecera minimalista */}
+                                        <div className="flex items-center justify-between px-6 py-3 bg-transparent border-b border-violet-900/10">
+                                            <div className="flex items-center gap-2">
+                                                <User className="h-5 w-5 text-violet-300/80" />
+                                                <span className="font-medium text-violet-100 text-sm tracking-wide">{resguardante}</span>
+                                                <span className="ml-2 text-xs text-violet-100/50">{articulos.length} artículo{articulos.length !== 1 ? 's' : ''}</span>
                                             </div>
                                             <button
-                                                title="Eliminar artículo"
-                                                onClick={() => setShowDeleteItemModal({ index, articulo })}
-                                                className="p-1 text-gray-400 hover:text-red-400 rounded-full hover:bg-gray-900/50 self-center ml-auto btn-delete-articulo"
+                                                onClick={() => {
+                                                    setPdfData({
+                                                        folio: selectedResguardo.folio,
+                                                        fecha: new Date(selectedResguardo.f_resguardo).toLocaleDateString(),
+                                                        director: selectedResguardo.dir_area,
+                                                        area: selectedResguardo.area_resguardo || '',
+                                                        puesto: selectedResguardo.puesto,
+                                                        resguardante: resguardante,
+                                                        articulos: articulos.map(art => ({
+                                                            id_inv: art.num_inventario,
+                                                            descripcion: art.descripcion,
+                                                            rubro: art.rubro,
+                                                            estado: art.condicion,
+                                                            origen: art.origen,
+                                                            resguardante: art.resguardante
+                                                        }))
+                                                    });
+                                                    setShowPDFButton(true);
+                                                }}
+                                                className="flex items-center gap-1 px-2.5 py-1 rounded bg-violet-800/10 hover:bg-violet-700/20 text-violet-200 text-xs font-normal border border-violet-800/10 transition-colors shadow-none"
                                             >
-                                                <CircleX className="h-4 w-4" />
+                                                <FileText className="h-4 w-4" />
+                                                <span className="hidden sm:inline">PDF</span>
                                             </button>
                                         </div>
-                                    ))}
-                                </div>
+                                        {/* Lista simple tipo list-group minimalista */}
+                                        <ul className="divide-y divide-violet-900/10 bg-black">
+                                            {articulos.map((articulo, index) => (
+                                                <li
+                                                    key={`${selectedResguardo.folio}-${index}`}
+                                                    className={`flex items-start gap-4 px-6 py-3 transition-all duration-200 ${
+                                                        selectedArticulos.includes(articulo.num_inventario)
+                                                            ? 'bg-violet-900/10' : 'hover:bg-violet-900/5'
+                                                    }`}
+                                                >
+                                                    <div
+                                                        onClick={() => toggleArticuloSelection(articulo.num_inventario)}
+                                                        className={`flex items-center justify-center w-5 h-5 rounded border cursor-pointer transition-all duration-200 mt-1 mr-2 ${
+                                                            selectedArticulos.includes(articulo.num_inventario)
+                                                                ? 'bg-black border-violet-400'
+                                                                : 'border-violet-700/30 hover:border-violet-400 hover:bg-violet-500/10'
+                                                        }`}
+                                                        title="Seleccionar artículo"
+                                                    >
+                                                        {selectedArticulos.includes(articulo.num_inventario) && (
+                                                            <div className="w-2 h-2 bg-white rounded-full"></div>
+                                                        )}
+                                                    </div>
+                                                    <div className="flex-1 min-w-0">
+                                                        <div className="flex flex-wrap items-center gap-2">
+                                                            <span className="text-sm font-medium text-white truncate">{articulo.num_inventario}</span>
+                                                            <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-normal border ${
+                                                                articulo.condicion === 'B' ? 'bg-green-900/10 text-green-200 border border-green-900/20' :
+                                                                articulo.condicion === 'R' ? 'bg-yellow-900/10 text-yellow-200 border border-yellow-900/20' :
+                                                                articulo.condicion === 'M' ? 'bg-red-900/10 text-red-200 border border-red-900/20' :
+                                                                'bg-gray-900/10 text-gray-300 border-gray-900/20'
+                                                            }`}>{articulo.condicion}</span>
+                                                            <span className={`ml-2 px-2 py-0.5 rounded-full text-xs font-normal border ${
+                                                                articulo.origen === 'INEA' ? 'bg-blue-900/10 text-blue-200 border-blue-700/20' :
+                                                                articulo.origen === 'ITEA' ? 'bg-pink-900/10 text-pink-200 border-pink-700/20' :
+                                                                'bg-gray-900/10 text-gray-400 border-gray-800/20'
+                                                            }`}>{articulo.origen}</span>
+                                                        </div>
+                                                        <div className="text-xs text-gray-300 mt-1">{articulo.descripcion}</div>
+                                                        <div className="text-xs text-gray-500 mt-1 flex items-center gap-1">
+                                                            <Briefcase className="h-3 w-3" />
+                                                            {articulo.rubro}
+                                                        </div>
+                                                    </div>
+                                                    <button
+                                                        title="Eliminar artículo"
+                                                        onClick={() => setShowDeleteItemModal({ index, articulo })}
+                                                        className="p-1 text-gray-400 hover:text-red-400 rounded-full hover:bg-gray-900/30 self-center ml-auto btn-delete-articulo"
+                                                    >
+                                                        <CircleX className="h-4 w-4" />
+                                                    </button>
+                                                </li>
+                                            ))}
+                                        </ul>
+                                        {/* Pie de la tarjeta: eliminación múltiple minimalista */}
+                                        {articulos.length > 1 && (
+                                            <div className="flex justify-end items-center gap-2 px-6 py-2 bg-transparent border-t border-violet-900/10">
+                                                <button
+                                                    className="px-3 py-1.5 bg-violet-700/10 text-violet-100 rounded-md text-xs font-normal flex items-center gap-2 hover:bg-violet-700/20 border border-violet-700/10 transition-colors"
+                                                    onClick={() => setShowDeleteSelectedModal(true)}
+                                                    disabled={selectedArticulos.length === 0}
+                                                >
+                                                    <XOctagon className="h-4 w-4" />
+                                                    Eliminar seleccionados ({selectedArticulos.length})
+                                                </button>
+                                            </div>
+                                        )}
+                                    </div>
+                                ))}
                                 </>
                             ) : (
                                 <div className="flex flex-col items-center justify-center h-full min-h-[200px] text-gray-500">
@@ -1207,7 +1309,7 @@ export default function ConsultarResguardos() {
 
                                 <div className="w-full flex flex-col items-center gap-4">
                                     <div className="w-full rounded-lg overflow-hidden border border-gray-700">
-                                        <BajaPDFReport data={pdfBajaData} onClose={() => setShowPDFBajaButton(false)} />
+                                        <BajaPDFReport />
                                     </div>
                                     <div className="w-full">
                                         <PDFDownloadLink
