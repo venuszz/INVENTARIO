@@ -881,13 +881,41 @@ const ConsultarBajasResguardos = () => {
                                         </div>
 
                                         <div>
-                                            <label className="block text-xs uppercase tracking-wider text-gray-500 mb-1">Resguardante</label>
+                                            <label className="block text-xs uppercase tracking-wider text-gray-500 mb-1">Puesto</label>
                                             <div className="text-sm text-white flex items-center gap-2">
                                                 <User className="h-4 w-4 text-gray-400" />
-                                                {selectedBaja.usufinal}
-                                            </div>
-                                            <div className="text-xs text-gray-500 mt-1">
                                                 {selectedBaja.puesto}
+                                            </div>
+                                        </div>
+                                        <div>
+                                            <label className="block text-xs uppercase tracking-wider text-gray-500 mb-1">Resguardantes</label>
+                                            <div className="flex flex-wrap gap-2">
+                                                {Array.from(new Set(selectedBaja.articulos.map(a => a.usufinal || 'Sin asignar'))).map((resguardante, idx) => {
+                                                    // Paleta de colores oscuros con gradientes sutiles
+                                                    const colorPalette = [
+                                                        'from-slate-800 to-slate-700 border-slate-600 text-slate-200',
+                                                        'from-zinc-800 to-zinc-700 border-zinc-600 text-zinc-200',
+                                                        'from-neutral-800 to-neutral-700 border-neutral-600 text-neutral-200',
+                                                        'from-stone-800 to-stone-700 border-stone-600 text-stone-200',
+                                                        'from-red-900 to-red-800 border-red-700 text-red-200',
+                                                        'from-orange-900 to-orange-800 border-orange-700 text-orange-200',
+                                                        'from-amber-900 to-amber-800 border-amber-700 text-amber-200',
+                                                        'from-emerald-900 to-emerald-800 border-emerald-700 text-emerald-200',
+                                                        'from-teal-900 to-teal-800 border-teal-700 text-teal-200',
+                                                        'from-cyan-900 to-cyan-800 border-cyan-700 text-cyan-200',
+                                                    ];
+                                                    const color = colorPalette[idx % colorPalette.length];
+                                                    return (
+                                                        <span
+                                                            key={idx}
+                                                            className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-gradient-to-r ${color} border shadow-md transition-all duration-200 hover:scale-105`}
+                                                            style={{ letterSpacing: '0.02em' }}
+                                                        >
+                                                            <User className="h-3.5 w-3.5 mr-1 opacity-80" />
+                                                            {resguardante}
+                                                        </span>
+                                                    );
+                                                })}
                                             </div>
                                         </div>
                                     </div>

@@ -162,12 +162,12 @@ export const BajaPDF = ({ data }: { data: PdfDataBaja }) => {
                 </View>
 
                 <View style={styles.section}>
-                    <Text><Text style={styles.label}>FOLIO DE RESGUARDO ORIGINAL: </Text> {data.folio_resguardo}</Text>
-                    <Text><Text style={styles.label}>FOLIO DE BAJA: </Text> {data.folio_baja}</Text>
-                    <Text><Text style={styles.label}>DIRECTOR: </Text> {data.director}</Text>
-                    <Text><Text style={styles.label}>ÁREA: </Text> {data.area}</Text>
-                    <Text><Text style={styles.label}>PUESTO: </Text> {data.puesto}</Text>
-                    <Text><Text style={styles.label}>FECHA DE BAJA: </Text> {data.fecha}</Text>
+                    <Text><Text style={styles.label}>FOLIO DE RESGUARDO ORIGINAL: </Text> {data.folio_resguardo?.toUpperCase()}</Text>
+                    <Text><Text style={styles.label}>FOLIO DE BAJA: </Text> {data.folio_baja?.toUpperCase()}</Text>
+                    <Text><Text style={styles.label}>DIRECTOR: </Text> {data.director?.toUpperCase()}</Text>
+                    <Text><Text style={styles.label}>ÁREA: </Text> {data.area?.toUpperCase()}</Text>
+                    <Text><Text style={styles.label}>PUESTO: </Text> {data.puesto?.toUpperCase()}</Text>
+                    <Text><Text style={styles.label}>FECHA DE BAJA: </Text> {data.fecha?.toUpperCase()}</Text>
                 </View>
                 {grupos.map((grupo) => (
                     grupo.articulos.length > 0 && (
@@ -192,15 +192,15 @@ export const BajaPDF = ({ data }: { data: PdfDataBaja }) => {
                                 </View>
                                 {grupo.articulos.map((art: PdfArticulo, idx2: number) => (
                                     <View style={styles.tableRow} key={idx2}>
-                                        <Text style={{ ...styles.tableCell, flex: 2.5 }}>{art.id_inv}</Text>
-                                        <Text style={{ ...styles.tableCell, flex: 5.5 }}>{art.descripcion}</Text>
-                                        <Text style={{ ...styles.tableCell, flex: 1.6 }}>{art.rubro}</Text>
-                                        <Text style={{ ...styles.tableCell, flex: .7 }}>{art.estado}</Text>
+                                        <Text style={{ ...styles.tableCell, flex: 2.5 }}>{art.id_inv?.toUpperCase()}</Text>
+                                        <Text style={{ ...styles.tableCell, flex: 5.5 }}>{art.descripcion?.toUpperCase()}</Text>
+                                        <Text style={{ ...styles.tableCell, flex: 1.6 }}>{art.rubro?.toUpperCase()}</Text>
+                                        <Text style={{ ...styles.tableCell, flex: .7 }}>{art.estado?.toUpperCase()}</Text>
                                         {showResguardanteColumn && (
-                                            <Text style={{ ...styles.tableCell, flex: 2.5 }}>{art.resguardante || data.resguardante}</Text>
+                                            <Text style={{ ...styles.tableCell, flex: 2.5 }}>{(art.resguardante || data.resguardante)?.toUpperCase()}</Text>
                                         )}
                                         {hasMultipleFolios && (
-                                            <Text style={{ ...styles.tableCell, flex: 2 }}>{art.folio_baja || data.folio_baja}</Text>
+                                            <Text style={{ ...styles.tableCell, flex: 2 }}>{(art.folio_baja || data.folio_baja)?.toUpperCase()}</Text>
                                         )}
                                     </View>
                                 ))}
@@ -216,8 +216,8 @@ export const BajaPDF = ({ data }: { data: PdfDataBaja }) => {
                             <Text> </Text>
                             <Text>_______________________________</Text>
                             <Text> </Text>
-                            <Text>{getFirma('Autoriza')?.nombre || ' '}</Text>
-                            <Text>{getFirma('Autoriza')?.puesto || 'DIRECTOR(A) ADMIN. Y FINANZAS'}</Text>
+                            <Text>{getFirma('Autoriza')?.nombre?.toUpperCase() || ' '}</Text>
+                            <Text>{getFirma('Autoriza')?.puesto?.toUpperCase() || 'DIRECTOR(A) ADMIN. Y FINANZAS'}</Text>
                         </View>
                         <View style={styles.signatureBox}>
                             <Text>       CONOCIMIENTO</Text>
@@ -225,8 +225,8 @@ export const BajaPDF = ({ data }: { data: PdfDataBaja }) => {
                             <Text> </Text>
                             <Text>________________________________</Text>
                             <Text> </Text>
-                            <Text>{getFirma('Conocimiento')?.nombre || ' '}</Text>
-                            <Text>{getFirma('Conocimiento')?.puesto || 'DIRECTOR(A) RECURSOS MATERIALES'}</Text>
+                            <Text>{getFirma('Conocimiento')?.nombre?.toUpperCase() || ' '}</Text>
+                            <Text>{getFirma('Conocimiento')?.puesto?.toUpperCase() || 'DIRECTOR(A) RECURSOS MATERIALES'}</Text>
                         </View>
                         <View style={styles.signatureBox}>
                             <Text>           EX-RESPONSABLE</Text>
@@ -234,8 +234,8 @@ export const BajaPDF = ({ data }: { data: PdfDataBaja }) => {
                             <Text> </Text>
                             <Text>__________________________________</Text>
                             <Text> </Text>
-                            <Text>{data.director}</Text>
-                            <Text>{data.puesto} DE {data.area}</Text>
+                            <Text>{data.director?.toUpperCase()}</Text>
+                            <Text>{data.puesto?.toUpperCase()} DE {data.area?.toUpperCase()}</Text>
                         </View>
                     </View>
                     <Text
