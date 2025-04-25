@@ -53,6 +53,9 @@ export default function NavigationBar() {
     const [openMenu, setOpenMenu] = useState<string | null>(null);
     const [openSubmenu, setOpenSubmenu] = useState<string | null>(null);
     const [userData, setUserData] = useState<{ firstName?: string; lastName?: string; username?: string; email?: string }>({});
+    const [showLogoutModal, setShowLogoutModal] = useState(false);
+    const [modalPosition, setModalPosition] = useState({ x: 0, y: 0 });
+    const [popoverPosition, setPopoverPosition] = useState<'top' | 'bottom'>('bottom');
     const handleLogout = useCerrarSesion();
 
     // Cerrar menús al hacer clic fuera
@@ -91,6 +94,20 @@ export default function NavigationBar() {
         }
     }, []);
 
+    // Cerrar popover al hacer clic fuera
+    useEffect(() => {
+        const handleClickOutside = (event: MouseEvent) => {
+            if (showLogoutModal && !(event.target as HTMLElement).closest('.popover-content')) {
+                setShowLogoutModal(false);
+            }
+        };
+
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => {
+            document.removeEventListener('mousedown', handleClickOutside);
+        };
+    }, [showLogoutModal]);
+
     const toggleMenu = (menu: string) => {
         setOpenMenu(openMenu === menu ? null : menu);
         setOpenSubmenu(null);
@@ -111,6 +128,46 @@ export default function NavigationBar() {
         setOpenMenu(null);
         setOpenSubmenu(null);
         setMobileMenuOpen(false);
+    };
+
+    const initiateLogout = (event: React.MouseEvent) => {
+        const button = event.currentTarget;
+        const rect = button.getBoundingClientRect();
+        const windowWidth = window.innerWidth;
+        const windowHeight = window.innerHeight;
+
+        // Posición inicial centrada bajo el botón
+        let x = rect.left + rect.width / 2;
+        let y = rect.bottom + 8;
+        let position: 'top' | 'bottom' = 'bottom';
+
+        // Aseguramos que el popover tenga espacio para mostrarse
+        const POPOVER_WIDTH = 256; // w-64 = 16rem = 256px
+        const POPOVER_HEIGHT = 140; // altura aproximada del popover
+        const MARGIN = 16; // margen de seguridad
+
+        // Ajuste horizontal
+        if (x + POPOVER_WIDTH / 2 > windowWidth - MARGIN) {
+            x = windowWidth - POPOVER_WIDTH / 2 - MARGIN;
+        } else if (x - POPOVER_WIDTH / 2 < MARGIN) {
+            x = POPOVER_WIDTH / 2 + MARGIN;
+        }
+
+        // Ajuste vertical
+        if (y + POPOVER_HEIGHT > windowHeight - MARGIN) {
+            // Si no hay espacio abajo, lo mostramos arriba del botón
+            y = rect.top - 8;
+            position = 'top';
+        }
+
+        setModalPosition({ x, y });
+        setPopoverPosition(position);
+        setShowLogoutModal(true);
+    };
+
+    const confirmLogout = async () => {
+        await handleLogout();
+        setShowLogoutModal(false);
     };
 
     const menuItems: MenuItem[] = [
@@ -286,7 +343,11 @@ export default function NavigationBar() {
                             >
                                 <Grid className="h-5 w-5" />
                             </Link>
-                            <button onClick={handleLogout} className="p-2 text-gray-300 hover:text-white hover:bg-gray-800 rounded-full" title='Cerrar sesión'>
+                            <button 
+                                onClick={initiateLogout} 
+                                className="p-2 text-gray-300 hover:text-white hover:bg-gray-800 rounded-full" 
+                                title='Cerrar sesión'
+                            >
                                 <LogOut className="h-5 w-5" />
                             </button>
                         </div>
@@ -373,9 +434,66 @@ export default function NavigationBar() {
                                 <div className="text-base font-medium text-white">{userData.firstName ? `${userData.firstName}${userData.lastName ? ' ' + userData.lastName : ''}` : userData.username || 'Usuario'}</div>
                             </div>
                             <div className="ml-auto flex space-x-2">
-                                <button onClick={handleLogout} className="p-2 text-gray-300 hover:text-white hover:bg-gray-800 rounded-full" title='Cerrar sesión'>
+                                <button 
+                                    onClick={initiateLogout} 
+                                    className="p-2 text-gray-300 hover:text-white hover:bg-gray-800 rounded-full" 
+                                    title='Cerrar sesión'
+                                >
                                     <LogOut className="h-5 w-5" />
                                 </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Logout Confirmation Popover */}
+            {showLogoutModal && (
+                <div 
+                    className="fixed z-50"
+                    style={{
+                        position: 'fixed',
+                        top: `${modalPosition.y}px`,
+                        left: `${modalPosition.x}px`,
+                        transform: 'translateX(-50%)',
+                    }}
+                >
+                    <div 
+                        className="bg-gray-900/95 backdrop-blur-sm rounded-lg border border-blue-500/20 overflow-visible w-64 popover-content"
+                        data-position={popoverPosition}
+                        style={{
+                            '--arrow-x': '50%',
+                            maxWidth: 'calc(100vw - 32px)',
+                            marginTop: popoverPosition === 'bottom' ? '8px' : undefined,
+                            marginBottom: popoverPosition === 'top' ? '8px' : undefined,
+                        } as React.CSSProperties}
+                    >
+                        <div className="p-4">
+                            <div className="flex flex-col items-center text-center gap-3">
+                                <div className="p-2 bg-blue-500/10 rounded-full">
+                                    <LogOut className="h-5 w-5 text-blue-400" />
+                                </div>
+                                <div>
+                                    <p className="text-sm text-gray-300">
+                                        {userData.firstName 
+                                            ? `¿Cerrar sesión, ${userData.firstName}?`
+                                            : "¿Cerrar sesión?"}
+                                    </p>
+                                </div>
+                                <div className="flex w-full gap-2">
+                                    <button
+                                        onClick={() => setShowLogoutModal(false)}
+                                        className="flex-1 py-1.5 px-3 bg-gray-800/50 text-gray-300 text-xs rounded-md hover:bg-gray-800 border border-gray-700/50 transition-colors"
+                                    >
+                                        Cancelar
+                                    </button>
+                                    <button
+                                        onClick={confirmLogout}
+                                        className="flex-1 py-1.5 px-3 bg-blue-600/20 text-blue-300 text-xs rounded-md hover:bg-blue-600/30 border border-blue-500/30 transition-colors"
+                                    >
+                                        Confirmar
+                                    </button>
+                                </div>
                             </div>
                         </div>
                     </div>
