@@ -780,9 +780,36 @@ const ConsultarBajasResguardos = () => {
                                                                 {baja.f_resguardo.slice(0, 10).split('-').reverse().join('/')}
                                                             </div>
                                                         </td>
-                                                        <td className="px-4 py-4">
-                                                            <div className="text-sm text-white">{baja.dir_area}</div>
+                                                        <td className="px-4 py-4 group relative">
+                                                            <div className="text-sm text-white hover:text-red-400 transition-colors">
+                                                                {baja.dir_area}
+                                                            </div>
                                                             <div className="text-xs text-gray-500">{baja.area_resguardo}</div>
+
+                                                            {/* Tooltip con los resguardantes */}
+                                                            <div className="absolute left-1/2 -translate-x-1/2 top-full mt-2 w-max max-w-sm opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-[9999]">
+                                                                <div className="absolute left-1/2 -top-2 -translate-x-1/2 border-8 border-transparent border-b-gray-800"></div>
+                                                                <div className="bg-black border border-gray-800 rounded-lg shadow-xl p-4">
+                                                                    <h4 className="text-sm font-medium text-gray-300 mb-2 flex items-center gap-2">
+                                                                        <User className="h-4 w-4 text-red-400" />
+                                                                        Resguardantes
+                                                                    </h4>
+                                                                    <div className="flex flex-col gap-2">
+                                                                        {Array.from(new Set(allBajas
+                                                                            .filter(r => r.folio_resguardo === baja.folio_resguardo)
+                                                                            .map(r => r.usufinal || 'Sin asignar')))
+                                                                            .map((resguardante, idx) => (
+                                                                                <div
+                                                                                    key={idx}
+                                                                                    className="flex items-center gap-2 text-sm text-gray-400 bg-gray-900/50 px-2 py-1 rounded-lg w-full"
+                                                                                >
+                                                                                    <div className="h-2 w-2 rounded-full bg-red-500"></div>
+                                                                                    {resguardante}
+                                                                                </div>
+                                                                            ))}
+                                                                    </div>
+                                                                </div>
+                                                            </div>
                                                         </td>
                                                         <td className="px-4 py-4">
                                                             <div className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getItemCountBgColor(itemCount)}`}>
@@ -1023,8 +1050,13 @@ const ConsultarBajasResguardos = () => {
                                                                 <p className="text-sm text-gray-300">
                                                                     {articulo.descripcion}
                                                                 </p>
-                                                                <div className="text-xs text-gray-500 mt-1">
-                                                                    Condición: {articulo.condicion}
+                                                                <div className="flex items-center gap-2 text-xs text-gray-500 mt-1">
+                                                                    <span>Condición: {articulo.condicion}</span>
+                                                                    <span className="text-gray-600">•</span>
+                                                                    <span className="flex items-center gap-1">
+                                                                        <Calendar className="h-3 w-3" />
+                                                                        {selectedBaja?.f_resguardo.slice(0, 10).split('-').reverse().join('/')}
+                                                                    </span>
                                                                 </div>
                                                             </div>
                                                             <button

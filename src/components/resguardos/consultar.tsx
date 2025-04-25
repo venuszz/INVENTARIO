@@ -103,7 +103,7 @@ const getExactArticulo = async (
         .eq('rubro', articulo.rubro)
         .eq('estado', articulo.condicion)
         .eq('area', area || '');
-    
+
     return data;
 };
 
@@ -213,7 +213,7 @@ export default function ConsultarResguardos() {
                 const userData = JSON.parse(decodeURIComponent(userDataCookie.split('=')[1]));
                 createdBy = `${userData.firstName || ''}${userData.lastName ? ' ' + userData.lastName : ''}`.trim();
             }
-        } catch {}
+        } catch { }
 
         for (const articulo of articulos) {
             await supabase
@@ -384,7 +384,7 @@ export default function ConsultarResguardos() {
         const { data, error } = await supabase
             .from('firmas')
             .select('*');
-        
+
         if (error) {
             console.error('Error al obtener firmas:', error);
             return null;
@@ -868,9 +868,36 @@ export default function ConsultarResguardos() {
                                                                 {resguardo.f_resguardo.slice(0, 10).split('-').reverse().join('/')}
                                                             </div>
                                                         </td>
-                                                        <td className="px-4 py-4">
-                                                            <div className="text-sm text-white">{resguardo.dir_area}</div>
+                                                        <td className="px-4 py-4 group relative">
+                                                            <div className="text-sm text-white hover:text-blue-400 transition-colors">
+                                                                {resguardo.dir_area}
+                                                            </div>
                                                             <div className="text-xs text-gray-500">{resguardo.area_resguardo}</div>
+
+                                                            {/* Tooltip con los resguardantes */}
+                                                            <div className="absolute left-1/2 -translate-x-1/2 top-full mt-2 w-max max-w-sm opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-[9999]">
+                                                                <div className="absolute left-1/2 -top-2 -translate-x-1/2 border-8 border-transparent border-b-gray-800"></div>
+                                                                <div className="bg-black border border-gray-800 rounded-lg shadow-xl p-4">
+                                                                    <h4 className="text-sm font-medium text-gray-300 mb-2 flex items-center gap-2">
+                                                                        <User className="h-4 w-4 text-blue-400" />
+                                                                        Resguardantes
+                                                                    </h4>
+                                                                    <div className="flex flex-col gap-2">
+                                                                        {Array.from(new Set(allResguardos
+                                                                            .filter(r => r.folio === resguardo.folio)
+                                                                            .map(r => r.usufinal || 'Sin asignar')))
+                                                                            .map((resguardante, idx) => (
+                                                                                <div
+                                                                                    key={idx}
+                                                                                    className="flex items-center gap-2 text-sm text-gray-400 bg-gray-900/50 px-2 py-1 rounded-lg w-full"
+                                                                                >
+                                                                                    <div className="h-2 w-2 rounded-full bg-blue-500"></div>
+                                                                                    {resguardante}
+                                                                                </div>
+                                                                            ))}
+                                                                    </div>
+                                                                </div>
+                                                            </div>
                                                         </td>
                                                         <td className="px-4 py-4">
                                                             <div className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border border-gray-800 text-blue-100 ${bgColor}`}>
@@ -1034,155 +1061,157 @@ export default function ConsultarResguardos() {
                         </div>
 
                         {/* Selected Items */}
-                        <div className="bg-gray-900/20 rounded-xl border border-gray-800 p-4 flex-grow shadow-inner relative max-h-[70vh] overflow-hidden">
-                            <h2 className="text-lg font-medium text-gray-100 mb-2 flex items-center gap-2 sticky top-0 z-20 bg-black/80 p-2 -m-2 backdrop-blur-md">
-                                <ListChecks className="h-5 w-5 text-blue-400" />
-                                Artículos del Resguardo ({selectedResguardo?.articulos.length || 0})
-                            </h2>
+                        <div className="bg-gray-900/20 rounded-xl border border-gray-800 flex-grow shadow-inner flex flex-col overflow-hidden">
+                            {/* Título fijo */}
+                            <div className="p-4 bg-black/80 backdrop-blur-md border-b border-gray-800 sticky top-0 z-20">
+                                <h2 className="text-lg font-medium text-gray-100 flex items-center gap-2">
+                                    <ListChecks className="h-5 w-5 text-blue-400" />
+                                    Artículos del Resguardo ({selectedResguardo?.articulos.length || 0})
+                                </h2>
+                            </div>
 
-                            {selectedResguardo ? (
-                                <>
-                                {/* Botones de acciones para selección múltiple */}
-                                {selectedArticulos.length > 0 && (
-                                    <div className="flex justify-end items-center gap-2 mb-4">
-                                        <button
-                                            className="px-4 py-2 bg-gradient-to-r from-red-700 to-red-500 text-white rounded-lg text-sm font-semibold flex items-center gap-2 hover:from-red-800 hover:to-red-600 border border-red-900/50 transition-colors shadow-lg"
-                                            onClick={() => setShowDeleteSelectedModal(true)}
-                                        >
-                                            <XOctagon className="h-4 w-4" />
-                                            Eliminar seleccionados ({selectedArticulos.length})
-                                        </button>
-                                        <button
-                                            className="px-3 py-2 bg-gray-800 text-gray-200 rounded-lg text-xs font-medium flex items-center gap-2 hover:bg-gray-700 border border-gray-700 transition-colors"
-                                            onClick={() => setSelectedArticulos([])}
-                                        >
-                                            <X className="h-4 w-4" />
-                                            Limpiar selección
-                                        </button>
-                                    </div>
-                                )}
-                                {/* Agrupar artículos por resguardante */}
-                                {Object.entries(
-                                    selectedResguardo.articulos.reduce((groups: { [key: string]: ResguardoArticulo[] }, articulo) => {
-                                        const resguardante = articulo.resguardante || 'Sin asignar';
-                                        if (!groups[resguardante]) {
-                                            groups[resguardante] = [];
-                                        }
-                                        groups[resguardante].push(articulo);
-                                        return groups;
-                                    }, {})
-                                ).map(([resguardante, articulos]) => (
-                                    <div key={resguardante} className="mb-8 rounded-xl bg-gradient-to-br from-violet-950/40 to-black/70 shadow-sm overflow-hidden border border-violet-900/10">
-                                        {/* Cabecera minimalista */}
-                                        <div className="flex items-center justify-between px-6 py-3 bg-transparent border-b border-violet-900/10">
-                                            <div className="flex items-center gap-2">
-                                                <User className="h-5 w-5 text-violet-300/80" />
-                                                <span className="font-medium text-violet-100 text-sm tracking-wide">{resguardante}</span>
-                                                <span className="ml-2 text-xs text-violet-100/50">{articulos.length} artículo{articulos.length !== 1 ? 's' : ''}</span>
-                                            </div>
-                                            <button
-                                                onClick={() => {
-                                                    setPdfData({
-                                                        folio: selectedResguardo.folio,
-                                                        fecha: new Date(selectedResguardo.f_resguardo).toLocaleDateString(),
-                                                        director: selectedResguardo.dir_area,
-                                                        area: selectedResguardo.area_resguardo || '',
-                                                        puesto: selectedResguardo.puesto,
-                                                        resguardante: resguardante,
-                                                        articulos: articulos.map(art => ({
-                                                            id_inv: art.num_inventario,
-                                                            descripcion: art.descripcion,
-                                                            rubro: art.rubro,
-                                                            estado: art.condicion,
-                                                            origen: art.origen,
-                                                            resguardante: art.resguardante
-                                                        }))
-                                                    });
-                                                    setShowPDFButton(true);
-                                                }}
-                                                className="flex items-center gap-1 px-2.5 py-1 rounded bg-violet-800/10 hover:bg-violet-700/20 text-violet-200 text-xs font-normal border border-violet-800/10 transition-colors shadow-none"
-                                            >
-                                                <FileText className="h-4 w-4" />
-                                                <span className="hidden sm:inline">PDF</span>
-                                            </button>
-                                        </div>
-                                        {/* Lista simple tipo list-group minimalista */}
-                                        <ul className="divide-y divide-violet-900/10 bg-black">
-                                            {articulos.map((articulo, index) => (
-                                                <li
-                                                    key={`${selectedResguardo.folio}-${index}`}
-                                                    className={`flex items-start gap-4 px-6 py-3 transition-all duration-200 ${
-                                                        selectedArticulos.includes(articulo.num_inventario)
-                                                            ? 'bg-violet-900/10' : 'hover:bg-violet-900/5'
-                                                    }`}
-                                                >
-                                                    <div
-                                                        onClick={() => toggleArticuloSelection(articulo.num_inventario)}
-                                                        className={`flex items-center justify-center w-5 h-5 rounded border cursor-pointer transition-all duration-200 mt-1 mr-2 ${
-                                                            selectedArticulos.includes(articulo.num_inventario)
-                                                                ? 'bg-black border-violet-400'
-                                                                : 'border-violet-700/30 hover:border-violet-400 hover:bg-violet-500/10'
-                                                        }`}
-                                                        title="Seleccionar artículo"
-                                                    >
-                                                        {selectedArticulos.includes(articulo.num_inventario) && (
-                                                            <div className="w-2 h-2 bg-white rounded-full"></div>
-                                                        )}
-                                                    </div>
-                                                    <div className="flex-1 min-w-0">
-                                                        <div className="flex flex-wrap items-center gap-2">
-                                                            <span className="text-sm font-medium text-white truncate">{articulo.num_inventario}</span>
-                                                            <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-normal border ${
-                                                                articulo.condicion === 'B' ? 'bg-green-900/10 text-green-200 border border-green-900/20' :
-                                                                articulo.condicion === 'R' ? 'bg-yellow-900/10 text-yellow-200 border border-yellow-900/20' :
-                                                                articulo.condicion === 'M' ? 'bg-red-900/10 text-red-200 border border-red-900/20' :
-                                                                'bg-gray-900/10 text-gray-300 border-gray-900/20'
-                                                            }`}>{articulo.condicion}</span>
-                                                            <span className={`ml-2 px-2 py-0.5 rounded-full text-xs font-normal border ${
-                                                                articulo.origen === 'INEA' ? 'bg-blue-900/10 text-blue-200 border-blue-700/20' :
-                                                                articulo.origen === 'ITEA' ? 'bg-pink-900/10 text-pink-200 border-pink-700/20' :
-                                                                'bg-gray-900/10 text-gray-400 border-gray-800/20'
-                                                            }`}>{articulo.origen}</span>
-                                                        </div>
-                                                        <div className="text-xs text-gray-300 mt-1">{articulo.descripcion}</div>
-                                                        <div className="text-xs text-gray-500 mt-1 flex items-center gap-1">
-                                                            <Briefcase className="h-3 w-3" />
-                                                            {articulo.rubro}
-                                                        </div>
-                                                    </div>
-                                                    <button
-                                                        title="Eliminar artículo"
-                                                        onClick={() => setShowDeleteItemModal({ index, articulo })}
-                                                        className="p-1 text-gray-400 hover:text-red-400 rounded-full hover:bg-gray-900/30 self-center ml-auto btn-delete-articulo"
-                                                    >
-                                                        <CircleX className="h-4 w-4" />
-                                                    </button>
-                                                </li>
-                                            ))}
-                                        </ul>
-                                        {/* Pie de la tarjeta: eliminación múltiple minimalista */}
-                                        {articulos.length > 1 && (
-                                            <div className="flex justify-end items-center gap-2 px-6 py-2 bg-transparent border-t border-violet-900/10">
+                            {/* Contenido scrolleable */}
+                            <div className="flex-1 overflow-y-auto p-4 max-h-[70vh]">
+                                {selectedResguardo ? (
+                                    <>
+                                        {/* Botones de acciones para selección múltiple */}
+                                        {selectedArticulos.length > 0 && (
+                                            <div className="flex justify-end items-center gap-2 mb-4 overflow-auto max-h-[10ch">
                                                 <button
-                                                    className="px-3 py-1.5 bg-violet-700/10 text-violet-100 rounded-md text-xs font-normal flex items-center gap-2 hover:bg-violet-700/20 border border-violet-700/10 transition-colors"
+                                                    className="px-4 py-2 bg-gradient-to-r from-red-700 to-red-500 text-white rounded-lg text-sm font-semibold flex items-center gap-2 hover:from-red-800 hover:to-red-600 border border-red-900/50 transition-colors shadow-lg"
                                                     onClick={() => setShowDeleteSelectedModal(true)}
-                                                    disabled={selectedArticulos.length === 0}
                                                 >
                                                     <XOctagon className="h-4 w-4" />
                                                     Eliminar seleccionados ({selectedArticulos.length})
                                                 </button>
+                                                <button
+                                                    className="px-3 py-2 bg-gray-800 text-gray-200 rounded-lg text-xs font-medium flex items-center gap-2 hover:bg-gray-700 border border-gray-700 transition-colors"
+                                                    onClick={() => setSelectedArticulos([])}
+                                                >
+                                                    <X className="h-4 w-4" />
+                                                    Limpiar selección
+                                                </button>
                                             </div>
                                         )}
+                                        {/* Agrupar artículos por resguardante */}
+                                        {Object.entries(
+                                            selectedResguardo.articulos.reduce((groups: { [key: string]: ResguardoArticulo[] }, articulo) => {
+                                                const resguardante = articulo.resguardante || 'Sin asignar';
+                                                if (!groups[resguardante]) {
+                                                    groups[resguardante] = [];
+                                                }
+                                                groups[resguardante].push(articulo);
+                                                return groups;
+                                            }, {})
+                                        ).map(([resguardante, articulos]) => (
+                                            <div key={resguardante} className="mb-8 rounded-xl bg-gradient-to-br from-gray-950 to-blue-900/70 shadow-sm border border-violet-900/10">
+                                                {/* Cabecera minimalista */}
+                                                <div className="flex items-center justify-between px-6 py-3 bg-transparent border-b border-violet-900/10">
+                                                    <div className="flex items-center gap-2">
+                                                        <User className="h-5 w-5 text-blue-300/80" />
+                                                        <span className="font-medium text-violet-100 text-sm tracking-wide">{resguardante}</span>
+                                                        <span className="ml-2 text-xs text-violet-100/50">{articulos.length} artículo{articulos.length !== 1 ? 's' : ''}</span>
+                                                    </div>
+                                                    <button
+                                                        onClick={() => {
+                                                            setPdfData({
+                                                                folio: selectedResguardo.folio,
+                                                                fecha: new Date(selectedResguardo.f_resguardo).toLocaleDateString(),
+                                                                director: selectedResguardo.dir_area,
+                                                                area: selectedResguardo.area_resguardo || '',
+                                                                puesto: selectedResguardo.puesto,
+                                                                resguardante: resguardante,
+                                                                articulos: articulos.map(art => ({
+                                                                    id_inv: art.num_inventario,
+                                                                    descripcion: art.descripcion,
+                                                                    rubro: art.rubro,
+                                                                    estado: art.condicion,
+                                                                    origen: art.origen,
+                                                                    resguardante: art.resguardante
+                                                                }))
+                                                            });
+                                                            setShowPDFButton(true);
+                                                        }}
+                                                        className="flex items-center gap-1 px-2.5 py-1 rounded bg-blue-800/10 hover:bg-blue-700/20 text-blue-200 text-xs font-normal border border-blue-800/10 transition-colors shadow-none"
+                                                    >
+                                                        <FileText className="h-4 w-4" />
+                                                        <span className="hidden sm:inline">PDF</span>
+                                                    </button>
+                                                </div>
+                                                {/* Lista simple tipo list-group minimalista */}
+                                                <ul className="divide-y divide-blue-900/10 bg-black">
+                                                    {articulos.map((articulo, index) => (
+                                                        <li
+                                                            key={`${selectedResguardo.folio}-${index}`}
+                                                            className={`flex items-start gap-4 px-6 py-3 transition-all duration-200 ${selectedArticulos.includes(articulo.num_inventario)
+                                                                    ? 'bg-blue-900/10' : 'hover:bg-blue-900/5'
+                                                                }`}
+                                                        >
+                                                            <div
+                                                                onClick={() => toggleArticuloSelection(articulo.num_inventario)}
+                                                                className={`flex items-center justify-center w-5 h-5 rounded border cursor-pointer transition-all duration-200 mt-1 mr-2 ${selectedArticulos.includes(articulo.num_inventario)
+                                                                        ? 'bg-black border-blue-400'
+                                                                        : 'border-blue-700/30 hover:blue-400 hover:bg-blue-500/10'
+                                                                    }`}
+                                                                title="Seleccionar artículo"
+                                                            >
+                                                                {selectedArticulos.includes(articulo.num_inventario) && (
+                                                                    <div className="w-2 h-2 bg-white rounded-full"></div>
+                                                                )}
+                                                            </div>
+                                                            <div className="flex-1 min-w-0">
+                                                                <div className="flex flex-wrap items-center gap-2">
+                                                                    <span className="text-sm font-medium text-white truncate">{articulo.num_inventario}</span>
+                                                                    <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-normal border ${articulo.condicion === 'B' ? 'bg-green-900/10 text-green-200 border border-green-900/20' :
+                                                                            articulo.condicion === 'R' ? 'bg-yellow-900/10 text-yellow-200 border border-yellow-900/20' :
+                                                                                articulo.condicion === 'M' ? 'bg-red-900/10 text-red-200 border border-red-900/20' :
+                                                                                    'bg-gray-900/10 text-gray-300 border-gray-900/20'
+                                                                        }`}>{articulo.condicion}</span>
+                                                                    <span className={`ml-2 px-2 py-0.5 rounded-full text-xs font-normal border ${articulo.origen === 'INEA' ? 'bg-blue-900/10 text-blue-200 border-blue-700/20' :
+                                                                            articulo.origen === 'ITEA' ? 'bg-pink-900/10 text-pink-200 border-pink-700/20' :
+                                                                                'bg-gray-900/10 text-gray-400 border-gray-800/20'
+                                                                        }`}>{articulo.origen}</span>
+                                                                </div>
+                                                                <div className="text-xs text-gray-300 mt-1">{articulo.descripcion}</div>
+                                                                <div className="text-xs text-gray-500 mt-1 flex items-center gap-1">
+                                                                    <Briefcase className="h-3 w-3" />
+                                                                    {articulo.rubro}
+                                                                </div>
+                                                            </div>
+                                                            <button
+                                                                title="Eliminar artículo"
+                                                                onClick={() => setShowDeleteItemModal({ index, articulo })}
+                                                                className="p-1 text-gray-400 hover:text-red-400 rounded-full hover:bg-gray-900/30 self-center ml-auto btn-delete-articulo"
+                                                            >
+                                                                <CircleX className="h-4 w-4" />
+                                                            </button>
+                                                        </li>
+                                                    ))}
+                                                </ul>
+                                                {/* Pie de la tarjeta: eliminación múltiple minimalista */}
+                                                {articulos.length > 1 && (
+                                                    <div className="flex justify-end items-center gap-2 px-6 py-2 bg-transparent border-t border-violet-900/10">
+                                                        <button
+                                                            className="px-3 py-1.5 bg-violet-700/10 text-violet-100 rounded-md text-xs font-normal flex items-center gap-2 hover:bg-violet-700/20 border border-violet-700/10 transition-colors"
+                                                            onClick={() => setShowDeleteSelectedModal(true)}
+                                                            disabled={selectedArticulos.length === 0}
+                                                        >
+                                                            <XOctagon className="h-4 w-4" />
+                                                            Eliminar seleccionados ({selectedArticulos.length})
+                                                        </button>
+                                                    </div>
+                                                )}
+                                            </div>
+                                        ))}
+                                    </>
+                                ) : (
+                                    <div className="flex flex-col items-center justify-center h-full min-h-[200px] text-gray-500">
+                                        <ListChecks className="h-12 w-12 mb-2 text-gray-600" />
+                                        <p className="text-sm">No hay artículos para mostrar</p>
+                                        <p className="text-xs mt-1">Seleccione un resguardo para ver sus artículos</p>
                                     </div>
-                                ))}
-                                </>
-                            ) : (
-                                <div className="flex flex-col items-center justify-center h-full min-h-[200px] text-gray-500">
-                                    <ListChecks className="h-12 w-12 mb-2 text-gray-600" />
-                                    <p className="text-sm">No hay artículos para mostrar</p>
-                                    <p className="text-xs mt-1">Seleccione un resguardo para ver sus artículos</p>
-                                </div>
-                            )}
+                                )}
+                            </div>
                         </div>
                     </div>
                 </div>
