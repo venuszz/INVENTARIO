@@ -24,7 +24,7 @@ interface Column {
     keys?: string[];
 }
 
-export const generatePDF = async ({ data, columns, title, fileName, firmas = [] }: PDFOptions) => {
+export const generatePDF = async ({ data, columns, fileName, firmas = [] }: PDFOptions) => {
     const pdfDoc = await PDFDocument.create();
 
     // Cargar y embedear las imágenes
@@ -207,7 +207,7 @@ export const generatePDF = async ({ data, columns, title, fileName, firmas = [] 
                 'INSTITUTO TLAXCALTECA PARA LA EDUCACIÓN DE LOS ADULTOS',
                 'DIRECCIÓN DE ADMINISTRACIÓN Y FINANZAS',
                 'OFICINA DE RECURSOS MATERIALES',
-                title.toUpperCase()
+                'REPORTE LEVANTAMIENTO DE INVENTARIO'
             ];
 
             titles.forEach((text, index) => {
