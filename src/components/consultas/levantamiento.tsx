@@ -62,7 +62,7 @@ const ESTATUS_COLORS = {
 
 export default function LevantamientoUnificado() {
     const [muebles, setMuebles] = useState<LevMueble[]>([]);
-    const [loading, setLoading] = useState(true);
+    const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [filteredCount, setFilteredCount] = useState(0);
     const [currentPage, setCurrentPage] = useState(1);
@@ -205,11 +205,12 @@ export default function LevantamientoUnificado() {
     // Función para manejar la exportación
     const handleExport = async () => {
         try {
-            setMessage({ type: 'info', text: 'Preparando datos para exportación...' });
+            setLoading(true);
             const exportData = await getFilteredData();
 
             if (!exportData || exportData.length === 0) {
                 setMessage({ type: 'error', text: 'No hay datos para exportar.' });
+                setLoading(false);
                 return;
             }
 
@@ -234,26 +235,13 @@ export default function LevantamientoUnificado() {
 
                 if (firmasError) throw firmasError;
 
-                // Columnas específicas para PDF ajustadas al nuevo formato
                 const pdfColumns = [
-                    { header: 'Id Inv', key: 'id_inv', width: 45 },
-                    { header: 'DESCRIPCIÓN', key: 'descripcion', width: 150 },
-                    { header: 'VALOR', key: 'valor', width: 45 },
-                    { header: 'PROVEEDOR', key: 'proveedor', width: 65 },
-                    { header: 'FACTURA', key: 'factura', width: 45 },
-                    { header: 'RUBRO', key: 'rubro', width: 65 },
-                    { header: 'ESTADO', key: 'estado', width: 40 },
-                    { header: 'ESTATUS', key: 'estatus', width: 40 },
-                    { header: 'FECHA ADQ.', key: 'f_adq', width: 40 },
-                    { header: 'FORMA ADQ.', key: 'formadq', width: 40 },
-                    { 
-                        header: 'UBICACIÓN',
-                        isComposite: true,
-                        keys: ['ubicacion_es', 'ubicacion_mu', 'ubicacion_no'],
-                        width: 66 
-                    },
+                    { header: 'ID INV', key: 'id_inv', width: 65 },
+                    { header: 'DESCRIPCIÓN', key: 'descripcion', width: 175 },
+                    { header: 'ESTADO', key: 'estado', width: 65 },
+                    { header: 'ESTATUS', key: 'estatus', width: 65 },
                     { header: 'AREA', key: 'area', width: 65 },
-                    { header: 'USUARIO FINAL', key: 'usufinal', width: 80 }
+                    { header: 'USUARIO FINAL', key: 'usufinal', width: 60 }
                 ];
 
                 await generatePDF({ 
@@ -272,6 +260,8 @@ export default function LevantamientoUnificado() {
         } catch (error) {
             console.error('Error al exportar:', error);
             setMessage({ type: 'error', text: 'Error al generar el archivo.' });
+        } finally {
+            setLoading(false);
         }
     };
 
@@ -642,8 +632,17 @@ export default function LevantamientoUnificado() {
                                                             : 'bg-gradient-to-r from-green-600 to-green-500 hover:from-green-500 hover:to-green-400 text-black'}
                                                     `}
                                                 >
-                                                    <Download className="h-5 w-5" />
-                                                    {exportType === 'pdf' ? 'Generar PDF' : 'Descargar Excel'}
+                                                    {loading ? (
+                                                        <>
+                                                            <RefreshCw className="h-5 w-5 animate-spin" />
+                                                            {exportType === 'pdf' ? 'Generando PDF...' : 'Generando Excel...'}
+                                                        </>
+                                                    ) : (
+                                                        <>
+                                                            <Download className="h-5 w-5" />
+                                                            {exportType === 'pdf' ? 'Generar PDF' : 'Descargar Excel'}
+                                                        </>
+                                                    )}
                                                 </button>
                                             </div>
                                         </div>
@@ -707,16 +706,7 @@ export default function LevantamientoUnificado() {
                                         </tr>
                                     </thead>
                                     <tbody className="bg-black divide-y divide-gray-800">
-                                        {loading ? (
-                                            <tr className="h-96">
-                                                <td colSpan={6} className="px-6 py-24 text-center text-gray-400">
-                                                    <div className="flex flex-col items-center justify-center space-y-4">
-                                                        <RefreshCw className="h-12 w-12 animate-spin text-gray-500" />
-                                                        <p className="text-lg font-medium">Cargando datos...</p>
-                                                    </div>
-                                                </td>
-                                            </tr>
-                                        ) : error ? (
+                                        {error ? (
                                             <tr className="h-96">
                                                 <td colSpan={6} className="px-6 py-24 text-center text-red-400">
                                                     <AlertCircle className="h-12 w-12" />
