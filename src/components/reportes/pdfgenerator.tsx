@@ -225,10 +225,10 @@ export const generatePDF = async ({ data, columns, title, fileName, firmas = [] 
 
             // Agregar la información adicional justificada a la izquierda
             const infoLines = [
-                `NOMBRE: ${directoraFirma.nombre}`,
+                `NOMBRE:      ${directoraFirma.nombre}`,
                 'ADSCRIPCIÓN: DIRECCIÓN GENERAL',
-                `CARGO: ${directoraFirma.puesto}`,
-                `FECHA: ${currentDate}`
+                `CARGO:       ${directoraFirma.puesto}`,
+                `FECHA:       ${currentDate}`
             ];
 
             infoLines.forEach((line, index) => {
@@ -310,7 +310,7 @@ export const generatePDF = async ({ data, columns, title, fileName, firmas = [] 
         }
 
         // Agregar pie de página con número de página
-        const pageText = `Página ${pageIndex + 1} de ${totalPages}`;
+        const pageText = `Página ${pageIndex +1 } de ${totalPages}`;
         const pageTextWidth = regularFont.widthOfTextAtSize(pageText, 10);
         
         page.drawText(normalizeText(pageText), {
