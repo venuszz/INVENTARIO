@@ -14,7 +14,7 @@ interface MaintenancePageProps {
 
 export default function MaintenancePage({
     pageTitle = "Mantenimiento",
-    maintenanceEndTime = "2025-04-24T18:00:00", // EDITA AQUÍ: Formato ISO "YYYY-MM-DDTHH:MM:SS"
+    maintenanceEndTime = "2025-04-24T18:30:00", // EDITA AQUÍ: Formato ISO "YYYY-MM-DDTHH:MM:SS"
     maintenanceReason = "Actualización de sistemas",
     showHomeButton = true,
     showBackButton = true,
@@ -30,7 +30,7 @@ export default function MaintenancePage({
             const endTime = new Date(maintenanceEndTime).getTime();
             const now = new Date().getTime();
 
-            setProgress(60);
+            setProgress(80);
 
             // Si ya pasó la hora de finalización
             if (now >= endTime) {
