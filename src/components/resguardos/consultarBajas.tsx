@@ -12,7 +12,10 @@ import { BajaPDF } from './BajaPDFReport';
 import dynamic from 'next/dynamic';
 
 // Importar el componente PDF de forma dinámica para evitar SSR
-const BajaPDFReport = dynamic(() => import('./BajaPDFReport'), { ssr: false });
+const BajaPDFReport = dynamic<{ data: PdfDataBaja; onClose: () => void }>(
+    () => import('./BajaPDFReport'),
+    { ssr: false }
+);
 
 interface ResguardoBaja {
     id: number;
@@ -43,6 +46,7 @@ interface ResguardoBajaArticulo {
     condicion: string;
     origen: string;
     folio_baja: string;
+    usufinal?: string | null;
 }
 
 interface PdfDataBaja {
@@ -60,6 +64,7 @@ interface PdfDataBaja {
         estado: string;
         origen?: string | null;
         folio_baja: string;
+        resguardante: string;
     }>;
     firmas?: Array<{
         cargo: string;
@@ -201,9 +206,24 @@ const ConsultarBajasResguardos = () => {
     const fetchBajaDetails = async (folioResguardo: string) => {
         setLoading(true);
         try {
+            // Modificar la consulta para incluir todos los campos necesarios
             const { data, error } = await supabase
                 .from('resguardos_bajas')
-                .select('*')
+                .select(`
+                    id,
+                    num_inventario,
+                    descripcion,
+                    rubro,
+                    condicion,
+                    origen,
+                    folio_baja,
+                    usufinal,
+                    folio_resguardo,
+                    f_resguardo,
+                    area_resguardo,
+                    dir_area,
+                    puesto
+                `)
                 .eq('folio_resguardo', folioResguardo);
 
             if (error) throw error;
@@ -217,7 +237,8 @@ const ConsultarBajasResguardos = () => {
                     rubro: item.rubro,
                     condicion: item.condicion,
                     origen: item.origen,
-                    folio_baja: item.folio_baja
+                    folio_baja: item.folio_baja,
+                    usufinal: item.usufinal || firstItem.usufinal // Usar el usufinal del artículo o el general
                 }));
 
                 // Group articles by folio_baja
@@ -242,27 +263,29 @@ const ConsultarBajasResguardos = () => {
                 // Update PDF data
                 const selectedArticles = getSelectedItemsForPDF();
                 setPdfBajaData({
-                    folio_resguardo: detalles.folio_resguardo,
-                    folio_baja: detalles.folio_baja,
-                    fecha: new Date(detalles.f_resguardo).toLocaleDateString(),
-                    director: detalles.dir_area,
-                    area: detalles.area_resguardo || '',
-                    puesto: detalles.puesto,
-                    resguardante: detalles.usufinal || '',
+                    folio_resguardo: firstItem.folio_resguardo,
+                    folio_baja: firstItem.folio_baja,
+                    fecha: new Date(firstItem.f_resguardo).toLocaleDateString(),
+                    director: firstItem.dir_area,
+                    area: firstItem.area_resguardo || '',
+                    puesto: firstItem.puesto,
+                    resguardante: firstItem.usufinal || '',
                     articulos: selectedArticles.length > 0 ? selectedArticles.map(art => ({
                         id_inv: art.num_inventario,
                         descripcion: art.descripcion,
                         rubro: art.rubro,
                         estado: art.condicion,
                         origen: art.origen,
-                        folio_baja: art.folio_baja
+                        folio_baja: art.folio_baja,
+                        resguardante: art.usufinal || firstItem.usufinal || '' // Usar el resguardante individual o el general
                     })) : articles.map(art => ({
                         id_inv: art.num_inventario,
                         descripcion: art.descripcion,
                         rubro: art.rubro,
                         estado: art.condicion,
                         origen: art.origen,
-                        folio_baja: art.folio_baja
+                        folio_baja: art.folio_baja,
+                        resguardante: art.usufinal || firstItem.usufinal || '' // Usar el resguardante individual o el general
                     }))
                 });
 
@@ -298,9 +321,7 @@ const ConsultarBajasResguardos = () => {
     const handleBajaPDF = async () => {
         if (selectedBaja) {
             const groupedSelected = getSelectedItemsGroupedByFolio();
-            // Si hay más de un grupo, generar PDF por cada grupo
             for (const group of groupedSelected) {
-                // Obtener firmas
                 const firmas = await getFirmas();
                 
                 setPdfBajaData({
@@ -317,7 +338,8 @@ const ConsultarBajasResguardos = () => {
                         rubro: art.rubro,
                         estado: art.condicion,
                         origen: art.origen,
-                        folio_baja: art.folio_baja
+                        folio_baja: art.folio_baja,
+                        resguardante: art.usufinal || selectedBaja.usufinal || '' // Use article's usufinal if available
                     })),
                     firmas: firmas || undefined
                 });
@@ -758,9 +780,36 @@ const ConsultarBajasResguardos = () => {
                                                                 {baja.f_resguardo.slice(0, 10).split('-').reverse().join('/')}
                                                             </div>
                                                         </td>
-                                                        <td className="px-4 py-4">
-                                                            <div className="text-sm text-white">{baja.dir_area}</div>
+                                                        <td className="px-4 py-4 group relative">
+                                                            <div className="text-sm text-white hover:text-red-400 transition-colors">
+                                                                {baja.dir_area}
+                                                            </div>
                                                             <div className="text-xs text-gray-500">{baja.area_resguardo}</div>
+
+                                                            {/* Tooltip con los resguardantes */}
+                                                            <div className="absolute left-1/2 -translate-x-1/2 top-full mt-2 w-max max-w-sm opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-[9999]">
+                                                                <div className="absolute left-1/2 -top-2 -translate-x-1/2 border-8 border-transparent border-b-gray-800"></div>
+                                                                <div className="bg-black border border-gray-800 rounded-lg shadow-xl p-4">
+                                                                    <h4 className="text-sm font-medium text-gray-300 mb-2 flex items-center gap-2">
+                                                                        <User className="h-4 w-4 text-red-400" />
+                                                                        Resguardantes
+                                                                    </h4>
+                                                                    <div className="flex flex-col gap-2">
+                                                                        {Array.from(new Set(allBajas
+                                                                            .filter(r => r.folio_resguardo === baja.folio_resguardo)
+                                                                            .map(r => r.usufinal || 'Sin asignar')))
+                                                                            .map((resguardante, idx) => (
+                                                                                <div
+                                                                                    key={idx}
+                                                                                    className="flex items-center gap-2 text-sm text-gray-400 bg-gray-900/50 px-2 py-1 rounded-lg w-full"
+                                                                                >
+                                                                                    <div className="h-2 w-2 rounded-full bg-red-500"></div>
+                                                                                    {resguardante}
+                                                                                </div>
+                                                                            ))}
+                                                                    </div>
+                                                                </div>
+                                                            </div>
                                                         </td>
                                                         <td className="px-4 py-4">
                                                             <div className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getItemCountBgColor(itemCount)}`}>
@@ -859,13 +908,41 @@ const ConsultarBajasResguardos = () => {
                                         </div>
 
                                         <div>
-                                            <label className="block text-xs uppercase tracking-wider text-gray-500 mb-1">Resguardante</label>
+                                            <label className="block text-xs uppercase tracking-wider text-gray-500 mb-1">Puesto</label>
                                             <div className="text-sm text-white flex items-center gap-2">
                                                 <User className="h-4 w-4 text-gray-400" />
-                                                {selectedBaja.usufinal}
-                                            </div>
-                                            <div className="text-xs text-gray-500 mt-1">
                                                 {selectedBaja.puesto}
+                                            </div>
+                                        </div>
+                                        <div>
+                                            <label className="block text-xs uppercase tracking-wider text-gray-500 mb-1">Resguardantes</label>
+                                            <div className="flex flex-wrap gap-2">
+                                                {Array.from(new Set(selectedBaja.articulos.map(a => a.usufinal || 'Sin asignar'))).map((resguardante, idx) => {
+                                                    // Paleta de colores oscuros con gradientes sutiles
+                                                    const colorPalette = [
+                                                        'from-slate-800 to-slate-700 border-slate-600 text-slate-200',
+                                                        'from-zinc-800 to-zinc-700 border-zinc-600 text-zinc-200',
+                                                        'from-neutral-800 to-neutral-700 border-neutral-600 text-neutral-200',
+                                                        'from-stone-800 to-stone-700 border-stone-600 text-stone-200',
+                                                        'from-red-900 to-red-800 border-red-700 text-red-200',
+                                                        'from-orange-900 to-orange-800 border-orange-700 text-orange-200',
+                                                        'from-amber-900 to-amber-800 border-amber-700 text-amber-200',
+                                                        'from-emerald-900 to-emerald-800 border-emerald-700 text-emerald-200',
+                                                        'from-teal-900 to-teal-800 border-teal-700 text-teal-200',
+                                                        'from-cyan-900 to-cyan-800 border-cyan-700 text-cyan-200',
+                                                    ];
+                                                    const color = colorPalette[idx % colorPalette.length];
+                                                    return (
+                                                        <span
+                                                            key={idx}
+                                                            className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-gradient-to-r ${color} border shadow-md transition-all duration-200 hover:scale-105`}
+                                                            style={{ letterSpacing: '0.02em' }}
+                                                        >
+                                                            <User className="h-3.5 w-3.5 mr-1 opacity-80" />
+                                                            {resguardante}
+                                                        </span>
+                                                    );
+                                                })}
                                             </div>
                                         </div>
                                     </div>
@@ -973,8 +1050,13 @@ const ConsultarBajasResguardos = () => {
                                                                 <p className="text-sm text-gray-300">
                                                                     {articulo.descripcion}
                                                                 </p>
-                                                                <div className="text-xs text-gray-500 mt-1">
-                                                                    Condición: {articulo.condicion}
+                                                                <div className="flex items-center gap-2 text-xs text-gray-500 mt-1">
+                                                                    <span>Condición: {articulo.condicion}</span>
+                                                                    <span className="text-gray-600">•</span>
+                                                                    <span className="flex items-center gap-1">
+                                                                        <Calendar className="h-3 w-3" />
+                                                                        {selectedBaja?.f_resguardo.slice(0, 10).split('-').reverse().join('/')}
+                                                                    </span>
                                                                 </div>
                                                             </div>
                                                             <button

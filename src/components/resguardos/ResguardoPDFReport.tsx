@@ -7,6 +7,7 @@ interface PdfArticulo {
     rubro: string | null;
     estado: string | null;
     origen?: string | null; // INEA o ITEA
+    resguardante?: string | null; // Nuevo campo para el resguardante
 }
 
 interface PdfFirma {
@@ -23,7 +24,9 @@ interface PdfData {
     puesto: string;
     resguardante: string;
     articulos: PdfArticulo[];
-    firmas?: PdfFirma[]; // Agregando campo opcional de firmas
+    firmas?: PdfFirma[];
+    usufinal?: string;
+    usufinalPuesto?: string;
 }
 
 interface ResguardoPDFReportProps {
@@ -113,8 +116,29 @@ export const ResguardoPDF = ({ data }: { data: PdfData }) => {
             { nombre: '', articulos: data.articulos }
         ];
 
+    // Si data.firmas está vacío, crear firmas por defecto
+    const defaultFirmas: PdfFirma[] = [
+        {
+            concepto: 'Autoriza',
+            nombre: 'Por asignar',
+            puesto: 'DIRECTOR(A) ADMIN. Y FINANZAS'
+        },
+        {
+            concepto: 'Conocimiento',
+            nombre: 'Por asignar',
+            puesto: 'DIRECTOR(A) RECURSOS MATERIALES'
+        },
+        {
+            concepto: 'Responsable',
+            nombre: data.director || '',
+            puesto: data.puesto || ''
+        }
+    ];
+
+    const firmasToUse = data.firmas?.length ? data.firmas : defaultFirmas;
+
     const getFirma = (concepto: string) => {
-        return data.firmas?.find(f => f.concepto === concepto);
+        return firmasToUse.find(f => f.concepto === concepto);
     };
 
     return (
@@ -132,34 +156,43 @@ export const ResguardoPDF = ({ data }: { data: PdfData }) => {
                 </View>
 
                 <View style={styles.section}>
-                    <Text><Text style={styles.label}>Folio:      </Text> {data.folio}</Text>
-                    <Text><Text style={styles.label}>Director:</Text> {data.director}</Text>
-                    <Text><Text style={styles.label}>Área:      </Text> {data.area}</Text>
-                    <Text><Text style={styles.label}>Puesto:  </Text> {data.puesto}</Text>
-                    <Text><Text style={styles.label}>Fecha:    </Text> {data.fecha}</Text>
-                    <Text><Text style={styles.label}>Resguardante:</Text> {data.resguardante}</Text>
+                    <Text><Text style={styles.label}>FOLIO: </Text> {data.folio.toUpperCase()}</Text>
+                    <Text><Text style={styles.label}>DIRECTOR: </Text> {data.director?.toUpperCase()}</Text>
+                    <Text><Text style={styles.label}>ÁREA: </Text> {data.area.toUpperCase()}</Text>
+                    <Text><Text style={styles.label}>PUESTO: </Text> {data.puesto.toUpperCase()}</Text>
+                    <Text><Text style={styles.label}>FECHA: </Text> {data.fecha.toUpperCase()}</Text>
+                    {/* Solo mostrar el resguardante aquí si es uno solo para todos los artículos */}
+                    {!data.articulos.some(a => a.resguardante) && (
+                        <Text><Text style={styles.label}>RESGUARDANTE: </Text> {data.resguardante?.toUpperCase()}</Text>
+                    )}
                 </View>
                 {grupos.map((grupo) => (
                     grupo.articulos.length > 0 && (
                         <View key={grupo.nombre} wrap={false}>
                             {grupo.nombre && (
                                 <Text style={{ fontWeight: 'bold', fontSize: 11, marginTop: 12, marginBottom: 2 }}>
-                                    Artículos de origen {grupo.nombre}
+                                    ARTÍCULOS DE ORIGEN {grupo.nombre}
                                 </Text>
                             )}
                             <View style={styles.table}>
                                 <View style={[styles.tableRow, styles.tableHeader]}>
-                                    <Text style={[styles.tableCell, styles.tableCellHeader, { flex: 2.5 }]}>ID Inventario</Text>
-                                    <Text style={[styles.tableCell, styles.tableCellHeader, { flex: 5.5 }]}>Descripción</Text>
-                                    <Text style={[styles.tableCell, styles.tableCellHeader, { flex: 1.6 }]}>Rubro</Text>
-                                    <Text style={[styles.tableCell, styles.tableCellHeader, { flex: .7 }]}>Estado</Text>
+                                    <Text style={[styles.tableCell, styles.tableCellHeader, { flex: 2.5 }]}>ID INVENTARIO</Text>
+                                    <Text style={[styles.tableCell, styles.tableCellHeader, { flex: 5.5 }]}>DESCRIPCIÓN</Text>
+                                    <Text style={[styles.tableCell, styles.tableCellHeader, { flex: 1.6 }]}>RUBRO</Text>
+                                    <Text style={[styles.tableCell, styles.tableCellHeader, { flex: .7 }]}>ESTADO</Text>
+                                    {data.articulos.some(a => a.resguardante) && (
+                                        <Text style={[styles.tableCell, styles.tableCellHeader, { flex: 2.5 }]}>RESGUARDANTE</Text>
+                                    )}
                                 </View>
                                 {grupo.articulos.map((art: PdfArticulo, idx2: number) => (
                                     <View style={styles.tableRow} key={idx2}>
-                                        <Text style={{ ...styles.tableCell, flex: 2.5 }}>{art.id_inv}</Text>
-                                        <Text style={{ ...styles.tableCell, flex: 5.5 }}>{art.descripcion}</Text>
-                                        <Text style={{ ...styles.tableCell, flex: 1.6 }}>{art.rubro}</Text>
-                                        <Text style={{ ...styles.tableCell, flex: .7 }}>{art.estado}</Text>
+                                        <Text style={{ ...styles.tableCell, flex: 2.5 }}>{art.id_inv?.toUpperCase()}</Text>
+                                        <Text style={{ ...styles.tableCell, flex: 5.5 }}>{art.descripcion?.toUpperCase()}</Text>
+                                        <Text style={{ ...styles.tableCell, flex: 1.6 }}>{art.rubro?.toUpperCase()}</Text>
+                                        <Text style={{ ...styles.tableCell, flex: .7 }}>{art.estado?.toUpperCase()}</Text>
+                                        {data.articulos.some(a => a.resguardante) && (
+                                            <Text style={{ ...styles.tableCell, flex: 2.5 }}>{(art.resguardante || data.resguardante)?.toUpperCase()}</Text>
+                                        )}
                                     </View>
                                 ))}
                             </View>
@@ -172,31 +205,28 @@ export const ResguardoPDF = ({ data }: { data: PdfData }) => {
                             <Text>         AUTORIZA</Text>
                             <Text> </Text>
                             <Text> </Text>
-                            <Text> </Text>
                             <Text>_______________________________</Text>
                             <Text> </Text>
-                            <Text>{getFirma('Autoriza')?.nombre || ' '}</Text>
-                            <Text>{getFirma('Autoriza')?.puesto || 'DIRECTOR(A) ADMIN. Y FINANZAS'}</Text>
+                            <Text>{getFirma('Autoriza')?.nombre?.toUpperCase() || ' '}</Text>
+                            <Text>{getFirma('Autoriza')?.puesto?.toUpperCase() || 'DIRECTOR(A) ADMIN. Y FINANZAS'}</Text>
                         </View>
                         <View style={styles.signatureBox}>
                             <Text>       CONOCIMIENTO</Text>
                             <Text> </Text>
                             <Text> </Text>
-                            <Text> </Text>
                             <Text>________________________________</Text>
                             <Text> </Text>
-                            <Text>{getFirma('Conocimiento')?.nombre || ' '}</Text>
-                            <Text>{getFirma('Conocimiento')?.puesto || 'DIRECTOR(A) RECURSOS MATERIALES'}</Text>
+                            <Text>{getFirma('Conocimiento')?.nombre?.toUpperCase() || ' '}</Text>
+                            <Text>{getFirma('Conocimiento')?.puesto?.toUpperCase() || 'DIRECTOR(A) RECURSOS MATERIALES'}</Text>
                         </View>
                         <View style={styles.signatureBox}>
-                            <Text>           RESPONSABLE</Text>
-                            <Text> </Text>
+                            <Text>RESGUARDANTE</Text>
                             <Text> </Text>
                             <Text> </Text>
                             <Text>__________________________________</Text>
                             <Text> </Text>
-                            <Text>{data.resguardante}</Text>
-                            <Text>{data.puesto}</Text>
+                            <Text>{data.director?.toUpperCase()}</Text>
+                            <Text>{data.puesto?.toUpperCase()} DE {data.area?.toUpperCase()}</Text>
                         </View>
                     </View>
                     <Text
@@ -205,7 +235,7 @@ export const ResguardoPDF = ({ data }: { data: PdfData }) => {
                             textAlign: 'right',
                             marginTop: 10,
                         }}
-                        render={({ pageNumber, totalPages }) => `Página ${pageNumber} de ${totalPages}`}
+                        render={({ pageNumber, totalPages }) => `PÁGINA ${pageNumber} DE ${totalPages}`}
                     />
                 </View>
             </Page>

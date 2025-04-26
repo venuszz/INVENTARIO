@@ -25,3 +25,98 @@ body {
   font-family: Arial, Helvetica, sans-serif;
   overflow-y: hidden;
 }
+
+/* Custom modal shadow for firmas modal */
+.firmas-modal-shadow {
+  box-shadow: 0 15px 30px -8px rgba(0, 0, 0, 0.7), 0 0 20px -5px rgba(218, 165, 32, 0.2);
+}
+
+/* Animación para el modal de logout */
+@keyframes scaleIn {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes overlayShow {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.modal-overlay {
+  animation: overlayShow 150ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.modal-content {
+  animation: scaleIn 150ms cubic-bezier(0.16, 1, 0.3, 1);
+  transform-origin: var(--origin-x, center) var(--origin-y, center);
+}
+
+/* Animación para el popover de logout */
+@keyframes slideUpAndFade {
+  from {
+    opacity: 0;
+    transform: translateY(4px) scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes slideDownAndFade {
+  from {
+    opacity: 0;
+    transform: translateY(-4px) scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.popover-content {
+  animation: slideUpAndFade 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  filter: drop-shadow(0 4px 6px rgba(0, 0, 0, 0.3)) 
+         drop-shadow(0 0 20px rgba(59, 130, 246, 0.1));
+  transform-origin: var(--origin-x, center) var(--origin-y, center);
+}
+
+.popover-content[data-position="top"] {
+  animation: slideDownAndFade 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.popover-content::before {
+  content: '';
+  position: absolute;
+  width: 8px;
+  height: 8px;
+  background: inherit;
+  border: inherit;
+  clip-path: polygon(0% 0%, 100% 100%, 0% 100%);
+  transform: rotate(45deg) translateX(-50%);
+}
+
+.popover-content[data-position="bottom"]::before {
+  top: -4px;
+  left: var(--arrow-x, 50%);
+  border-right: none;
+  border-bottom: none;
+}
+
+.popover-content[data-position="top"]::before {
+  bottom: -4px;
+  left: var(--arrow-x, 50%);
+  border-left: none;
+  border-top: none;
+  transform: rotate(45deg) translateX(-50%) scale(-1);
+}

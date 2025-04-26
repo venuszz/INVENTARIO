@@ -28,6 +28,7 @@ interface Mueble {
     usufinal: string | null;
     area?: string | null;
     origen?: string; // Nuevo campo para identificar el origen
+    resguardanteAsignado?: string; // Campo para el resguardante individual
 }
 
 interface Directorio {
@@ -40,9 +41,34 @@ interface Directorio {
 interface ResguardoForm {
     folio: string;
     directorId: string;
-    resguardante: string;
     area: string;
     puesto: string;
+    resguardante: string;
+}
+
+// Interfaces para PDF, igual que en consultar.tsx
+interface PdfFirma {
+    concepto: string;
+    nombre: string;
+    puesto: string;
+}
+
+interface PdfData {
+    folio: string;
+    fecha: string;
+    director: string | undefined;
+    area: string;
+    puesto: string;
+    resguardante: string;
+    articulos: Array<{
+        id_inv: string | null;
+        descripcion: string | null;
+        rubro: string | null;
+        estado: string | null;
+        origen?: string | null;
+        resguardante: string; // Incluir el resguardante individual
+    }>;
+    firmas?: PdfFirma[];
 }
 
 // Utilidad para asignar color a áreas y responsables
@@ -69,16 +95,23 @@ function getColorClass(value: string | null | undefined) {
     return colorPalette[idx];
 }
 
+// Truncar texto para la lista principal
+function truncateText(text: string | null | undefined, length: number = 40) {
+    if (!text) return '';
+    return text.length > length ? text.substring(0, length) + '...' : text;
+}
+
 export default function CrearResguardos() {
     const [filteredMuebles, setFilteredMuebles] = useState<Mueble[]>([]);
     const [directorio, setDirectorio] = useState<Directorio[]>([]);
     const [selectedMuebles, setSelectedMuebles] = useState<Mueble[]>([]);
+    const [showPDFButton, setShowPDFButton] = useState(false);
     const [formData, setFormData] = useState<ResguardoForm>({
         folio: '',
         directorId: '',
-        resguardante: '',
         area: '',
-        puesto: ''
+        puesto: '',
+        resguardante: '' // Añadiendo el campo resguardante con valor inicial
     });
     const [showDirectorModal, setShowDirectorModal] = useState(false);
     const [incompleteDirector, setIncompleteDirector] = useState<Directorio | null>(null);
@@ -103,27 +136,78 @@ export default function CrearResguardos() {
     const [showWarningModal, setShowWarningModal] = useState(false);
     const [directorInputDisabled, setDirectorInputDisabled] = useState(false);
     const [directorSearchTerm, setDirectorSearchTerm] = useState('');
-
-    interface PdfArticulo {
-        id_inv: string | null;
-        descripcion: string | null;
-        rubro: string | null;
-        estado: string | null;
-        origen?: string | null;
-    }
-
-    interface PdfData {
-        folio: string;
-        fecha: string;
-        director: string | undefined;
-        area: string;
-        puesto: string;
-        resguardante: string;
-        articulos: PdfArticulo[];
-    }
+    const [totalCount, setTotalCount] = useState(0);
 
     const [pdfData, setPdfData] = useState<PdfData | null>(null);
-    const [showPDFButton, setShowPDFButton] = useState(false);
+
+    // Validación de campos obligatorios
+    const isFormValid =
+        selectedMuebles.length > 0 &&
+        formData.directorId.trim() !== '' &&
+        formData.area.trim() !== '' &&
+        formData.puesto.trim() !== '';
+
+    // Fetch directorio y firmas data
+    useEffect(() => {
+        const fetchData = async () => {
+            try {
+                const [directorioResult, firmasResult, allMueblesInea, allMueblesItea] = await Promise.all([
+                    supabase.from('directorio').select('*'),
+                    supabase.from('firmas').select('*').order('id', { ascending: true }),
+                    supabase.from('muebles').select('area,usufinal').eq('estatus', 'ACTIVO'),
+                    supabase.from('mueblesitea').select('area,usufinal').eq('estatus', 'ACTIVO')
+                ]);
+
+                if (directorioResult.error) throw directorioResult.error;
+                if (firmasResult.error) throw firmasResult.error;
+                if (allMueblesInea.error) throw allMueblesInea.error;
+                if (allMueblesItea.error) throw allMueblesItea.error;
+
+                // Combinar áreas y responsables de ambas tablas
+                const allItems = [...(allMueblesInea.data || []), ...(allMueblesItea.data || [])];
+                
+                // Obtener valores únicos para los filtros
+                const areas = Array.from(new Set(allItems.map(m => m.area).filter(Boolean)));
+                const responsables = Array.from(new Set(allItems.map(m => m.usufinal).filter(Boolean)));
+                
+                setUniqueAreas(areas);
+                setUniqueResponsables(responsables);
+                setDirectorio(directorioResult.data || []);
+                
+                return firmasResult.data;
+            } catch (err) {
+                setError('Error al cargar los datos');
+                console.error(err);
+                return null;
+            }
+        };
+        fetchData();
+    }, []);
+
+    // Utilidad para traer todos los registros de una tabla en lotes
+    async function fetchAllRows<T = unknown>(table: string, filter: object = {}, batchSize = 1000): Promise<T[]> {
+        let allRows: T[] = [];
+        let from = 0;
+        let to = batchSize - 1;
+        let keepFetching = true;
+        while (keepFetching) {
+            let query = supabase.from(table).select('*').range(from, to);
+            // Agregar filtros
+            Object.entries(filter).forEach(([key, value]) => {
+                query = query.eq(key, value);
+            });
+            const { data, error } = await query;
+            if (error) throw error;
+            allRows = allRows.concat(data || []);
+            if (!data || data.length < batchSize) {
+                keepFetching = false;
+            } else {
+                from += batchSize;
+                to += batchSize;
+            }
+        }
+        return allRows;
+    }
 
     // Fetch data with pagination directly from database
     const fetchData = useCallback(async (
@@ -137,86 +221,58 @@ export default function CrearResguardos() {
     ) => {
         setLoading(true);
         try {
-            // 1. Obtener todos los id_inv que ya están en resguardos
-            const { data: resguardosData, error: resguardosError } = await supabase
+            // 1. Obtener los detalles de los artículos que ya están en resguardos
+            const { data: resguardados } = await supabase
                 .from('resguardos')
-                .select('num_inventario');
-            if (resguardosError) throw resguardosError;
-            const idsResguardados = new Set((resguardosData || []).map(r => r.num_inventario));
+                .select('num_inventario, descripcion, rubro, condicion, area_resguardo');
 
-            // Traer todos los muebles activos de ambas tablas (sin paginar aún)
-            let mueblesQuery = supabase
-                .from('muebles')
-                .select('id, id_inv, descripcion, estatus, resguardante, rubro, estado, usufinal, area')
-                .eq('estatus', 'ACTIVO');
-            let mueblesIteaQuery = supabase
-                .from('mueblesitea')
-                .select('id, id_inv, descripcion, estatus, resguardante, rubro, estado, usufinal, area')
-                .eq('estatus', 'ACTIVO');
+            // Crear un Set con la combinación de campos relevantes para búsqueda más eficiente
+            const resguardadosSet = new Set(
+                (resguardados || []).map(r => `${r.num_inventario}-${r.descripcion}-${r.rubro}-${r.condicion}-${r.area_resguardo}`.toLowerCase())
+            );
 
-            if (searchQuery) {
-                mueblesQuery = mueblesQuery.or(`id_inv.ilike.%${searchQuery}%,descripcion.ilike.%${searchQuery}%`);
-                mueblesIteaQuery = mueblesIteaQuery.or(`id_inv.ilike.%${searchQuery}%,descripcion.ilike.%${searchQuery}%`);
-            }
-            if (areaFilter) {
-                mueblesQuery = mueblesQuery.ilike('area', `%${areaFilter}%`);
-                mueblesIteaQuery = mueblesIteaQuery.ilike('area', `%${areaFilter}%`);
-            }
-            if (responsableFilter) {
-                mueblesQuery = mueblesQuery.ilike('usufinal', `%${responsableFilter}%`);
-                mueblesIteaQuery = mueblesIteaQuery.ilike('usufinal', `%${responsableFilter}%`);
-            }
-
-            const [mueblesResult, mueblesIteaResult] = await Promise.all([
-                mueblesQuery,
-                mueblesIteaQuery
+            // 2. Obtener todos los muebles activos de ambas tablas (en lotes)
+            const [dataInea, dataItea] = await Promise.all([
+                fetchAllRows('muebles', { estatus: 'ACTIVO' }),
+                fetchAllRows('mueblesitea', { estatus: 'ACTIVO' })
             ]);
-
-            const mueblesWithOrigen = (mueblesResult.data || []).map(m => ({ ...m, origen: 'INEA' }));
-            const mueblesIteaWithOrigen = (mueblesIteaResult.data || []).map(m => ({ ...m, origen: 'ITEA' }));
             let combinedData = [
-                ...mueblesWithOrigen,
-                ...mueblesIteaWithOrigen
+                ...((Array.isArray(dataInea) ? dataInea as Mueble[] : [] as Mueble[]).map((item: Mueble) => ({ ...item, origen: 'INEA' }))),
+                ...((Array.isArray(dataItea) ? dataItea as Mueble[] : [] as Mueble[]).map((item: Mueble) => ({ ...item, origen: 'ITEA' }))),
             ];
 
-            // Filtrar los que ya están en resguardos
-            combinedData = combinedData.filter(m => m.id_inv && !idsResguardados.has(m.id_inv));
+            // 3. Filtrar: solo mostrar los que NO están en resguardos, considerando todos los campos relevantes
+            combinedData = combinedData.filter(item => {
+                const itemKey = `${item.id_inv}-${item.descripcion}-${item.rubro}-${item.estado}-${item.area}`.toLowerCase();
+                return !resguardadosSet.has(itemKey);
+            });
 
-            // Ordenar
+            // 4. Aplicar filtros de búsqueda, área y responsable en frontend
+            if (searchQuery) {
+                const searchPattern = searchQuery.toLowerCase();
+                combinedData = combinedData.filter(item =>
+                    (item.id_inv && item.id_inv.toLowerCase().includes(searchPattern)) ||
+                    (item.descripcion && item.descripcion.toLowerCase().includes(searchPattern))
+                );
+            }
+            if (areaFilter) {
+                combinedData = combinedData.filter(item => item.area === areaFilter);
+            }
+            if (responsableFilter) {
+                combinedData = combinedData.filter(item => item.usufinal === responsableFilter);
+            }
+
+            // 5. Ordenar
             combinedData.sort((a, b) => {
-                const aValue = a[sortField as keyof Mueble] || '';
-                const bValue = b[sortField as keyof Mueble] || '';
-                if (aValue < bValue) return sortDir === 'asc' ? -1 : 1;
-                if (aValue > bValue) return sortDir === 'asc' ? 1 : -1;
-                return 0;
+                const aValue = String(a[sortField as keyof typeof a] ?? '').toLowerCase();
+                const bValue = String(b[sortField as keyof typeof b] ?? '').toLowerCase();
+                return sortDir === 'asc' ? aValue.localeCompare(bValue) : bValue.localeCompare(aValue);
             });
 
-            // Paginar después de filtrar
-            const paginatedResults = combinedData.slice((page - 1) * rowsPerPage, page * rowsPerPage);
-            setFilteredMuebles(paginatedResults as Mueble[]);
-
-            // Fetch directorio
-            const { data: directorioData } = await supabase.from('directorio').select('*');
-            setDirectorio(directorioData || []);
-
-            // Obtener valores únicos para los filtros - desde tablas completas
-            const allDataQuery = supabase.from('muebles').select('area, usufinal').eq('estatus', 'ACTIVO');
-            const allDataIteaQuery = supabase.from('mueblesitea').select('area, usufinal').eq('estatus', 'ACTIVO');
-
-            const [allData, allDataItea] = await Promise.all([allDataQuery, allDataIteaQuery]);
-
-            const allAreas = new Set<string>();
-            const allResponsables = new Set<string>();
-
-            // Procesar datos para obtener valores únicos
-            [...(allData.data || []), ...(allDataItea.data || [])].forEach(item => {
-                if (item.area) allAreas.add(item.area);
-                if (item.usufinal) allResponsables.add(item.usufinal);
-            });
-
-            setUniqueAreas(Array.from(allAreas).sort());
-            setUniqueResponsables(Array.from(allResponsables).sort());
-
+            // 6. Paginación manual
+            setTotalCount(combinedData.length);
+            const paginated = combinedData.slice((page - 1) * rowsPerPage, page * rowsPerPage);
+            setFilteredMuebles(paginated);
             setError(null);
         } catch (err) {
             setError('Error al cargar los datos');
@@ -298,7 +354,7 @@ export default function CrearResguardos() {
         setSelectedMuebles(newSelectedMuebles);
 
         if (newSelectedMuebles.length === 0) {
-            setFormData({ folio: formData.folio, directorId: '', resguardante: '', area: '', puesto: '' });
+            setFormData({ folio: formData.folio, directorId: '', area: '', puesto: '', resguardante: '' });
             setDirectorInputDisabled(false);
         } else if (!isAlreadySelected && newSelectedMuebles.length === 1) {
             // Si es el primer seleccionado, intentar seleccionar director
@@ -384,13 +440,7 @@ export default function CrearResguardos() {
 
     // Handle form submit
     const handleSubmit = async () => {
-        if (selectedMuebles.length === 0) {
-            setError('Seleccione al menos un artículo para crear el resguardo');
-            return;
-        }
-
-        // Validación: directorId, área y puesto
-        if (!formData.directorId || !formData.area || !formData.puesto) {
+        if (!isFormValid) {
             setError('Complete todos los campos obligatorios');
             return;
         }
@@ -414,17 +464,50 @@ export default function CrearResguardos() {
         try {
             setLoading(true);
 
+            // Obtener las firmas
+            const { data: firmasData, error: firmasError } = await supabase
+                .from('firmas')
+                .select('*')
+                .order('id', { ascending: true });
+
+            if (firmasError) throw firmasError;
+
+            // Activar el botón de PDF antes de crear el PDF
+            setShowPDFButton(true);
+
+            // Guardar datos para el PDF
+            setPdfData({
+                folio: folioToUse,
+                fecha: new Date().toLocaleDateString(),
+                director: directorio.find(d => d.id_directorio.toString() === formData.directorId)?.nombre?.toUpperCase() || '',
+                area: formData.area.trim().toUpperCase(),
+                puesto: formData.puesto.trim().toUpperCase(),
+                resguardante: formData.resguardante,
+                articulos: selectedMuebles.map(m => ({
+                    id_inv: m.id_inv,
+                    descripcion: m.descripcion,
+                    rubro: m.rubro,
+                    estado: m.estado,
+                    origen: m.origen || null,
+                    resguardante: m.resguardanteAsignado || ''
+                })),
+                firmas: firmasData || []
+            });
+
             const resguardoPromises = selectedMuebles.map(async (mueble) => {
                 // Usar el campo origen para determinar la tabla
                 const tableName = mueble.origen === 'ITEA' ? 'mueblesitea' : 'muebles';
                 // CORREGIDO: buscar director por ID, no por nombre
                 const directorNombre = directorio.find(dir => dir.id_directorio.toString() === formData.directorId)?.nombre;
+                
+                // Determinar el resguardante a usar (individual o general)
+                const resguardanteToUse = mueble.resguardanteAsignado || formData.resguardante;
 
-                // Update mueble: ahora también actualiza usufinal y area
+                // Update mueble: ahora también actualiza usufinal, area y resguardante
                 const { error: updateError } = await supabase
                     .from(tableName)
                     .update({
-                        resguardante: formData.resguardante,
+                        resguardante: resguardanteToUse, // Actualizar resguardante en tabla origen
                         usufinal: directorNombre,
                         area: formData.area
                     })
@@ -442,10 +525,10 @@ export default function CrearResguardos() {
                     descripcion: mueble.descripcion,
                     rubro: mueble.rubro,
                     condicion: mueble.estado,
-                    usufinal: formData.resguardante,
+                    usufinal: resguardanteToUse, // Usar el resguardante individual o general
                     created_by: createdBy,
                     puesto: formData.puesto,
-                    origen: mueble.origen || '', // Guardar el origen INEA o ITEA
+                    origen: mueble.origen || '',
                 });
 
                 if (insertError) throw insertError;
@@ -453,23 +536,6 @@ export default function CrearResguardos() {
 
             await Promise.all(resguardoPromises);
 
-            // Guardar datos para el PDF
-            setPdfData({
-                folio: folioToUse,
-                fecha: new Date().toLocaleDateString(),
-                director: directorio.find(d => d.id_directorio.toString() === formData.directorId)?.nombre,
-                area: formData.area,
-                puesto: formData.puesto,
-                resguardante: formData.resguardante,
-                articulos: selectedMuebles.map(m => ({
-                    id_inv: m.id_inv,
-                    descripcion: m.descripcion,
-                    rubro: m.rubro,
-                    estado: m.estado,
-                    origen: m.origen || null
-                }))
-            });
-            setShowPDFButton(true);
             sessionStorage.setItem('pdfDownloaded', 'false');
 
             // Reset form but keep the folio for next group if needed
@@ -514,7 +580,7 @@ export default function CrearResguardos() {
     };
 
     // Calculate total pages
-    const totalPages = Math.ceil(filteredMuebles.length / rowsPerPage);
+    const totalPages = Math.ceil(totalCount / rowsPerPage);
 
     const inputsDisabled = selectedMuebles.length === 0;
 
@@ -671,7 +737,7 @@ export default function CrearResguardos() {
                                             className={`h-4 w-4 text-blue-400 cursor-pointer hover:text-blue-300 ${loading ? 'animate-spin' : ''}`}
                                             onClick={() => fetchData(currentPage, rowsPerPage, searchTerm, sortField, sortDirection, areaFilter, responsableFilter)}
                                         />
-                                        <span>Total: {filteredMuebles.length} registros</span>
+                                        <span>Total: {totalCount} registros</span>
                                     </div>
                                 </div>
                             </div>
@@ -804,14 +870,14 @@ export default function CrearResguardos() {
                                                             </div>
                                                             <div className={`text-[10px] mt-1 font-mono px-2 py-0.5 rounded-full border inline-block
                                                                 ${mueble.origen === 'INEA' ? 'bg-blue-900/30 text-blue-300 border-blue-700' :
-                                                                  mueble.origen === 'ITEA' ? 'bg-pink-900/30 text-pink-200 border-pink-700' :
-                                                                  'bg-gray-900/40 text-gray-400 border-gray-800'}`}
+                                                                    mueble.origen === 'ITEA' ? 'bg-pink-900/30 text-pink-200 border-pink-700' :
+                                                                        'bg-gray-900/40 text-gray-400 border-gray-800'}`}
                                                             >
                                                                 {mueble.origen}
                                                             </div>
                                                         </td>
                                                         <td className="px-4 py-4">
-                                                            <div className="text-sm text-white">{mueble.descripcion}</div>
+                                                            <div className="text-sm text-white">{truncateText(mueble.descripcion, 40)}</div>
                                                         </td>
                                                         <td className="px-4 py-4">
                                                             <div className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border ${getColorClass(mueble.area)}`}>{mueble.area || 'No especificada'}</div>
@@ -827,7 +893,7 @@ export default function CrearResguardos() {
                                                                 ${mueble.estado === 'B' ? 'bg-green-900/20 text-green-300 border border-green-900' :
                                                                     mueble.estado === 'R' ? 'bg-yellow-900/20 text-yellow-300 border border-yellow-900' :
                                                                         mueble.estado === 'M' ? 'bg-red-900/20 text-red-300 border border-red-900' :
-                                                                            mueble.estado === 'N' ? 'bg-blue-900/20 text-blue-300 border border-blue-900' :
+                                                                            mueble.estado === 'N' ? 'bg-blue-900/20 text-blue-300 border-blue-900' :
                                                                                 'bg-gray-900/20 text-gray-300 border border-gray-900'}`}>
                                                                 {mueble.estado}
                                                             </div>
@@ -1050,10 +1116,26 @@ export default function CrearResguardos() {
                                                 </div>
                                                 <div className={`text-[10px] mt-1 font-mono px-2 py-0.5 rounded-full border inline-block
                                                     ${mueble.origen === 'INEA' ? 'bg-blue-900/30 text-blue-300 border-blue-700' :
-                                                      mueble.origen === 'ITEA' ? 'bg-pink-900/30 text-pink-200 border-pink-700' :
-                                                      'bg-gray-900/40 text-gray-400 border-gray-800'}`}
+                                                        mueble.origen === 'ITEA' ? 'bg-pink-900/30 text-pink-200 border-pink-700' :
+                                                            'bg-gray-900/40 text-gray-400 border-gray-800'}`}
                                                 >
                                                     {mueble.origen}
+                                                </div>
+                                                
+                                                {/* Campo de resguardante individual */}
+                                                <div className="mt-3 flex items-center gap-2">
+                                                    <input
+                                                        type="text"
+                                                        value={mueble.resguardanteAsignado || ''}
+                                                        onChange={(e) => {
+                                                            const newSelectedMuebles = selectedMuebles.map(m =>
+                                                                m.id === mueble.id ? { ...m, resguardanteAsignado: e.target.value } : m
+                                                            );
+                                                            setSelectedMuebles(newSelectedMuebles);
+                                                        }}
+                                                        placeholder="Resguardante individual (opcional)"
+                                                        className="block w-full bg-gray-900/50 border border-gray-800 rounded-lg py-1.5 px-3 text-white placeholder-gray-500 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
+                                                    />
                                                 </div>
                                             </div>
                                             <button
@@ -1079,8 +1161,12 @@ export default function CrearResguardos() {
                                     setSelectedMuebles([]);
                                     setFormData(prev => ({
                                         ...prev,
-                                        resguardante: ''
+                                        resguardante: '',
+                                        area: '',
+                                        puesto: '',
+                                        directorId: ''
                                     }));
+                                    setDirectorInputDisabled(false);
                                 }}
                                 disabled={selectedMuebles.length === 0 || loading}
                                 className={`px-4 py-2 rounded-lg text-sm flex items-center justify-center gap-2 
@@ -1091,9 +1177,9 @@ export default function CrearResguardos() {
                             </button>
                             <button
                                 onClick={handleSubmit}
-                                disabled={selectedMuebles.length === 0 || !formData.directorId || !formData.area || !formData.puesto || loading}
+                                disabled={!isFormValid || loading}
                                 className={`px-4 py-2 rounded-lg text-sm flex items-center justify-center gap-2 flex-grow sm:flex-grow-0 
-                                    ${selectedMuebles.length === 0 || !formData.directorId || !formData.area || !formData.puesto || loading ?
+                                    ${!isFormValid || loading ?
                                         'bg-blue-900/10 text-blue-300/50 border border-blue-900/20 cursor-not-allowed' :
                                         'bg-blue-600 text-white hover:bg-blue-500'}`}
                             >
@@ -1359,7 +1445,7 @@ export default function CrearResguardos() {
                             <div>
                                 <h3 className="text-xl font-bold text-white mb-2">¿Cerrar sin descargar?</h3>
                                 <p className="text-gray-400 text-sm">
-                                    No has descargado el PDF. Si cierras esta ventana, no podrás volver a generar este documento por ahora. 
+                                    No has descargado el PDF. Si cierras esta ventana, no podrás volver a generar este documento por ahora.
                                 </p>
                             </div>
 

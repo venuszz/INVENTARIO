@@ -1,78 +1,10 @@
-import { useState } from 'react';
 import {
-    FileText, Download, FileSpreadsheet, File, 
-    FileDigit, X, AlertCircle,
+    FileText,
     UserX, MapPin, Trash2, CheckCircle,
-    Database, ListChecks
+    Database
 } from 'lucide-react';
-import supabase from '@/app/lib/supabase/client';
-// import { generatePDF } from './pdfgenerator';
-
-interface Mueble {
-    id: number;
-    id_inv: string;
-    rubro: string | null;
-    descripcion: string | null;
-    valor: number | null;
-    f_adq: string | null;
-    formadq: string | null;
-    proveedor: string | null;
-    factura: string | null;
-    ubicacion_es: string | null;
-    ubicacion_mu: string | null;
-    ubicacion_no: string | null;
-    estado: string | null;
-    estatus: string | null;
-    area: string | null;
-    usufinal: string | null;
-    fechabaja: string | null;
-    causadebaja: string | null;
-    resguardante: string | null;
-    image_path: string | null;
-}
 
 export default function ReportesIneaDashboard() {
-    // Estado para controlar el modal de exportación
-   
-
-    // Columnas a exportar
-    const exportColumns = [
-        { header: 'ID Inventario', key: 'id_inv', width: 18 },
-        { header: 'Rubro', key: 'rubro', width: 18 },
-        { header: 'Descripción', key: 'descripcion', width: 40 },
-        { header: 'Valor', key: 'valor', width: 12 },
-        { header: 'Fecha Adquisición', key: 'f_adq', width: 16 },
-        { header: 'Forma Adq.', key: 'formadq', width: 14 },
-        { header: 'Proveedor', key: 'proveedor', width: 20 },
-        { header: 'Factura', key: 'factura', width: 14 },
-        { header: 'Ubicación ES', key: 'ubicacion_es', width: 10 },
-        { header: 'Ubicación MU', key: 'ubicacion_mu', width: 10 },
-        { header: 'Ubicación NO', key: 'ubicacion_no', width: 12 },
-        { header: 'Estado', key: 'estado', width: 14 },
-        { header: 'Estatus', key: 'estatus', width: 14 },
-        { header: 'Área', key: 'area', width: 18 },
-        { header: 'Usuario Final', key: 'usufinal', width: 20 },
-        { header: 'Fecha Baja', key: 'fechabaja', width: 16 },
-        { header: 'Causa de Baja', key: 'causadebaja', width: 24 },
-        { header: 'Resguardante', key: 'resguardante', width: 18 },
-    ];
-
-    // Obtiene el filtro de estatus según el reporte
-    function getEstatusFilter(report: string) {
-        switch (report) {
-            case 'Activos':
-                return 'ACTIVO';
-            case 'Inactivos':
-                return 'INACTIVO';
-            case 'No localizados':
-                return 'NO LOCALIZADO';
-            case 'Obsoletos':
-                return 'OBSOLETO';
-            default:
-                return null; // General: sin filtro
-        }
-    }
-
     // Datos de reportes INEA con íconos y colores específicos
     const reportes = [
         {
@@ -127,11 +59,6 @@ export default function ReportesIneaDashboard() {
         },
     ];
 
-    // Función para abrir el modal de exportación
-    
-
-    // Exporta el reporte real trayendo todos los datos (paginación manual)
-    
     return (
         <div className="bg-black text-white min-h-screen p-2 sm:p-4 md:p-6 lg:p-8">
             <div className="w-full mx-auto bg-black rounded-lg sm:rounded-xl shadow-2xl overflow-hidden border border-gray-800 transition-all duration-500 transform">
@@ -173,19 +100,11 @@ export default function ReportesIneaDashboard() {
                                                             reporte.title === 'Auditoría' ? 'Reportes de revisiones y verificaciones' :
                                                                 'Datos estadísticos y métricas de uso'}
                                 </p>
-
-                                
                             </div>
                         ))}
                     </div>
                 </div>
-
-                {/* Footer */}
-                
             </div>
-
-            {/* Modal de exportación */}
-            
         </div>
     );
 }

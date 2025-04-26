@@ -1,20 +1,51 @@
 "use client";
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
     FileText, Download, FileSpreadsheet, File,
     FileDigit, X, AlertCircle,
     UserX, MapPin, Trash2, CheckCircle,
-    Database, ListChecks
+    Database, ListChecks, Settings2, Pencil
 } from 'lucide-react';
 import supabase from '@/app/lib/supabase/client';
 import { generateExcel } from './excelgenerator';
 import { generatePDF } from './pdfgenerator';
+
+// Firma interface
+interface Firma {
+    id: number;
+    concepto: string;
+    nombre: string | null;
+    puesto: string | null;
+}
 
 export default function ReportesIteaDashboard() {
     // Estado para controlar el modal de exportación
     const [exportModalOpen, setExportModalOpen] = useState(false);
     const [selectedReport, setSelectedReport] = useState('');
     const [error, setError] = useState<string | null>(null);
+
+    // Estados para la gestión de firmas
+    const [firmasModalOpen, setFirmasModalOpen] = useState(false);
+    const [firmas, setFirmas] = useState<Firma[]>([]);
+    const [editingFirma, setEditingFirma] = useState<Firma | null>(null);
+
+    // Fetch firmas on component mount
+    useEffect(() => {
+        const fetchFirmas = async () => {
+            const { data, error } = await supabase
+                .from('firmas')
+                .select('*')
+                .order('id', { ascending: true });
+            if (error) {
+                setError('Error al cargar las firmas: ' + error.message);
+                return;
+            }
+            if (data) {
+                setFirmas(data);
+            }
+        };
+        fetchFirmas();
+    }, []);
 
     // Columnas a exportar
     const exportColumns = [
@@ -263,9 +294,18 @@ export default function ReportesIteaDashboard() {
                         </span>
                         Reportes ITEA
                     </h1>
-                    <div className="flex items-center gap-2 text-sm text-gray-400">
-                        <ListChecks className="h-4 w-4 text-blue-400" />
-                        <span>{reportes.length} categorías de reportes</span>
+                    <div className="flex items-center gap-4">
+                        <button
+                            onClick={() => setFirmasModalOpen(true)}
+                            className="p-2 rounded-lg text-gray-400 hover:text-amber-500 transition-colors border border-gray-800 hover:border-amber-500/30"
+                            title="Configurar Firmas"
+                        >
+                            <Settings2 className="h-5 w-5" />
+                        </button>
+                        <div className="flex items-center gap-2 text-sm text-gray-400">
+                            <ListChecks className="h-4 w-4 text-blue-400" />
+                            <span>{reportes.length} categorías de reportes</span>
+                        </div>
                     </div>
                 </div>
 
@@ -371,6 +411,140 @@ export default function ReportesIteaDashboard() {
                                     </button>
                                 </div>
                             </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Modal de Firmas con Edición Inline - Negro & Dorado */}
+            {firmasModalOpen && (
+                <div className="fixed inset-0 bg-black/95 flex items-center justify-center z-50 px-4 backdrop-blur-md animate-fadeIn">
+                    <div 
+                        className="bg-black w-full max-w-md rounded-2xl overflow-hidden border border-gray-900 firmas-modal-shadow"
+                    >
+                        {/* Barra superior dorada */}
+                        <div className="h-0.5 w-full bg-gradient-to-r from-amber-700/80 via-yellow-500 to-amber-700/80"></div>
+                        <div className="p-6">
+                            {/* Header */}
+                            <div className="flex items-center justify-between mb-5">
+                                <div className="flex items-center gap-3">
+                                    <div className="p-2 bg-black rounded-lg border border-amber-700/30">
+                                        <Settings2 className="h-5 w-5 text-amber-500" />
+                                    </div>
+                                    <h3 className="text-lg font-semibold text-white">Configuración de Firmas</h3>
+                                </div>
+                                <button
+                                    onClick={() => setFirmasModalOpen(false)}
+                                    className="p-1.5 rounded-lg text-gray-500 hover:text-amber-500 transition-colors focus:outline-none"
+                                    title="Cerrar"
+                                >
+                                    <X className="h-5 w-5" />
+                                </button>
+                            </div>
+                            <div className="space-y-3 mt-2">
+                                {firmas.map((firma) => {
+                                    const isEditing = editingFirma?.id === firma.id;
+                                    return (
+                                        <div 
+                                            key={firma.id} 
+                                            className={`group p-4 relative rounded-xl transition-all duration-300 ${isEditing 
+                                                ? 'bg-gray-900 border border-amber-700/50' 
+                                                : 'bg-gray-950 border border-gray-800 hover:border-amber-800/40'}`}
+                                        >
+                                            {isEditing ? (
+                                                <form onSubmit={async (e) => {
+                                                    e.preventDefault();
+                                                    const formData = new FormData(e.currentTarget);
+                                                    const updates = {
+                                                        nombre: formData.get('nombre'),
+                                                        puesto: formData.get('puesto'),
+                                                    };
+                                                    const { error } = await supabase
+                                                        .from('firmas')
+                                                        .update(updates)
+                                                        .eq('id', firma.id);
+                                                    if (!error) {
+                                                        setFirmas(firmas.map(f => 
+                                                            f.id === firma.id 
+                                                                ? { ...f, 
+                                                                    nombre: updates.nombre as string,
+                                                                    puesto: updates.puesto as string
+                                                                }
+                                                                : f
+                                                        ));
+                                                        setEditingFirma(null);
+                                                    } else {
+                                                        setError('Error al actualizar la firma');
+                                                    }
+                                                }} className="space-y-3">
+                                                    <h4 className="font-medium text-amber-500 text-sm mb-2">{firma.concepto}</h4>
+                                                    <div className="space-y-3">
+                                                        <div>
+                                                            <label className="block text-xs font-medium text-amber-500/70 mb-1">
+                                                                Nombre
+                                                            </label>
+                                                            <input
+                                                                type="text"
+                                                                name="nombre"
+                                                                defaultValue={firma.nombre || ''}
+                                                                className="w-full px-3 py-2 bg-black border border-gray-800 focus:border-amber-700/60 rounded-lg focus:outline-none focus:ring-1 focus:ring-amber-700/30 text-white text-sm transition-all"
+                                                                autoFocus
+                                                                title="Nombre de la persona que firma"
+                                                                placeholder="Nombre completo"
+                                                            />
+                                                        </div>
+                                                        <div>
+                                                            <label className="block text-xs font-medium text-amber-500/70 mb-1">
+                                                                Puesto
+                                                            </label>
+                                                            <input
+                                                                type="text"
+                                                                name="puesto"
+                                                                defaultValue={firma.puesto || ''}
+                                                                className="w-full px-3 py-2 bg-black border border-gray-800 focus:border-amber-700/60 rounded-lg focus:outline-none focus:ring-1 focus:ring-amber-700/30 text-white text-sm transition-all"
+                                                                title="Puesto de la persona que firma"
+                                                                placeholder="Cargo o puesto"
+                                                            />
+                                                        </div>
+                                                    </div>
+                                                    <div className="flex justify-end gap-2 pt-2">
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => setEditingFirma(null)}
+                                                            className="px-3 py-1.5 bg-gray-900 hover:bg-gray-800 rounded-md text-gray-400 text-xs font-medium transition-all focus:outline-none"
+                                                        >
+                                                            Cancelar
+                                                        </button>
+                                                        <button
+                                                            type="submit"
+                                                            className="px-3 py-1.5 bg-gradient-to-r from-amber-800 to-amber-700 hover:from-amber-700 hover:to-amber-600 rounded-md text-white text-xs font-medium transition-all focus:outline-none"
+                                                        >
+                                                            Guardar
+                                                        </button>
+                                                    </div>
+                                                </form>
+                                            ) : (
+                                                <div className="flex justify-between items-start">
+                                                    <div>
+                                                        <h4 className="font-medium text-amber-500 text-sm">{firma.concepto}</h4>
+                                                        <p className="text-white text-sm mt-1.5">{firma.nombre || 'Sin asignar'}</p>
+                                                        <p className="text-gray-500 text-xs mt-0.5">{firma.puesto || 'Sin asignar'}</p>
+                                                    </div>
+                                                    <button
+                                                        onClick={() => setEditingFirma(firma)}
+                                                        className="p-1.5 rounded-md bg-black opacity-0 group-hover:opacity-100 text-gray-500 hover:text-amber-500 transition-all border border-gray-800 hover:border-amber-700/30 focus:outline-none"
+                                                        title="Editar firma"
+                                                    >
+                                                        <Pencil className="h-3.5 w-3.5" />
+                                                    </button>
+                                                </div>
+                                            )}
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                            {/* Línea separadora dorada sutil */}
+                            <div className="mt-5 mb-4 h-px w-full bg-gradient-to-r from-transparent via-amber-800/30 to-transparent"></div>
                         </div>
                     </div>
                 </div>
