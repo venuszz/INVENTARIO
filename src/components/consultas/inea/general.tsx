@@ -2,8 +2,8 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import {
     Search, RefreshCw, Filter, ChevronLeft, ChevronRight,
-    ArrowUpDown, AlertCircle, X, Save, Trash2, Check, CircleSlash2,
-    ActivitySquare, LayoutGrid, TagIcon, ChevronDown, Building2, BookOpen, FileText, User, Shield, AlertTriangle, Calendar, Info, Edit, Receipt, ClipboardList, Store, CheckCircle, XCircle, Plus, DollarSign
+    ArrowUpDown, AlertCircle, X, Save, Trash2, CircleSlash2,
+    ActivitySquare, LayoutGrid, TagIcon, ChevronDown, Building2, User, Shield, AlertTriangle, Calendar, Info, Edit, Receipt, ClipboardList, Store, CheckCircle, XCircle, Plus, DollarSign
 } from 'lucide-react';
 import supabase from '@/app/lib/supabase/client';
 
@@ -1484,13 +1484,13 @@ export default function ConsultasIneaGeneral() {
                                             </div>
 
                                             <div className="form-group">
-                                                <label className="flex items-center gap-2 text-sm font-medium text-gray-300 mb-2">Ubicación (Edificio)</label>
+                                                <label className="flex items-center gap-2 text-sm font-medium text-gray-300 mb-2">Estado</label>
                                                 <div className="relative">
                                                     <Building2 className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500 pointer-events-none" />
                                                     <input
                                                         type="text"
-                                                        title="Ubicación (Edificio)"
-                                                        placeholder="Ubicación (Edificio)"
+                                                        title="Estado"
+                                                        placeholder="Estado"
                                                         value={editFormData?.ubicacion_es || ''}
                                                         onChange={(e) => handleEditFormChange(e, 'ubicacion_es')}
                                                         className="w-full bg-gray-800 border border-gray-700 rounded-lg pl-10 pr-4 py-2.5 text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
@@ -1499,13 +1499,13 @@ export default function ConsultasIneaGeneral() {
                                             </div>
 
                                             <div className="form-group">
-                                                <label className="flex items-center gap-2 text-sm font-medium text-gray-300 mb-2">Ubicación (Mueble)</label>
+                                                <label className="flex items-center gap-2 text-sm font-medium text-gray-300 mb-2">Municipio</label>
                                                 <div className="relative">
-                                                    <BookOpen className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500 pointer-events-none" />
+                                                    <Building2 className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500 pointer-events-none" />
                                                     <input
                                                         type="text"
-                                                        title="Ubicación (Mueble)"
-                                                        placeholder="Ubicación (Mueble)"
+                                                        title="Municipio"
+                                                        placeholder="Municipio"
                                                         value={editFormData?.ubicacion_mu || ''}
                                                         onChange={(e) => handleEditFormChange(e, 'ubicacion_mu')}
                                                         className="w-full bg-gray-800 border border-gray-700 rounded-lg pl-10 pr-4 py-2.5 text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
@@ -1514,31 +1514,17 @@ export default function ConsultasIneaGeneral() {
                                             </div>
 
                                             <div className="form-group">
-                                                <label className="flex items-center gap-2 text-sm font-medium text-gray-300 mb-2">Ubicación (Notas)</label>
-                                                <input
-                                                    type="text"
-                                                    value={editFormData?.ubicacion_no || ''}
-                                                    onChange={(e) => handleEditFormChange(e, 'ubicacion_no')}
-                                                    className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2.5 text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
-                                                    title="Ingrese notas de ubicación"
-                                                    placeholder="Notas de ubicación"
-                                                />
-                                            </div>
-
-                                            <div className="form-group">
-                                                <label className="flex items-center gap-2 text-sm font-medium text-gray-300 mb-2">Estado</label>
+                                                <label className="flex items-center gap-2 text-sm font-medium text-gray-300 mb-2">Nomenclatura</label>
                                                 <div className="relative">
-                                                    <select
-                                                        title="Seleccione el estado"
-                                                        value={editFormData?.estado || ''}
-                                                        onChange={(e) => handleEditFormChange(e, 'estado')}
-                                                        className="appearance-none w-full bg-gray-800 border border-gray-700 rounded-lg pl-4 pr-10 py-2.5 text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
-                                                    >
-                                                        {filterOptions.estados.map((estado) => (
-                                                            <option key={estado} value={estado}>{estado}</option>
-                                                        ))}
-                                                    </select>
-                                                    <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />
+                                                    <Building2 className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500 pointer-events-none" />
+                                                    <input
+                                                        type="text"
+                                                        title="Nomenclatura"
+                                                        placeholder="Nomenclatura"
+                                                        value={editFormData?.ubicacion_no || ''}
+                                                        onChange={(e) => handleEditFormChange(e, 'ubicacion_no')}
+                                                        className="w-full bg-gray-800 border border-gray-700 rounded-lg pl-10 pr-4 py-2.5 text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                                                    />
                                                 </div>
                                             </div>
 
@@ -1681,47 +1667,27 @@ export default function ConsultasIneaGeneral() {
                                                 </p>
                                             </div>
                                             <div className="detail-card bg-gray-800/50 rounded-lg p-4 hover:bg-gray-800/80 transition-all">
-                                                <h3 className="text-xs font-medium uppercase tracking-wider text-gray-400">Estado</h3>
-                                                <p className="mt-2 text-white">{selectedItem.estado || 'No especificado'}</p>
+                                                <h4 className="text-sm font-medium text-gray-400 mb-2 flex items-center gap-2">
+                                                    <Building2 className="h-4 w-4" />
+                                                    Estado
+                                                </h4>
+                                                <p className="text-white">{selectedItem.ubicacion_es || 'No especificado'}</p>
                                             </div>
+
                                             <div className="detail-card bg-gray-800/50 rounded-lg p-4 hover:bg-gray-800/80 transition-all">
-                                                <h3 className="text-xs font-medium uppercase tracking-wider text-gray-400">Estatus</h3>
-                                                <div className="mt-2">
-                                                    <span className={`inline-flex items-center px-3 py-1 text-sm font-medium rounded-full ${selectedItem.estatus === 'ACTIVO' ? 'bg-green-900/70 text-green-200 border border-green-700' :
-                                                        selectedItem.estatus === 'INACTIVO' ? 'bg-red-900/70 text-red-200 border border-red-700' :
-                                                            'bg-gray-700 text-gray-300 border border-gray-600'
-                                                        }`}>
-                                                        {selectedItem.estatus === 'ACTIVO' && <Check className="h-3.5 w-3.5 mr-1.5" />}
-                                                        {selectedItem.estatus === 'INACTIVO' && <AlertCircle className="h-3.5 w-3.5 mr-1.5" />}
-                                                        {selectedItem.estatus || 'No especificado'}
-                                                    </span>
-                                                </div>
+                                                <h4 className="text-sm font-medium text-gray-400 mb-2 flex items-center gap-2">
+                                                    <Building2 className="h-4 w-4" />
+                                                    Municipio
+                                                </h4>
+                                                <p className="text-white">{selectedItem.ubicacion_mu || 'No especificado'}</p>
                                             </div>
-                                            <div className="detail-card bg-gray-800/50 rounded-lg p-4 hover:bg-gray-800/80 transition-all col-span-2">
-                                                <h3 className="text-xs font-medium uppercase tracking-wider text-gray-400">Ubicación</h3>
-                                                <div className="mt-2 grid grid-cols-1 md:grid-cols-3 gap-3">
-                                                    {selectedItem.ubicacion_es && (
-                                                        <div className="flex items-center gap-2 bg-gray-900/60 p-2 rounded-md">
-                                                            <Building2 className="h-4 w-4 text-blue-400 flex-shrink-0" />
-                                                            <span className="text-white">{selectedItem.ubicacion_es}</span>
-                                                        </div>
-                                                    )}
-                                                    {selectedItem.ubicacion_mu && (
-                                                        <div className="flex items-center gap-2 bg-gray-900/60 p-2 rounded-md">
-                                                            <BookOpen className="h-4 w-4 text-blue-400 flex-shrink-0" />
-                                                            <span className="text-white">{selectedItem.ubicacion_mu}</span>
-                                                        </div>
-                                                    )}
-                                                    {selectedItem.ubicacion_no && (
-                                                        <div className="flex items-center gap-2 bg-gray-900/60 p-2 rounded-md">
-                                                            <FileText className="h-4 w-4 text-blue-400 flex-shrink-0" />
-                                                            <span className="text-white">{selectedItem.ubicacion_no}</span>
-                                                        </div>
-                                                    )}
-                                                    {!selectedItem.ubicacion_es && !selectedItem.ubicacion_mu && !selectedItem.ubicacion_no && (
-                                                        <span className="text-gray-400">No especificado</span>
-                                                    )}
-                                                </div>
+
+                                            <div className="detail-card bg-gray-800/50 rounded-lg p-4 hover:bg-gray-800/80 transition-all">
+                                                <h4 className="text-sm font-medium text-gray-400 mb-2 flex items-center gap-2">
+                                                    <Building2 className="h-4 w-4" />
+                                                    Nomenclatura
+                                                </h4>
+                                                <p className="text-white">{selectedItem.ubicacion_no || 'No especificado'}</p>
                                             </div>
                                             <div className="detail-card bg-gray-800/50 rounded-lg p-4 hover:bg-gray-800/80 transition-all">
                                                 <h3 className="text-xs font-medium uppercase tracking-wider text-gray-400">Área</h3>
