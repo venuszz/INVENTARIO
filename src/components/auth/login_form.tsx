@@ -148,10 +148,9 @@ export default function LoginPage() {
                 setIsLoading(false)
                 return
             }
-
             try {
-                // Set cookie to expire in 30 minutes
-                const expires = new Date(Date.now() + 30 * 60 * 1000);
+                // Set cookie to expire in 1 hour
+                const expires = new Date(Date.now() + 60 * 60 * 1000);
                 Cookies.set('authToken', authData.session.access_token, {
                     expires,
                     path: '/',

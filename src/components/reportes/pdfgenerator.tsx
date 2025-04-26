@@ -198,20 +198,20 @@ export const generatePDF = async ({ data, columns, title, fileName, firmas = [] 
                 title.toUpperCase()
             ];
 
-            // Dibujar cada línea del título
+            // Dibujar cada línea del título con menor espaciado
             titles.forEach((text, index) => {
-                const textWidth = font.widthOfTextAtSize(text, 10); // Reduced from 12 to 10
+                const textWidth = font.widthOfTextAtSize(text, 10);
                 const xPos = (pageWidth - textWidth) / 2;
                 page.drawText(normalizeText(text), {
                     x: xPos,
-                    y: yPos - (index * 16), // Reduced spacing from 20 to 16
-                    size: 10, // Reduced from 12 to 10
+                    y: yPos - (index * 14), // Reducido de 16 a 14
+                    size: 10,
                     font: font,
                     color: rgb(0, 0, 0)
                 });
             });
 
-            yPos -= 80; // Reduced from 100 to 80 to tighten spacing
+            yPos -= 60; // Reducido de 80 a 60 para acercar más el contenido
 
             // Obtener la información de la última firma (la que está a la derecha)
             const directoraFirma = firmas[firmas.length - 1];
@@ -223,7 +223,7 @@ export const generatePDF = async ({ data, columns, title, fileName, firmas = [] 
             const año = fecha.getFullYear();
             const currentDate = `${dia} de ${mes} de ${año}`;
 
-            // Agregar la información adicional justificada a la izquierda
+            // Agregar la información adicional justificada a la izquierda con menor espaciado
             const infoLines = [
                 `NOMBRE: ${directoraFirma.nombre.toUpperCase()}`,
                 'ADSCRIPCIÓN: DIRECCIÓN GENERAL',
@@ -234,14 +234,14 @@ export const generatePDF = async ({ data, columns, title, fileName, firmas = [] 
             infoLines.forEach((line, index) => {
                 page.drawText(normalizeText(line), {
                     x: margin,
-                    y: yPos - (index * 16), // Reduced from 20 to 16
-                    size: 8, // Reduced from 11 to 8
+                    y: yPos - (index * 12), // Reducido de 16 a 12
+                    size: 8,
                     font: regularFont,
                     color: rgb(0, 0, 0)
                 });
             });
 
-            yPos -= 80; // Reduced from 100 to 80
+            yPos -= 50; // Reducido de 80 a 50 para acercar más la tabla
         } else {
             yPos -= 20; // Solo un pequeño espacio en las páginas siguientes
         }
