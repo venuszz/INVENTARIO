@@ -91,6 +91,7 @@ const ConsultarBajasResguardos = () => {
     const detailRef = useRef<HTMLDivElement>(null);
     const [filterDate, setFilterDate] = useState('');
     const [filterDirector, setFilterDirector] = useState('');
+    const [filterResguardante, setFilterResguardante] = useState('');
     const [allBajas, setAllBajas] = useState<ResguardoBaja[]>([]);
     const [selectedItems, setSelectedItems] = useState<{ [key: string]: boolean }>({});
     const [groupedItems, setGroupedItems] = useState<{ [key: string]: ResguardoBajaArticulo[] }>({});
@@ -121,6 +122,10 @@ const ConsultarBajasResguardos = () => {
 
             if (filterDirector) {
                 baseQuery = baseQuery.ilike('dir_area', `%${filterDirector?.trim().toUpperCase() || ''}%`);
+            }
+
+            if (filterResguardante) {
+                baseQuery = baseQuery.ilike('usufinal', `%${filterResguardante?.trim().toUpperCase() || ''}%`);
             }
 
             // Obtener los datos con los filtros aplicados
@@ -180,7 +185,7 @@ const ConsultarBajasResguardos = () => {
         } finally {
             setLoading(false);
         }
-    }, [currentPage, rowsPerPage, sortField, sortDirection, filterDate, filterDirector]);
+    }, [currentPage, rowsPerPage, sortField, sortDirection, filterDate, filterDirector, filterResguardante]);
 
     // Fetch all bajas for counting articles by folio correctly
     useEffect(() => {
@@ -193,6 +198,9 @@ const ConsultarBajasResguardos = () => {
                 if (filterDirector) {
                     dataQuery = dataQuery.ilike('dir_area', `%${filterDirector.trim().toUpperCase()}%`);
                 }
+                if (filterResguardante) {
+                    dataQuery = dataQuery.ilike('usufinal', `%${filterResguardante.trim().toUpperCase()}%`);
+                }
                 const { data, error } = await dataQuery;
                 if (!error) setAllBajas(data || []);
             } catch {
@@ -200,7 +208,7 @@ const ConsultarBajasResguardos = () => {
             }
         };
         fetchAllBajas();
-    }, [filterDate, filterDirector, searchTerm]);
+    }, [filterDate, filterDirector, filterResguardante, searchTerm]);
 
     // Fetch bajas by folio_resguardo
     const fetchBajaDetails = async (folioResguardo: string) => {
@@ -368,14 +376,26 @@ const ConsultarBajasResguardos = () => {
     // Efecto para búsqueda en tiempo real
     useEffect(() => {
         const delayDebounceFn = setTimeout(async () => {
-            if (searchTerm) {
+            if (searchTerm || filterDate || filterDirector || filterResguardante) {
                 setLoading(true);
                 try {
-                    const { data, error } = await supabase
-                        .from('resguardos_bajas')
-                        .select('*')
-                        .or(`folio_resguardo.ilike.%${searchTerm}%,folio_baja.ilike.%${searchTerm}%`)
-                        .order(sortField, { ascending: sortDirection === 'asc' });
+                    let query = supabase.from('resguardos_bajas').select('*');
+
+                    // Aplicar filtros
+                    if (searchTerm) {
+                        query = query.or(`folio_resguardo.ilike.%${searchTerm}%,folio_baja.ilike.%${searchTerm}%`);
+                    }
+                    if (filterDate) {
+                        query = query.eq('f_resguardo::date', filterDate);
+                    }
+                    if (filterDirector) {
+                        query = query.filter('dir_area', 'ilike', `%${filterDirector.trim().toUpperCase()}%`);
+                    }
+                    if (filterResguardante) {
+                        query = query.filter('usufinal', 'ilike', `%${filterResguardante.trim().toUpperCase()}%`);
+                    }
+
+                    const { data, error } = await query.order(sortField, { ascending: sortDirection === 'asc' });
 
                     if (error) throw error;
 
@@ -395,7 +415,7 @@ const ConsultarBajasResguardos = () => {
         }, 100);
 
         return () => clearTimeout(delayDebounceFn);
-    }, [searchTerm, sortField, sortDirection, fetchBajas]);
+    }, [searchTerm, sortField, sortDirection, filterDate, filterDirector, filterResguardante, fetchBajas]);
 
     useEffect(() => {
         fetchBajas();
@@ -628,13 +648,14 @@ const ConsultarBajasResguardos = () => {
 
                         {/* Filtro avanzado */}
                         <div className="mb-6 bg-gray-900/20 p-4 rounded-xl border border-gray-800 shadow-inner">
-                            <div className="flex flex-col md:flex-row gap-4 items-end">
-                                <div className="flex-1">
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                <div>
                                     <label className="block text-xs uppercase tracking-wider text-gray-500 mb-1">Filtrar por fecha</label>
                                     <input
                                         title='Fecha de resguardo'
                                         type="date"
                                         max={new Date().toISOString().split('T')[0]}
+                                        value={filterDate}
                                         onChange={e => {
                                             setCurrentPage(1);
                                             setFilterDate(e.target.value);
@@ -642,11 +663,12 @@ const ConsultarBajasResguardos = () => {
                                         className="w-full bg-black border border-gray-800 rounded-lg text-white py-2 px-3 focus:outline-none focus:ring-2 focus:ring-red-500"
                                     />
                                 </div>
-                                <div className="flex-1">
+                                <div>
                                     <label className="block text-xs uppercase tracking-wider text-gray-500 mb-1">Filtrar por director</label>
                                     <input
                                         type="text"
                                         placeholder="Nombre del director..."
+                                        value={filterDirector}
                                         onChange={e => {
                                             setCurrentPage(1);
                                             setFilterDirector(e.target.value);
@@ -654,10 +676,26 @@ const ConsultarBajasResguardos = () => {
                                         className="w-full bg-black border border-gray-800 rounded-lg text-white py-2 px-3 focus:outline-none focus:ring-2 focus:ring-red-500"
                                     />
                                 </div>
+                                <div>
+                                    <label className="block text-xs uppercase tracking-wider text-gray-500 mb-1">Filtrar por resguardante</label>
+                                    <input
+                                        type="text"
+                                        placeholder="Nombre del resguardante..."
+                                        value={filterResguardante}
+                                        onChange={e => {
+                                            setCurrentPage(1);
+                                            setFilterResguardante(e.target.value);
+                                        }}
+                                        className="w-full bg-black border border-gray-800 rounded-lg text-white py-2 px-3 focus:outline-none focus:ring-2 focus:ring-red-500"
+                                    />
+                                </div>
+                            </div>
+                            <div className="mt-4 flex justify-end">
                                 <button
                                     onClick={() => {
                                         setFilterDate('');
                                         setFilterDirector('');
+                                        setFilterResguardante('');
                                         setCurrentPage(1);
                                     }}
                                     className="px-4 py-2 bg-black border border-gray-800 text-gray-400 rounded-lg hover:bg-gray-900 transition-colors flex items-center gap-2 text-sm"
@@ -785,6 +823,23 @@ const ConsultarBajasResguardos = () => {
                                                                 {baja.dir_area}
                                                             </div>
                                                             <div className="text-xs text-gray-500">{baja.area_resguardo}</div>
+                                                            
+                                                            {/* Mostrar resguardantes cuando hay un filtro activo */}
+                                                            {filterResguardante && (
+                                                                <div className="mt-1">
+                                                                    {Array.from(new Set(allBajas
+                                                                        .filter(r => r.folio_resguardo === baja.folio_resguardo && r.usufinal?.toLowerCase().includes(filterResguardante.toLowerCase()))
+                                                                        .map(r => r.usufinal)))
+                                                                        .map((matchedResguardante, idx) => (
+                                                                            <div
+                                                                                key={idx}
+                                                                                className="inline-flex items-center px-2 py-0.5 rounded bg-red-500/20 border border-red-500/30 text-red-300 text-xs mr-1 mb-1"
+                                                                            >
+                                                                                {matchedResguardante}
+                                                                            </div>
+                                                                        ))}
+                                                                </div>
+                                                            )}
 
                                                             {/* Tooltip con los resguardantes */}
                                                             <div className="absolute left-1/2 -translate-x-1/2 top-full mt-2 w-max max-w-sm opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-[9999]">
