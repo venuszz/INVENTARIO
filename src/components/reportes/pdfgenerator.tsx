@@ -47,10 +47,10 @@ export const generatePDF = async ({ data, columns, title, fileName, firmas = [] 
     const margin = 40;
     const pageWidth = 842;
     const pageHeight = 595;
-    const minCellPadding = 2; // Aumentado de 1 a 2
-    const fontSize = 4;
-    const headerFontSize = 5;
-    const verticalPadding = 3; // Nuevo: padding vertical para separar el texto de las líneas
+    const minCellPadding = 2;
+    const fontSize = 6; // Increased table content font size from 4 to 6
+    const headerFontSize = 7; // Increased header font size from 5 to 7
+    const verticalPadding = 3;
 
     // Función para dividir texto en líneas, incluyendo palabras largas
     const wrapText = (text: string, maxWidth: number, font: import('pdf-lib').PDFFont, fontSize: number) => {
@@ -200,18 +200,18 @@ export const generatePDF = async ({ data, columns, title, fileName, firmas = [] 
 
             // Dibujar cada línea del título
             titles.forEach((text, index) => {
-                const textWidth = font.widthOfTextAtSize(text, 12);
+                const textWidth = font.widthOfTextAtSize(text, 10); // Reduced from 12 to 10
                 const xPos = (pageWidth - textWidth) / 2;
                 page.drawText(normalizeText(text), {
                     x: xPos,
-                    y: yPos - (index * 20),
-                    size: 12,
+                    y: yPos - (index * 16), // Reduced spacing from 20 to 16
+                    size: 10, // Reduced from 12 to 10
                     font: font,
                     color: rgb(0, 0, 0)
                 });
             });
 
-            yPos -= 100;
+            yPos -= 80; // Reduced from 100 to 80 to tighten spacing
 
             // Obtener la información de la última firma (la que está a la derecha)
             const directoraFirma = firmas[firmas.length - 1];
@@ -234,14 +234,14 @@ export const generatePDF = async ({ data, columns, title, fileName, firmas = [] 
             infoLines.forEach((line, index) => {
                 page.drawText(normalizeText(line), {
                     x: margin,
-                    y: yPos - (index * 20),
-                    size: 11,
+                    y: yPos - (index * 16), // Reduced from 20 to 16
+                    size: 8, // Reduced from 11 to 8
                     font: regularFont,
                     color: rgb(0, 0, 0)
                 });
             });
 
-            yPos -= 100; // Espacio después de la información adicional
+            yPos -= 80; // Reduced from 100 to 80
         } else {
             yPos -= 20; // Solo un pequeño espacio en las páginas siguientes
         }
@@ -355,7 +355,7 @@ export const generatePDF = async ({ data, columns, title, fileName, firmas = [] 
         page.drawText(normalizeText(summaryText), {
             x: textX,
             y: summaryY,
-            size: 12,
+            size: 10, // Reduced from 12 to 10
             font: font,
             color: rgb(0, 0, 0),
         });
@@ -391,29 +391,29 @@ export const generatePDF = async ({ data, columns, title, fileName, firmas = [] 
                 color: rgb(0, 0, 0),
             });
 
-            // Dibujar concepto arriba de la línea (aumentando el espacio a 25 puntos)
+            // Dibujar concepto arriba de la línea
             page.drawText(normalizeText(firma.concepto.toUpperCase()), {
-                x: xPos + (signatureBoxWidth / 2) - (regularFont.widthOfTextAtSize(firma.concepto.toUpperCase(), 10) / 2),
-                y: lineY + 25, // Cambiado de 15 a 25 para más espacio
-                size: 10,
+                x: xPos + (signatureBoxWidth / 2) - (regularFont.widthOfTextAtSize(firma.concepto.toUpperCase(), 8) / 2),
+                y: lineY + 20, // Reduced spacing
+                size: 8, // Reduced from 10 to 8
                 font: regularFont,
                 color: rgb(0, 0, 0),
             });
 
             // Dibujar nombre debajo de la línea
             page.drawText(normalizeText(firma.nombre.toUpperCase()), {
-                x: xPos + (signatureBoxWidth / 2) - (regularFont.widthOfTextAtSize(firma.nombre.toUpperCase(), 10) / 2),
-                y: lineY - 20,
-                size: 10,
+                x: xPos + (signatureBoxWidth / 2) - (regularFont.widthOfTextAtSize(firma.nombre.toUpperCase(), 8) / 2),
+                y: lineY - 15, // Adjusted spacing
+                size: 8, // Reduced from 10 to 8
                 font: regularFont,
                 color: rgb(0, 0, 0),
             });
 
             // Dibujar puesto debajo del nombre
             page.drawText(normalizeText(firma.puesto.toUpperCase()), {
-                x: xPos + (signatureBoxWidth / 2) - (regularFont.widthOfTextAtSize(firma.puesto.toUpperCase(), 10) / 2),
-                y: lineY - 35,
-                size: 10,
+                x: xPos + (signatureBoxWidth / 2) - (regularFont.widthOfTextAtSize(firma.puesto.toUpperCase(), 8) / 2),
+                y: lineY - 30, // Adjusted spacing
+                size: 8, // Reduced from 10 to 8
                 font: regularFont,
                 color: rgb(0, 0, 0),
             });
