@@ -24,7 +24,7 @@ interface Column {
     keys?: string[];
 }
 
-export const generatePDF = async ({ data, columns, title, fileName, firmas = [] }: PDFOptions) => {
+export const generatePDF = async ({ data, columns, fileName, firmas = [] }: PDFOptions) => {
     const pdfDoc = await PDFDocument.create();
 
     // Cargar y embedear las imágenes
@@ -36,21 +36,32 @@ export const generatePDF = async ({ data, columns, title, fileName, firmas = [] 
 
     // Configuración de página y fuentes
     const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
+    const boldFont = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
     const regularFont = await pdfDoc.embedFont(StandardFonts.Helvetica);
+
+    // Configuración de tabla ajustada para formato vertical A4
+    const margin = 50; // Aumentado para centrar mejor la tabla
+    const pageWidth = 595.28; // Ancho A4 en puntos
+    const pageHeight = 841.89; // Alto A4 en puntos
+    const minCellPadding = 2;
+    const fontSize = 7;
+    const headerFontSize = 8;
+    const verticalPadding = 3;
+
+    // Columnas ajustadas para formato vertical con ancho total calculado
+    columns = [
+        { header: 'No INVENTARIO', key: 'id_inv', width: 65 },
+        { header: 'DESCRIPCIÓN', key: 'descripcion', width: 175 },
+        { header: 'ESTADO', key: 'estado', width: 65 },
+        { header: 'ESTATUS', key: 'estatus', width: 65 },
+        { header: 'AREA', key: 'area', width: 65 },
+        { header: 'USUARIO FINAL', key: 'usufinal', width: 60 }
+    ];
 
     // Función para normalizar texto (convertir caracteres acentuados a su versión UTF-16)
     const normalizeText = (text: string) => {
         return text.normalize('NFKD').replace(/[\u0300-\u036f]/g, '');
     };
-
-    // Configuración de tabla
-    const margin = 40;
-    const pageWidth = 842;
-    const pageHeight = 595;
-    const minCellPadding = 2;
-    const fontSize = 6; // Increased table content font size from 4 to 6
-    const headerFontSize = 7; // Increased header font size from 5 to 7
-    const verticalPadding = 3;
 
     // Función para dividir texto en líneas, incluyendo palabras largas
     const wrapText = (text: string, maxWidth: number, font: import('pdf-lib').PDFFont, fontSize: number) => {
@@ -157,16 +168,14 @@ export const generatePDF = async ({ data, columns, title, fileName, firmas = [] 
         return currentY - 25;
     };
 
-    // Modificar processPage para incluir el padding vertical en el posicionamiento del texto
     const processPage = async (pageData: Record<string, unknown>[], pageIndex: number, totalPages: number) => {
         const page = pdfDoc.addPage([pageWidth, pageHeight]);
         const { height } = page.getSize();
         let yPos = height - margin;
 
-        // Solo dibujar el título, imágenes e información adicional en la primera página
         if (pageIndex === 0) {
-            // Calcular dimensiones para las imágenes (altura máxima de 50 puntos)
-            const maxImageHeight = 50;
+            // Calcular dimensiones para las imágenes (tamaño aumentado)
+            const maxImageHeight = 35; // Aumentado a 35
             const ineaAspectRatio = ineaImage.width / ineaImage.height;
             const iteaAspectRatio = iteaImage.width / iteaImage.height;
             
@@ -187,43 +196,45 @@ export const generatePDF = async ({ data, columns, title, fileName, firmas = [] 
                 x: pageWidth - margin - iteaWidth,
                 y: yPos - maxImageHeight,
                 width: iteaWidth,
-                height: iteaHeight,
+                height: ineaHeight,
             });
 
-            // Título institucional centrado
+            // Mover los títulos más abajo después de las imágenes
+            yPos -= maxImageHeight + 20; // Espacio adicional después de las imágenes
+
+            // Títulos principales
             const titles = [
                 'INSTITUTO TLAXCALTECA PARA LA EDUCACIÓN DE LOS ADULTOS',
                 'DIRECCIÓN DE ADMINISTRACIÓN Y FINANZAS',
                 'OFICINA DE RECURSOS MATERIALES',
-                title.toUpperCase()
+                'REPORTE LEVANTAMIENTO DE INVENTARIO'
             ];
 
-            // Dibujar cada línea del título
             titles.forEach((text, index) => {
-                const textWidth = font.widthOfTextAtSize(text, 10); // Reduced from 12 to 10
+                const textWidth = boldFont.widthOfTextAtSize(text, 11);
                 const xPos = (pageWidth - textWidth) / 2;
                 page.drawText(normalizeText(text), {
                     x: xPos,
-                    y: yPos - (index * 16), // Reduced spacing from 20 to 16
-                    size: 10, // Reduced from 12 to 10
-                    font: font,
+                    y: yPos - (index * 13) - 10,
+                    size: 11,
+                    font: boldFont,
                     color: rgb(0, 0, 0)
                 });
             });
 
-            yPos -= 80; // Reduced from 100 to 80 to tighten spacing
+            // Aumentar el espacio después de los títulos
+            yPos -= 80; // Aumentado a 80
 
-            // Obtener la información de la última firma (la que está a la derecha)
+            // Información del director
             const directoraFirma = firmas[firmas.length - 1];
             
-            // Formatear la fecha actual en español
+            // Formatear la fecha
             const fecha = new Date();
             const dia = fecha.getDate();
             const mes = new Intl.DateTimeFormat('es-ES', { month: 'long' }).format(fecha);
             const año = fecha.getFullYear();
             const currentDate = `${dia} de ${mes} de ${año}`;
 
-            // Agregar la información adicional justificada a la izquierda
             const infoLines = [
                 `NOMBRE: ${directoraFirma.nombre.toUpperCase()}`,
                 'ADSCRIPCIÓN: DIRECCIÓN GENERAL',
@@ -234,22 +245,21 @@ export const generatePDF = async ({ data, columns, title, fileName, firmas = [] 
             infoLines.forEach((line, index) => {
                 page.drawText(normalizeText(line), {
                     x: margin,
-                    y: yPos - (index * 16), // Reduced from 20 to 16
-                    size: 8, // Reduced from 11 to 8
+                    y: yPos - (index * 13),
+                    size: 10,
                     font: regularFont,
                     color: rgb(0, 0, 0)
                 });
             });
 
-            yPos -= 80; // Reduced from 100 to 80
-        } else {
-            yPos -= 20; // Solo un pequeño espacio en las páginas siguientes
+            yPos -= 70; // Espacio antes de la tabla
+
         }
 
-        // Dibujar los encabezados usando la nueva función
-        yPos = await drawHeaders(page, height - (pageIndex === 0 ? 220 : 70));
+        // Dibujar la tabla para todas las páginas (no solo la primera)
+        yPos = await drawHeaders(page, yPos);
 
-        // Dibujar filas de datos
+        // Procesar los datos de la tabla
         for (const row of pageData) {
             const rowHeight = calculateRowHeight(row, columns.map(col => col.width ?? 80));
             if (yPos - rowHeight < margin) break;
@@ -303,7 +313,31 @@ export const generatePDF = async ({ data, columns, title, fileName, firmas = [] 
                     });
                 }
 
+                // Dibujar línea vertical para separar columnas
+                page.drawLine({
+                    start: { x: xPos, y: yPos },
+                    end: { x: xPos, y: yPos - rowHeight },
+                    thickness: 0.5,
+                    color: rgb(0.7, 0.7, 0.7),
+                });
+
                 xPos += colWidth;
+            });
+
+            // Dibujar última línea vertical
+            page.drawLine({
+                start: { x: xPos, y: yPos },
+                end: { x: xPos, y: yPos - rowHeight },
+                thickness: 0.5,
+                color: rgb(0.7, 0.7, 0.7),
+            });
+
+            // Dibujar línea horizontal inferior de la fila
+            page.drawLine({
+                start: { x: margin, y: yPos - rowHeight },
+                end: { x: pageWidth - margin, y: yPos - rowHeight },
+                thickness: 0.5,
+                color: rgb(0.7, 0.7, 0.7),
             });
 
             yPos -= rowHeight;
@@ -324,96 +358,64 @@ export const generatePDF = async ({ data, columns, title, fileName, firmas = [] 
         return yPos;
     };
 
-    // Función para dibujar el resumen antes de las firmas
-    const drawSummary = (page: import('pdf-lib').PDFPage, yPosition: number, totalItems: number, totalValue: number) => {
-        const summaryY = yPosition - 40; // Espacio antes del resumen
-
-        // Formatear el valor total con separadores de miles y dos decimales
-        const formattedValue = new Intl.NumberFormat('es-MX', {
-            minimumFractionDigits: 2,
-            maximumFractionDigits: 2
-        }).format(totalValue);
-
-        const summaryText = `${totalItems.toLocaleString('es-MX')} BIENES MUEBLES CON UN VALOR DE $${formattedValue}`;
-
-        // Dibujar un rectángulo de fondo
-        const textWidth = font.widthOfTextAtSize(summaryText, 12);
-        
-        page.drawRectangle({
-            x: margin,
-            y: summaryY - 5,
-            width: pageWidth - (2 * margin),
-            height: 30,
-            color: rgb(0.95, 0.95, 0.95),
-            borderColor: rgb(0.8, 0.8, 0.8),
-            borderWidth: 1,
-        });
-
-        // Centrar el texto en el rectángulo
-        const textX = margin + ((pageWidth - (2 * margin) - textWidth) / 2);
-        
-        page.drawText(normalizeText(summaryText), {
-            x: textX,
-            y: summaryY,
-            size: 10, // Reduced from 12 to 10
-            font: font,
-            color: rgb(0, 0, 0),
-        });
-
-        return summaryY - 30; // Retornar la nueva posición Y para las firmas
-    };
-
-    // Función para dibujar la sección de firmas
+    // Ajustar la sección de firmas para formato vertical
     const drawSignatureSection = (page: import('pdf-lib').PDFPage, yPosition: number) => {
-        const signatureBoxWidth = (pageWidth - (2 * margin)) / 3;
-        const signatureBoxHeight = 100;
-        const signatureSectionY = yPosition - 100;
-        const lineY = signatureSectionY + 40;
+        // Aumentar el espacio antes de la sección de firmas
+        const signatureBoxWidth = (pageWidth - (2 * margin)) / 2; // Cambiado de 3 a 2 divisiones
+        const signatureBoxHeight = 80;
+        const signatureSectionY = yPosition - 120; // Aumentado de 80 a 120 para más espacio
+        const lineY = signatureSectionY + 35;
 
-        // Dibujar el borde rectangular que rodea toda la sección de firmas
+        // Dibujar el borde de la sección de firmas
         page.drawRectangle({
             x: margin,
             y: signatureSectionY,
             width: pageWidth - (2 * margin),
             height: signatureBoxHeight,
             borderColor: rgb(0, 0, 0),
-            borderWidth: 1,
+            borderWidth: 0.5,
         });
 
-        firmas.forEach((firma, index) => {
+        // Tomar solo las dos primeras firmas
+        const firmasAMostrar = firmas.slice(0, 2);
+
+        firmasAMostrar.forEach((firma, index) => {
             const xPos = margin + (index * signatureBoxWidth);
 
-            // Dibujar línea para firma
+            // Línea para firma
             page.drawLine({
-                start: { x: xPos + 20, y: lineY },
-                end: { x: xPos + signatureBoxWidth - 20, y: lineY },
-                thickness: 1,
+                start: { x: xPos + 15, y: lineY },
+                end: { x: xPos + signatureBoxWidth - 15, y: lineY },
+                thickness: 0.5,
                 color: rgb(0, 0, 0),
             });
 
-            // Dibujar concepto arriba de la línea
-            page.drawText(normalizeText(firma.concepto.toUpperCase()), {
-                x: xPos + (signatureBoxWidth / 2) - (regularFont.widthOfTextAtSize(firma.concepto.toUpperCase(), 8) / 2),
-                y: lineY + 20, // Reduced spacing
-                size: 8, // Reduced from 10 to 8
+            // Texto de firma ajustado
+            const textoConcepto = normalizeText(firma.concepto.toUpperCase());
+            const textoNombre = normalizeText(firma.nombre.toUpperCase());
+            const textoPuesto = normalizeText(firma.puesto.toUpperCase());
+
+            // Dibujar textos con tamaño reducido
+            page.drawText(textoConcepto, {
+                x: xPos + (signatureBoxWidth / 2) - (regularFont.widthOfTextAtSize(textoConcepto, 9) / 2),
+                y: lineY + 20,
+                size: 9,
                 font: regularFont,
                 color: rgb(0, 0, 0),
             });
 
-            // Dibujar nombre debajo de la línea
-            page.drawText(normalizeText(firma.nombre.toUpperCase()), {
-                x: xPos + (signatureBoxWidth / 2) - (regularFont.widthOfTextAtSize(firma.nombre.toUpperCase(), 8) / 2),
-                y: lineY - 15, // Adjusted spacing
-                size: 8, // Reduced from 10 to 8
+            page.drawText(textoNombre, {
+                x: xPos + (signatureBoxWidth / 2) - (regularFont.widthOfTextAtSize(textoNombre, 9) / 2),
+                y: lineY - 15,
+                size: 9,
                 font: regularFont,
                 color: rgb(0, 0, 0),
             });
 
-            // Dibujar puesto debajo del nombre
-            page.drawText(normalizeText(firma.puesto.toUpperCase()), {
-                x: xPos + (signatureBoxWidth / 2) - (regularFont.widthOfTextAtSize(firma.puesto.toUpperCase(), 8) / 2),
-                y: lineY - 30, // Adjusted spacing
-                size: 8, // Reduced from 10 to 8
+            page.drawText(textoPuesto, {
+                x: xPos + (signatureBoxWidth / 2) - (regularFont.widthOfTextAtSize(textoPuesto, 9) / 2),
+                y: lineY - 30,
+                size: 9,
                 font: regularFont,
                 color: rgb(0, 0, 0),
             });
@@ -424,7 +426,7 @@ export const generatePDF = async ({ data, columns, title, fileName, firmas = [] 
 
     // Función para verificar si se necesitará una página adicional para firmas
     const needsExtraPage = (yPos: number) => {
-        return yPos - margin < 160; // El mismo criterio que usamos para decidir crear nueva página
+        return yPos - margin < 200; // Aumentado de 160 a 200 para asegurar suficiente espacio
     };
 
     // Pre-procesar los datos para determinar el número total de páginas
@@ -433,7 +435,7 @@ export const generatePDF = async ({ data, columns, title, fileName, firmas = [] 
     let tempCurrentIndex = 0;
 
     while (tempCurrentIndex < data.length) {
-        const pageData = data.slice(tempCurrentIndex, tempCurrentIndex + 20);
+        const pageData = data.slice(tempCurrentIndex, tempCurrentIndex + 30); // Increased from 20 to 30 items per page
         let rowsHeight = 0;
         
         // Simular el procesamiento de la página para calcular el espacio usado
@@ -457,28 +459,20 @@ export const generatePDF = async ({ data, columns, title, fileName, firmas = [] 
     // Procesar todas las páginas con el número total correcto
     let currentPage = 0;
     let currentIndex = 0;
-    
-    // Calcular el valor total sumando la propiedad 'valor' de cada elemento
-    const totalItems = data.length;
-    const totalValue = data.reduce((sum, item) => {
-        const valor = parseFloat(item.valor?.toString() || '0');
-        return sum + (isNaN(valor) ? 0 : valor);
-    }, 0);
 
     while (currentIndex < data.length) {
-        const pageData = data.slice(currentIndex, currentIndex + 20);
+        const pageData = data.slice(currentIndex, currentIndex + 30);
         const yPos = await processPage(pageData, currentPage, totalPages);
         
         // Si es la última página y hay firmas
         if (currentIndex + pageData.length >= data.length && firmas.length > 0) {
             const page = pdfDoc.getPages()[currentPage];
             
-            // Verificar si hay espacio suficiente para el resumen y las firmas
+            // Verificar si hay espacio suficiente para las firmas
             if (yPos - margin < 160) {
                 // No hay suficiente espacio, crear nueva página
                 const newPage = pdfDoc.addPage([pageWidth, pageHeight]);
-                const summaryY = await drawSummary(newPage, pageHeight - margin, totalItems, totalValue);
-                drawSignatureSection(newPage, summaryY);
+                drawSignatureSection(newPage, pageHeight - margin);
 
                 // Agregar número de página a la nueva página
                 const pageText = `PÁGINA ${currentPage + 2} DE ${totalPages}`;
@@ -493,8 +487,7 @@ export const generatePDF = async ({ data, columns, title, fileName, firmas = [] 
                 });
             } else {
                 // Hay suficiente espacio, dibujar en la página actual
-                const summaryY = await drawSummary(page, yPos, totalItems, totalValue);
-                drawSignatureSection(page, summaryY);
+                drawSignatureSection(page, yPos);
             }
         }
 

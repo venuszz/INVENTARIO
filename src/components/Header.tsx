@@ -7,6 +7,7 @@ import Cookies from 'js-cookie';
 import { useRouter } from 'next/navigation';
 import supabase from '@/app/lib/supabase/client';
 import { WelcomeMessage } from "@/components/WelcomeMessage";
+import RoleGuard from "@/components/roleGuard";
 
 type MenuItem = {
     title: string;
@@ -52,7 +53,7 @@ export default function NavigationBar() {
     const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
     const [openMenu, setOpenMenu] = useState<string | null>(null);
     const [openSubmenu, setOpenSubmenu] = useState<string | null>(null);
-    const [userData, setUserData] = useState<{ firstName?: string; lastName?: string; username?: string; email?: string }>({});
+    const [userData, setUserData] = useState<{ firstName?: string; lastName?: string; username?: string; email?: string; rol?: string }>({});
     const [showLogoutModal, setShowLogoutModal] = useState(false);
     const [modalPosition, setModalPosition] = useState({ x: 0, y: 0 });
     const [popoverPosition, setPopoverPosition] = useState<'top' | 'bottom'>('bottom');
@@ -86,7 +87,8 @@ export default function NavigationBar() {
                     firstName: parsed.firstName,
                     lastName: parsed.lastName,
                     username: parsed.username,
-                    email: parsed.email
+                    email: parsed.email,
+                    rol: parsed.rol
                 });
             } catch {
                 setUserData({});
@@ -336,6 +338,15 @@ export default function NavigationBar() {
                     <div className="hidden md:flex items-center">
                         <WelcomeMessage />
                         <div className="flex items-center space-x-3">
+                        <RoleGuard roles={["superadmin"]} userRole={userData.rol}>
+                            <Link
+                                href="/register"
+                                className="p-2 text-gray-300 hover:text-white hover:bg-gray-800 rounded-full"
+                                title="Añadir usuario"
+                            >
+                                <User className="h-5 w-5" />
+                            </Link>
+                        </RoleGuard>
                             <Link
                                 href="/dashboard"
                                 className={`p-2 text-gray-300 hover:text-white hover:bg-gray-800 rounded-full ${pathname === '/dashboard' ? 'text-blue-400 bg-blue-950' : ''}`}
@@ -432,6 +443,9 @@ export default function NavigationBar() {
                             </div>
                             <div className="ml-3">
                                 <div className="text-base font-medium text-white">{userData.firstName ? `${userData.firstName}${userData.lastName ? ' ' + userData.lastName : ''}` : userData.username || 'Usuario'}</div>
+                                {userData.rol && (
+                                    <div className="text-xs text-gray-400 mt-0.5">{userData.rol}</div>
+                                )}
                             </div>
                             <div className="ml-auto flex space-x-2">
                                 <button 

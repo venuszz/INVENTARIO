@@ -1,12 +1,12 @@
 "use client";
-import { generatePDF } from '@/components/reportes/pdfgenerator';
+import { generatePDF } from './pdflevantamiento';
 import { generateExcel } from '@/components/reportes/excelgenerator';
 import React from 'react';
 import { useState, useEffect, useCallback } from 'react';
 import {
     Search, RefreshCw, ChevronLeft, ChevronRight,
     ArrowUpDown, AlertCircle, X, FileText, Download, 
-    FileDigit, FileDown, FileUp, DollarSign
+    FileDigit, FileDown, FileUp
 } from 'lucide-react';
 import supabase from '@/app/lib/supabase/client';
 
@@ -62,7 +62,7 @@ const ESTATUS_COLORS = {
 
 export default function LevantamientoUnificado() {
     const [muebles, setMuebles] = useState<LevMueble[]>([]);
-    const [loading, setLoading] = useState(true);
+    const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [filteredCount, setFilteredCount] = useState(0);
     const [currentPage, setCurrentPage] = useState(1);
@@ -89,8 +89,6 @@ export default function LevantamientoUnificado() {
     const [showFilters, setShowFilters] = useState(false);
     const [showExportModal, setShowExportModal] = useState(false);
     const [exportType, setExportType] = useState<'pdf' | 'excel' | null>(null);
-    const [totalValue, setTotalValue] = useState(0);
-    const [totalValueAllItems, setTotalValueAllItems] = useState(0);
 
     // Obtener opciones de filtro unificadas
     const fetchFilterOptions = useCallback(async () => {
@@ -152,79 +150,6 @@ export default function LevantamientoUnificado() {
         }
     }, []);
 
-    // Función para sumar valores filtrados (ambas tablas)
-    const sumFilteredValues = async (filters: {
-        estado?: string;
-        estatus?: string;
-        area?: string;
-        rubro?: string;
-        formadq?: string;
-    }) => {
-        let total = 0;
-        const sumTable = async (table: 'muebles' | 'mueblesitea') => {
-            let from = 0;
-            const pageSize = 1000;
-            let keepGoing = true;
-            while (keepGoing) {
-                let query = supabase
-                    .from(table)
-                    .select('valor')
-                    .neq('estatus', 'BAJA');
-                if (filters.estado) query = query.eq('estado', filters.estado);
-                if (filters.estatus) query = query.eq('estatus', filters.estatus);
-                if (filters.area) query = query.eq('area', filters.area);
-                if (filters.rubro) query = query.eq('rubro', filters.rubro);
-                if (filters.formadq) query = query.eq('formadq', filters.formadq);
-                const { data, error } = await query.range(from, from + pageSize - 1);
-                if (error) break;
-                if (data && data.length > 0) {
-                    total += data.reduce((sum, item) => sum + (parseFloat(item.valor) || 0), 0);
-                    if (data.length < pageSize) {
-                        keepGoing = false;
-                    } else {
-                        from += pageSize;
-                    }
-                } else {
-                    keepGoing = false;
-                }
-            }
-        };
-        await sumTable('muebles');
-        await sumTable('mueblesitea');
-        return total;
-    };
-
-    // Función para sumar todos los valores (sin filtros)
-    const sumAllValues = async () => {
-        let total = 0;
-        const sumTable = async (table: 'muebles' | 'mueblesitea') => {
-            let from = 0;
-            const pageSize = 1000;
-            let keepGoing = true;
-            while (keepGoing) {
-                const { data, error } = await supabase
-                    .from(table)
-                    .select('valor')
-                    .neq('estatus', 'BAJA')
-                    .range(from, from + pageSize - 1);
-                if (error) break;
-                if (data && data.length > 0) {
-                    total += data.reduce((sum, item) => sum + (parseFloat(item.valor) || 0), 0);
-                    if (data.length < pageSize) {
-                        keepGoing = false;
-                    } else {
-                        from += pageSize;
-                    }
-                } else {
-                    keepGoing = false;
-                }
-            }
-        };
-        await sumTable('muebles');
-        await sumTable('mueblesitea');
-        return total;
-    };
-
     // Función para obtener datos filtrados para exportación
     const getFilteredData = async () => {
         let allData: LevMueble[] = [];
@@ -280,11 +205,12 @@ export default function LevantamientoUnificado() {
     // Función para manejar la exportación
     const handleExport = async () => {
         try {
-            setMessage({ type: 'info', text: 'Preparando datos para exportación...' });
+            setLoading(true);
             const exportData = await getFilteredData();
 
             if (!exportData || exportData.length === 0) {
                 setMessage({ type: 'error', text: 'No hay datos para exportar.' });
+                setLoading(false);
                 return;
             }
 
@@ -309,26 +235,13 @@ export default function LevantamientoUnificado() {
 
                 if (firmasError) throw firmasError;
 
-                // Columnas específicas para PDF ajustadas al nuevo formato
                 const pdfColumns = [
-                    { header: 'Id Inv', key: 'id_inv', width: 45 },
-                    { header: 'DESCRIPCIÓN', key: 'descripcion', width: 150 },
-                    { header: 'VALOR', key: 'valor', width: 45 },
-                    { header: 'PROVEEDOR', key: 'proveedor', width: 65 },
-                    { header: 'FACTURA', key: 'factura', width: 45 },
-                    { header: 'RUBRO', key: 'rubro', width: 65 },
-                    { header: 'ESTADO', key: 'estado', width: 40 },
-                    { header: 'ESTATUS', key: 'estatus', width: 40 },
-                    { header: 'FECHA ADQ.', key: 'f_adq', width: 40 },
-                    { header: 'FORMA ADQ.', key: 'formadq', width: 40 },
-                    { 
-                        header: 'UBICACIÓN',
-                        isComposite: true,
-                        keys: ['ubicacion_es', 'ubicacion_mu', 'ubicacion_no'],
-                        width: 66 
-                    },
+                    { header: 'ID INV', key: 'id_inv', width: 65 },
+                    { header: 'DESCRIPCIÓN', key: 'descripcion', width: 175 },
+                    { header: 'ESTADO', key: 'estado', width: 65 },
+                    { header: 'ESTATUS', key: 'estatus', width: 65 },
                     { header: 'AREA', key: 'area', width: 65 },
-                    { header: 'USUARIO FINAL', key: 'usufinal', width: 80 }
+                    { header: 'USUARIO FINAL', key: 'usufinal', width: 60 }
                 ];
 
                 await generatePDF({ 
@@ -347,6 +260,8 @@ export default function LevantamientoUnificado() {
         } catch (error) {
             console.error('Error al exportar:', error);
             setMessage({ type: 'error', text: 'Error al generar el archivo.' });
+        } finally {
+            setLoading(false);
         }
     };
 
@@ -423,18 +338,6 @@ export default function LevantamientoUnificado() {
             )) {
                 setSelectedItem(null);
             }
-
-            const totalFilteredItems = await sumFilteredValues(filters);
-            setTotalValue(totalFilteredItems);
-            if (!Object.values(filters).some(value => value !== '')) {
-                const totalAllItems = await sumAllValues();
-                setTotalValueAllItems(totalAllItems);
-            } else {
-                if (totalValueAllItems === 0) {
-                    const totalAllItems = await sumAllValues();
-                    setTotalValueAllItems(totalAllItems);
-                }
-            }
         } catch (error) {
             console.error('Error al cargar muebles:', error);
             setError('Error al cargar los datos. Por favor, intente nuevamente.');
@@ -442,7 +345,7 @@ export default function LevantamientoUnificado() {
         } finally {
             setLoading(false);
         }
-    }, [searchTerm, filters, sortField, sortDirection, currentPage, rowsPerPage, selectedItem, totalValueAllItems]);
+    }, [searchTerm, filters, sortField, sortDirection, currentPage, rowsPerPage, selectedItem]);
 
     useEffect(() => {
         fetchFilterOptions();
@@ -493,21 +396,6 @@ export default function LevantamientoUnificado() {
                         Levantamiento de Inventario (INEA + ITEA)
                     </h1>
                     <p className="text-gray-400 text-sm sm:text-base">Vista unificada de todos los bienes registrados</p>
-                </div>
-                <div className="bg-black p-4 border-b border-gray-800 flex justify-center items-center">
-                    <div className="flex justify-between items-center">
-                        <div className="flex items-center gap-3">
-                            <div className="p-2 bg-blue-500/20 rounded-lg border border-blue-500/30">
-                                <DollarSign className="h-6 w-6 text-blue-400" />
-                            </div>
-                            <div className="flex flex-col items-center justify-center text-center">
-                                <h3 className="text-sm font-medium text-gray-400">Valor Total del Inventario</h3>
-                                <p className="text-2xl font-bold text-white">
-                                    ${(Object.values(filters).some(value => value !== '') ? totalValue : totalValueAllItems).toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                                </p>
-                            </div>
-                        </div>
-                    </div>
                 </div>
                 <div className="flex flex-col gap-4 p-4">
                     <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-4">
@@ -744,8 +632,17 @@ export default function LevantamientoUnificado() {
                                                             : 'bg-gradient-to-r from-green-600 to-green-500 hover:from-green-500 hover:to-green-400 text-black'}
                                                     `}
                                                 >
-                                                    <Download className="h-5 w-5" />
-                                                    {exportType === 'pdf' ? 'Generar PDF' : 'Descargar Excel'}
+                                                    {loading ? (
+                                                        <>
+                                                            <RefreshCw className="h-5 w-5 animate-spin" />
+                                                            {exportType === 'pdf' ? 'Generando PDF...' : 'Generando Excel...'}
+                                                        </>
+                                                    ) : (
+                                                        <>
+                                                            <Download className="h-5 w-5" />
+                                                            {exportType === 'pdf' ? 'Generar PDF' : 'Descargar Excel'}
+                                                        </>
+                                                    )}
                                                 </button>
                                             </div>
                                         </div>
@@ -809,16 +706,7 @@ export default function LevantamientoUnificado() {
                                         </tr>
                                     </thead>
                                     <tbody className="bg-black divide-y divide-gray-800">
-                                        {loading ? (
-                                            <tr className="h-96">
-                                                <td colSpan={6} className="px-6 py-24 text-center text-gray-400">
-                                                    <div className="flex flex-col items-center justify-center space-y-4">
-                                                        <RefreshCw className="h-12 w-12 animate-spin text-gray-500" />
-                                                        <p className="text-lg font-medium">Cargando datos...</p>
-                                                    </div>
-                                                </td>
-                                            </tr>
-                                        ) : error ? (
+                                        {error ? (
                                             <tr className="h-96">
                                                 <td colSpan={6} className="px-6 py-24 text-center text-red-400">
                                                     <AlertCircle className="h-12 w-12" />

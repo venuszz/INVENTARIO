@@ -149,6 +149,7 @@ export default function ConsultarResguardos() {
     const detailRef = useRef<HTMLDivElement>(null);
     const [filterDate, setFilterDate] = useState('');
     const [filterDirector, setFilterDirector] = useState('');
+    const [filterResguardante, setFilterResguardante] = useState('');
     const [showDeleteAllModal, setShowDeleteAllModal] = useState(false);
     const [showDeleteItemModal, setShowDeleteItemModal] = useState<{ index: number, articulo: ResguardoArticulo } | null>(null);
     const [deleting, setDeleting] = useState(false);
@@ -322,6 +323,10 @@ export default function ConsultarResguardos() {
                 countQuery = countQuery.filter('dir_area', 'ilike', `%${filterDirector.trim().toUpperCase()}%`);
             }
 
+            if (filterResguardante) {
+                countQuery = countQuery.filter('usufinal', 'ilike', `%${filterResguardante.trim().toUpperCase()}%`);
+            }
+
             const { count, error: countError } = await countQuery;
             if (countError) throw countError;
             setTotalCount(count || 0);
@@ -343,6 +348,10 @@ export default function ConsultarResguardos() {
                 dataQuery = dataQuery.filter('dir_area', 'ilike', `%${filterDirector.trim().toUpperCase()}%`);
             }
 
+            if (filterResguardante) {
+                dataQuery = dataQuery.filter('usufinal', 'ilike', `%${filterResguardante.trim().toUpperCase()}%`);
+            }
+
             const { data, error: queryError } = await dataQuery
                 .order(sortField, { ascending: sortDirection === 'asc' })
                 .range(from, to);
@@ -356,7 +365,7 @@ export default function ConsultarResguardos() {
         } finally {
             setLoading(false);
         }
-    }, [currentPage, rowsPerPage, sortField, sortDirection, filterDate, filterDirector]);
+    }, [currentPage, rowsPerPage, sortField, sortDirection, filterDate, filterDirector, filterResguardante]);
 
     // Fetch all resguardos for counting articles by folio correctly
     useEffect(() => {
@@ -370,6 +379,9 @@ export default function ConsultarResguardos() {
                     // Normalizar a mayúsculas y quitar espacios para comparar correctamente
                     dataQuery = dataQuery.filter('dir_area', 'ilike', `%${filterDirector.trim().toUpperCase()}%`);
                 }
+                if (filterResguardante) {
+                    dataQuery = dataQuery.filter('usufinal', 'ilike', `%${filterResguardante.trim().toUpperCase()}%`);
+                }
                 const { data, error } = await dataQuery;
                 if (!error) setAllResguardos(data || []);
             } catch {
@@ -377,7 +389,7 @@ export default function ConsultarResguardos() {
             }
         };
         fetchAllResguardos();
-    }, [filterDate, filterDirector, searchTerm]);
+    }, [filterDate, filterDirector, filterResguardante, searchTerm]);
 
     // Función para obtener las firmas
     const getFirmas = async () => {
@@ -611,14 +623,26 @@ export default function ConsultarResguardos() {
     // Efecto para búsqueda en tiempo real
     useEffect(() => {
         const delayDebounceFn = setTimeout(async () => {
-            if (searchTerm) {
+            if (searchTerm || filterDate || filterDirector || filterResguardante) {
                 setLoading(true);
                 try {
-                    const { data, error } = await supabase
-                        .from('resguardos')
-                        .select('*')
-                        .ilike('folio', `%${searchTerm}%`)
-                        .order(sortField, { ascending: sortDirection === 'asc' });
+                    let query = supabase.from('resguardos').select('*');
+
+                    // Aplicar filtros
+                    if (searchTerm) {
+                        query = query.ilike('folio', `%${searchTerm}%`);
+                    }
+                    if (filterDate) {
+                        query = query.eq('f_resguardo::date', filterDate);
+                    }
+                    if (filterDirector) {
+                        query = query.filter('dir_area', 'ilike', `%${filterDirector.trim().toUpperCase()}%`);
+                    }
+                    if (filterResguardante) {
+                        query = query.filter('usufinal', 'ilike', `%${filterResguardante.trim().toUpperCase()}%`);
+                    }
+
+                    const { data, error } = await query.order(sortField, { ascending: sortDirection === 'asc' });
 
                     if (error) throw error;
 
@@ -635,10 +659,10 @@ export default function ConsultarResguardos() {
             } else {
                 fetchResguardos();
             }
-        }, 100); // Pequeño delay para evitar demasiadas llamadas
+        }, 100);
 
         return () => clearTimeout(delayDebounceFn);
-    }, [searchTerm, sortField, sortDirection, fetchResguardos]);
+    }, [searchTerm, sortField, sortDirection, filterDate, filterDirector, filterResguardante, fetchResguardos]);
 
     useEffect(() => {
         fetchResguardos();
@@ -720,13 +744,14 @@ export default function ConsultarResguardos() {
 
                         {/* Filtro avanzado */}
                         <div className="mb-6 bg-gray-900/20 p-4 rounded-xl border border-gray-800 shadow-inner">
-                            <div className="flex flex-col md:flex-row gap-4 items-end">
-                                <div className="flex-1">
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                <div>
                                     <label className="block text-xs uppercase tracking-wider text-gray-500 mb-1">Filtrar por fecha</label>
                                     <input
                                         title='Fecha de resguardo'
                                         type="date"
                                         max={new Date().toISOString().split('T')[0]}
+                                        value={filterDate}
                                         onChange={e => {
                                             setCurrentPage(1);
                                             setFilterDate(e.target.value);
@@ -734,11 +759,12 @@ export default function ConsultarResguardos() {
                                         className="w-full bg-black border border-gray-800 rounded-lg text-white py-2 px-3 focus:outline-none focus:ring-2 focus:ring-blue-500"
                                     />
                                 </div>
-                                <div className="flex-1">
+                                <div>
                                     <label className="block text-xs uppercase tracking-wider text-gray-500 mb-1">Filtrar por director</label>
                                     <input
                                         type="text"
                                         placeholder="Nombre del director..."
+                                        value={filterDirector}
                                         onChange={e => {
                                             setCurrentPage(1);
                                             setFilterDirector(e.target.value);
@@ -746,10 +772,28 @@ export default function ConsultarResguardos() {
                                         className="w-full bg-black border border-gray-800 rounded-lg text-white py-2 px-3 focus:outline-none focus:ring-2 focus:ring-blue-500"
                                     />
                                 </div>
+                                <div>
+                                    <label className="block text-xs uppercase tracking-wider text-gray-500 mb-1">
+                                        Filtrar por resguardante
+                                    </label>
+                                    <input
+                                        type="text"
+                                        placeholder="Nombre del resguardante..."
+                                        value={filterResguardante}
+                                        onChange={e => {
+                                            setCurrentPage(1);
+                                            setFilterResguardante(e.target.value);
+                                        }}
+                                        className="w-full bg-black border border-gray-800 rounded-lg text-white py-2 px-3 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                    />
+                                </div>
+                            </div>
+                            <div className="mt-4 flex justify-end">
                                 <button
                                     onClick={() => {
                                         setFilterDate('');
                                         setFilterDirector('');
+                                        setFilterResguardante('');
                                         setCurrentPage(1);
                                     }}
                                     className="px-4 py-2 bg-black border border-gray-800 text-gray-400 rounded-lg hover:bg-gray-900 transition-colors flex items-center gap-2 text-sm"
@@ -873,8 +917,25 @@ export default function ConsultarResguardos() {
                                                                 {resguardo.dir_area}
                                                             </div>
                                                             <div className="text-xs text-gray-500">{resguardo.area_resguardo}</div>
+                                                            
+                                                            {/* Si hay un filtro de resguardante activo, mostrar un indicador */}
+                                                            {filterResguardante && (
+                                                                <div className="mt-1">
+                                                                    {Array.from(new Set(allResguardos
+                                                                        .filter(r => r.folio === resguardo.folio && r.usufinal?.toLowerCase().includes(filterResguardante.toLowerCase()))
+                                                                        .map(r => r.usufinal)))
+                                                                        .map((matchedResguardante, idx) => (
+                                                                            <div
+                                                                                key={idx}
+                                                                                className="inline-flex items-center px-2 py-0.5 rounded bg-blue-500/20 border border-blue-500/30 text-blue-300 text-xs mr-1 mb-1"
+                                                                            >
+                                                                                {matchedResguardante}
+                                                                            </div>
+                                                                        ))}
+                                                                </div>
+                                                            )}
 
-                                                            {/* Tooltip con los resguardantes */}
+                                                            {/* Tooltip con los resguardantes (mantener el existente) */}
                                                             <div className="absolute left-1/2 -translate-x-1/2 top-full mt-2 w-max max-w-sm opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-[9999]">
                                                                 <div className="absolute left-1/2 -top-2 -translate-x-1/2 border-8 border-transparent border-b-gray-800"></div>
                                                                 <div className="bg-black border border-gray-800 rounded-lg shadow-xl p-4">
