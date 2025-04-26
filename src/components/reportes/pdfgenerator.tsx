@@ -130,9 +130,28 @@ export const generatePDF = async ({ data, columns, title, fileName, firmas = [] 
         let xPos = margin;
         const currentY = startY;
 
+        // Agregar encabezado para la columna de numeración
+        const numberColWidth = 30;
+        page.drawRectangle({
+            x: xPos,
+            y: currentY - 25,
+            width: numberColWidth,
+            height: 25,
+            color: rgb(0.9, 0.9, 0.9),
+        });
+
+        page.drawText(normalizeText('No.'), {
+            x: xPos + centerTextInCell('No.', numberColWidth, font, headerFontSize),
+            y: currentY - 18,
+            size: headerFontSize,
+            font: font,
+            color: rgb(0.2, 0.2, 0.2)
+        });
+
+        xPos += numberColWidth;
+
         columns.forEach((col) => {
             const colWidth = col.width ?? 80;
-            // Dibujar el fondo del encabezado
             page.drawRectangle({
                 x: xPos,
                 y: currentY - 25,
@@ -141,7 +160,6 @@ export const generatePDF = async ({ data, columns, title, fileName, firmas = [] 
                 color: rgb(0.9, 0.9, 0.9),
             });
 
-            // Centrar el texto del encabezado
             const headerX = xPos + centerTextInCell(col.header, colWidth, font, headerFontSize);
             page.drawText(normalizeText(col.header), {
                 x: headerX,
@@ -198,20 +216,20 @@ export const generatePDF = async ({ data, columns, title, fileName, firmas = [] 
                 title.toUpperCase()
             ];
 
-            // Dibujar cada línea del título con menor espaciado
+            // Dibujar cada línea del título
             titles.forEach((text, index) => {
                 const textWidth = font.widthOfTextAtSize(text, 10);
                 const xPos = (pageWidth - textWidth) / 2;
                 page.drawText(normalizeText(text), {
                     x: xPos,
-                    y: yPos - (index * 14), // Reducido de 16 a 14
+                    y: yPos - (index * 16),
                     size: 10,
                     font: font,
                     color: rgb(0, 0, 0)
                 });
             });
 
-            yPos -= 60; // Reducido de 80 a 60 para acercar más el contenido
+            yPos -= 80;
 
             // Obtener la información de la última firma (la que está a la derecha)
             const directoraFirma = firmas[firmas.length - 1];
@@ -223,7 +241,7 @@ export const generatePDF = async ({ data, columns, title, fileName, firmas = [] 
             const año = fecha.getFullYear();
             const currentDate = `${dia} de ${mes} de ${año}`;
 
-            // Agregar la información adicional justificada a la izquierda con menor espaciado
+            // Agregar la información adicional en su posición original
             const infoLines = [
                 `NOMBRE: ${directoraFirma.nombre.toUpperCase()}`,
                 'ADSCRIPCIÓN: DIRECCIÓN GENERAL',
@@ -234,22 +252,22 @@ export const generatePDF = async ({ data, columns, title, fileName, firmas = [] 
             infoLines.forEach((line, index) => {
                 page.drawText(normalizeText(line), {
                     x: margin,
-                    y: yPos - (index * 12), // Reducido de 16 a 12
+                    y: yPos - (index * 16),
                     size: 8,
                     font: regularFont,
                     color: rgb(0, 0, 0)
                 });
             });
 
-            yPos -= 50; // Reducido de 80 a 50 para acercar más la tabla
+            // Ajustar la posición de la tabla para que aparezca un poco más abajo
+            const tableYPos = height - 180; // Cambiado de 160 a 180
+            yPos = await drawHeaders(page, tableYPos);
         } else {
             yPos -= 20; // Solo un pequeño espacio en las páginas siguientes
         }
 
-        // Dibujar los encabezados usando la nueva función
-        yPos = await drawHeaders(page, height - (pageIndex === 0 ? 220 : 70));
-
         // Dibujar filas de datos
+        let rowNumber = 1; // Contador para la numeración
         for (const row of pageData) {
             const rowHeight = calculateRowHeight(row, columns.map(col => col.width ?? 80));
             if (yPos - rowHeight < margin) break;
@@ -263,6 +281,19 @@ export const generatePDF = async ({ data, columns, title, fileName, firmas = [] 
                 thickness: 0.5,
                 color: rgb(0.7, 0.7, 0.7),
             });
+
+            // Dibujar el número de fila
+            const numberColWidth = 30;
+            const numberText = rowNumber.toString();
+            page.drawText(numberText, {
+                x: xPos + centerTextInCell(numberText, numberColWidth, regularFont, fontSize),
+                y: yPos - (rowHeight / 2) + (fontSize / 2),
+                size: fontSize,
+                font: regularFont,
+                color: rgb(0.2, 0.2, 0.2)
+            });
+
+            xPos += numberColWidth;
 
             columns.forEach((col) => {
                 const colWidth = col.width ?? 80;
@@ -307,6 +338,7 @@ export const generatePDF = async ({ data, columns, title, fileName, firmas = [] 
             });
 
             yPos -= rowHeight;
+            rowNumber++; // Incrementar el contador
         }
 
         // Agregar pie de página con número de página
@@ -383,6 +415,15 @@ export const generatePDF = async ({ data, columns, title, fileName, firmas = [] 
         firmas.forEach((firma, index) => {
             const xPos = margin + (index * signatureBoxWidth);
 
+            // Dibujar concepto arriba de la línea con más espacio
+            page.drawText(normalizeText(firma.concepto.toUpperCase()), {
+                x: xPos + (signatureBoxWidth / 2) - (regularFont.widthOfTextAtSize(firma.concepto.toUpperCase(), 8) / 2),
+                y: lineY + 30, // Aumentado de 20 a 30 para más espacio
+                size: 8,
+                font: regularFont,
+                color: rgb(0, 0, 0),
+            });
+
             // Dibujar línea para firma
             page.drawLine({
                 start: { x: xPos + 20, y: lineY },
@@ -391,29 +432,19 @@ export const generatePDF = async ({ data, columns, title, fileName, firmas = [] 
                 color: rgb(0, 0, 0),
             });
 
-            // Dibujar concepto arriba de la línea
-            page.drawText(normalizeText(firma.concepto.toUpperCase()), {
-                x: xPos + (signatureBoxWidth / 2) - (regularFont.widthOfTextAtSize(firma.concepto.toUpperCase(), 8) / 2),
-                y: lineY + 20, // Reduced spacing
-                size: 8, // Reduced from 10 to 8
-                font: regularFont,
-                color: rgb(0, 0, 0),
-            });
-
-            // Dibujar nombre debajo de la línea
+            // El resto de los textos mantienen su espaciado relativo a la línea
             page.drawText(normalizeText(firma.nombre.toUpperCase()), {
                 x: xPos + (signatureBoxWidth / 2) - (regularFont.widthOfTextAtSize(firma.nombre.toUpperCase(), 8) / 2),
-                y: lineY - 15, // Adjusted spacing
-                size: 8, // Reduced from 10 to 8
+                y: lineY - 15,
+                size: 8,
                 font: regularFont,
                 color: rgb(0, 0, 0),
             });
 
-            // Dibujar puesto debajo del nombre
             page.drawText(normalizeText(firma.puesto.toUpperCase()), {
                 x: xPos + (signatureBoxWidth / 2) - (regularFont.widthOfTextAtSize(firma.puesto.toUpperCase(), 8) / 2),
-                y: lineY - 30, // Adjusted spacing
-                size: 8, // Reduced from 10 to 8
+                y: lineY - 30,
+                size: 8,
                 font: regularFont,
                 color: rgb(0, 0, 0),
             });

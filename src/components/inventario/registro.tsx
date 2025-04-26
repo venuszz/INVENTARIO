@@ -444,8 +444,8 @@ export default function RegistroBienesForm() {
     const handleCloseMessage = () => setMessage({ type: '', text: '' });
 
     const requiredFields = {
-        1: ['id_inv', 'rubro', 'valor'],
-        2: ['ubicacion_es', 'ubicacion_mu', 'usufinal'],
+        1: ['id_inv', 'rubro', 'valor', 'formadq', 'f_adq'],
+        2: ['estatus', 'area', 'usufinal'],
         3: ['descripcion']
     };
 
@@ -616,25 +616,30 @@ export default function RegistroBienesForm() {
                                 </div>
 
                                 <div>
-                                    <label className="block mb-1 text-sm sm:text-base font-medium">Forma de Adquisición</label>
+                                    <label className="block mb-1 text-sm sm:text-base font-medium">Forma de Adquisición <span className="text-red-500">*</span></label>
                                     <select
                                         name="formadq"
                                         title='Seleccionar Forma de Adquisición'
                                         value={formData.formadq}
                                         onChange={handleChange}
-                                        className="w-full bg-black border border-gray-700 rounded-lg p-2 sm:p-3 focus:border-white focus:ring focus:ring-gray-700 focus:ring-opacity-50 transition-all text-sm sm:text-base"
+                                        onBlur={handleBlur}
+                                        required
+                                        className={`w-full bg-black border ${!isFieldValid('formadq') ? 'border-red-500' : 'border-gray-700'} rounded-lg p-2 sm:p-3 focus:border-white focus:ring focus:ring-gray-700 focus:ring-opacity-50 transition-all text-sm sm:text-base`}
                                     >
                                         <option value="">Seleccionar</option>
                                         {filterOptions.formasAdquisicion.map((forma, index) => (
                                             <option key={index} value={forma}>{forma}</option>
                                         ))}
                                     </select>
+                                    {!isFieldValid('formadq') && (
+                                        <p className="text-red-500 text-xs sm:text-sm mt-1">Este campo es obligatorio</p>
+                                    )}
                                 </div>
                             </div>
 
                             <div className="space-y-2 sm:space-y-4">
                                 <div>
-                                    <label className="block mb-1 text-sm sm:text-base font-medium">Fecha de Adquisición</label>
+                                    <label className="block mb-1 text-sm sm:text-base font-medium">Fecha de Adquisición <span className="text-red-500">*</span></label>
                                     <div className="relative">
                                         <input
                                             type="date"
@@ -642,10 +647,15 @@ export default function RegistroBienesForm() {
                                             title='Seleccionar Fecha de Adquisición'
                                             value={formData.f_adq}
                                             onChange={handleChange}
-                                            className="w-full bg-black border border-gray-700 rounded-lg p-2 sm:p-3 focus:border-white focus:ring focus:ring-gray-700 focus:ring-opacity-50 transition-all text-sm sm:text-base"
+                                            onBlur={handleBlur}
+                                            required
+                                            className={`w-full bg-black border ${!isFieldValid('f_adq') ? 'border-red-500' : 'border-gray-700'} rounded-lg p-2 sm:p-3 focus:border-white focus:ring focus:ring-gray-700 focus:ring-opacity-50 transition-all text-sm sm:text-base`}
                                         />
                                         <Calendar className="absolute right-3 top-2 sm:top-3 text-gray-400" size={18} />
                                     </div>
+                                    {!isFieldValid('f_adq') && (
+                                        <p className="text-red-500 text-xs sm:text-sm mt-1">Este campo es obligatorio</p>
+                                    )}
                                 </div>
 
                                 <div className="flex space-x-2 sm:space-x-3">
@@ -686,49 +696,41 @@ export default function RegistroBienesForm() {
                                     <h3 className="text-base sm:text-lg font-medium mb-2 sm:mb-3 text-white">Ubicación Actual</h3>
 
                                     <div className="mb-2 sm:mb-3">
-                                        <label className="block mb-1 text-sm sm:text-base font-medium">Estado <span className="text-red-500">*</span></label>
+                                        <label className="block mb-1 text-sm sm:text-base font-medium">Estado</label>
                                         <input
                                             type="text"
                                             name="ubicacion_es"
                                             value={formData.ubicacion_es}
                                             onChange={handleChange}
-                                            onBlur={handleBlur}
-                                            maxLength={4}
-                                            className={`w-full bg-black border ${!isFieldValid('ubicacion_es') ? 'border-red-500' : 'border-gray-700'} rounded-lg p-2 sm:p-3 focus:border-white focus:ring focus:ring-gray-700 focus:ring-opacity-50 transition-all text-sm sm:text-base`}
-                                            placeholder="Clave del estado (4 caracteres)"
+                                            maxLength={2}
+                                            className="w-full bg-black border border-gray-700 rounded-lg p-2 sm:p-3 focus:border-white focus:ring focus:ring-gray-700 focus:ring-opacity-50 transition-all text-sm sm:text-base"
+                                            placeholder="Clave (2 caracteres)"
                                         />
-                                        {!isFieldValid('ubicacion_es') && (
-                                            <p className="text-red-500 text-xs sm:text-sm mt-1">Este campo es obligatorio</p>
-                                        )}
                                     </div>
 
                                     <div className="mb-2 sm:mb-3">
-                                        <label className="block mb-1 text-sm sm:text-base font-medium">Municipio <span className="text-red-500">*</span></label>
+                                        <label className="block mb-1 text-sm sm:text-base font-medium">Municipio</label>
                                         <input
                                             type="text"
                                             name="ubicacion_mu"
                                             value={formData.ubicacion_mu}
                                             onChange={handleChange}
-                                            onBlur={handleBlur}
-                                            maxLength={5}
-                                            className={`w-full bg-black border ${!isFieldValid('ubicacion_mu') ? 'border-red-500' : 'border-gray-700'} rounded-lg p-2 sm:p-3 focus:border-white focus:ring focus:ring-gray-700 focus:ring-opacity-50 transition-all text-sm sm:text-base`}
-                                            placeholder="Clave del municipio (5 caracteres)"
+                                            maxLength={2}
+                                            className="w-full bg-black border border-gray-700 rounded-lg p-2 sm:p-3 focus:border-white focus:ring focus:ring-gray-700 focus:ring-opacity-50 transition-all text-sm sm:text-base"
+                                            placeholder="Clave (2 caracteres)"
                                         />
-                                        {!isFieldValid('ubicacion_mu') && (
-                                            <p className="text-red-500 text-xs sm:text-sm mt-1">Este campo es obligatorio</p>
-                                        )}
                                     </div>
 
                                     <div>
-                                        <label className="block mb-1 text-sm sm:text-base font-medium">Número de Ubicación</label>
+                                        <label className="block mb-1 text-sm sm:text-base font-medium">Nomenclatura</label>
                                         <input
                                             type="text"
                                             name="ubicacion_no"
                                             value={formData.ubicacion_no}
                                             onChange={handleChange}
-                                            maxLength={10}
+                                            maxLength={2}
                                             className="w-full bg-black border border-gray-700 rounded-lg p-2 sm:p-3 focus:border-white focus:ring focus:ring-gray-700 focus:ring-opacity-50 transition-all text-sm sm:text-base"
-                                            placeholder="Número identificador (10 caracteres máx.)"
+                                            placeholder="Clave (2 caracteres)"
                                         />
                                     </div>
                                 </div>
@@ -739,35 +741,45 @@ export default function RegistroBienesForm() {
                                     <h3 className="text-base sm:text-lg font-medium mb-2 sm:mb-3 text-white">Condiciones</h3>
 
                                     <div className="mb-2 sm:mb-3">
-                                        <label className="block mb-1 text-sm sm:text-base font-medium">Estado Físico</label>
+                                        <label className="block mb-1 text-sm sm:text-base font-medium">Estado Físico <span className="text-red-500">*</span></label>
                                         <select
                                             title='Seleccionar Estado Físico'
                                             name="estado"
                                             value={formData.estado}
                                             onChange={handleChange}
-                                            className="w-full bg-black border border-gray-700 rounded-lg p-2 sm:p-3 focus:border-white focus:ring focus:ring-gray-700 focus:ring-opacity-50 transition-all text-sm sm:text-base"
+                                            onBlur={handleBlur}
+                                            required
+                                            className={`w-full bg-black border ${!isFieldValid('estado') ? 'border-red-500' : 'border-gray-700'} rounded-lg p-2 sm:p-3 focus:border-white focus:ring focus:ring-gray-700 focus:ring-opacity-50 transition-all text-sm sm:text-base`}
                                         >
                                             <option value="">Seleccionar Estado</option>
                                             {filterOptions.estados.map((estado, index) => (
                                                 <option key={index} value={estado}>{estado}</option>
                                             ))}
                                         </select>
+                                        {!isFieldValid('estado') && (
+                                            <p className="text-red-500 text-xs sm:text-sm mt-1">Este campo es obligatorio</p>
+                                        )}
                                     </div>
 
                                     <div>
-                                        <label className="block mb-1 text-sm sm:text-base font-medium">Estatus</label>
+                                        <label className="block mb-1 text-sm sm:text-base font-medium">Estatus <span className="text-red-500">*</span></label>
                                         <select
                                             name="estatus"
                                             title='Seleccionar Estatus'
                                             value={formData.estatus}
                                             onChange={handleChange}
-                                            className="w-full bg-black border border-gray-700 rounded-lg p-2 sm:p-3 focus:border-white focus:ring focus:ring-gray-700 focus:ring-opacity-50 transition-all text-sm sm:text-base"
+                                            onBlur={handleBlur}
+                                            required
+                                            className={`w-full bg-black border ${!isFieldValid('estatus') ? 'border-red-500' : 'border-gray-700'} rounded-lg p-2 sm:p-3 focus:border-white focus:ring focus:ring-gray-700 focus:ring-opacity-50 transition-all text-sm sm:text-base`}
                                         >
                                             <option value="">Seleccionar Estatus</option>
                                             {filterOptions.estatus.map((estatus, index) => (
                                                 <option key={index} value={estatus}>{estatus}</option>
                                             ))}
                                         </select>
+                                        {!isFieldValid('estatus') && (
+                                            <p className="text-red-500 text-xs sm:text-sm mt-1">Este campo es obligatorio</p>
+                                        )}
                                     </div>
                                 </div>
 
@@ -1038,7 +1050,7 @@ export default function RegistroBienesForm() {
                                 </div>
 
                                 <div>
-                                    <label className="block text-sm font-medium text-gray-300 mb-2 flex items-center gap-2">
+                                    <label className="flex items-center gap-2 text-sm font-medium text-gray-300 mb-2">
                                         <User className="h-4 w-4 text-gray-400" />
                                         Área
                                     </label>
