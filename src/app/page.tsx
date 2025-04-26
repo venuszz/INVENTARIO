@@ -4,11 +4,38 @@ import { useEffect, useState, useRef } from 'react';
 export default function Inicio() {
   const [isLoaded, setIsLoaded] = useState(false);
   const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
+  const [currentTime, setCurrentTime] = useState('');
+  const [currentDate, setCurrentDate] = useState('');
   const particlesRef = useRef(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     setIsLoaded(true);
+
+    const updateDateTime = () => {
+      const now = new Date();
+      
+      // Format time in 12-hour format with AM/PM
+      setCurrentTime(now.toLocaleTimeString('es-MX', {
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit',
+        hour12: true
+      }));
+
+      // Format date in Spanish
+      const options: Intl.DateTimeFormatOptions = {
+        weekday: 'long',
+        day: 'numeric',
+        month: 'long',
+        year: 'numeric'
+      };
+      setCurrentDate(now.toLocaleDateString('es-MX', options));
+    };
+
+    // Update immediately and then every second
+    updateDateTime();
+    const interval = setInterval(updateDateTime, 1000);
 
     const handleMouseMove = (e: MouseEvent) => {
       if (containerRef.current) {
@@ -22,7 +49,7 @@ export default function Inicio() {
 
     window.addEventListener('mousemove', handleMouseMove);
 
-    const interval = setInterval(() => {
+    const particleInterval = setInterval(() => {
       if (particlesRef.current) {
         const particle = document.createElement('div');
         particle.classList.add('particle');
@@ -82,6 +109,7 @@ export default function Inicio() {
     return () => {
       window.removeEventListener('mousemove', handleMouseMove);
       clearInterval(interval);
+      clearInterval(particleInterval);
     };
   }, []);
 
@@ -90,6 +118,18 @@ export default function Inicio() {
       ref={containerRef}
       className="flex flex-col items-center justify-center h-full w-full bg-black overflow-hidden relative"
     >
+      {/* Clock and Date Display */}
+      <div className="absolute top-8 left-8 z-20 text-white">
+        <div className="bg-black/40 backdrop-blur-sm rounded-xl p-4 border border-white/10 shadow-2xl">
+          <div className="text-4xl font-light tracking-wider mb-1">
+            {currentTime}
+          </div>
+          <div className="text-sm text-gray-300 capitalize">
+            {currentDate}
+          </div>
+        </div>
+      </div>
+
       {/* Fondo de gradiente animado */}
       <div className="absolute inset-0 bg-black opacity-80 z-0">
         <div className="absolute inset-0 bg-grid"></div>
@@ -130,6 +170,7 @@ export default function Inicio() {
             className="h-80 w-auto object-contain animate-float"
             onLoad={() => setIsLoaded(true)}
           />
+          <p className='text-center text-gray-800 pt-2'>Powered by A|X</p>
         </div>
 
         {/* Círculos orbitando alrededor del logo */}
