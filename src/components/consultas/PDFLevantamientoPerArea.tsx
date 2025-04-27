@@ -264,16 +264,17 @@ export const generatePDF = async ({ data, columns, title, fileName, firmas = [] 
             if (firmas && firmas.length > 0) {
                 const responsable = firmas.find(f => f.concepto === 'Responsable') || firmas[0];
                 const infoLines = [
-                    `ÁREA: ${title.replace(/^LEVANTAMIENTO DE INVENTARIO - /i, '')}`,
+                    `ÁREA: ${title.replace(/^LEVANTAMIENTO DE INVENTARIO - /i, '').toUpperCase()}`,
                     `NOMBRE: ${responsable.nombre.toUpperCase()}`,
                     `CARGO: ${responsable.puesto.toUpperCase()}`,
-                    `FECHA: ${(() => {
+                    `FECHA DE IMPRESIÓN:  ${(() => {
                         const fecha = new Date();
                         const dia = fecha.getDate();
-                        const mes = new Intl.DateTimeFormat('es-ES', { month: 'long' }).format(fecha);
+                        const mes = new Intl.DateTimeFormat('es-ES', { month: 'long' }).format(fecha).toUpperCase();
                         const año = fecha.getFullYear();
-                        return `${dia} de ${mes} de ${año}`;
-                    })().toUpperCase()}`
+                        return `${dia} DE ${mes} DE ${año}`;
+                    })()}`,
+                    `FECHA DE EJECUCIÓN:`,
                 ];
                 infoLines.forEach((line, idx) => {
                     page.drawText(normalizeText(line), {
@@ -396,35 +397,59 @@ export const generatePDF = async ({ data, columns, title, fileName, firmas = [] 
     };
 
     const drawSignatureSection = (page: import('pdf-lib').PDFPage, yPosition: number) => {
-        const signatureBoxWidth = (pageWidth - (2 * margin)) / 1;
+        // Cambiar a dos firmas: izquierda (sin título arriba), derecha (RESPONSABLE)
+        const signatureBoxWidth = (pageWidth - (2 * margin)) / 2;
         const signatureSectionY = yPosition - 80;
         const lineY = signatureSectionY + 40;
         const signatureFontSize = 8;
+        const xLeft = margin;
+        const xRight = margin + signatureBoxWidth;
+        // Firma izquierda: NOMBRE Y FIRMA
+        page.drawLine({
+            start: { x: xLeft + 20, y: lineY },
+            end: { x: xLeft + signatureBoxWidth - 20, y: lineY },
+            thickness: 1,
+            color: rgb(0, 0, 0),
+        });
+        page.drawText(normalizeText('NOMBRE Y FIRMA'), {
+            x: xLeft + (signatureBoxWidth / 2) - (regularFont.widthOfTextAtSize('NOMBRE Y FIRMA', signatureFontSize) / 2),
+            y: lineY - 15,
+            size: signatureFontSize,
+            font: regularFont,
+            color: rgb(0, 0, 0),
+        });
+        page.drawText(normalizeText('PERSONA QUE LEVANTA EL REPORTE'), {
+            x: xLeft + (signatureBoxWidth / 2) - (regularFont.widthOfTextAtSize('PERSONA QUE LEVANTA EL REPORTE', signatureFontSize) / 2),
+            y: lineY - 30,
+            size: signatureFontSize,
+            font: regularFont,
+            color: rgb(0, 0, 0),
+        });
+        // Firma derecha: RESPONSABLE
         if (firmas && firmas.length > 0) {
             const responsable = firmas.find(f => f.concepto === 'Responsable') || firmas[0];
-            const xPos = margin;
             page.drawText(normalizeText('RESPONSABLE'), {
-                x: xPos + (signatureBoxWidth / 2) - (regularFont.widthOfTextAtSize('RESPONSABLE', signatureFontSize) / 2),
+                x: xRight + (signatureBoxWidth / 2) - (regularFont.widthOfTextAtSize('RESPONSABLE', signatureFontSize) / 2),
                 y: lineY + 30,
                 size: signatureFontSize,
                 font: regularFont,
                 color: rgb(0, 0, 0),
             });
             page.drawLine({
-                start: { x: xPos + 20, y: lineY },
-                end: { x: xPos + signatureBoxWidth - 20, y: lineY },
+                start: { x: xRight + 20, y: lineY },
+                end: { x: xRight + signatureBoxWidth - 20, y: lineY },
                 thickness: 1,
                 color: rgb(0, 0, 0),
             });
             page.drawText(normalizeText(responsable.nombre.toUpperCase()), {
-                x: xPos + (signatureBoxWidth / 2) - (regularFont.widthOfTextAtSize(responsable.nombre.toUpperCase(), signatureFontSize) / 2),
+                x: xRight + (signatureBoxWidth / 2) - (regularFont.widthOfTextAtSize(responsable.nombre.toUpperCase(), signatureFontSize) / 2),
                 y: lineY - 15,
                 size: signatureFontSize,
                 font: regularFont,
                 color: rgb(0, 0, 0),
             });
             page.drawText(normalizeText(responsable.puesto.toUpperCase()), {
-                x: xPos + (signatureBoxWidth / 2) - (regularFont.widthOfTextAtSize(responsable.puesto.toUpperCase(), signatureFontSize) / 2),
+                x: xRight + (signatureBoxWidth / 2) - (regularFont.widthOfTextAtSize(responsable.puesto.toUpperCase(), signatureFontSize) / 2),
                 y: lineY - 30,
                 size: signatureFontSize,
                 font: regularFont,
