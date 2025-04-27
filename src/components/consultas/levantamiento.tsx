@@ -1,5 +1,6 @@
 "use client";
 import { generateExcel } from '@/components/reportes/excelgenerator';
+import { generatePDF } from '@/components/consultas/PDFLevantamiento';
 import React from 'react';
 import { useState, useEffect, useCallback } from 'react';
 import {
@@ -237,8 +238,47 @@ export default function LevantamientoUnificado() {
                     f_adq: item.f_adq || '',
                     fechabaja: item.fechabaja || ''
                 }));
-
                 await generateExcel({ data: formattedData, fileName, worksheetName });
+            } else if (exportType === 'pdf') {
+                // --- COLUMNAS PARA PDF ---
+                const columns = [
+                    { header: 'ID INVENTARIO', key: 'id_inv', width: 60 },
+                    { header: 'DESCRIPCIÓN', key: 'descripcion', width: 120 },
+                    { header: 'ESTADO', key: 'estado', width: 50 },
+                    { header: 'ESTATUS', key: 'estatus', width: 50 },
+                    { header: 'ÁREA', key: 'area', width: 60 },
+                    { header: 'USUARIO FINAL', key: 'usufinal', width: 70 },
+                ];
+                // --- FIRMAS PARA PDF ---
+                const firmas = [
+                    {
+                        concepto: 'ELABORÓ',
+                        nombre: 'JUAN PÉREZ',
+                        puesto: 'JEFE DE RECURSOS MATERIALES',
+                    },
+                    {
+                        concepto: 'REVISÓ',
+                        nombre: 'MARÍA LÓPEZ',
+                        puesto: 'DIRECTORA DE ADMINISTRACIÓN Y FINANZAS',
+                    },
+                    {
+                        concepto: 'AUTORIZÓ',
+                        nombre: 'ANA GARCÍA',
+                        puesto: 'DIRECTORA GENERAL',
+                    },
+                ];
+                // --- FORMATEO DE DATOS PARA PDF ---
+                const formattedData = exportData.map((item, index) => ({
+                    ...item,
+                    _counter: index + 1,
+                }));
+                await generatePDF({
+                    data: formattedData,
+                    columns,
+                    title: 'LEVANTAMIENTO DE INVENTARIO (INEA + ITEA)',
+                    fileName,
+                    firmas,
+                });
             }
 
             setMessage({ type: 'success', text: 'Archivo generado exitosamente.' });
@@ -422,6 +462,17 @@ export default function LevantamientoUnificado() {
                             >
                                 <FileUp className="h-4 w-4" />
                                 <span className="hidden sm:inline">Excel</span>
+                            </button>
+                            <button
+                                onClick={() => {
+                                    setExportType('pdf');
+                                    setShowExportModal(true);
+                                }}
+                                className="px-4 py-2 bg-red-700 text-white rounded-md font-medium flex items-center gap-2 hover:bg-red-800 transition-colors border border-red-800"
+                                title="Exportar a PDF"
+                            >
+                                <File className="h-4 w-4" />
+                                <span className="hidden sm:inline">PDF</span>
                             </button>
                             <button
                                 onClick={() => { setLoading(true); fetchMuebles(); }}
