@@ -1,11 +1,12 @@
 "use client";
 import { generateExcel } from '@/components/reportes/excelgenerator';
 import { generatePDF } from '@/components/consultas/PDFLevantamiento';
+import { generatePDF as generatePDFPerArea } from '@/components/consultas/PDFLevantamientoPerArea';
 import React from 'react';
 import { useState, useEffect, useCallback } from 'react';
 import {
     Search, RefreshCw, ChevronLeft, ChevronRight,
-    ArrowUpDown, AlertCircle, X, FileUp, File
+    ArrowUpDown, AlertCircle, X, FileUp, File, FileText, Filter
 } from 'lucide-react';
 import supabase from '@/app/lib/supabase/client';
 
@@ -40,6 +41,7 @@ interface FilterOptions {
     areas: string[];
     rubros: string[];
     formadq: string[];
+    usufinales?: string[];
 }
 
 interface Message {
@@ -74,7 +76,8 @@ export default function LevantamientoUnificado() {
         estatus: '',
         area: '',
         rubro: '',
-        formadq: ''
+        formadq: '',
+        usufinal: ''
     });
     const [filterOptions, setFilterOptions] = useState<FilterOptions>({
         estados: [],
@@ -85,9 +88,143 @@ export default function LevantamientoUnificado() {
     });
     const [selectedItem, setSelectedItem] = useState<LevMueble | null>(null);
     const [message, setMessage] = useState<Message | null>(null);
-    const [showFilters, setShowFilters] = useState(false);
     const [exportType, setExportType] = useState<'excel' | 'pdf' | null>(null);
     const [showExportModal, setShowExportModal] = useState(false);
+
+    // Estado para PDF por área/usuario
+    const [showAreaPDFModal, setShowAreaPDFModal] = useState(false);
+    const [areaPDFLoading, setAreaPDFLoading] = useState(false);
+    const [areaPDFError, setAreaPDFError] = useState<string | null>(null);
+    const [areaDirectorForm, setAreaDirectorForm] = useState<{nombre: string, puesto: string}>({nombre: '', puesto: ''});
+    interface DirectorioOption {
+        id_directorio: number;
+        nombre: string;
+        puesto: string;
+        area: string;
+    }
+    const [areaDirectorOptions, setAreaDirectorOptions] = useState<DirectorioOption[]>([]);
+    const [areaDirectorAmbiguous, setAreaDirectorAmbiguous] = useState(false);
+    const [areaPDFTarget, setAreaPDFTarget] = useState<{area: string, usufinal: string}>({area: '', usufinal: ''});
+
+    // Detectar si hay filtro por área o usuario final
+    const isAreaOrUserFiltered = !!filters.area || !!filters.usufinal;
+
+    // Estado para mostrar/ocultar filtros avanzados
+    const [showFilters, setShowFilters] = useState(false);
+
+    // Utilidad para limpiar texto
+    function cleanText(str: string) {
+        return (str || '').normalize('NFKD').replace(/[\u0300-\u036f]/g, '').replace(/[^\w\s]/gi, '').toLowerCase().trim();
+    }
+
+    // Buscar directorio por área o usuario
+    const fetchDirectorFromDirectorio = async (area: string) => {
+        setAreaPDFLoading(true);
+        setAreaDirectorAmbiguous(false);
+        setAreaDirectorForm({ nombre: '', puesto: '' });
+        setAreaPDFError(null);
+        try {
+            // Obtener todos los directores de la tabla directorio
+            const { data, error } = await supabase.from('directorio').select('*');
+            if (error) throw error;
+            if (!data) throw new Error('No se pudo obtener el directorio');
+            setAreaDirectorOptions(data); // Todos los directores disponibles para el select
+            // Buscar coincidencia exacta por área
+            const areaClean = cleanText(area);
+            const matches = data.filter((d: DirectorioOption) => cleanText(d.area) === areaClean);
+            if (matches.length === 1) {
+                setAreaDirectorForm({ nombre: matches[0].nombre, puesto: matches[0].puesto });
+                setAreaPDFTarget(t => ({ ...t, area: matches[0].area }));
+            } else {
+                setAreaPDFTarget(t => ({ ...t, area: area })); // Prellenar área aunque no exista
+                setAreaDirectorAmbiguous(true);
+                setAreaDirectorForm({ nombre: '', puesto: '' });
+            }
+        } catch {
+            setAreaPDFError('Error al buscar en directorio.');
+        } finally {
+            setAreaPDFLoading(false);
+        }
+    };
+
+    // Manejar click en botón PDF por área/usuario
+    const handleAreaPDFClick = () => {
+        setAreaPDFTarget({ area: filters.area, usufinal: filters.usufinal });
+        fetchDirectorFromDirectorio(filters.area);
+        setShowAreaPDFModal(true);
+    };
+
+    // Generar PDF por área/usuario
+    const handleAreaPDFGenerate = async () => {
+        setAreaPDFLoading(true);
+        setAreaPDFError(null);
+        try {
+            // Guardar/actualizar directorio si los datos son válidos
+            if (areaDirectorForm.nombre && areaDirectorForm.puesto && areaPDFTarget.area) {
+                // Buscar si ya existe el director por nombre
+                const { data: existing, error: findError } = await supabase
+                    .from('directorio')
+                    .select('*')
+                    .eq('nombre', areaDirectorForm.nombre.trim());
+                if (findError) throw findError;
+                if (existing && existing.length > 0) {
+                    // UPDATE si ya existe
+                    await supabase
+                        .from('directorio')
+                        .update({
+                            puesto: areaDirectorForm.puesto.trim(),
+                            area: areaPDFTarget.area.trim()
+                        })
+                        .eq('id_directorio', existing[0].id_directorio);
+                } else {
+                    // INSERT si no existe
+                    await supabase
+                        .from('directorio')
+                        .insert({
+                            nombre: areaDirectorForm.nombre.trim(),
+                            puesto: areaDirectorForm.puesto.trim(),
+                            area: areaPDFTarget.area.trim()
+                        });
+                }
+                // Guardar área si no existe
+                const { data: areaExists } = await supabase
+                    .from('areas')
+                    .select('*')
+                    .eq('itea', areaPDFTarget.area.trim());
+                if (!areaExists || areaExists.length === 0) {
+                    await supabase
+                        .from('areas')
+                        .insert({ itea: areaPDFTarget.area.trim() });
+                }
+            }
+            const exportData = (await getFilteredData()).map((item, index) => ({ ...item, _counter: index + 1 }));
+            if (!exportData.length) throw new Error('No hay datos para exportar.');
+            const columns = [
+                { header: 'ID INVENTARIO', key: 'id_inv', width: 60 },
+                { header: 'DESCRIPCIÓN', key: 'descripcion', width: 120 },
+                { header: 'ESTADO', key: 'estado', width: 50 },
+                { header: 'ESTATUS', key: 'estatus', width: 50 },
+                { header: 'ÁREA', key: 'area', width: 60 },
+                { header: 'USUARIO FINAL', key: 'usufinal', width: 70 },
+            ];
+            const firmas = [
+                { concepto: 'Responsable', nombre: areaDirectorForm.nombre, puesto: areaDirectorForm.puesto },
+            ];
+            await generatePDFPerArea({
+                data: exportData,
+                columns,
+                title: `LEVANTAMIENTO DE INVENTARIO - ${areaPDFTarget.area}`,
+                fileName: `levantamiento_area_${areaPDFTarget.area || areaPDFTarget.usufinal}_${new Date().toISOString().slice(0,10)}`,
+                firmas,
+            });
+            setShowAreaPDFModal(false);
+            setMessage({ type: 'success', text: 'PDF generado exitosamente.' });
+        } catch {
+            setAreaPDFError('Error al generar PDF.');
+        } finally {
+            setAreaPDFLoading(false);
+        }
+    };
 
     // Obtener opciones de filtro unificadas
     const fetchFilterOptions = useCallback(async () => {
@@ -142,7 +279,17 @@ export default function LevantamientoUnificado() {
                 ...(formadqItea.data?.map(i => i.formadq?.trim()) || [])
             ].filter(Boolean))) as string[];
 
-            setFilterOptions({ estados, estatus, areas, rubros, formadq });
+            // Obtener usuarios finales únicos de ambas tablas
+            const [usufinalInea, usufinalItea] = await Promise.all([
+                supabase.from('muebles').select('usufinal').not('usufinal', 'is', null),
+                supabase.from('mueblesitea').select('usufinal').not('usufinal', 'is', null),
+            ]);
+            const usufinales = Array.from(new Set([
+                ...(usufinalInea.data?.map(i => i.usufinal?.trim()) || []),
+                ...(usufinalItea.data?.map(i => i.usufinal?.trim()) || [])
+            ].filter(Boolean))) as string[];
+
+            setFilterOptions({ estados, estatus, areas, rubros, formadq, usufinales });
         } catch (error) {
             console.error('Error al cargar opciones de filtro:', error);
             setError('Error al cargar opciones de filtro');
@@ -163,7 +310,7 @@ export default function LevantamientoUnificado() {
                 // Aplicar filtros de búsqueda
                 if (searchTerm) {
                     const search = `%${searchTerm}%`;
-                    const searchPattern = `id_inv.ilike.${search},descripcion.ilike.${search},resguardante.ilike.${search},usufinal.ilike.${search}`;
+                    const searchPattern = `id_inv.ilike.${search},descripcion.ilike.${search},resguardante.ilike.${search}`;
                     query = query.or(searchPattern);
                 }
                 // Aplicar otros filtros
@@ -229,6 +376,25 @@ export default function LevantamientoUnificado() {
 
             const fileName = `levantamiento_unificado_${new Date().toISOString().slice(0,10)}`;
 
+            // --- OBTENER FIRMAS DE LA BD COMO EN pdfgenerator.tsx ---
+            let firmas: { concepto: string; nombre: string; puesto: string }[] = [];
+            try {
+                const { data: firmasData, error: firmasError } = await supabase
+                    .from('firmas')
+                    .select('*')
+                    .order('id', { ascending: true });
+                if (firmasError) throw firmasError;
+                if (firmasData && firmasData.length > 0) {
+                    firmas = firmasData.map(f => ({
+                        concepto: f.concepto,
+                        nombre: f.nombre,
+                        puesto: f.puesto
+                    }));
+                }
+            } catch {
+                setMessage({ type: 'error', text: 'Error al obtener las firmas. Se usarán firmas por defecto.' });
+            }
+
             if (exportType === 'excel') {
                 const worksheetName = 'Levantamiento';
                 const formattedData = exportData.map((item, index) => ({
@@ -240,7 +406,6 @@ export default function LevantamientoUnificado() {
                 }));
                 await generateExcel({ data: formattedData, fileName, worksheetName });
             } else if (exportType === 'pdf') {
-                // --- COLUMNAS PARA PDF ---
                 const columns = [
                     { header: 'ID INVENTARIO', key: 'id_inv', width: 60 },
                     { header: 'DESCRIPCIÓN', key: 'descripcion', width: 120 },
@@ -249,25 +414,6 @@ export default function LevantamientoUnificado() {
                     { header: 'ÁREA', key: 'area', width: 60 },
                     { header: 'USUARIO FINAL', key: 'usufinal', width: 70 },
                 ];
-                // --- FIRMAS PARA PDF ---
-                const firmas = [
-                    {
-                        concepto: 'ELABORÓ',
-                        nombre: 'JUAN PÉREZ',
-                        puesto: 'JEFE DE RECURSOS MATERIALES',
-                    },
-                    {
-                        concepto: 'REVISÓ',
-                        nombre: 'MARÍA LÓPEZ',
-                        puesto: 'DIRECTORA DE ADMINISTRACIÓN Y FINANZAS',
-                    },
-                    {
-                        concepto: 'AUTORIZÓ',
-                        nombre: 'ANA GARCÍA',
-                        puesto: 'DIRECTORA GENERAL',
-                    },
-                ];
-                // --- FORMATEO DE DATOS PARA PDF ---
                 const formattedData = exportData.map((item, index) => ({
                     ...item,
                     _counter: index + 1,
@@ -275,7 +421,7 @@ export default function LevantamientoUnificado() {
                 await generatePDF({
                     data: formattedData,
                     columns,
-                    title: 'LEVANTAMIENTO DE INVENTARIO (INEA + ITEA)',
+                    title: 'LEVANTAMIENTO DE INVENTARIO',
                     fileName,
                     firmas,
                 });
@@ -307,7 +453,7 @@ export default function LevantamientoUnificado() {
             // Aplicar filtros a todas las consultas
             if (searchTerm) {
                 const search = `%${searchTerm}%`;
-                const searchPattern = `id_inv.ilike.${search},descripcion.ilike.${search},resguardante.ilike.${search},usufinal.ilike.${search}`;
+                const searchPattern = `id_inv.ilike.${search},descripcion.ilike.${search},resguardante.ilike.${search}`;
                 countInea = countInea.or(searchPattern);
                 countItea = countItea.or(searchPattern);
                 dataInea = dataInea.or(searchPattern);
@@ -402,13 +548,23 @@ export default function LevantamientoUnificado() {
         }
     }, [message]);
 
+    // useEffect para autocompletar directorio al cambiar el filtro de usuario final
+    useEffect(() => {
+        if (filters.usufinal) {
+            fetchDirectorFromDirectorio(filters.area);
+        }
+        // Solo autocompletar si hay filtro de usuario
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [filters.usufinal]);
+
     const clearFilters = () => {
         setFilters({
             estado: '',
             estatus: '',
             area: '',
             rubro: '',
-            formadq: ''
+            formadq: '',
+            usufinal: ''
         });
         setSearchTerm('');
         setCurrentPage(1);
@@ -446,7 +602,7 @@ export default function LevantamientoUnificado() {
                                 type="text"
                                 value={searchTerm}
                                 onChange={e => { setSearchTerm(e.target.value); setCurrentPage(1); }}
-                                placeholder="Buscar por ID, descripción o usuario..."
+                                placeholder="Buscar por ID o descripción..."
                                 className="pl-10 pr-4 py-2 w-full bg-black border border-gray-700 rounded-md text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:border-gray-500"
                                 title="Buscar"
                             />
@@ -465,14 +621,27 @@ export default function LevantamientoUnificado() {
                             </button>
                             <button
                                 onClick={() => {
-                                    setExportType('pdf');
-                                    setShowExportModal(true);
+                                    if (isAreaOrUserFiltered) {
+                                        handleAreaPDFClick();
+                                    } else {
+                                        setExportType('pdf');
+                                        setShowExportModal(true);
+                                    }
                                 }}
-                                className="px-4 py-2 bg-red-700 text-white rounded-md font-medium flex items-center gap-2 hover:bg-red-800 transition-colors border border-red-800"
-                                title="Exportar a PDF"
+                                className={`flip-card border shadow-lg transition-transform transform hover:scale-105 ${isAreaOrUserFiltered ? 'bg-gradient-to-r from-purple-800 to-fuchsia-700 text-white border-fuchsia-800 px-6 py-3 text-base' : 'bg-red-700 text-white border-red-800 px-4 py-2 text-sm'} rounded-md font-medium flex items-center gap-2`}
+                                title={isAreaOrUserFiltered ? 'Exportar PDF personalizado por área/usuario' : 'Exportar a PDF'}
+                                style={{ perspective: '600px', minWidth: isAreaOrUserFiltered ? 170 : 110 }}
                             >
-                                <File className="h-4 w-4" />
-                                <span className="hidden sm:inline">PDF</span>
+                                <span className={`flip-card-inner${isAreaOrUserFiltered ? ' flipped' : ''}`}>
+                                    <span className="flip-card-front flex items-center gap-2">
+                                        <File className="h-4 w-4 text-red-300" />
+                                        <span className="hidden sm:inline">PDF</span>
+                                    </span>
+                                    <span className="flip-card-back flex items-center gap-2">
+                                        <FileText className="h-5 w-5 text-fuchsia-300 animate-bounce" />
+                                        <span className="hidden sm:inline text-base">PDF Área/Usuario</span>
+                                    </span>
+                                </span>
                             </button>
                             <button
                                 onClick={() => { setLoading(true); fetchMuebles(); }}
@@ -484,11 +653,19 @@ export default function LevantamientoUnificado() {
                             </button>
                             <button
                                 onClick={() => setShowFilters(!showFilters)}
-                                className="px-4 py-2 bg-gray-800 text-blue-400 rounded-md text-sm hover:bg-gray-700 transition-colors flex items-center gap-2"
-                                title={showFilters ? "Ocultar filtros" : "Mostrar filtros"}
+                                className={`px-4 py-2 rounded-md font-medium flex items-center gap-2 transition-colors ${Object.values(filters).some(value => value !== '')
+                                    ? 'bg-gray-900 text-blue-200 hover:bg-gray-800'
+                                    : 'bg-gray-800 text-gray-300 hover:bg-gray-700'
+                                }`}
+                                title="Mostrar/ocultar filtros avanzados"
                             >
-                                {showFilters ? <X className="h-4 w-4" /> : <Search className="h-4 w-4" />}
-                                {showFilters ? "Ocultar filtros" : "Filtrar"}
+                                <Filter className="h-4 w-4" />
+                                Filtros
+                                {Object.values(filters).some(value => value !== '') && (
+                                    <span className="ml-1 bg-black text-white rounded-full w-5 h-5 flex items-center justify-center text-xs">
+                                        {Object.values(filters).filter(value => value !== '').length}
+                                    </span>
+                                )}
                             </button>
                             <button
                                 onClick={clearFilters}
@@ -500,7 +677,7 @@ export default function LevantamientoUnificado() {
                         </div>
                     </div>
                     {showFilters && (
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-4 mt-6 border border-gray-700 rounded-xl bg-black shadow-lg backdrop-blur-sm transition-all duration-300 overflow-hidden p-6">
                             <div>
                                 <label className="block text-sm font-medium text-gray-300 mb-1">Estado</label>
                                 <select
@@ -509,7 +686,7 @@ export default function LevantamientoUnificado() {
                                         setFilters(f => ({ ...f, estado: e.target.value }));
                                         setCurrentPage(1);
                                     }}
-                                    className="w-full bg-gray-700 border border-gray-600 rounded-lg px-3 py-2.5 text-white"
+                                    className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2.5 text-white focus:ring-2 focus:ring-fuchsia-600 focus:border-fuchsia-600 transition-all"
                                     title="Filtrar por estado"
                                 >
                                     <option value="">Todos</option>
@@ -526,7 +703,7 @@ export default function LevantamientoUnificado() {
                                         setFilters(f => ({ ...f, estatus: e.target.value }));
                                         setCurrentPage(1);
                                     }}
-                                    className="w-full bg-gray-700 border border-gray-600 rounded-lg px-3 py-2.5 text-white"
+                                    className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2.5 text-white focus:ring-2 focus:ring-fuchsia-600 focus:border-fuchsia-600 transition-all"
                                     title="Filtrar por estatus"
                                 >
                                     <option value="">Todos</option>
@@ -543,7 +720,7 @@ export default function LevantamientoUnificado() {
                                         setFilters(f => ({ ...f, area: e.target.value }));
                                         setCurrentPage(1);
                                     }}
-                                    className="w-full bg-gray-700 border border-gray-600 rounded-lg px-3 py-2.5 text-white"
+                                    className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2.5 text-white focus:ring-2 focus:ring-fuchsia-600 focus:border-fuchsia-600 transition-all"
                                     title="Filtrar por área"
                                 >
                                     <option value="">Todas</option>
@@ -560,7 +737,7 @@ export default function LevantamientoUnificado() {
                                         setFilters(f => ({ ...f, rubro: e.target.value }));
                                         setCurrentPage(1);
                                     }}
-                                    className="w-full bg-gray-700 border border-gray-600 rounded-lg px-3 py-2.5 text-white"
+                                    className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2.5 text-white focus:ring-2 focus:ring-fuchsia-600 focus:border-fuchsia-600 transition-all"
                                     title="Filtrar por rubro"
                                 >
                                     <option value="">Todos</option>
@@ -577,12 +754,29 @@ export default function LevantamientoUnificado() {
                                         setFilters(f => ({ ...f, formadq: e.target.value }));
                                         setCurrentPage(1);
                                     }}
-                                    className="w-full bg-gray-700 border border-gray-600 rounded-lg px-3 py-2.5 text-white"
+                                    className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2.5 text-white focus:ring-2 focus:ring-fuchsia-600 focus:border-fuchsia-600 transition-all"
                                     title="Filtrar por forma de adquisición"
                                 >
                                     <option value="">Todas</option>
                                     {filterOptions.formadq.map(e => (
                                         <option key={e} value={e}>{e}</option>
+                                    ))}
+                                </select>
+                            </div>
+                            <div>
+                                <label className="block text-sm font-medium text-gray-300 mb-1">Usuario Final</label>
+                                <select
+                                    value={filters.usufinal}
+                                    onChange={e => {
+                                        setFilters(f => ({ ...f, usufinal: e.target.value }));
+                                        setCurrentPage(1);
+                                    }}
+                                    className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2.5 text-white focus:ring-2 focus:ring-fuchsia-600 focus:border-fuchsia-600 transition-all"
+                                    title="Filtrar por usuario final"
+                                >
+                                    <option value="">Todos</option>
+                                    {filterOptions.usufinales?.map(u => (
+                                        <option key={u} value={u}>{u}</option>
                                     ))}
                                 </select>
                             </div>
@@ -592,7 +786,7 @@ export default function LevantamientoUnificado() {
                         <div className={`p-3 rounded-md ${message.type === 'success' ? 'bg-green-900/50 text-green-300 border border-green-800' :
                                 message.type === 'error' ? 'bg-red-900/50 text-red-300 border border-red-800' :
                                     message.type === 'warning' ? 'bg-yellow-900/50 text-yellow-300 border border-yellow-800' :
-                                        'bg-blue-900/50 text-blue-300 border border-blue-800'
+                                        message.type === 'info' ? 'bg-blue-900/50 text-blue-300 border border-blue-800' : ''
                             }`}>
                             {message.text}
                         </div>
@@ -687,6 +881,112 @@ export default function LevantamientoUnificado() {
                                             </div>
                                         </div>
                                     </div>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+                    {showAreaPDFModal && (
+                        <div className="fixed inset-0 bg-black/90 flex items-center justify-center z-50 px-4 animate-fadeIn">
+                            <div className="bg-black rounded-2xl shadow-2xl border border-fuchsia-600/30 w-full max-w-md overflow-hidden transition-all duration-300 transform">
+                                <div className="relative p-6 bg-gradient-to-b from-black to-fuchsia-950">
+                                    <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-fuchsia-500/60 via-fuchsia-400 to-fuchsia-500/60"></div>
+                                    <button
+                                        onClick={() => setShowAreaPDFModal(false)}
+                                        className="absolute top-3 right-3 p-2 rounded-full bg-black/60 hover:bg-gray-900 text-fuchsia-400 hover:text-fuchsia-500 border border-fuchsia-500/30 transition-colors"
+                                        title="Cerrar"
+                                    >
+                                        <X className="h-4 w-4" />
+                                    </button>
+                                    <div className="flex flex-col items-center text-center mb-4">
+                                        <div className="p-3 rounded-full border border-fuchsia-500/30 bg-fuchsia-500/10 mb-3">
+                                            <FileText className="h-8 w-8 text-fuchsia-400" />
+                                        </div>
+                                        <h3 className="text-2xl font-bold text-fuchsia-400">Exportar PDF por Área/Usuario</h3>
+                                        <p className="text-gray-400 mt-2">Genera un PDF con encabezado y firma personalizada para el área o usuario filtrado.</p>
+                                    </div>
+                                    <form className="space-y-4 mt-2" onSubmit={e => { e.preventDefault(); handleAreaPDFGenerate(); }}>
+                                        <div>
+                                            <label className="block text-xs uppercase tracking-wider text-gray-400 mb-1">Área</label>
+                                            <input
+                                                title='Área'
+                                                type="text"
+                                                value={areaPDFTarget.area}
+                                                onChange={e => setAreaPDFTarget(t => ({ ...t, area: e.target.value }))}
+                                                placeholder="Área"
+                                                required
+                                                disabled={!!(areaDirectorForm.nombre && areaDirectorForm.puesto && areaPDFTarget.area)}
+                                                className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2.5 text-white"
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className="block text-xs uppercase tracking-wider text-gray-400 mb-1">Director/Jefe</label>
+                                            {areaDirectorAmbiguous && areaDirectorOptions.length > 0 ? (
+                                                <select
+                                                    title='Director/Jefe'
+                                                    className="w-full bg-gray-800 border border-fuchsia-700 rounded-lg px-3 py-2.5 text-white"
+                                                    value={areaDirectorForm.nombre}
+                                                    onChange={e => {
+                                                        const selected = areaDirectorOptions.find(opt => opt.nombre === e.target.value);
+                                                        setAreaDirectorForm(f => ({
+                                                            ...f,
+                                                            nombre: selected?.nombre || '',
+                                                            puesto: selected?.puesto || ''
+                                                        }));
+                                                        setAreaPDFTarget(t => ({ ...t, area: selected?.area || t.area }));
+                                                    }}
+                                                    disabled={!!(areaDirectorForm.nombre && areaDirectorForm.puesto && areaPDFTarget.area)}
+                                                >
+                                                    <option value="">Selecciona...</option>
+                                                    {areaDirectorOptions.map(opt => (
+                                                        <option key={opt.id_directorio} value={opt.nombre}>{opt.nombre}</option>
+                                                    ))}
+                                                </select>
+                                            ) : (
+                                                <input
+                                                    type="text"
+                                                    className="w-full bg-gray-800 border border-fuchsia-700 rounded-lg px-3 py-2.5 text-white"
+                                                    value={areaDirectorForm.nombre}
+                                                    onChange={e => setAreaDirectorForm(f => ({ ...f, nombre: e.target.value }))}
+                                                    placeholder="Nombre del director/jefe"
+                                                    required
+                                                    disabled={!!(areaDirectorForm.nombre && areaDirectorForm.puesto && areaPDFTarget.area)}
+                                                />
+                                            )}
+                                        </div>
+                                        <div>
+                                            <label className="block text-xs uppercase tracking-wider text-gray-400 mb-1">Puesto</label>
+                                            <input
+                                                type="text"
+                                                className="w-full bg-gray-800 border border-fuchsia-700 rounded-lg px-3 py-2.5 text-white"
+                                                value={areaDirectorForm.puesto ?? ''}
+                                                onChange={e => setAreaDirectorForm(f => ({ ...f, puesto: e.target.value }))}
+                                                placeholder="Puesto del director/jefe"
+                                                required
+                                                disabled={!!(areaDirectorForm.nombre && areaDirectorForm.puesto && areaPDFTarget.area)}
+                                                autoComplete="off"
+                                            />
+                                        </div>
+                                        {areaPDFError && <div className="text-red-400 text-sm">{areaPDFError}</div>}
+                                        <div className="w-full flex flex-col items-center gap-4 mt-4">
+                                            <button
+                                                type="submit"
+                                                className="w-full py-3 px-4 font-medium rounded-lg flex items-center justify-center gap-2 transition-all transform hover:scale-[1.02] shadow-lg bg-gradient-to-r from-fuchsia-600 to-fuchsia-500 hover:from-fuchsia-500 hover:to-fuchsia-400 text-black"
+                                                disabled={areaPDFLoading || !areaDirectorForm.nombre || !areaDirectorForm.puesto || !areaPDFTarget.area}
+                                            >
+                                                {areaPDFLoading ? (
+                                                    <>
+                                                        <RefreshCw className="h-5 w-5 animate-spin" />
+                                                        Generando PDF...
+                                                    </>
+                                                ) : (
+                                                    <>
+                                                        <FileText className="h-5 w-5" />
+                                                        Descargar PDF personalizado
+                                                    </>
+                                                )}
+                                            </button>
+                                        </div>
+                                    </form>
                                 </div>
                             </div>
                         </div>
@@ -892,6 +1192,43 @@ export default function LevantamientoUnificado() {
                     </div>
                 </div>
             </div>
+            <style jsx>{`
+                .flip-card {
+                    perspective: 600px;
+                    position: relative;
+                    overflow: visible;
+                }
+                .flip-card-inner {
+                    display: inline-block;
+                    transition: transform 0.6s cubic-bezier(0.4,0.2,0.2,1);
+                    transform-style: preserve-3d;
+                    position: relative;
+                    width: 100%;
+                    height: 100%;
+                }
+                .flip-card-inner.flipped {
+                    transform: rotateY(180deg);
+                }
+                .flip-card-front, .flip-card-back {
+                    backface-visibility: hidden;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    position: absolute;
+                    width: 100%;
+                    height: 100%;
+                    top: 0;
+                    left: 0;
+                }
+                .flip-card-front {
+                    z-index: 2;
+                    transform: rotateY(0deg);
+                }
+                .flip-card-back {
+                    z-index: 1;
+                    transform: rotateY(180deg);
+                }
+            `}</style>
         </div>
     );
 }
