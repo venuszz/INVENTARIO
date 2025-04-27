@@ -639,7 +639,7 @@ export default function LevantamientoUnificado() {
                                     </span>
                                     <span className="flip-card-back flex items-center gap-2">
                                         <FileText className="h-5 w-5 text-fuchsia-300 animate-bounce" />
-                                        <span className="hidden sm:inline text-base">PDF Área/Usuario</span>
+                                        <span className="hidden sm:inline text-base">PDF</span>
                                     </span>
                                 </span>
                             </button>
