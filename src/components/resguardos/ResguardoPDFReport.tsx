@@ -89,7 +89,6 @@ const styles = StyleSheet.create({
     signature: {
         marginTop: 12,
         flexDirection: 'row',
-        //justifyContent: 'space-between',
     },
     signatureBox: {
         width: '40%',
@@ -98,6 +97,13 @@ const styles = StyleSheet.create({
         textAlign: 'center',
         paddingTop: 8,
         fontSize: 7,
+    },
+    footer: {
+        position: 'absolute',
+        left: 25,
+        right: 25,
+        bottom: 25,
+        width: 'auto',
     },
 });
 
@@ -133,7 +139,7 @@ export const ResguardoPDF = ({ data }: { data: PdfData }) => {
 
     return (
         <Document>
-            <Page size="A4" style={styles.page}>
+            <Page size="A4" style={styles.page} wrap>
                 <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
                     <Image src="/images/LOGO-ITEA.png" style={{ width: 100, height: 50, objectFit: "contain" }} />
                     <View style={{ flex: 1, alignItems: 'center', paddingHorizontal: 10 }}>
@@ -165,12 +171,12 @@ export const ResguardoPDF = ({ data }: { data: PdfData }) => {
                         {/* Permitir que la tabla y sus filas se dividan entre páginas */}
                         <View style={styles.table} wrap={true}>
                             <View style={[styles.tableRow, styles.tableHeader]}>
-                                <Text style={[styles.tableCell, styles.tableCellHeader, { flex: 2.5 }]}>ID INVENTARIO</Text>
-                                <Text style={[styles.tableCell, styles.tableCellHeader, { flex: 5.5 }]}>DESCRIPCIÓN</Text>
-                                <Text style={[styles.tableCell, styles.tableCellHeader, { flex: 1.6 }]}>RUBRO</Text>
-                                <Text style={[styles.tableCell, styles.tableCellHeader, { flex: .7 }]}>ESTADO</Text>
+                                <Text style={[styles.tableCell, styles.tableCellHeader, { flex: 2.5, fontSize: 8 }]}>ID INVENTARIO</Text>
+                                <Text style={[styles.tableCell, styles.tableCellHeader, { flex: 5.5, fontSize: 8 }]}>DESCRIPCIÓN</Text>
+                                <Text style={[styles.tableCell, styles.tableCellHeader, { flex: 1.6, fontSize: 8 }]}>RUBRO</Text>
+                                <Text style={[styles.tableCell, styles.tableCellHeader, { flex: .7, fontSize: 8 }]}>ESTADO</Text>
                                 {data.articulos.some(a => a.resguardante) && (
-                                    <Text style={[styles.tableCell, styles.tableCellHeader, { flex: 2.5 }]}>RESGUARDANTE</Text>
+                                    <Text style={[styles.tableCell, styles.tableCellHeader, { flex: 2.5, fontSize: 8 }]}>RESGUARDANTE</Text>
                                 )}
                             </View>
                             {grupo.articulos.length > 0 ? (
@@ -193,7 +199,8 @@ export const ResguardoPDF = ({ data }: { data: PdfData }) => {
                         </View>
                     </View>
                 ))}
-                <View style={{ position: 'absolute', bottom: 20, left: 25, right: 25 }}>
+                {/* Firmas y paginación siempre al pie de cada página */}
+                <View fixed style={styles.footer}>
                     <View style={styles.signature}>
                         <View style={styles.signatureBox}>
                             <Text>         AUTORIZA</Text>

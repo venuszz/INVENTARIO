@@ -93,6 +93,13 @@ const styles = StyleSheet.create({
         paddingTop: 8,
         fontSize: 7,
     },
+    footer: {
+        position: 'absolute',
+        left: 25,
+        right: 25,
+        bottom: 20,
+        width: 'auto',
+    },
 });
 
 export const BajaPDF = ({ data }: { data: PdfDataBaja }) => {
@@ -134,7 +141,7 @@ export const BajaPDF = ({ data }: { data: PdfDataBaja }) => {
 
     return (
         <Document>
-            <Page size="A4" style={styles.page}>
+            <Page size="A4" style={styles.page} wrap>
                 <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
                     <Image 
                         src="/images/LOGO-ITEA.png" 
@@ -172,15 +179,15 @@ export const BajaPDF = ({ data }: { data: PdfDataBaja }) => {
                             </Text>
                             <View style={styles.table}>
                                 <View style={[styles.tableRow, styles.tableHeader]} fixed>
-                                    <Text style={[styles.tableCell, styles.tableCellHeader, { flex: 2.5 }]}>ID INVENTARIO</Text>
-                                    <Text style={[styles.tableCell, styles.tableCellHeader, { flex: 5.5 }]}>DESCRIPCIÓN</Text>
-                                    <Text style={[styles.tableCell, styles.tableCellHeader, { flex: 1.6 }]}>RUBRO</Text>
-                                    <Text style={[styles.tableCell, styles.tableCellHeader, { flex: .7 }]}>ESTADO</Text>
+                                    <Text style={[styles.tableCell, styles.tableCellHeader, { flex: 2.5, fontSize: 8 }]}>ID INVENTARIO</Text>
+                                    <Text style={[styles.tableCell, styles.tableCellHeader, { flex: 5.5, fontSize: 8 }]}>DESCRIPCIÓN</Text>
+                                    <Text style={[styles.tableCell, styles.tableCellHeader, { flex: 1.6, fontSize: 8 }]}>RUBRO</Text>
+                                    <Text style={[styles.tableCell, styles.tableCellHeader, { flex: .7, fontSize: 8 }]}>ESTADO</Text>
                                     {showResguardanteColumn && (
-                                        <Text style={[styles.tableCell, styles.tableCellHeader, { flex: 2.5 }]}>RESGUARDANTE</Text>
+                                        <Text style={[styles.tableCell, styles.tableCellHeader, { flex: 2.5, fontSize: 8 }]}>RESGUARDANTE</Text>
                                     )}
                                     {hasMultipleFolios && (
-                                        <Text style={[styles.tableCell, styles.tableCellHeader, { flex: 2 }]}>FOLIO BAJA</Text>
+                                        <Text style={[styles.tableCell, styles.tableCellHeader, { flex: 2, fontSize: 8 }]}>FOLIO BAJA</Text>
                                     )}
                                 </View>
                                 {grupo.articulos.map((art: PdfArticulo, idx2: number) => (
@@ -201,34 +208,26 @@ export const BajaPDF = ({ data }: { data: PdfDataBaja }) => {
                         </View>
                     )
                 ))}
-                <View style={{ position: 'absolute', bottom: 20, left: 25, right: 25 }}>
+                {/* Firmas y paginación solo al pie de la última página */}
+                <View style={styles.footer}>
                     <View style={styles.signature}>
                         <View style={styles.signatureBox}>
-                            <Text>         AUTORIZA</Text>
-                            <Text> </Text>
-                            <Text> </Text>
+                            <Text style={{ fontWeight: 'bold', fontSize: 9, marginBottom: 2 }}>AUTORIZA</Text>
                             <Text>_______________________________</Text>
-                            <Text> </Text>
-                            <Text>{getFirma('Autoriza')?.nombre?.toUpperCase() || ' '}</Text>
-                            <Text>{getFirma('Autoriza')?.puesto?.toUpperCase() || 'DIRECTOR(A) ADMIN. Y FINANZAS'}</Text>
+                            <Text style={{ marginTop: 2 }}>{getFirma('Autoriza')?.nombre?.toUpperCase() || ' '}</Text>
+                            <Text style={{ fontSize: 7 }}>{getFirma('Autoriza')?.puesto?.toUpperCase() || 'DIRECTOR(A) ADMIN. Y FINANZAS'}</Text>
                         </View>
                         <View style={styles.signatureBox}>
-                            <Text>       CONOCIMIENTO</Text>
-                            <Text> </Text>
-                            <Text> </Text>
+                            <Text style={{ fontWeight: 'bold', fontSize: 9, marginBottom: 2 }}>CONOCIMIENTO</Text>
                             <Text>________________________________</Text>
-                            <Text> </Text>
-                            <Text>{getFirma('Conocimiento')?.nombre?.toUpperCase() || ' '}</Text>
-                            <Text>{getFirma('Conocimiento')?.puesto?.toUpperCase() || 'DIRECTOR(A) RECURSOS MATERIALES'}</Text>
+                            <Text style={{ marginTop: 2 }}>{getFirma('Conocimiento')?.nombre?.toUpperCase() || ' '}</Text>
+                            <Text style={{ fontSize: 7 }}>{getFirma('Conocimiento')?.puesto?.toUpperCase() || 'DIRECTOR(A) RECURSOS MATERIALES'}</Text>
                         </View>
                         <View style={styles.signatureBox}>
-                            <Text>           EX-RESPONSABLE</Text>
-                            <Text> </Text>
-                            <Text> </Text>
+                            <Text style={{ fontWeight: 'bold', fontSize: 9, marginBottom: 2 }}>EX-RESPONSABLE</Text>
                             <Text>__________________________________</Text>
-                            <Text> </Text>
-                            <Text>{data.director?.toUpperCase()}</Text>
-                            <Text>{data.puesto?.toUpperCase()} DE {data.area?.toUpperCase()}</Text>
+                            <Text style={{ marginTop: 2 }}>{data.director?.toUpperCase()}</Text>
+                            <Text style={{ fontSize: 7 }}>{data.puesto?.toUpperCase()} DE {data.area?.toUpperCase()}</Text>
                         </View>
                     </View>
                     <Text
@@ -237,7 +236,9 @@ export const BajaPDF = ({ data }: { data: PdfDataBaja }) => {
                             textAlign: 'right',
                             marginTop: 10,
                         }}
-                        render={({ pageNumber, totalPages }) => `PÁGINA ${pageNumber} DE ${totalPages}`}
+                        render={({ pageNumber, totalPages }) =>
+                            pageNumber === totalPages ? `PÁGINA ${pageNumber} DE ${totalPages}` : ''
+                        }
                     />
                 </View>
             </Page>
