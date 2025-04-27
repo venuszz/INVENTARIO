@@ -189,6 +189,45 @@ export default function ConsultasIneaBajas() {
 
     const detailRef = useRef<HTMLDivElement>(null);
 
+    const [bajaInfo, setBajaInfo] = useState<null | { created_by: string; created_at: string; motive: string }>(null);
+    const [bajaInfoLoading, setBajaInfoLoading] = useState(false);
+    const [bajaInfoError, setBajaInfoError] = useState<string | null>(null);
+
+    useEffect(() => {
+        if (!selectedItem || isEditing) {
+            setBajaInfo(null);
+            setBajaInfoError(null);
+            return;
+        }
+        let cancelled = false;
+        async function fetchBajaInfo() {
+            setBajaInfoLoading(true);
+            setBajaInfoError(null);
+            try {
+                if (!selectedItem) return;
+                const { data, error } = await supabase
+                    .from('deprecated')
+                    .select('created_by, created_at, motive')
+                    .eq('id_inv', selectedItem.id_inv)
+                    .eq('descripcion', selectedItem.descripcion || '')
+                    .eq('area', selectedItem.area || '')
+                    .eq('motive', selectedItem.causadebaja || '')
+                    .order('created_at', { ascending: false })
+                    .limit(1);
+                if (error) throw error;
+                if (!cancelled) {
+                    setBajaInfo(data && data.length > 0 ? data[0] : null);
+                }
+            } catch {
+                if (!cancelled) setBajaInfoError('No se pudo obtener la información de baja.');
+            } finally {
+                if (!cancelled) setBajaInfoLoading(false);
+            }
+        }
+        fetchBajaInfo();
+        return () => { cancelled = true; };
+    }, [selectedItem, isEditing]);
+
     // Función para obtener el directorio
     const fetchDirectorio = useCallback(async () => {
         try {
@@ -1708,6 +1747,24 @@ export default function ConsultasIneaBajas() {
                                                         <span>Causa: {selectedItem.causadebaja || 'No especificada'}</span>
                                                     </div>
                                                 </div>
+                                            </div>
+                                            {/* NUEVO: Card de información de baja (usuario, fecha, motivo) */}
+                                            <div className="detail-card bg-red-900/60 border border-red-800 rounded-lg p-4 col-span-2 mt-2">
+                                                <h3 className="text-xs font-medium uppercase tracking-wider text-white flex items-center gap-2 mb-2">
+                                                    <Info className="h-4 w-4" />
+                                                    Registro de Baja
+                                                </h3>
+                                                {bajaInfoLoading ? (
+                                                    <span className="text-gray-400">Cargando información...</span>
+                                                ) : bajaInfoError ? (
+                                                    <span className="text-red-400">{bajaInfoError}</span>
+                                                ) : bajaInfo ? (
+                                                    <div className="flex flex-col gap-1 text-sm text-gray-200">
+                                                        <div><span className="font-bold text-white text-1xl">{bajaInfo.created_by}</span></div>
+                                                    </div>
+                                                ) : (
+                                                    <span className="text-gray-400">No hay registro de baja en historial.</span>
+                                                )}
                                             </div>
                                         </div>
                                         <div className="flex items-center space-x-4 pt-6 border-t border-gray-800">

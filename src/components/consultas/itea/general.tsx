@@ -6,6 +6,7 @@ import {
     ActivitySquare, LayoutGrid, TagIcon, ChevronDown, Building2, FileText, User, Shield, AlertTriangle, Calendar, Info, Edit, Receipt, ClipboardList, Store, CheckCircle, XCircle, Plus, Clock, DollarSign
 } from 'lucide-react';
 import supabase from '@/app/lib/supabase/client';
+import Cookies from 'js-cookie';
 
 interface Mueble {
     id: number;
@@ -651,12 +652,33 @@ export default function ConsultasIteaGeneral() {
         setShowBajaModal(false);
         setLoading(true);
         try {
-            const today = '2025-04-21'; // Fecha actual fija
+            const today = '2025-04-27'; // Fecha actual
             const { error } = await supabase
                 .from('mueblesitea')
                 .update({ estatus: 'BAJA', causadebaja: bajaCause, fechabaja: today })
                 .eq('id', selectedItem.id);
             if (error) throw error;
+
+            // Obtener nombre completo del usuario desde la cookie userData
+            let createdBy = 'SISTEMA';
+            try {
+                const userData = Cookies.get('userData');
+                if (userData) {
+                    const parsed = JSON.parse(userData);
+                    if (parsed.firstName && parsed.lastName) {
+                        createdBy = `${parsed.firstName} ${parsed.lastName}`;
+                    }
+                }
+            } catch {}
+
+            await supabase.from('deprecated').insert({
+                id_inv: selectedItem.id_inv || '',
+                descripcion: selectedItem.descripcion || '',
+                area: selectedItem.area || '',
+                created_by: createdBy,
+                motive: bajaCause
+            });
+
             fetchMuebles();
             setSelectedItem(null);
             setMessage({ type: 'success', text: 'Artículo dado de baja correctamente' });

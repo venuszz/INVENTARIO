@@ -6,6 +6,7 @@ import {
     ActivitySquare, LayoutGrid, TagIcon, ChevronDown, Building2, User, Shield, AlertTriangle, Calendar, Info, Edit, Receipt, ClipboardList, Store, CheckCircle, XCircle, Plus, DollarSign
 } from 'lucide-react';
 import supabase from '@/app/lib/supabase/client';
+import Cookies from 'js-cookie';
 
 interface Mueble {
     id: number;
@@ -335,6 +336,27 @@ export default function ConsultasIneaGeneral() {
                 .update({ estatus: 'BAJA', causadebaja: bajaCause, fechabaja: today })
                 .eq('id', selectedItem.id);
             if (error) throw error;
+
+            // Obtener nombre completo del usuario desde la cookie userData
+            let createdBy = 'SISTEMA';
+            try {
+                const userData = Cookies.get('userData');
+                if (userData) {
+                    const parsed = JSON.parse(userData);
+                    if (parsed.firstName && parsed.lastName) {
+                        createdBy = `${parsed.firstName} ${parsed.lastName}`;
+                    }
+                }
+            } catch {}
+
+            await supabase.from('deprecated').insert({
+                id_inv: selectedItem.id_inv,
+                descripcion: selectedItem.descripcion || '',
+                area: selectedItem.area || '',
+                created_by: createdBy,
+                motive: bajaCause
+            });
+
             fetchMuebles();
             setSelectedItem(null);
             setMessage({ type: 'success', text: 'Artículo dado de baja correctamente' });
