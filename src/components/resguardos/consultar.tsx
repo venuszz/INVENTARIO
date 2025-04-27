@@ -306,56 +306,53 @@ export default function ConsultarResguardos() {
         }
     };
 
-    // Fetch resguardos with pagination and sorting
+    // Fetch resguardos with pagination and sorting (por folio único)
     const fetchResguardos = useCallback(async () => {
         setLoading(true);
         try {
-            // Obtener el conteo total de resguardos con filtros
-            let countQuery = supabase.from('resguardos').select('*', { count: 'exact', head: true });
+            // 1. Obtener todos los folios únicos con filtros
+            let foliosQuery = supabase.from('resguardos').select('folio, f_resguardo, dir_area, area_resguardo, usufinal', { count: 'exact' });
 
             if (filterDate) {
-                // Aplicar casting a DATE para comparación exacta
-                countQuery = countQuery.eq('f_resguardo::date', filterDate);
+                foliosQuery = foliosQuery.eq('f_resguardo::date', filterDate);
             }
-
             if (filterDirector) {
-                // Normalizar a mayúsculas y quitar espacios para comparar correctamente
-                countQuery = countQuery.filter('dir_area', 'ilike', `%${filterDirector.trim().toUpperCase()}%`);
+                foliosQuery = foliosQuery.filter('dir_area', 'ilike', `%${filterDirector.trim().toUpperCase()}%`);
             }
-
             if (filterResguardante) {
-                countQuery = countQuery.filter('usufinal', 'ilike', `%${filterResguardante.trim().toUpperCase()}%`);
+                foliosQuery = foliosQuery.filter('usufinal', 'ilike', `%${filterResguardante.trim().toUpperCase()}%`);
             }
 
-            const { count, error: countError } = await countQuery;
-            if (countError) throw countError;
-            setTotalCount(count || 0);
+            // Obtener todos los folios únicos (sin paginar aún)
+            const { data: foliosData, error: foliosError } = await foliosQuery;
+            if (foliosError) throw foliosError;
+            // Agrupar por folio único
+            const foliosUnicosArr = Array.from(new Map((foliosData || []).map(r => [r.folio, r])).values());
+            setTotalCount(foliosUnicosArr.length);
 
-            // Calcular rango para paginación
+            // 2. Paginar los folios únicos
             const from = (currentPage - 1) * rowsPerPage;
-            const to = from + rowsPerPage - 1;
+            const to = from + rowsPerPage;
+            const foliosPagina = foliosUnicosArr
+                .sort((a, b) => {
+                    // Ordenar según sortField y sortDirection
+                    const dir = sortDirection === 'asc' ? 1 : -1;
+                    if (a[sortField] < b[sortField]) return -1 * dir;
+                    if (a[sortField] > b[sortField]) return 1 * dir;
+                    return 0;
+                })
+                .slice(from, to);
 
-            // Obtener los resguardos paginados y ordenados con filtros
-            let dataQuery = supabase.from('resguardos').select('*');
-
-            if (filterDate) {
-                // Aplicar casting a DATE para comparación exacta
-                dataQuery = dataQuery.eq('f_resguardo::date', filterDate);
+            // 3. Obtener los datos completos de los resguardos de los folios de la página
+            if (foliosPagina.length === 0) {
+                setResguardos([]);
+                setError(null);
+                setLoading(false);
+                return;
             }
-
-            if (filterDirector) {
-                // Normalizar a mayúsculas y quitar espacios para comparar correctamente
-                dataQuery = dataQuery.filter('dir_area', 'ilike', `%${filterDirector.trim().toUpperCase()}%`);
-            }
-
-            if (filterResguardante) {
-                dataQuery = dataQuery.filter('usufinal', 'ilike', `%${filterResguardante.trim().toUpperCase()}%`);
-            }
-
-            const { data, error: queryError } = await dataQuery
-                .order(sortField, { ascending: sortDirection === 'asc' })
-                .range(from, to);
-
+            const foliosFiltrados = foliosPagina.map(f => f.folio);
+            const dataQuery = supabase.from('resguardos').select('*').in('folio', foliosFiltrados);
+            const { data, error: queryError } = await dataQuery;
             if (queryError) throw queryError;
             setResguardos(data || []);
             setError(null);
@@ -671,7 +668,7 @@ export default function ConsultarResguardos() {
     // Calculate total pages
     const totalPages = Math.ceil(totalCount / rowsPerPage);
 
-    // Agrupar resguardos por folio para mostrar solo un folio por fila
+    // Agrupar resguardos por folio para mostrar solo un folio por fila (de los resguardos cargados en la página)
     const foliosUnicos = Array.from(
         new Map(resguardos.map(r => [r.folio, r])).values()
     );

@@ -108,6 +108,11 @@ export const generatePDF = async ({ data, columns, title, fileName, firmas = [] 
             let value = '';
             if (col.isComposite && col.keys) {
                 value = col.keys.map(key => row[key]?.toString() || '').filter(Boolean).join(' / ');
+            } else if (col.key === 'ubicacion_es') {
+                value = [row['ubicacion_es'], row['ubicacion_mu'], row['ubicacion_no']]
+                    .map(v => (v ?? '').toString().toUpperCase())
+                    .filter(Boolean)
+                    .join(' ');
             } else {
                 value = col.key ? row[col.key]?.toString() || '' : '';
             }
@@ -125,13 +130,61 @@ export const generatePDF = async ({ data, columns, title, fileName, firmas = [] 
         return (cellWidth - textWidth) / 2;
     };
 
+    // --- Ajuste automático de anchos de columna para que no se salgan de la hoja ---
+    const numberColWidth = 30;
+    const availableTableWidth = pageWidth - 2 * margin - numberColWidth;
+    const originalWidths = columns.map(col => col.width ?? 80);
+    const totalOriginalWidth = originalWidths.reduce((a, b) => a + b, 0);
+    let adjustedWidths = [...originalWidths];
+    if (totalOriginalWidth > availableTableWidth) {
+        adjustedWidths = originalWidths.map(w => (w / totalOriginalWidth) * availableTableWidth);
+    }
+
+    // --- Helper para wrap de encabezados de columna ---
+    const wrapHeaderText = (text: string, colWidth: number) => {
+        // Usa el mismo wrapText pero con fuente de encabezado
+        return wrapText(text, colWidth - 2 * minCellPadding, font, headerFontSize);
+    };
+
+    // --- Optimización: aprovechar mejor el espacio vertical en cada página ---
+    const encabezadoCompleto = 180; // Altura del encabezado institucional y datos (solo en la primera página)
+    const headerHeight = 25; // Altura del encabezado de la tabla
+    const margenInferior = margin; // Ya definido
+
+    // Calcula cuántas filas caben en cada página según el contenido y el espacio realmente disponible
+    const paginarPorAltura = (dataArr: Record<string, unknown>[]) => {
+        const pages: Record<string, unknown>[][] = [];
+        let idx = 0;
+        let pageIndex = 0;
+        while (idx < dataArr.length) {
+            let yDisponible = pageHeight - margin - headerHeight - margenInferior;
+            if (pageIndex === 0) yDisponible -= (encabezadoCompleto - headerHeight); // Solo en la primera página se descuenta el encabezado completo
+            const pageRows: Record<string, unknown>[] = [];
+            while (idx < dataArr.length) {
+                const row = dataArr[idx];
+                const rowHeight = calculateRowHeight(row, adjustedWidths);
+                if (pageRows.length === 0 && rowHeight > yDisponible) {
+                    pageRows.push(row);
+                    idx++;
+                    break;
+                }
+                if (rowHeight > yDisponible) break;
+                pageRows.push(row);
+                yDisponible -= rowHeight;
+                idx++;
+            }
+            pages.push(pageRows);
+            pageIndex++;
+        }
+        return pages;
+    };
+
     // Función para dibujar el encabezado de las columnas
     const drawHeaders = (page: import('pdf-lib').PDFPage, startY: number) => {
         let xPos = margin;
         const currentY = startY;
 
         // Agregar encabezado para la columna de numeración
-        const numberColWidth = 30;
         page.drawRectangle({
             x: xPos,
             y: currentY - 25,
@@ -140,18 +193,22 @@ export const generatePDF = async ({ data, columns, title, fileName, firmas = [] 
             color: rgb(0.9, 0.9, 0.9),
         });
 
-        page.drawText(normalizeText('No.'), {
-            x: xPos + centerTextInCell('No.', numberColWidth, font, headerFontSize),
-            y: currentY - 18,
-            size: headerFontSize,
-            font: font,
-            color: rgb(0.2, 0.2, 0.2)
+        // Wrap para el encabezado de la columna de numeración
+        const numberHeaderLines = wrapHeaderText('No.', numberColWidth);
+        numberHeaderLines.forEach((line, idx) => {
+            page.drawText(normalizeText(line), {
+                x: xPos + centerTextInCell(line, numberColWidth, font, headerFontSize),
+                y: currentY - 18 - (idx * (headerFontSize + 1)),
+                size: headerFontSize,
+                font: font,
+                color: rgb(0.2, 0.2, 0.2)
+            });
         });
 
         xPos += numberColWidth;
 
-        columns.forEach((col) => {
-            const colWidth = col.width ?? 80;
+        columns.forEach((col, idx) => {
+            const colWidth = adjustedWidths[idx];
             page.drawRectangle({
                 x: xPos,
                 y: currentY - 25,
@@ -160,13 +217,16 @@ export const generatePDF = async ({ data, columns, title, fileName, firmas = [] 
                 color: rgb(0.9, 0.9, 0.9),
             });
 
-            const headerX = xPos + centerTextInCell(col.header, colWidth, font, headerFontSize);
-            page.drawText(normalizeText(col.header), {
-                x: headerX,
-                y: currentY - 18,
-                size: headerFontSize,
-                font: font,
-                color: rgb(0.2, 0.2, 0.2)
+            // Wrap para encabezado
+            const headerLines = wrapHeaderText(col.header, colWidth);
+            headerLines.forEach((line, lineIdx) => {
+                page.drawText(normalizeText(line), {
+                    x: xPos + centerTextInCell(line, colWidth, font, headerFontSize),
+                    y: currentY - 18 - (lineIdx * (headerFontSize + 1)),
+                    size: headerFontSize,
+                    font: font,
+                    color: rgb(0.2, 0.2, 0.2)
+                });
             });
 
             xPos += colWidth;
@@ -175,8 +235,8 @@ export const generatePDF = async ({ data, columns, title, fileName, firmas = [] 
         return currentY - 25;
     };
 
-    // Modificar processPage para incluir el padding vertical en el posicionamiento del texto
-    const processPage = async (pageData: Record<string, unknown>[], pageIndex: number, totalPages: number) => {
+    // Modificar processPage para numeración global y usar anchos ajustados
+    const processPage = async (pageData: Record<string, unknown>[], pageIndex: number, totalPages: number, globalStartIndex: number) => {
         const page = pdfDoc.addPage([pageWidth, pageHeight]);
         const { height } = page.getSize();
         let yPos = height - margin;
@@ -267,11 +327,10 @@ export const generatePDF = async ({ data, columns, title, fileName, firmas = [] 
         }
 
         // Dibujar filas de datos
-        let rowNumber = 1; // Contador para la numeración
-        for (const row of pageData) {
-            const rowHeight = calculateRowHeight(row, columns.map(col => col.width ?? 80));
-            if (yPos - rowHeight < margin) break;
-
+        for (let i = 0; i < pageData.length; i++) {
+            const row = pageData[i];
+            const rowHeight = calculateRowHeight(row, adjustedWidths);
+            // NO break: siempre renderizar todos los ítems del bloque
             let xPos = margin;
 
             // Dibujar línea horizontal superior de la fila
@@ -282,9 +341,8 @@ export const generatePDF = async ({ data, columns, title, fileName, firmas = [] 
                 color: rgb(0.7, 0.7, 0.7),
             });
 
-            // Dibujar el número de fila
-            const numberColWidth = 30;
-            const numberText = rowNumber.toString();
+            // Numeración global
+            const numberText = (globalStartIndex + i + 1).toString();
             page.drawText(numberText, {
                 x: xPos + centerTextInCell(numberText, numberColWidth, regularFont, fontSize),
                 y: yPos - (rowHeight / 2) + (fontSize / 2),
@@ -295,9 +353,28 @@ export const generatePDF = async ({ data, columns, title, fileName, firmas = [] 
 
             xPos += numberColWidth;
 
-            columns.forEach((col) => {
-                const colWidth = col.width ?? 80;
-                if (col.isComposite && col.keys) {
+            columns.forEach((col, idx) => {
+                const colWidth = adjustedWidths[idx];
+                if (col.key === 'ubicacion_es') {
+                    const value = [row['ubicacion_es'], row['ubicacion_mu'], row['ubicacion_no']]
+                        .map(v => (v ?? '').toString().toUpperCase())
+                        .filter(Boolean)
+                        .join(' ');
+
+                    const lines = wrapText(value, colWidth - (2 * minCellPadding), regularFont, fontSize);
+                    lines.forEach((line, lineIndex) => {
+                        const lineX = xPos + centerTextInCell(line.trim(), colWidth, regularFont, fontSize);
+                        const lineY = yPos - verticalPadding - (fontSize + 4) - (lineIndex * (fontSize + 2)) - ((rowHeight - (verticalPadding * 2) - ((lines.length * (fontSize + 2)))) / 2);
+                        
+                        page.drawText(normalizeText(line.trim()), {
+                            x: lineX,
+                            y: lineY,
+                            size: fontSize,
+                            font: regularFont,
+                            color: rgb(0.2, 0.2, 0.2)
+                        });
+                    });
+                } else if (col.isComposite && col.keys) {
                     const combinedValue = col.keys
                         .map(key => (row[key]?.toString() || '').toUpperCase())
                         .filter(Boolean)
@@ -338,7 +415,6 @@ export const generatePDF = async ({ data, columns, title, fileName, firmas = [] 
             });
 
             yPos -= rowHeight;
-            rowNumber++; // Incrementar el contador
         }
 
         // Agregar pie de página con número de página
@@ -453,62 +529,23 @@ export const generatePDF = async ({ data, columns, title, fileName, firmas = [] 
         return signatureSectionY;
     };
 
-    // Función para verificar si se necesitará una página adicional para firmas
-    const needsExtraPage = (yPos: number) => {
-        return yPos - margin < 160; // El mismo criterio que usamos para decidir crear nueva página
-    };
-
-    // Pre-procesar los datos para determinar el número total de páginas
-    let totalPages = 0;
-    let tempYPos = pageHeight - margin;
-    let tempCurrentIndex = 0;
-
-    while (tempCurrentIndex < data.length) {
-        const pageData = data.slice(tempCurrentIndex, tempCurrentIndex + 20);
-        let rowsHeight = 0;
-        
-        // Simular el procesamiento de la página para calcular el espacio usado
-        pageData.forEach(row => {
-            rowsHeight += calculateRowHeight(row, columns.map(col => col.width ?? 80));
-        });
-
-        // Si es la última página, verificar si necesitará página adicional para firmas
-        if (tempCurrentIndex + pageData.length >= data.length && firmas.length > 0) {
-            const remainingSpace = tempYPos - rowsHeight - margin;
-            if (needsExtraPage(remainingSpace)) {
-                totalPages++; // Agregar una página extra para las firmas
-            }
-        }
-
-        totalPages++;
-        tempCurrentIndex += pageData.length;
-        tempYPos = pageHeight - margin;
-    }
-
-    // Procesar todas las páginas con el número total correcto
-    let currentPage = 0;
-    let currentIndex = 0;
-    
-    // Calcular el valor total sumando la propiedad 'valor' de cada elemento
-    const totalItems = data.length;
-    const totalValue = data.reduce((sum, item) => {
-        const valor = parseFloat(item.valor?.toString() || '0');
-        return sum + (isNaN(valor) ? 0 : valor);
-    }, 0);
-
-    while (currentIndex < data.length) {
-        const pageData = data.slice(currentIndex, currentIndex + 20);
-        const yPos = await processPage(pageData, currentPage, totalPages);
+    // Procesar todas las páginas con numeración global y bloques según altura
+    const paginadas = paginarPorAltura(data);
+    const totalPages = paginadas.length;
+    let globalIndex = 0;
+    for (let currentPage = 0; currentPage < paginadas.length; currentPage++) {
+        const pageData = paginadas[currentPage];
+        const yPos = await processPage(pageData, currentPage, totalPages, globalIndex);
         
         // Si es la última página y hay firmas
-        if (currentIndex + pageData.length >= data.length && firmas.length > 0) {
+        if (currentPage === paginadas.length - 1 && firmas.length > 0) {
             const page = pdfDoc.getPages()[currentPage];
             
             // Verificar si hay espacio suficiente para el resumen y las firmas
             if (yPos - margin < 160) {
                 // No hay suficiente espacio, crear nueva página
                 const newPage = pdfDoc.addPage([pageWidth, pageHeight]);
-                const summaryY = await drawSummary(newPage, pageHeight - margin, totalItems, totalValue);
+                const summaryY = await drawSummary(newPage, pageHeight - margin, data.length, data.reduce((sum, item) => sum + (parseFloat(item.valor?.toString() || '0') || 0), 0));
                 drawSignatureSection(newPage, summaryY);
 
                 // Agregar número de página a la nueva página
@@ -524,13 +561,12 @@ export const generatePDF = async ({ data, columns, title, fileName, firmas = [] 
                 });
             } else {
                 // Hay suficiente espacio, dibujar en la página actual
-                const summaryY = await drawSummary(page, yPos, totalItems, totalValue);
+                const summaryY = await drawSummary(page, yPos, data.length, data.reduce((sum, item) => sum + (parseFloat(item.valor?.toString() || '0') || 0), 0));
                 drawSignatureSection(page, summaryY);
             }
         }
 
-        currentIndex += pageData.length;
-        currentPage++;
+        globalIndex += pageData.length;
     }
 
     // Guardar PDF

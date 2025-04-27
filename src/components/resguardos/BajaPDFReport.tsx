@@ -99,15 +99,6 @@ export const BajaPDF = ({ data }: { data: PdfDataBaja }) => {
     // Separar artículos por origen
     const articulosINEA = data.articulos.filter(a => a.origen === 'INEA');
     const articulosITEA = data.articulos.filter(a => a.origen === 'ITEA');
-    const hasOrigen = data.articulos.some(a => a.origen);
-    const grupos = hasOrigen
-        ? [
-            { nombre: 'INEA', articulos: articulosINEA },
-            { nombre: 'ITEA', articulos: articulosITEA }
-        ]
-        : [
-            { nombre: '', articulos: data.articulos }
-        ];
 
     // Verificar si hay diferentes folios de baja
     const hasMultipleFolios = data.articulos.some(a => a.folio_baja && a.folio_baja !== data.folio_baja);
@@ -169,16 +160,18 @@ export const BajaPDF = ({ data }: { data: PdfDataBaja }) => {
                     <Text><Text style={styles.label}>PUESTO: </Text> {data.puesto?.toUpperCase()}</Text>
                     <Text><Text style={styles.label}>FECHA DE BAJA: </Text> {data.fecha?.toUpperCase()}</Text>
                 </View>
-                {grupos.map((grupo) => (
+                {/* Renderizar INEA e ITEA una debajo de otra, permitiendo que ambas se partan entre páginas */}
+                {[
+                    { nombre: 'INEA', articulos: articulosINEA },
+                    { nombre: 'ITEA', articulos: articulosITEA }
+                ].map((grupo) => (
                     grupo.articulos.length > 0 && (
-                        <View key={grupo.nombre} wrap={false}>
-                            {grupo.nombre && (
-                                <Text style={{ fontWeight: 'bold', fontSize: 11, marginTop: 12, marginBottom: 2, color: '#b91c1c' }}>
-                                    ARTÍCULOS DE ORIGEN {grupo.nombre}
-                                </Text>
-                            )}
+                        <View key={grupo.nombre}>
+                            <Text style={{ fontWeight: 'bold', fontSize: 11, marginTop: 12, marginBottom: 2, color: '#b91c1c' }}>
+                                ARTÍCULOS DE ORIGEN {grupo.nombre}
+                            </Text>
                             <View style={styles.table}>
-                                <View style={[styles.tableRow, styles.tableHeader]}>
+                                <View style={[styles.tableRow, styles.tableHeader]} fixed>
                                     <Text style={[styles.tableCell, styles.tableCellHeader, { flex: 2.5 }]}>ID INVENTARIO</Text>
                                     <Text style={[styles.tableCell, styles.tableCellHeader, { flex: 5.5 }]}>DESCRIPCIÓN</Text>
                                     <Text style={[styles.tableCell, styles.tableCellHeader, { flex: 1.6 }]}>RUBRO</Text>

@@ -105,16 +105,6 @@ export const ResguardoPDF = ({ data }: { data: PdfData }) => {
     // Separar artículos por origen
     const articulosINEA = data.articulos.filter(a => a.origen === 'INEA');
     const articulosITEA = data.articulos.filter(a => a.origen === 'ITEA');
-    // Si no tienen campo origen, intentar deducirlo (compatibilidad)
-    const hasOrigen = data.articulos.some(a => a.origen);
-    const grupos = hasOrigen
-        ? [
-            { nombre: 'INEA', articulos: articulosINEA },
-            { nombre: 'ITEA', articulos: articulosITEA }
-        ]
-        : [
-            { nombre: '', articulos: data.articulos }
-        ];
 
     // Si data.firmas está vacío, crear firmas por defecto
     const defaultFirmas: PdfFirma[] = [
@@ -166,26 +156,26 @@ export const ResguardoPDF = ({ data }: { data: PdfData }) => {
                         <Text><Text style={styles.label}>RESGUARDANTE: </Text> {data.resguardante?.toUpperCase()}</Text>
                     )}
                 </View>
-                {grupos.map((grupo) => (
-                    grupo.articulos.length > 0 && (
-                        <View key={grupo.nombre} wrap={false}>
-                            {grupo.nombre && (
-                                <Text style={{ fontWeight: 'bold', fontSize: 11, marginTop: 12, marginBottom: 2 }}>
-                                    ARTÍCULOS DE ORIGEN {grupo.nombre}
-                                </Text>
-                            )}
-                            <View style={styles.table}>
-                                <View style={[styles.tableRow, styles.tableHeader]}>
-                                    <Text style={[styles.tableCell, styles.tableCellHeader, { flex: 2.5 }]}>ID INVENTARIO</Text>
-                                    <Text style={[styles.tableCell, styles.tableCellHeader, { flex: 5.5 }]}>DESCRIPCIÓN</Text>
-                                    <Text style={[styles.tableCell, styles.tableCellHeader, { flex: 1.6 }]}>RUBRO</Text>
-                                    <Text style={[styles.tableCell, styles.tableCellHeader, { flex: .7 }]}>ESTADO</Text>
-                                    {data.articulos.some(a => a.resguardante) && (
-                                        <Text style={[styles.tableCell, styles.tableCellHeader, { flex: 2.5 }]}>RESGUARDANTE</Text>
-                                    )}
-                                </View>
-                                {grupo.articulos.map((art: PdfArticulo, idx2: number) => (
-                                    <View style={styles.tableRow} key={idx2}>
+                {/* Renderizar siempre ambas tablas, una debajo de la otra, aunque alguna esté vacía */}
+                {[{ nombre: 'INEA', articulos: articulosINEA }, { nombre: 'ITEA', articulos: articulosITEA }].map((grupo) => (
+                    <View key={grupo.nombre}>
+                        <Text style={{ fontWeight: 'bold', fontSize: 11, marginTop: 12, marginBottom: 2 }}>
+                            ARTÍCULOS DE ORIGEN {grupo.nombre}
+                        </Text>
+                        {/* Permitir que la tabla y sus filas se dividan entre páginas */}
+                        <View style={styles.table} wrap={true}>
+                            <View style={[styles.tableRow, styles.tableHeader]}>
+                                <Text style={[styles.tableCell, styles.tableCellHeader, { flex: 2.5 }]}>ID INVENTARIO</Text>
+                                <Text style={[styles.tableCell, styles.tableCellHeader, { flex: 5.5 }]}>DESCRIPCIÓN</Text>
+                                <Text style={[styles.tableCell, styles.tableCellHeader, { flex: 1.6 }]}>RUBRO</Text>
+                                <Text style={[styles.tableCell, styles.tableCellHeader, { flex: .7 }]}>ESTADO</Text>
+                                {data.articulos.some(a => a.resguardante) && (
+                                    <Text style={[styles.tableCell, styles.tableCellHeader, { flex: 2.5 }]}>RESGUARDANTE</Text>
+                                )}
+                            </View>
+                            {grupo.articulos.length > 0 ? (
+                                grupo.articulos.map((art: PdfArticulo, idx2: number) => (
+                                    <View style={styles.tableRow} key={idx2} wrap={true}>
                                         <Text style={{ ...styles.tableCell, flex: 2.5 }}>{art.id_inv?.toUpperCase()}</Text>
                                         <Text style={{ ...styles.tableCell, flex: 5.5 }}>{art.descripcion?.toUpperCase()}</Text>
                                         <Text style={{ ...styles.tableCell, flex: 1.6 }}>{art.rubro?.toUpperCase()}</Text>
@@ -194,10 +184,14 @@ export const ResguardoPDF = ({ data }: { data: PdfData }) => {
                                             <Text style={{ ...styles.tableCell, flex: 2.5 }}>{(art.resguardante || data.resguardante)?.toUpperCase()}</Text>
                                         )}
                                     </View>
-                                ))}
-                            </View>
+                                ))
+                            ) : (
+                                <View style={styles.tableRow} wrap={true}>
+                                    <Text style={{ ...styles.tableCell, flex: 12, textAlign: 'center' }}>SIN REGISTROS</Text>
+                                </View>
+                            )}
                         </View>
-                    )
+                    </View>
                 ))}
                 <View style={{ position: 'absolute', bottom: 20, left: 25, right: 25 }}>
                     <View style={styles.signature}>
