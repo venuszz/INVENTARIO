@@ -2,14 +2,11 @@
 import { generateExcel } from '@/components/reportes/excelgenerator';
 import React from 'react';
 import { useState, useEffect, useCallback } from 'react';
-import ReactDOM from 'react-dom/client';
 import {
     Search, RefreshCw, ChevronLeft, ChevronRight,
     ArrowUpDown, AlertCircle, X, FileUp, File
 } from 'lucide-react';
 import supabase from '@/app/lib/supabase/client';
-import { BlobProvider } from '@react-pdf/renderer';
-import { LevantamientoPDF } from './LevantamientoPDFReport';
 
 // Tipo unificado para INEA/ITEA
 interface LevMueble {
@@ -154,39 +151,54 @@ export default function LevantamientoUnificado() {
     // Función para obtener datos filtrados para exportación
     const getFilteredData = async () => {
         try {
-            // Crear las consultas base
-            let queryInea = supabase.from('muebles').select('*');
-            let queryItea = supabase.from('mueblesitea').select('*');
+            // --- Helper para traer todos los datos paginando manualmente ---
+            const fetchAllRows = async (table: 'muebles' | 'mueblesitea') => {
+                let allRows: LevMueble[] = [];
+                let from = 0;
+                const pageSize = 1000;
+                let keepGoing = true;
+                let query = supabase.from(table).select('*');
 
-            // Aplicar filtros de búsqueda
-            if (searchTerm) {
-                const search = `%${searchTerm}%`;
-                const searchPattern = `id_inv.ilike.${search},descripcion.ilike.${search},resguardante.ilike.${search},usufinal.ilike.${search}`;
-                queryInea = queryInea.or(searchPattern);
-                queryItea = queryItea.or(searchPattern);
-            }
-
-            // Aplicar otros filtros
-            Object.entries(filters).forEach(([key, value]) => {
-                if (value) {
-                    queryInea = queryInea.eq(key, value);
-                    queryItea = queryItea.eq(key, value);
+                // Aplicar filtros de búsqueda
+                if (searchTerm) {
+                    const search = `%${searchTerm}%`;
+                    const searchPattern = `id_inv.ilike.${search},descripcion.ilike.${search},resguardante.ilike.${search},usufinal.ilike.${search}`;
+                    query = query.or(searchPattern);
                 }
-            });
+                // Aplicar otros filtros
+                Object.entries(filters).forEach(([key, value]) => {
+                    if (value) {
+                        query = query.eq(key, value);
+                    }
+                });
 
-            // Ejecutar ambas consultas en paralelo sin paginación para obtener todos los datos filtrados
-            const [ineaResult, iteaResult] = await Promise.all([
-                queryInea,
-                queryItea
+                while (keepGoing) {
+                    const { data, error } = await query.range(from, from + pageSize - 1);
+                    if (error) throw error;
+                    if (data && data.length > 0) {
+                        allRows = allRows.concat(data);
+                        if (data.length < pageSize) {
+                            keepGoing = false;
+                        } else {
+                            from += pageSize;
+                        }
+                    } else {
+                        keepGoing = false;
+                    }
+                }
+                return allRows;
+            };
+
+            // Traer todos los datos de ambas tablas
+            const [ineaRows, iteaRows] = await Promise.all([
+                fetchAllRows('muebles'),
+                fetchAllRows('mueblesitea')
             ]);
-
-            if (ineaResult.error) throw ineaResult.error;
-            if (iteaResult.error) throw iteaResult.error;
 
             // Combinar y procesar los resultados
             const allData = [
-                ...(ineaResult.data?.map(item => ({ ...item, origen: 'INEA' as const })) || []),
-                ...(iteaResult.data?.map(item => ({ ...item, origen: 'ITEA' as const })) || [])
+                ...ineaRows.map(item => ({ ...item, origen: 'INEA' as const })),
+                ...iteaRows.map(item => ({ ...item, origen: 'ITEA' as const }))
             ];
 
             // Ordenar los datos según la configuración actual
@@ -200,17 +212,6 @@ export default function LevantamientoUnificado() {
             console.error('Error al obtener datos filtrados:', error);
             throw error;
         }
-    };
-
-    // Función para obtener firmas actuales
-    const getFirmas = async () => {
-        const { data: firmas, error } = await supabase
-            .from('firmas')
-            .select('*')
-            .order('id', { ascending: true });
-        
-        if (error) throw error;
-        return firmas;
     };
 
     // Función para manejar la exportación
@@ -238,63 +239,6 @@ export default function LevantamientoUnificado() {
                 }));
 
                 await generateExcel({ data: formattedData, fileName, worksheetName });
-            } else if (exportType === 'pdf') {
-                const firmas = await getFirmas();
-                const filtrosActivos: Record<string, string> = Object.entries(filters)
-                    .filter(([, value]) => value)
-                    .reduce((acc, [key, value]) => ({ ...acc, [key]: value }), {});
-
-                if (searchTerm) {
-                    filtrosActivos['busqueda'] = searchTerm;
-                }
-
-                const pdfData = {
-                    fecha: new Date().toLocaleDateString(),
-                    articulos: exportData,
-                    firmas: firmas || [],
-                    filtros: filtrosActivos
-                };
-
-                // Usar solo el componente base para exportar
-                const container = document.createElement('div');
-                container.style.display = 'none';
-                document.body.appendChild(container);
-
-                const root = ReactDOM.createRoot(container);
-                root.render(
-                    <BlobProvider document={<LevantamientoPDF data={pdfData} />}>
-                        {({ blob }) => {
-                            if (blob) {
-                                const url = URL.createObjectURL(blob);
-                                const link = document.createElement('a');
-                                link.href = url;
-                                link.download = `levantamiento_${new Date().toISOString().slice(0,10)}.pdf`;
-                                document.body.appendChild(link);
-                                link.click();
-                                URL.revokeObjectURL(url);
-                                document.body.removeChild(link);
-                                setTimeout(() => {
-                                    root.unmount();
-                                    if (document.body.contains(container)) {
-                                        document.body.removeChild(container);
-                                    }
-                                }, 100);
-                            }
-                            return null;
-                        }}
-                    </BlobProvider>
-                );
-
-                setTimeout(() => {
-                    try {
-                        root.unmount();
-                        if (document.body.contains(container)) {
-                            document.body.removeChild(container);
-                        }
-                    } catch (e) {
-                        console.error('Cleanup error:', e);
-                    }
-                }, 5000);
             }
 
             setMessage({ type: 'success', text: 'Archivo generado exitosamente.' });
@@ -478,17 +422,6 @@ export default function LevantamientoUnificado() {
                             >
                                 <FileUp className="h-4 w-4" />
                                 <span className="hidden sm:inline">Excel</span>
-                            </button>
-                            <button
-                                onClick={() => {
-                                    setExportType('pdf');
-                                    setShowExportModal(true);
-                                }}
-                                className="px-4 py-2 bg-red-700 text-white rounded-md font-medium flex items-center gap-2 hover:bg-red-800 transition-colors border border-red-800"
-                                title="Exportar a PDF"
-                            >
-                                <File className="h-4 w-4" />
-                                <span className="hidden sm:inline">PDF</span>
                             </button>
                             <button
                                 onClick={() => { setLoading(true); fetchMuebles(); }}
