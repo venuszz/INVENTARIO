@@ -9,6 +9,8 @@ import {
 import supabase from '@/app/lib/supabase/client';
 import { SupabaseClient } from '@supabase/supabase-js';
 import { generateResguardoPDF } from './ResguardoPDFReport';
+import { useUserRole } from "@/hooks/useUserRole";
+import RoleGuard from "@/components/roleGuard";
 
 interface Resguardo {
     id: number;
@@ -695,6 +697,8 @@ export default function ConsultarResguardos() {
         return allResguardos.filter(r => r.folio === folio).length;
     };
 
+    const userRole = useUserRole();
+
     return (
         <div className="bg-black text-white min-h-screen p-2 sm:p-4 md:p-6 lg:p-8">
             <div className="w-full mx-auto bg-black rounded-lg sm:rounded-xl shadow-2xl overflow-hidden transition-all duration-500 transform border border-gray-800">
@@ -1117,6 +1121,7 @@ export default function ConsultarResguardos() {
                                         <Download className="h-4 w-4" />
                                         Generar PDF
                                     </button>
+                                    <RoleGuard roles={["admin", "superadmin"]} userRole={userRole}>
                                     <button
                                         onClick={() => setShowDeleteAllModal(true)}
                                         className="mt-2 w-full py-2.5 bg-red-900/20 border border-red-800 text-red-300 rounded-lg hover:bg-red-900/40 transition-colors flex items-center justify-center gap-2"
@@ -1124,6 +1129,7 @@ export default function ConsultarResguardos() {
                                         <XOctagon className="h-4 w-4" />
                                         Borrar resguardo
                                     </button>
+                                    </RoleGuard>
                                 </>
                             ) : (
                                 <div className="flex flex-col items-center justify-center h-full min-h-[200px] text-gray-500">
@@ -1150,7 +1156,8 @@ export default function ConsultarResguardos() {
                                     <>
                                         {/* Botones de acciones para selección múltiple */}
                                         {selectedArticulos.length > 0 && (
-                                            <div className="flex justify-end items-center gap-2 mb-4 overflow-auto max-h-[10ch">
+                                            <div className="flex justify-end items-center gap-2 mb-4 overflow-auto">
+                                                <RoleGuard roles={["admin", "superadmin"]} userRole={userRole}>
                                                 <button
                                                     className="px-4 py-2 bg-gradient-to-r from-red-700 to-red-500 text-white rounded-lg text-sm font-semibold flex items-center gap-2 hover:from-red-800 hover:to-red-600 border border-red-900/50 transition-colors shadow-lg"
                                                     onClick={() => setShowDeleteSelectedModal(true)}
@@ -1158,6 +1165,7 @@ export default function ConsultarResguardos() {
                                                     <XOctagon className="h-4 w-4" />
                                                     Eliminar seleccionados ({selectedArticulos.length})
                                                 </button>
+                                                </RoleGuard>
                                                 <button
                                                     className="px-3 py-2 bg-gray-800 text-gray-200 rounded-lg text-xs font-medium flex items-center gap-2 hover:bg-gray-700 border border-gray-700 transition-colors"
                                                     onClick={() => setSelectedArticulos([])}
@@ -1252,6 +1260,7 @@ export default function ConsultarResguardos() {
                                                                     {articulo.rubro}
                                                                 </div>
                                                             </div>
+                                                            <RoleGuard roles={["admin", "superadmin"]} userRole={userRole}>
                                                             <button
                                                                 title="Eliminar artículo"
                                                                 onClick={() => setShowDeleteItemModal({ index, articulo })}
@@ -1259,12 +1268,14 @@ export default function ConsultarResguardos() {
                                                             >
                                                                 <CircleX className="h-4 w-4" />
                                                             </button>
+                                                            </RoleGuard>
                                                         </li>
                                                     ))}
                                                 </ul>
                                                 {/* Pie de la tarjeta: eliminación múltiple minimalista */}
                                                 {articulos.length > 1 && (
                                                     <div className="flex justify-end items-center gap-2 px-6 py-2 bg-transparent border-t border-violet-900/10">
+                                                        <RoleGuard roles={["admin", "superadmin"]} userRole={userRole}>
                                                         <button
                                                             className="px-3 py-1.5 bg-violet-700/10 text-violet-100 rounded-md text-xs font-normal flex items-center gap-2 hover:bg-violet-700/20 border border-violet-700/10 transition-colors"
                                                             onClick={() => setShowDeleteSelectedModal(true)}
@@ -1273,6 +1284,7 @@ export default function ConsultarResguardos() {
                                                             <XOctagon className="h-4 w-4" />
                                                             Eliminar seleccionados ({selectedArticulos.length})
                                                         </button>
+                                                        </RoleGuard>
                                                     </div>
                                                 )}
                                             </div>

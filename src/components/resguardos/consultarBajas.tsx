@@ -8,6 +8,8 @@ import {
 } from 'lucide-react';
 import supabase from '@/app/lib/supabase/client';
 import { generateBajaPDF } from './BajaPDFReport';
+import { useUserRole } from "@/hooks/useUserRole";
+import RoleGuard from "@/components/roleGuard";
 
 interface ResguardoBaja {
     id: number;
@@ -499,6 +501,8 @@ const ConsultarBajasResguardos = () => {
         setShowDeleteModal(true);
     };
 
+    const userRole = useUserRole();
+
     return (
         <div className="bg-black text-white min-h-screen p-2 sm:p-4 md:p-6 lg:p-8">
             <div className="w-full mx-auto bg-black rounded-lg sm:rounded-xl shadow-2xl overflow-hidden transition-all duration-500 transform border border-gray-800">
@@ -918,6 +922,7 @@ const ConsultarBajasResguardos = () => {
                                         <Download className="h-4 w-4" />
                                         Generar PDF de {Object.values(selectedItems).filter(Boolean).length > 0 ? 'Artículos Seleccionados' : 'Baja Completa'}
                                     </button>
+                                    <RoleGuard roles={["admin", "superadmin"]} userRole={userRole}>
                                     <button
                                         onClick={() => initiateDelete('folio', { folioResguardo: selectedBaja.folio_resguardo })}
                                         className="w-full py-2 bg-red-900/20 text-red-400 rounded-lg hover:bg-red-900/40 transition-colors border border-red-900/50 flex items-center justify-center gap-2 mt-2"
@@ -925,6 +930,7 @@ const ConsultarBajasResguardos = () => {
                                         <X className="h-4 w-4" />
                                         Eliminar Folio Completo
                                     </button>
+                                    </RoleGuard>
                                 </>
                             ) : (
                                 <div className="flex flex-col items-center justify-center h-full min-h-[200px] text-gray-500">
@@ -954,6 +960,7 @@ const ConsultarBajasResguardos = () => {
                                                     Limpiar Selección
                                                 </button>
                                                 {Object.values(selectedItems).filter(Boolean).length > 0 && (
+                                                    <RoleGuard roles={["admin", "superadmin"]} userRole={userRole}>
                                                     <button
                                                         onClick={() => {
                                                             const selectedArticulos = selectedBaja.articulos.filter(art => selectedItems[art.id]);
@@ -964,6 +971,7 @@ const ConsultarBajasResguardos = () => {
                                                         <X className="h-3 w-3" />
                                                         Eliminar Seleccionados
                                                     </button>
+                                                    </RoleGuard>
                                                 )}
                                             </div>
                                             <span className="text-sm text-gray-400">
@@ -1020,6 +1028,7 @@ const ConsultarBajasResguardos = () => {
                                                                     </span>
                                                                 </div>
                                                             </div>
+                                                            <RoleGuard roles={["admin", "superadmin"]} userRole={userRole}>
                                                             <button
                                                                 onClick={(e) => {
                                                                     e.stopPropagation();
@@ -1030,6 +1039,7 @@ const ConsultarBajasResguardos = () => {
                                                             >
                                                                 <X className="h-4 w-4" />
                                                             </button>
+                                                            </RoleGuard>
                                                         </div>
                                                     </div>
                                                 ))}
