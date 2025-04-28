@@ -10,6 +10,8 @@ import {
 import supabase from '@/app/lib/supabase/client';
 import { generateExcel } from './excelgenerator';
 import { generatePDF } from './pdfgenerator';
+import { useUserRole } from "@/hooks/useUserRole";
+import RoleGuard from "@/components/roleGuard";
 
 interface Mueble {
     id: number;
@@ -290,6 +292,8 @@ export default function ReportesIneaDashboard() {
         }
     };
 
+    const userRole = useUserRole();
+
     return (
         <div className="bg-black text-white min-h-screen p-2 sm:p-4 md:p-6 lg:p-8">
             <div className="w-full mx-auto bg-black rounded-lg sm:rounded-xl shadow-2xl overflow-hidden border border-gray-800 transition-all duration-500 transform">
@@ -303,6 +307,7 @@ export default function ReportesIneaDashboard() {
                         Reportes INEA
                     </h1>
                     <div className="flex items-center gap-4">
+                        <RoleGuard roles={["admin", "superadmin"]} userRole={userRole}>
                         <button
                             onClick={() => setFirmasModalOpen(true)}
                             className="p-2 rounded-lg text-gray-400 hover:text-amber-500 transition-colors border border-gray-800 hover:border-amber-500/30"
@@ -310,6 +315,7 @@ export default function ReportesIneaDashboard() {
                         >
                             <Settings2 className="h-5 w-5" />
                         </button>
+                        </RoleGuard>
                         <div className="flex items-center gap-2 text-sm text-gray-400">
                             <ListChecks className="h-4 w-4 text-blue-400" />
                             <span>{reportes.length} categorías de reportes</span>
