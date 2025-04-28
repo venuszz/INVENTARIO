@@ -9,13 +9,11 @@ import {
 import supabase from '@/app/lib/supabase/client';
 import { PDFDownloadLink } from '@react-pdf/renderer';
 import { ResguardoPDF } from './ResguardoPDFReport';
-import { BajaPDF } from './BajaPDFReport';
 import dynamic from 'next/dynamic';
 import { SupabaseClient } from '@supabase/supabase-js';
 
 // Importar el componente PDF de forma dinámica para evitar SSR
 const ResguardoPDFReport = dynamic(() => import('./ResguardoPDFReport'), { ssr: false });
-const BajaPDFReport = dynamic(() => import('./BajaPDFReport'), { ssr: false });
 
 interface Resguardo {
     id: number;
@@ -48,6 +46,7 @@ interface PdfFirma {
     concepto: string;
     nombre: string;
     puesto: string;
+    cargo: string;
 }
 
 interface PdfData {
@@ -83,6 +82,7 @@ interface PdfDataBaja {
         estado: string;
         origen?: string | null;
         resguardante?: string; // Pasar el resguardante individual
+        folio_baja: string; // Agregar folio_baja
     }>;
     firmas?: PdfFirma[];
 }
@@ -275,7 +275,8 @@ export default function ConsultarResguardos() {
                     rubro: art.rubro,
                     estado: art.condicion,
                     origen: art.origen,
-                    resguardante: art.resguardante
+                    resguardante: art.resguardante || '', // Siempre string
+                    folio_baja: folioBaja
                 })),
                 firmas: firmas || undefined
             });
@@ -506,7 +507,8 @@ export default function ConsultarResguardos() {
                     rubro: art.rubro,
                     estado: art.condicion,
                     origen: art.origen,
-                    resguardante: art.resguardante
+                    resguardante: art.resguardante || '', // Siempre string
+                    folio_baja: folioBaja
                 })),
                 firmas: firmas || undefined
             });
@@ -570,7 +572,8 @@ export default function ConsultarResguardos() {
                         rubro: articulo.rubro,
                         estado: articulo.condicion,
                         origen: articulo.origen,
-                        resguardante: articulo.resguardante
+                        resguardante: articulo.resguardante || '', // Siempre string
+                        folio_baja: folioBaja
                     }
                 ],
                 firmas: firmas || undefined
@@ -1082,8 +1085,7 @@ export default function ConsultarResguardos() {
                                                     return (
                                                         <span
                                                             key={idx}
-                                                            className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-gradient-to-r ${color} border shadow-md transition-all duration-200 hover:scale-105`}
-                                                            style={{ letterSpacing: '0.02em' }}
+                                                            className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-gradient-to-r ${color} border shadow-md transition-all duration-200 hover:scale-105 tracking-tight`}
                                                         >
                                                             <User className="h-3.5 w-3.5 mr-1 opacity-80" />
                                                             {resguardante}
@@ -1377,12 +1379,11 @@ export default function ConsultarResguardos() {
                                 <div className="p-3 bg-red-500/10 rounded-full border border-red-500/30 mb-3">
                                     <FileDigit className="h-8 w-8 text-red-500" />
                                 </div>
-                                <h3 className="text-2xl font-bold text-white">Baja procesada</h3>
+                                <h3 className="text-2xl font-bold text-white">Baja generada</h3>
                                 <p className="text-gray-400 mt-2">
-                                    Se ha generado el documento de baja con folio: <span className="text-red-300 font-bold">{pdfBajaData.folio_baja}</span>
+                                    Descarga el PDF de la baja para imprimir o compartir
                                 </p>
                             </div>
-
                             <div className="space-y-5 mt-6">
                                 <div className="rounded-lg border border-gray-800 bg-gray-900/50 p-4">
                                     <label className="block text-xs uppercase tracking-wider text-gray-500 mb-1">Documento generado</label>
@@ -1394,24 +1395,59 @@ export default function ConsultarResguardos() {
                                     </div>
                                 </div>
 
-                                <div className="w-full flex flex-col items-center gap-4">
-                                    <div className="w-full rounded-lg overflow-hidden border border-gray-700">
-                                        <BajaPDFReport />
-                                    </div>
-                                    <div className="w-full">
-                                        <PDFDownloadLink
-                                            document={<BajaPDF data={pdfBajaData} />}
-                                            fileName={`baja_${pdfBajaData.folio_baja}.pdf`}
-                                            className="w-full py-3 px-4 bg-gradient-to-r from-red-600 to-red-500 hover:from-red-500 hover:to-red-400 text-white font-medium rounded-lg flex items-center justify-center gap-2 transition-all transform hover:scale-[1.02] shadow-lg"
-                                        >
-                                            {({ loading }) => (
-                                                <>
-                                                    <Download className="h-5 w-5" />
-                                                    {loading ? 'Generando PDF...' : 'Descargar PDF'}
-                                                </>
-                                            )}
-                                        </PDFDownloadLink>
-                                    </div>
+                                <div className="w-full">
+                                    <button
+                                        onClick={async () => {
+                                            if (pdfBajaData) {
+                                                const foliosBaja = Array.from(new Set(pdfBajaData.articulos.map(a => a.folio_baja)));
+                                                const showFolioBajaColumn = foliosBaja.length > 1;
+                                                const columns = [
+                                                    { header: 'No. Inventario', key: 'id_inv' },
+                                                    { header: 'Descripción', key: 'descripcion' },
+                                                    { header: 'Rubro', key: 'rubro' },
+                                                    { header: 'Condición', key: 'estado' },
+                                                    { header: 'Origen', key: 'origen' },
+                                                    { header: 'Resguardante', key: 'resguardante' },
+                                                ];
+                                                if (showFolioBajaColumn) {
+                                                    columns.splice(1, 0, { header: 'Folio Baja', key: 'folio_baja' });
+                                                }
+                                                const firmas = pdfBajaData.firmas ?? [];
+                                                const pdfData = pdfBajaData.articulos.map(a => ({
+                                                    id_inv: a.id_inv,
+                                                    descripcion: a.descripcion,
+                                                    rubro: a.rubro,
+                                                    estado: a.estado,
+                                                    origen: a.origen || '',
+                                                    resguardante: a.resguardante,
+                                                    folio_baja: a.folio_baja
+                                                }));
+                                                const title = `BAJA DE RESGUARDO FOLIO ${pdfBajaData.folio_baja}`;
+                                                const fileName = `baja_${pdfBajaData.folio_baja}`;
+                                                const { generateBajaPDF } = await import('./BajaPDFReport');
+                                                await generateBajaPDF({
+                                                    data: pdfData,
+                                                    columns,
+                                                    title,
+                                                    fileName,
+                                                    firmas,
+                                                    encabezado: {
+                                                        ...pdfBajaData,
+                                                        articulos: pdfBajaData.articulos.map(articulo => ({
+                                                            ...articulo,
+                                                            resguardante: articulo.resguardante || ''
+                                                        }))
+                                                    }
+                                                });
+                                                setShowPDFBajaButton(false);
+                                                setPdfBajaData(null);
+                                            }
+                                        }}
+                                        className="w-full py-3 px-4 bg-red-600 text-white rounded-lg font-medium hover:bg-red-700 transition-colors flex items-center justify-center gap-2"
+                                    >
+                                        <Download className="h-4 w-4" />
+                                        Descargar PDF
+                                    </button>
                                 </div>
                             </div>
                         </div>

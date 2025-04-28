@@ -7,15 +7,7 @@ import {
     Info, RefreshCw, FileDigit, Building2
 } from 'lucide-react';
 import supabase from '@/app/lib/supabase/client';
-import { PDFDownloadLink } from '@react-pdf/renderer';
-import { BajaPDF } from './BajaPDFReport';
-import dynamic from 'next/dynamic';
-
-// Importar el componente PDF de forma dinámica para evitar SSR
-const BajaPDFReport = dynamic<{ data: PdfDataBaja; onClose: () => void }>(
-    () => import('./BajaPDFReport'),
-    { ssr: false }
-);
+import { generateBajaPDF } from './BajaPDFReport';
 
 interface ResguardoBaja {
     id: number;
@@ -87,7 +79,7 @@ const ConsultarBajasResguardos = () => {
     const [sortField, setSortField] = useState<'id' | 'folio_resguardo' | 'f_resguardo' | 'dir_area'>('id');
     const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
     const [pdfBajaData, setPdfBajaData] = useState<PdfDataBaja | null>(null);
-    const [showPDFButton, setShowPDFButton] = useState(false);
+    const [showPDFModal, setShowPDFModal] = useState(false);
     const detailRef = useRef<HTMLDivElement>(null);
     const [filterDate, setFilterDate] = useState('');
     const [filterDirector, setFilterDirector] = useState('');
@@ -104,14 +96,10 @@ const ConsultarBajasResguardos = () => {
         singleArticulo?: ResguardoBajaArticulo;
     } | null>(null);
 
-    // Update loading state
-    const isLoading = loading;
-
     // Fetch bajas with pagination and sorting
     const fetchBajas = useCallback(async () => {
         setLoading(true);
         try {
-            // Consulta base para obtener folios únicos
             let baseQuery = supabase
                 .from('resguardos_bajas')
                 .select('*');
@@ -128,12 +116,10 @@ const ConsultarBajasResguardos = () => {
                 baseQuery = baseQuery.ilike('usufinal', `%${filterResguardante?.trim().toUpperCase() || ''}%`);
             }
 
-            // Obtener los datos con los filtros aplicados
             const { data: allData, error: queryError } = await baseQuery;
-            
+
             if (queryError) throw queryError;
 
-            // Agrupar por folio_resguardo y tomar el primer registro de cada grupo
             const uniqueFolios = Array.from(
                 new Map(
                     allData?.map(item => [item.folio_resguardo, item])
@@ -143,40 +129,35 @@ const ConsultarBajasResguardos = () => {
             const totalUniqueFolios = uniqueFolios.length;
             setTotalCount(totalUniqueFolios);
 
-            // Calcular el número total de páginas basado en folios únicos
             const totalPages = Math.ceil(totalUniqueFolios / rowsPerPage);
-            
-            // Asegurarse de que la página actual no exceda el total de páginas
             const adjustedCurrentPage = Math.min(currentPage, totalPages || 1);
             if (adjustedCurrentPage !== currentPage) {
                 setCurrentPage(adjustedCurrentPage);
             }
 
-            // Calcular rango para paginación
             const from = (adjustedCurrentPage - 1) * rowsPerPage;
-            
-            // Aplicar paginación a los folios únicos
+
             const paginatedData = uniqueFolios
                 .sort((a, b) => {
                     if (sortField === 'id') {
                         return sortDirection === 'asc' ? a.id - b.id : b.id - a.id;
                     }
                     if (sortField === 'f_resguardo') {
-                        return sortDirection === 'asc' 
+                        return sortDirection === 'asc'
                             ? new Date(a.f_resguardo).getTime() - new Date(b.f_resguardo).getTime()
                             : new Date(b.f_resguardo).getTime() - new Date(a.f_resguardo).getTime();
                     }
                     if (sortField === 'dir_area' || sortField === 'folio_resguardo') {
                         const aValue = a[sortField]?.toLowerCase() || '';
                         const bValue = b[sortField]?.toLowerCase() || '';
-                        return sortDirection === 'asc' 
+                        return sortDirection === 'asc'
                             ? aValue.localeCompare(bValue)
                             : bValue.localeCompare(aValue);
                     }
                     return 0;
                 })
                 .slice(from, from + rowsPerPage);
-            
+
             setBajas(paginatedData || []);
             setError(null);
         } catch (err) {
@@ -187,7 +168,6 @@ const ConsultarBajasResguardos = () => {
         }
     }, [currentPage, rowsPerPage, sortField, sortDirection, filterDate, filterDirector, filterResguardante]);
 
-    // Fetch all bajas for counting articles by folio correctly
     useEffect(() => {
         const fetchAllBajas = async () => {
             try {
@@ -210,11 +190,9 @@ const ConsultarBajasResguardos = () => {
         fetchAllBajas();
     }, [filterDate, filterDirector, filterResguardante, searchTerm]);
 
-    // Fetch bajas by folio_resguardo
     const fetchBajaDetails = async (folioResguardo: string) => {
         setLoading(true);
         try {
-            // Modificar la consulta para incluir todos los campos necesarios
             const { data, error } = await supabase
                 .from('resguardos_bajas')
                 .select(`
@@ -246,10 +224,9 @@ const ConsultarBajasResguardos = () => {
                     condicion: item.condicion,
                     origen: item.origen,
                     folio_baja: item.folio_baja,
-                    usufinal: item.usufinal || firstItem.usufinal // Usar el usufinal del artículo o el general
+                    usufinal: item.usufinal || firstItem.usufinal
                 }));
 
-                // Group articles by folio_baja
                 const grouped = articles.reduce((acc, article) => {
                     const folio = article.folio_baja;
                     if (!acc[folio]) {
@@ -267,42 +244,6 @@ const ConsultarBajasResguardos = () => {
                 };
 
                 setSelectedBaja(detalles);
-
-                // Update PDF data
-                const selectedArticles = getSelectedItemsForPDF();
-                setPdfBajaData({
-                    folio_resguardo: firstItem.folio_resguardo,
-                    folio_baja: firstItem.folio_baja,
-                    fecha: new Date(firstItem.f_resguardo).toLocaleDateString(),
-                    director: firstItem.dir_area,
-                    area: firstItem.area_resguardo || '',
-                    puesto: firstItem.puesto,
-                    resguardante: firstItem.usufinal || '',
-                    articulos: selectedArticles.length > 0 ? selectedArticles.map(art => ({
-                        id_inv: art.num_inventario,
-                        descripcion: art.descripcion,
-                        rubro: art.rubro,
-                        estado: art.condicion,
-                        origen: art.origen,
-                        folio_baja: art.folio_baja,
-                        resguardante: art.usufinal || firstItem.usufinal || '' // Usar el resguardante individual o el general
-                    })) : articles.map(art => ({
-                        id_inv: art.num_inventario,
-                        descripcion: art.descripcion,
-                        rubro: art.rubro,
-                        estado: art.condicion,
-                        origen: art.origen,
-                        folio_baja: art.folio_baja,
-                        resguardante: art.usufinal || firstItem.usufinal || '' // Usar el resguardante individual o el general
-                    }))
-                });
-
-                // Scroll to details on mobile
-                if (window.innerWidth < 768 && detailRef.current) {
-                    setTimeout(() => {
-                        detailRef.current?.scrollIntoView({ behavior: 'smooth' });
-                    }, 100);
-                }
             }
         } catch (err) {
             setError('Error al cargar los detalles de la baja');
@@ -312,12 +253,11 @@ const ConsultarBajasResguardos = () => {
         }
     };
 
-    // Función para obtener las firmas
     const getFirmas = async () => {
         const { data, error } = await supabase
             .from('firmas')
             .select('*');
-        
+
         if (error) {
             console.error('Error al obtener firmas:', error);
             return null;
@@ -325,38 +265,44 @@ const ConsultarBajasResguardos = () => {
         return data;
     };
 
-    // En la función que genera el PDF de baja, modificar para incluir las firmas
     const handleBajaPDF = async () => {
-        if (selectedBaja) {
+        if (!selectedBaja) return;
+
+        setLoading(true);
+        try {
             const groupedSelected = getSelectedItemsGroupedByFolio();
-            for (const group of groupedSelected) {
-                const firmas = await getFirmas();
-                
-                setPdfBajaData({
-                    folio_resguardo: selectedBaja.folio_resguardo,
-                    folio_baja: group.folio_baja,
-                    fecha: new Date(selectedBaja.f_resguardo).toLocaleDateString(),
-                    director: selectedBaja.dir_area,
-                    area: selectedBaja.area_resguardo || '',
-                    puesto: selectedBaja.puesto,
-                    resguardante: selectedBaja.usufinal || '',
-                    articulos: group.articulos.map(art => ({
-                        id_inv: art.num_inventario,
-                        descripcion: art.descripcion,
-                        rubro: art.rubro,
-                        estado: art.condicion,
-                        origen: art.origen,
-                        folio_baja: art.folio_baja,
-                        resguardante: art.usufinal || selectedBaja.usufinal || '' // Use article's usufinal if available
-                    })),
-                    firmas: firmas || undefined
-                });
-                setShowPDFButton(true);
-            }
+            const firstGroup = groupedSelected[0];
+
+            const firmas = await getFirmas();
+
+            setPdfBajaData({
+                folio_resguardo: selectedBaja.folio_resguardo,
+                folio_baja: firstGroup.folio_baja,
+                fecha: new Date(selectedBaja.f_resguardo).toLocaleDateString(),
+                director: selectedBaja.dir_area,
+                area: selectedBaja.area_resguardo || '',
+                puesto: selectedBaja.puesto,
+                resguardante: selectedBaja.usufinal || '',
+                articulos: firstGroup.articulos.map(art => ({
+                    id_inv: art.num_inventario,
+                    descripcion: art.descripcion,
+                    rubro: art.rubro,
+                    estado: art.condicion,
+                    origen: art.origen,
+                    folio_baja: art.folio_baja,
+                    resguardante: art.usufinal || selectedBaja.usufinal || ''
+                })),
+                firmas: firmas || undefined
+            });
+            setShowPDFModal(true);
+        } catch (err) {
+            setError('Error al preparar el PDF de baja');
+            console.error(err);
+        } finally {
+            setLoading(false);
         }
     };
 
-    // Handle sort
     const handleSort = (field: 'id' | 'folio_resguardo' | 'f_resguardo' | 'dir_area') => {
         if (sortField === field) {
             setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
@@ -367,13 +313,11 @@ const ConsultarBajasResguardos = () => {
         setCurrentPage(1);
     };
 
-    // Reset search
     const resetSearch = () => {
         setSearchTerm('');
         fetchBajas();
     };
 
-    // Efecto para búsqueda en tiempo real
     useEffect(() => {
         const delayDebounceFn = setTimeout(async () => {
             if (searchTerm || filterDate || filterDirector || filterResguardante) {
@@ -381,7 +325,6 @@ const ConsultarBajasResguardos = () => {
                 try {
                     let query = supabase.from('resguardos_bajas').select('*');
 
-                    // Aplicar filtros
                     if (searchTerm) {
                         query = query.or(`folio_resguardo.ilike.%${searchTerm}%,folio_baja.ilike.%${searchTerm}%`);
                     }
@@ -421,20 +364,13 @@ const ConsultarBajasResguardos = () => {
         fetchBajas();
     }, [fetchBajas]);
 
-    // Calculate total pages
     const totalPages = Math.ceil(totalCount / rowsPerPage);
+    const foliosUnicos = Array.from(new Map(bajas.map(r => [r.folio_resguardo, r])).values());
 
-    // Agrupar bajas por folio_resguardo para mostrar solo un folio por fila
-    const foliosUnicos = Array.from(
-        new Map(bajas.map(r => [r.folio_resguardo, r])).values()
-    );
-
-    // Función para contar artículos por folio_resguardo usando todas las bajas filtradas
     const getArticuloCount = (folioResguardo: string) => {
         return allBajas.filter(r => r.folio_resguardo === folioResguardo).length;
     };
 
-    // Add function to handle item selection
     const handleItemSelection = (articleId: number) => {
         setSelectedItems(prev => ({
             ...prev,
@@ -442,7 +378,6 @@ const ConsultarBajasResguardos = () => {
         }));
     };
 
-    // Add function to handle select all items in a group
     const handleGroupSelection = (folioBaja: string) => {
         const newSelectedItems = { ...selectedItems };
         const groupArticles = groupedItems[folioBaja] || [];
@@ -456,29 +391,19 @@ const ConsultarBajasResguardos = () => {
         setSelectedItems(newSelectedItems);
     };
 
-    // Add function to clear all selections
     const clearSelections = () => {
         setSelectedItems({});
     };
 
-    // Add function to get selected items for PDF
-    const getSelectedItemsForPDF = () => {
-        if (!selectedBaja) return [];
-        return selectedBaja.articulos.filter(art => selectedItems[art.id]);
-    };
-
-    // Add function to get selected items grouped by folio_baja
     const getSelectedItemsGroupedByFolio = () => {
         if (!selectedBaja) return [];
         const selectedArticles = selectedBaja.articulos.filter(art => selectedItems[art.id]);
-        // Si no hay artículos seleccionados, usar todos los artículos
         if (selectedArticles.length === 0) {
             return [{
                 folio_baja: selectedBaja.folio_baja,
                 articulos: selectedBaja.articulos
             }];
         }
-        // Agrupar artículos seleccionados por folio_baja
         const grouped = selectedArticles.reduce((acc, art) => {
             const found = acc.find(g => g.folio_baja === art.folio_baja);
             if (found) {
@@ -496,26 +421,20 @@ const ConsultarBajasResguardos = () => {
 
     const getItemCountBgColor = (count: number) => {
         switch (count) {
-            case 0:
-                return 'bg-gray-900/40 text-gray-400 border border-gray-800';
-            case 1:
-                return 'bg-red-900/20 text-red-300 border border-red-900';
+            case 0: return 'bg-gray-900/40 text-gray-400 border border-gray-800';
+            case 1: return 'bg-red-900/20 text-red-300 border border-red-900';
             case 2:
             case 3:
-            case 4:
-                return 'bg-red-800/40 text-red-300 border border-red-800';
+            case 4: return 'bg-red-800/40 text-red-300 border border-red-800';
             case 5:
             case 6:
             case 7:
             case 8:
-            case 9:
-                return 'bg-red-800/60 text-red-200 border border-red-700';
-            default:
-                return 'bg-red-700/60 text-red-100 border border-red-600';
+            case 9: return 'bg-red-800/60 text-red-200 border border-red-700';
+            default: return 'bg-red-700/60 text-red-100 border border-red-600';
         }
     };
 
-    // Función para manejar la eliminación
     const handleDelete = async () => {
         if (!itemToDelete) return;
 
@@ -525,7 +444,6 @@ const ConsultarBajasResguardos = () => {
 
             switch (deleteType) {
                 case 'folio':
-                    // Eliminar todo el folio
                     if (itemToDelete.folioResguardo) {
                         result = await supabase
                             .from('resguardos_bajas')
@@ -535,7 +453,6 @@ const ConsultarBajasResguardos = () => {
                     break;
 
                 case 'selected':
-                    // Eliminar múltiples artículos seleccionados
                     if (itemToDelete.articulos && itemToDelete.articulos.length > 0) {
                         const ids = itemToDelete.articulos.map(art => art.id);
                         result = await supabase
@@ -546,7 +463,6 @@ const ConsultarBajasResguardos = () => {
                     break;
 
                 case 'single':
-                    // Eliminar un solo artículo
                     if (itemToDelete.singleArticulo) {
                         result = await supabase
                             .from('resguardos_bajas')
@@ -558,7 +474,6 @@ const ConsultarBajasResguardos = () => {
 
             if (result?.error) throw result.error;
 
-            // Refrescar la vista
             await fetchBajas();
             setSelectedBaja(null);
             setSelectedItems({});
@@ -573,7 +488,6 @@ const ConsultarBajasResguardos = () => {
         }
     };
 
-    // Función para iniciar el proceso de eliminación
     const initiateDelete = (type: 'folio' | 'selected' | 'single', data: {
         folioResguardo?: string;
         folioBaja?: string;
@@ -748,7 +662,7 @@ const ConsultarBajasResguardos = () => {
                                         </tr>
                                     </thead>
                                     <tbody className="bg-transparent divide-y divide-gray-800/50">
-                                        {isLoading ? (
+                                        {loading ? (
                                             <tr className="h-96">
                                                 <td colSpan={5} className="px-6 py-24 text-center text-gray-400">
                                                     <div className="flex flex-col items-center justify-center space-y-4">
@@ -793,7 +707,6 @@ const ConsultarBajasResguardos = () => {
                                             </tr>
                                         ) : (
                                             foliosUnicos.map((baja) => {
-                                                // Contar artículos por folio
                                                 const itemCount = getArticuloCount(baja.folio_resguardo);
                                                 return (
                                                     <tr
@@ -823,8 +736,7 @@ const ConsultarBajasResguardos = () => {
                                                                 {baja.dir_area}
                                                             </div>
                                                             <div className="text-xs text-gray-500">{baja.area_resguardo}</div>
-                                                            
-                                                            {/* Mostrar resguardantes cuando hay un filtro activo */}
+
                                                             {filterResguardante && (
                                                                 <div className="mt-1">
                                                                     {Array.from(new Set(allBajas
@@ -841,7 +753,6 @@ const ConsultarBajasResguardos = () => {
                                                                 </div>
                                                             )}
 
-                                                            {/* Tooltip con los resguardantes */}
                                                             <div className="absolute left-1/2 -translate-x-1/2 top-full mt-2 w-max max-w-sm opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-[9999]">
                                                                 <div className="absolute left-1/2 -top-2 -translate-x-1/2 border-8 border-transparent border-b-gray-800"></div>
                                                                 <div className="bg-black border border-gray-800 rounded-lg shadow-xl p-4">
@@ -973,7 +884,6 @@ const ConsultarBajasResguardos = () => {
                                             <label className="block text-xs uppercase tracking-wider text-gray-500 mb-1">Resguardantes</label>
                                             <div className="flex flex-wrap gap-2">
                                                 {Array.from(new Set(selectedBaja.articulos.map(a => a.usufinal || 'Sin asignar'))).map((resguardante, idx) => {
-                                                    // Paleta de colores oscuros con gradientes sutiles
                                                     const colorPalette = [
                                                         'from-slate-800 to-slate-700 border-slate-600 text-slate-200',
                                                         'from-zinc-800 to-zinc-700 border-zinc-600 text-zinc-200',
@@ -990,8 +900,7 @@ const ConsultarBajasResguardos = () => {
                                                     return (
                                                         <span
                                                             key={idx}
-                                                            className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-gradient-to-r ${color} border shadow-md transition-all duration-200 hover:scale-105`}
-                                                            style={{ letterSpacing: '0.02em' }}
+                                                            className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-gradient-to-r ${color} border shadow-md transition-all duration-200 hover:scale-105 tracking-wider`}
                                                         >
                                                             <User className="h-3.5 w-3.5 mr-1 opacity-80" />
                                                             {resguardante}
@@ -1009,7 +918,6 @@ const ConsultarBajasResguardos = () => {
                                         <Download className="h-4 w-4" />
                                         Generar PDF de {Object.values(selectedItems).filter(Boolean).length > 0 ? 'Artículos Seleccionados' : 'Baja Completa'}
                                     </button>
-                                    {/* Botón para eliminar folio completo */}
                                     <button
                                         onClick={() => initiateDelete('folio', { folioResguardo: selectedBaja.folio_resguardo })}
                                         className="w-full py-2 bg-red-900/20 text-red-400 rounded-lg hover:bg-red-900/40 transition-colors border border-red-900/50 flex items-center justify-center gap-2 mt-2"
@@ -1036,7 +944,6 @@ const ConsultarBajasResguardos = () => {
 
                             {selectedBaja ? (
                                 <div className="space-y-3 mt-2 overflow-auto max-h-[54vh]">
-                                    {/* Selection controls */}
                                     <div className="sticky top-0 z-10 bg-black/90 backdrop-blur-sm p-2 -mx-2 mb-2 border-b border-gray-800">
                                         <div className="flex items-center justify-between gap-2">
                                             <div className="flex items-center gap-2">
@@ -1065,7 +972,6 @@ const ConsultarBajasResguardos = () => {
                                         </div>
                                     </div>
 
-                                    {/* Group items by folio_baja */}
                                     {Object.entries(groupedItems).map(([folioBaja, articulos]) => (
                                         <div key={folioBaja} className="mb-6 bg-gray-900/10 p-4 rounded-xl border border-gray-800">
                                             <div className="flex items-center justify-between mb-3">
@@ -1163,14 +1069,14 @@ const ConsultarBajasResguardos = () => {
             )}
 
             {/* Modal para descargar PDF de baja */}
-            {showPDFButton && pdfBajaData && (
+            {showPDFModal && pdfBajaData && (
                 <div className="fixed inset-0 bg-black/90 flex items-center justify-center z-50 px-4 animate-fadeIn">
                     <div className="bg-black rounded-2xl shadow-2xl border border-red-600/30 w-full max-w-md overflow-hidden transition-all duration-300 transform">
                         <div className="relative p-6 bg-gradient-to-b from-black to-gray-900">
                             <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-red-500/60 via-red-400 to-red-500/60"></div>
 
                             <button
-                                onClick={() => setShowPDFButton(false)}
+                                onClick={() => setShowPDFModal(false)}
                                 className="absolute top-3 right-3 p-2 rounded-full bg-black/60 hover:bg-gray-900 text-red-400 hover:text-red-500 border border-red-500/30 transition-colors"
                                 title="Cerrar"
                             >
@@ -1198,24 +1104,55 @@ const ConsultarBajasResguardos = () => {
                                     </div>
                                 </div>
 
-                                <div className="w-full flex flex-col items-center gap-4">
-                                    <div className="w-full rounded-lg overflow-hidden border border-gray-700">
-                                        <BajaPDFReport data={pdfBajaData} onClose={() => setShowPDFButton(false)} />
-                                    </div>
-                                    <div className="w-full">
-                                        <PDFDownloadLink
-                                            document={<BajaPDF data={pdfBajaData} />}
-                                            fileName={`baja_${pdfBajaData.folio_baja}.pdf`}
-                                            className="w-full py-3 px-4 bg-gradient-to-r from-red-600 to-red-500 hover:from-red-500 hover:to-red-400 text-white font-medium rounded-lg flex items-center justify-center gap-2 transition-all transform hover:scale-[1.02] shadow-lg"
-                                        >
-                                            {({ loading }) => (
-                                                <>
-                                                    <Download className="h-5 w-5" />
-                                                    {loading ? 'Generando PDF...' : 'Descargar PDF'}
-                                                </>
-                                            )}
-                                        </PDFDownloadLink>
-                                    </div>
+                                <div className="w-full rounded-lg overflow-hidden border border-gray-700">
+                                </div>
+
+                                <div className="w-full">
+                                    <button
+                                        onClick={async () => {
+                                            if (pdfBajaData) {
+                                                // Construir columns y datos igual que en BajaPDFReport
+                                                const foliosBaja = Array.from(new Set(pdfBajaData.articulos.map(a => a.folio_baja)));
+                                                const showFolioBajaColumn = foliosBaja.length > 1;
+                                                const columns = [
+                                                    { header: 'No. Inventario', key: 'id_inv' },
+                                                    { header: 'Descripción', key: 'descripcion' },
+                                                    { header: 'Rubro', key: 'rubro' },
+                                                    { header: 'Condición', key: 'estado' },
+                                                    { header: 'Origen', key: 'origen' },
+                                                    { header: 'Resguardante', key: 'resguardante' },
+                                                ];
+                                                if (showFolioBajaColumn) {
+                                                    columns.splice(1, 0, { header: 'Folio Baja', key: 'folio_baja' });
+                                                }
+                                                const firmas = pdfBajaData.firmas ?? [];
+                                                const pdfData = pdfBajaData.articulos.map(a => ({
+                                                    id_inv: a.id_inv,
+                                                    descripcion: a.descripcion,
+                                                    rubro: a.rubro,
+                                                    estado: a.estado,
+                                                    origen: a.origen || '',
+                                                    resguardante: a.resguardante,
+                                                    folio_baja: a.folio_baja
+                                                }));
+                                                const title = `BAJA DE RESGUARDO FOLIO ${pdfBajaData.folio_baja}`;
+                                                const fileName = `baja_${pdfBajaData.folio_baja}`;
+                                                await generateBajaPDF({
+                                                    data: pdfData,
+                                                    columns,
+                                                    title,
+                                                    fileName,
+                                                    firmas,
+                                                    encabezado: pdfBajaData
+                                                });
+                                                setShowPDFModal(false);
+                                            }
+                                        }}
+                                        className="w-full py-3 px-4 bg-red-600 text-white rounded-lg font-medium hover:bg-red-700 transition-colors flex items-center justify-center gap-2"
+                                    >
+                                        <Download className="h-4 w-4" />
+                                        Descargar PDF
+                                    </button>
                                 </div>
                             </div>
                         </div>
