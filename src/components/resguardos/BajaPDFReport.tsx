@@ -208,7 +208,7 @@ export async function generateBajaPDF({
             y: currentY - 25,
             width: numberColWidth,
             height: 25,
-            color: rgb(0.9, 0.9, 0.9),
+            color: rgb(1, 0.85, 0.85), // Rojo sutil
         });
 
         const numberHeaderLines = wrapHeaderText('No.', numberColWidth);
@@ -218,7 +218,7 @@ export async function generateBajaPDF({
                 y: currentY - 18 - (idx * (headerFontSize + 1)),
                 size: headerFontSize,
                 font: font,
-                color: rgb(0.2, 0.2, 0.2)
+                color: rgb(1, 0, 0) // Rojo
             });
         });
 
@@ -231,7 +231,7 @@ export async function generateBajaPDF({
                 y: currentY - 25,
                 width: colWidth,
                 height: 25,
-                color: rgb(0.9, 0.9, 0.9),
+                color: rgb(1, 0.85, 0.85), // Rojo sutil
             });
 
             const headerLines = wrapHeaderText(col.header, colWidth);
@@ -241,7 +241,7 @@ export async function generateBajaPDF({
                     y: currentY - 18 - (lineIdx * (headerFontSize + 1)),
                     size: headerFontSize,
                     font: font,
-                    color: rgb(0.2, 0.2, 0.2)
+                    color: rgb(1, 0, 0) // Rojo
                 });
             });
 
