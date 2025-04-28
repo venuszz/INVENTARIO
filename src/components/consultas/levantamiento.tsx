@@ -106,6 +106,11 @@ export default function LevantamientoUnificado() {
     const [areaDirectorAmbiguous, setAreaDirectorAmbiguous] = useState(false);
     const [areaPDFTarget, setAreaPDFTarget] = useState<{area: string, usufinal: string}>({area: '', usufinal: ''});
 
+    // Estado para controlar si los campos fueron auto-completados
+    const [autoCompletedFields, setAutoCompletedFields] = useState<{area: boolean, nombre: boolean, puesto: boolean}>(
+        { area: false, nombre: false, puesto: false }
+    );
+
     // Detectar si hay filtro por área o usuario final
     const isAreaOrUserFiltered = !!filters.area || !!filters.usufinal;
 
@@ -123,6 +128,7 @@ export default function LevantamientoUnificado() {
         setAreaDirectorAmbiguous(false);
         setAreaDirectorForm({ nombre: '', puesto: '' });
         setAreaPDFError(null);
+        setAutoCompletedFields({ area: false, nombre: false, puesto: false });
         try {
             // Obtener todos los directores de la tabla directorio
             const { data, error } = await supabase.from('directorio').select('*');
@@ -135,10 +141,12 @@ export default function LevantamientoUnificado() {
             if (matches.length === 1) {
                 setAreaDirectorForm({ nombre: matches[0].nombre, puesto: matches[0].puesto });
                 setAreaPDFTarget(t => ({ ...t, area: matches[0].area }));
+                setAutoCompletedFields({ area: true, nombre: true, puesto: true });
             } else {
                 setAreaPDFTarget(t => ({ ...t, area: area })); // Prellenar área aunque no exista
                 setAreaDirectorAmbiguous(true);
                 setAreaDirectorForm({ nombre: '', puesto: '' });
+                setAutoCompletedFields({ area: false, nombre: false, puesto: false });
             }
         } catch {
             setAreaPDFError('Error al buscar en directorio.');
@@ -488,7 +496,7 @@ export default function LevantamientoUnificado() {
             }
             if (toGlobal >= totalInea) {
                 fromItea = Math.max(0, fromGlobal - totalInea);
-                toItea = Math.min(toGlobal - totalInea, totalItea - 1);
+                toItea = Math.min(toGlobal - totalItea, totalItea - 1);
             }
 
             // Aplicar ordenamiento y obtener datos paginados
@@ -911,10 +919,13 @@ export default function LevantamientoUnificado() {
                                                 title='Área'
                                                 type="text"
                                                 value={areaPDFTarget.area}
-                                                onChange={e => setAreaPDFTarget(t => ({ ...t, area: e.target.value }))}
+                                                onChange={e => {
+                                                    setAreaPDFTarget(t => ({ ...t, area: e.target.value }));
+                                                    setAutoCompletedFields(f => ({ ...f, area: false }));
+                                                }}
                                                 placeholder="Área"
                                                 required
-                                                disabled={!!(areaDirectorForm.nombre && areaDirectorForm.puesto && areaPDFTarget.area)}
+                                                disabled={areaPDFLoading || (autoCompletedFields.area && areaPDFTarget.area === areaPDFTarget.area)}
                                                 className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2.5 text-white"
                                             />
                                         </div>
@@ -933,8 +944,13 @@ export default function LevantamientoUnificado() {
                                                             puesto: selected?.puesto || ''
                                                         }));
                                                         setAreaPDFTarget(t => ({ ...t, area: selected?.area || t.area }));
+                                                        setAutoCompletedFields({
+                                                            area: !!selected?.area,
+                                                            nombre: !!selected?.nombre,
+                                                            puesto: !!selected?.puesto
+                                                        });
                                                     }}
-                                                    disabled={!!(areaDirectorForm.nombre && areaDirectorForm.puesto && areaPDFTarget.area)}
+                                                    disabled={areaPDFLoading}
                                                 >
                                                     <option value="">Selecciona...</option>
                                                     {areaDirectorOptions.map(opt => (
@@ -946,10 +962,13 @@ export default function LevantamientoUnificado() {
                                                     type="text"
                                                     className="w-full bg-gray-800 border border-fuchsia-700 rounded-lg px-3 py-2.5 text-white"
                                                     value={areaDirectorForm.nombre}
-                                                    onChange={e => setAreaDirectorForm(f => ({ ...f, nombre: e.target.value }))}
+                                                    onChange={e => {
+                                                        setAreaDirectorForm(f => ({ ...f, nombre: e.target.value }));
+                                                        setAutoCompletedFields(f => ({ ...f, nombre: false }));
+                                                    }}
                                                     placeholder="Nombre del director/jefe"
                                                     required
-                                                    disabled={!!(areaDirectorForm.nombre && areaDirectorForm.puesto && areaPDFTarget.area)}
+                                                    disabled={areaPDFLoading || (autoCompletedFields.nombre && areaDirectorForm.nombre === areaDirectorForm.nombre)}
                                                 />
                                             )}
                                         </div>
@@ -959,10 +978,13 @@ export default function LevantamientoUnificado() {
                                                 type="text"
                                                 className="w-full bg-gray-800 border border-fuchsia-700 rounded-lg px-3 py-2.5 text-white"
                                                 value={areaDirectorForm.puesto ?? ''}
-                                                onChange={e => setAreaDirectorForm(f => ({ ...f, puesto: e.target.value }))}
+                                                onChange={e => {
+                                                    setAreaDirectorForm(f => ({ ...f, puesto: e.target.value }));
+                                                    setAutoCompletedFields(f => ({ ...f, puesto: false }));
+                                                }}
                                                 placeholder="Puesto del director/jefe"
                                                 required
-                                                disabled={!!(areaDirectorForm.nombre && areaDirectorForm.puesto && areaPDFTarget.area)}
+                                                disabled={areaPDFLoading || (autoCompletedFields.puesto && areaDirectorForm.puesto === areaDirectorForm.puesto)}
                                                 autoComplete="off"
                                             />
                                         </div>
