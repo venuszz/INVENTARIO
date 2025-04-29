@@ -9,6 +9,7 @@ import {
     ArrowUpDown, AlertCircle, X, FileUp, File, FileText, Filter
 } from 'lucide-react';
 import supabase from '@/app/lib/supabase/client';
+import { useUserRole } from "@/hooks/useUserRole";
 
 // Tipo unificado para INEA/ITEA
 interface LevMueble {
@@ -590,6 +591,9 @@ export default function LevantamientoUnificado() {
         return text.length > length ? `${text.substring(0, length)}...` : text;
     };
 
+    const role = useUserRole();
+    const isUsuario = role === "usuario";
+
     return (
         <div className="bg-black text-white min-h-screen p-2 sm:p-4 md:p-6 lg:p-8">
             <div className="w-full mx-auto bg-black rounded-lg sm:rounded-xl shadow-2xl overflow-hidden border border-gray-800">
@@ -925,9 +929,12 @@ export default function LevantamientoUnificado() {
                                                 }}
                                                 placeholder="Área"
                                                 required
-                                                disabled={areaPDFLoading || (autoCompletedFields.area && areaPDFTarget.area === areaPDFTarget.area)}
+                                                disabled={areaPDFLoading || (isUsuario ? true : autoCompletedFields.area)}
                                                 className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2.5 text-white"
                                             />
+                                            {isUsuario && (
+                                                <div className="text-xs text-gray-400 mt-1">Solo un administrador puede editar este campo</div>
+                                            )}
                                         </div>
                                         <div>
                                             <label className="block text-xs uppercase tracking-wider text-gray-400 mb-1">Director/Jefe</label>
@@ -968,8 +975,11 @@ export default function LevantamientoUnificado() {
                                                     }}
                                                     placeholder="Nombre del director/jefe"
                                                     required
-                                                    disabled={areaPDFLoading || (autoCompletedFields.nombre && areaDirectorForm.nombre === areaDirectorForm.nombre)}
+                                                    disabled={areaPDFLoading || (isUsuario ? true : autoCompletedFields.nombre)}
                                                 />
+                                            )}
+                                            {isUsuario && (
+                                                <div className="text-xs text-gray-400 mt-1">Solo un administrador puede editar este campo</div>
                                             )}
                                         </div>
                                         <div>
@@ -984,9 +994,12 @@ export default function LevantamientoUnificado() {
                                                 }}
                                                 placeholder="Puesto del director/jefe"
                                                 required
-                                                disabled={areaPDFLoading || (autoCompletedFields.puesto && areaDirectorForm.puesto === areaDirectorForm.puesto)}
+                                                disabled={areaPDFLoading || (isUsuario ? true : autoCompletedFields.puesto)}
                                                 autoComplete="off"
                                             />
+                                            {isUsuario && (
+                                                <div className="text-xs text-gray-400 mt-1">Solo un administrador puede editar este campo</div>
+                                            )}
                                         </div>
                                         {areaPDFError && <div className="text-red-400 text-sm">{areaPDFError}</div>}
                                         <div className="w-full flex flex-col items-center gap-4 mt-4">
