@@ -7,6 +7,8 @@ import {
 } from 'lucide-react';
 import supabase from '@/app/lib/supabase/client';
 import Cookies from 'js-cookie';
+import { useUserRole } from "@/hooks/useUserRole";
+import RoleGuard from "@/components/roleGuard";
 
 interface Mueble {
     id: number;
@@ -347,7 +349,7 @@ export default function ConsultasIneaGeneral() {
                         createdBy = `${parsed.firstName} ${parsed.lastName}`;
                     }
                 }
-            } catch {}
+            } catch { }
 
             await supabase.from('deprecated').insert({
                 id_inv: selectedItem.id_inv,
@@ -852,6 +854,8 @@ export default function ConsultasIneaGeneral() {
             return () => clearTimeout(timer);
         }
     }, [message]);
+
+    const userRole = useUserRole();
 
     return (
         <div className="bg-black text-white min-h-screen p-2 sm:p-4 md:p-6 lg:p-8">
@@ -1748,6 +1752,7 @@ export default function ConsultasIneaGeneral() {
                                                 </div>
                                             )}
                                         </div>
+                                        <RoleGuard roles={["admin", "superadmin"]} userRole={userRole}>
                                         <div className="flex items-center space-x-4 pt-6 border-t border-gray-800">
                                             <button
                                                 onClick={handleStartEdit}
@@ -1771,156 +1776,157 @@ export default function ConsultasIneaGeneral() {
                                                 Dar de Baja
                                             </button>
                                         </div>
+                                    </RoleGuard>
                                     </div>
                                 )}
-                            </div>
+                        </div>
                         </div>
                     )}
 
-                    {/* Modal para completar información del director */}
-                    {showDirectorModal && (
-                        <div className="fixed inset-0 bg-black/90 flex items-center justify-center z-50 px-4 animate-fadeIn">
-                            <div className="bg-black rounded-2xl shadow-2xl border border-yellow-600/30 w-full max-w-md overflow-hidden transition-all duration-300 transform">
-                                <div className="relative p-6 bg-gradient-to-b from-black to-gray-900">
-                                    <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-yellow-500/60 via-yellow-400 to-yellow-500/60"></div>
+                {/* Modal para completar información del director */}
+                {showDirectorModal && (
+                    <div className="fixed inset-0 bg-black/90 flex items-center justify-center z-50 px-4 animate-fadeIn">
+                        <div className="bg-black rounded-2xl shadow-2xl border border-yellow-600/30 w-full max-w-md overflow-hidden transition-all duration-300 transform">
+                            <div className="relative p-6 bg-gradient-to-b from-black to-gray-900">
+                                <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-yellow-500/60 via-yellow-400 to-yellow-500/60"></div>
 
-                                    <div className="flex flex-col items-center text-center mb-4">
-                                        <div className="p-3 bg-yellow-500/10 rounded-full border border-yellow-500/30 mb-3">
-                                            <AlertCircle className="h-8 w-8 text-yellow-500" />
-                                        </div>
-                                        <h3 className="text-2xl font-bold text-white">Información requerida</h3>
-                                        <p className="text-gray-400 mt-2">
-                                            Por favor complete el área del director/jefe de área seleccionado
-                                        </p>
+                                <div className="flex flex-col items-center text-center mb-4">
+                                    <div className="p-3 bg-yellow-500/10 rounded-full border border-yellow-500/30 mb-3">
+                                        <AlertCircle className="h-8 w-8 text-yellow-500" />
                                     </div>
+                                    <h3 className="text-2xl font-bold text-white">Información requerida</h3>
+                                    <p className="text-gray-400 mt-2">
+                                        Por favor complete el área del director/jefe de área seleccionado
+                                    </p>
+                                </div>
 
-                                    <div className="space-y-5 mt-6">
-                                        <div className="rounded-lg border border-gray-800 bg-gray-900/50 p-4">
-                                            <label className="flex items-center gap-2 text-sm font-medium text-gray-300 mb-2">Director/Jefe seleccionado</label>
-                                            <div className="flex items-center gap-3">
-                                                <div className="p-2 bg-gray-800 rounded-lg">
-                                                    <User className="h-4 w-4 text-yellow-400" />
-                                                </div>
-                                                <span className="text-white font-medium">{incompleteDirector?.nombre || 'Director'}</span>
+                                <div className="space-y-5 mt-6">
+                                    <div className="rounded-lg border border-gray-800 bg-gray-900/50 p-4">
+                                        <label className="flex items-center gap-2 text-sm font-medium text-gray-300 mb-2">Director/Jefe seleccionado</label>
+                                        <div className="flex items-center gap-3">
+                                            <div className="p-2 bg-gray-800 rounded-lg">
+                                                <User className="h-4 w-4 text-yellow-400" />
                                             </div>
-                                        </div>
-
-                                        <div>
-                                            <label className="flex items-center gap-2 text-sm font-medium text-gray-300 mb-2">
-                                                <LayoutGrid className="h-4 w-4 text-gray-400" />
-                                                Área
-                                            </label>
-                                            <input
-                                                type="text"
-                                                value={directorFormData.area}
-                                                onChange={(e) => setDirectorFormData({ area: e.target.value })}
-                                                placeholder="Ej: Administración, Recursos Humanos, Contabilidad..."
-                                                className="block w-full bg-gray-900 border border-gray-700 rounded-lg py-3 px-4 text-white placeholder-gray-500 focus:outline-none focus:border-yellow-500 focus:ring-1 focus:ring-yellow-500 transition-colors"
-                                                required
-                                            />
-                                            {!directorFormData.area && (
-                                                <p className="text-xs text-yellow-500/80 mt-2 flex items-center gap-1">
-                                                    <AlertCircle className="h-3 w-3" />
-                                                    Este campo es obligatorio
-                                                </p>
-                                            )}
+                                            <span className="text-white font-medium">{incompleteDirector?.nombre || 'Director'}</span>
                                         </div>
                                     </div>
-                                </div>
 
-                                <div className="p-5 bg-black border-t border-gray-800 flex justify-end gap-3">
-                                    <button
-                                        onClick={() => setShowDirectorModal(false)}
-                                        className="px-5 py-2.5 bg-gray-900 text-white rounded-lg text-sm hover:bg-gray-800 border border-gray-800 transition-colors flex items-center gap-2"
-                                    >
-                                        <X className="h-4 w-4" />
-                                        Cancelar
-                                    </button>
-                                    <button
-                                        onClick={saveDirectorInfo}
-                                        disabled={savingDirector || !directorFormData.area}
-                                        className={`px-5 py-2.5 rounded-lg text-sm flex items-center gap-2 transition-all duration-300 
-                                            ${savingDirector || !directorFormData.area ?
-                                                'bg-gray-900 text-gray-500 cursor-not-allowed border border-gray-800' :
-                                                'bg-gradient-to-r from-yellow-600 to-yellow-500 text-black font-medium hover:shadow-lg hover:shadow-yellow-500/20'}`}
-                                    >
-                                        {savingDirector ? (
-                                            <RefreshCw className="h-4 w-4 animate-spin" />
-                                        ) : (
-                                            <Save className="h-4 w-4" />
-                                        )}
-                                        {savingDirector ? 'Guardando...' : 'Guardar y Continuar'}
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
-                    )}
-
-                    {/* Modal de confirmación de baja */}
-                    {showBajaModal && selectedItem && (
-                        <div className="fixed inset-0 bg-black/90 flex items-center justify-center z-50 px-4 animate-fadeIn">
-                            <div className="bg-black rounded-2xl shadow-2xl border border-red-600/30 w-full max-w-md overflow-hidden transition-all duration-300 transform">
-                                <div className="relative p-6 bg-gradient-to-b from-black to-gray-900">
-                                    <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-red-500/60 via-red-400 to-red-500/60"></div>
-                                    <div className="flex flex-col items-center text-center mb-4">
-                                        <div className="p-3 bg-red-500/10 rounded-full border border-red-500/30 mb-3">
-                                            <AlertTriangle className="h-8 w-8 text-red-500" />
-                                        </div>
-                                        <h3 className="text-2xl font-bold text-white">¿Dar de baja este artículo?</h3>
-                                    </div>
-                                    <div className="rounded-lg border border-gray-800 bg-gray-900/50 p-4 mb-4">
-                                        <div className="text-left text-sm text-gray-300">
-                                            <div><span className="font-bold text-white">ID:</span> {selectedItem.id_inv}</div>
-                                            <div><span className="font-bold text-white">Descripción:</span> {selectedItem.descripcion}</div>
-                                            <div><span className="font-bold text-white">Área:</span> {selectedItem.area}</div>
-                                        </div>
-                                    </div>
                                     <div>
                                         <label className="flex items-center gap-2 text-sm font-medium text-gray-300 mb-2">
-                                            <Info className="h-4 w-4 text-gray-400" />
-                                            Causa de Baja
+                                            <LayoutGrid className="h-4 w-4 text-gray-400" />
+                                            Área
                                         </label>
-                                        <textarea
-                                            value={bajaCause}
-                                            onChange={(e) => setBajaCause(e.target.value)}
-                                            placeholder="Ingrese la causa de baja"
-                                            className="block w-full bg-gray-900 border border-gray-700 rounded-lg py-3 px-4 text-white placeholder-gray-500 focus:outline-none focus:border-red-500 focus:ring-1 focus:ring-red-500 transition-colors"
-                                            rows={3}
+                                        <input
+                                            type="text"
+                                            value={directorFormData.area}
+                                            onChange={(e) => setDirectorFormData({ area: e.target.value })}
+                                            placeholder="Ej: Administración, Recursos Humanos, Contabilidad..."
+                                            className="block w-full bg-gray-900 border border-gray-700 rounded-lg py-3 px-4 text-white placeholder-gray-500 focus:outline-none focus:border-yellow-500 focus:ring-1 focus:ring-yellow-500 transition-colors"
                                             required
                                         />
-                                        {!bajaCause && (
-                                            <p className="text-xs text-red-500/80 mt-2 flex items-center gap-1">
+                                        {!directorFormData.area && (
+                                            <p className="text-xs text-yellow-500/80 mt-2 flex items-center gap-1">
                                                 <AlertCircle className="h-3 w-3" />
                                                 Este campo es obligatorio
                                             </p>
                                         )}
                                     </div>
                                 </div>
-                                <div className="p-5 bg-black border-t border-gray-800 flex justify-end gap-3">
-                                    <button
-                                        onClick={() => setShowBajaModal(false)}
-                                        className="px-5 py-2.5 bg-gray-900 text-white rounded-lg text-sm hover:bg-gray-800 border border-gray-800 transition-colors flex items-center gap-2"
-                                    >
-                                        <X className="h-4 w-4" />
-                                        Cancelar
-                                    </button>
-                                    <button
-                                        onClick={confirmBaja}
-                                        disabled={!bajaCause}
-                                        className={`px-5 py-2.5 rounded-lg text-sm flex items-center gap-2 transition-all duration-300 
-                                            ${!bajaCause ?
-                                                'bg-gray-900 text-gray-500 cursor-not-allowed border border-gray-800' :
-                                                'bg-gradient-to-r from-red-600 to-red-500 text-white font-medium hover:shadow-lg hover:shadow-red-500/20'}`}
-                                    >
-                                        <Trash2 className="h-4 w-4" />
-                                        Dar de Baja
-                                    </button>
-                                </div>
+                            </div>
+
+                            <div className="p-5 bg-black border-t border-gray-800 flex justify-end gap-3">
+                                <button
+                                    onClick={() => setShowDirectorModal(false)}
+                                    className="px-5 py-2.5 bg-gray-900 text-white rounded-lg text-sm hover:bg-gray-800 border border-gray-800 transition-colors flex items-center gap-2"
+                                >
+                                    <X className="h-4 w-4" />
+                                    Cancelar
+                                </button>
+                                <button
+                                    onClick={saveDirectorInfo}
+                                    disabled={savingDirector || !directorFormData.area}
+                                    className={`px-5 py-2.5 rounded-lg text-sm flex items-center gap-2 transition-all duration-300 
+                                            ${savingDirector || !directorFormData.area ?
+                                            'bg-gray-900 text-gray-500 cursor-not-allowed border border-gray-800' :
+                                            'bg-gradient-to-r from-yellow-600 to-yellow-500 text-black font-medium hover:shadow-lg hover:shadow-yellow-500/20'}`}
+                                >
+                                    {savingDirector ? (
+                                        <RefreshCw className="h-4 w-4 animate-spin" />
+                                    ) : (
+                                        <Save className="h-4 w-4" />
+                                    )}
+                                    {savingDirector ? 'Guardando...' : 'Guardar y Continuar'}
+                                </button>
                             </div>
                         </div>
-                    )}
-                </div>
+                    </div>
+                )}
+
+                {/* Modal de confirmación de baja */}
+                {showBajaModal && selectedItem && (
+                    <div className="fixed inset-0 bg-black/90 flex items-center justify-center z-50 px-4 animate-fadeIn">
+                        <div className="bg-black rounded-2xl shadow-2xl border border-red-600/30 w-full max-w-md overflow-hidden transition-all duration-300 transform">
+                            <div className="relative p-6 bg-gradient-to-b from-black to-gray-900">
+                                <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-red-500/60 via-red-400 to-red-500/60"></div>
+                                <div className="flex flex-col items-center text-center mb-4">
+                                    <div className="p-3 bg-red-500/10 rounded-full border border-red-500/30 mb-3">
+                                        <AlertTriangle className="h-8 w-8 text-red-500" />
+                                    </div>
+                                    <h3 className="text-2xl font-bold text-white">¿Dar de baja este artículo?</h3>
+                                </div>
+                                <div className="rounded-lg border border-gray-800 bg-gray-900/50 p-4 mb-4">
+                                    <div className="text-left text-sm text-gray-300">
+                                        <div><span className="font-bold text-white">ID:</span> {selectedItem.id_inv}</div>
+                                        <div><span className="font-bold text-white">Descripción:</span> {selectedItem.descripcion}</div>
+                                        <div><span className="font-bold text-white">Área:</span> {selectedItem.area}</div>
+                                    </div>
+                                </div>
+                                <div>
+                                    <label className="flex items-center gap-2 text-sm font-medium text-gray-300 mb-2">
+                                        <Info className="h-4 w-4 text-gray-400" />
+                                        Causa de Baja
+                                    </label>
+                                    <textarea
+                                        value={bajaCause}
+                                        onChange={(e) => setBajaCause(e.target.value)}
+                                        placeholder="Ingrese la causa de baja"
+                                        className="block w-full bg-gray-900 border border-gray-700 rounded-lg py-3 px-4 text-white placeholder-gray-500 focus:outline-none focus:border-red-500 focus:ring-1 focus:ring-red-500 transition-colors"
+                                        rows={3}
+                                        required
+                                    />
+                                    {!bajaCause && (
+                                        <p className="text-xs text-red-500/80 mt-2 flex items-center gap-1">
+                                            <AlertCircle className="h-3 w-3" />
+                                            Este campo es obligatorio
+                                        </p>
+                                    )}
+                                </div>
+                            </div>
+                            <div className="p-5 bg-black border-t border-gray-800 flex justify-end gap-3">
+                                <button
+                                    onClick={() => setShowBajaModal(false)}
+                                    className="px-5 py-2.5 bg-gray-900 text-white rounded-lg text-sm hover:bg-gray-800 border border-gray-800 transition-colors flex items-center gap-2"
+                                >
+                                    <X className="h-4 w-4" />
+                                    Cancelar
+                                </button>
+                                <button
+                                    onClick={confirmBaja}
+                                    disabled={!bajaCause}
+                                    className={`px-5 py-2.5 rounded-lg text-sm flex items-center gap-2 transition-all duration-300 
+                                            ${!bajaCause ?
+                                            'bg-gray-900 text-gray-500 cursor-not-allowed border border-gray-800' :
+                                            'bg-gradient-to-r from-red-600 to-red-500 text-white font-medium hover:shadow-lg hover:shadow-red-500/20'}`}
+                                >
+                                    <Trash2 className="h-4 w-4" />
+                                    Dar de Baja
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                )}
             </div>
         </div>
+        </div >
     );
 }

@@ -10,12 +10,7 @@ import {
 } from 'lucide-react';
 import supabase from '@/app/lib/supabase/client';
 import Cookies from 'js-cookie';
-import dynamic from 'next/dynamic';
-import { PDFDownloadLink } from '@react-pdf/renderer';
-import { ResguardoPDF } from './ResguardoPDFReport';
-
-// Importar el componente PDF de forma dinámica para evitar SSR
-const ResguardoPDFReport = dynamic(() => import('./ResguardoPDFReport'), { ssr: false });
+import { generateResguardoPDF } from './ResguardoPDFReport';
 
 interface Mueble {
     id: number;
@@ -137,6 +132,7 @@ export default function CrearResguardos() {
     const [directorInputDisabled, setDirectorInputDisabled] = useState(false);
     const [directorSearchTerm, setDirectorSearchTerm] = useState('');
     const [totalCount, setTotalCount] = useState(0);
+    const [generatingPDF, setGeneratingPDF] = useState(false);
 
     const [pdfData, setPdfData] = useState<PdfData | null>(null);
 
@@ -547,6 +543,9 @@ export default function CrearResguardos() {
             setSuccessMessage(`Resguardo ${folioToUse} creado correctamente con ${selectedMuebles.length} artículo(s)`);
             setTimeout(() => setSuccessMessage(null), 3000);
 
+            // Actualizar folio automáticamente tras guardar
+            await generateFolio();
+
             // Refresh data
             fetchData(currentPage, rowsPerPage, searchTerm, sortField, sortDirection, areaFilter, responsableFilter);
 
@@ -583,6 +582,23 @@ export default function CrearResguardos() {
     const totalPages = Math.ceil(totalCount / rowsPerPage);
 
     const inputsDisabled = selectedMuebles.length === 0;
+
+    // Función para manejar la generación del PDF (igual que en consultar.tsx)
+    const handleGeneratePDF = async () => {
+        setGeneratingPDF(true);
+        try {
+            if (pdfData) {
+                await generateResguardoPDF(pdfData);
+                sessionStorage.setItem('pdfDownloaded', 'true');
+            }
+        } catch (error) {
+            setError('Error al generar el PDF');
+            console.error(error);
+        } finally {
+            setGeneratingPDF(false);
+            setShowPDFButton(false); // Cerrar el modal después de la descarga
+        }
+    };
 
     return (
         <div className="bg-black text-white min-h-screen p-2 sm:p-4 md:p-6 lg:p-8">
@@ -1398,35 +1414,17 @@ export default function CrearResguardos() {
                                         <div className="p-2 bg-gray-800 rounded-lg">
                                             <FileText className="h-4 w-4 text-green-400" />
                                         </div>
-                                        <span className="text-white font-medium">Resguardo de equipo</span>
+                                        <span className="text-white font-medium">Resguardo {pdfData.folio}</span>
                                     </div>
                                 </div>
-
-                                {/* Componente PDF con visualización y botón de descarga */}
-                                <div className="w-full flex flex-col items-center gap-4">
-                                    <div className="w-full rounded-lg overflow-hidden border border-gray-700">
-                                        <ResguardoPDFReport data={pdfData as PdfData} onClose={() => setShowPDFButton(false)} />
-                                    </div>
-                                    {/* Botón verde de descarga usando PDFDownloadLink */}
-                                    <div className="w-full">
-                                        <PDFDownloadLink
-                                            document={<ResguardoPDF data={pdfData as PdfData} />}
-                                            fileName={`resguardo_${pdfData.folio}.pdf`}
-                                            className="w-full py-3 px-4 bg-gradient-to-r from-green-600 to-green-500 hover:from-green-500 hover:to-green-400 text-black font-medium rounded-lg flex items-center justify-center gap-2 transition-all transform hover:scale-[1.02] shadow-lg"
-                                            onClick={() => {
-                                                // Marcar que se ha descargado el PDF
-                                                sessionStorage.setItem('pdfDownloaded', 'true');
-                                            }}
-                                        >
-                                            {({ loading }) => (
-                                                <>
-                                                    <Download className="h-5 w-5" />
-                                                    {loading ? 'Generando PDF...' : 'Descargar PDF'}
-                                                </>
-                                            )}
-                                        </PDFDownloadLink>
-                                    </div>
-                                </div>
+                                <button
+                                    onClick={handleGeneratePDF}
+                                    disabled={generatingPDF}
+                                    className="w-full py-3 px-4 bg-gradient-to-r from-green-600 to-green-500 hover:from-green-500 hover:to-green-400 text-black font-medium rounded-lg flex items-center justify-center gap-2 transition-all transform hover:scale-[1.02] shadow-lg"
+                                >
+                                    <Download className="h-4 w-4" />
+                                    {generatingPDF ? 'Generando PDF...' : 'Descargar PDF'}
+                                </button>
                             </div>
                         </div>
                     </div>

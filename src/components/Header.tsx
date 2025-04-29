@@ -215,7 +215,7 @@ export default function NavigationBar() {
             submenu: [
                 { title: 'Crear resguardo', path: '/resguardos/crear' },
                 { title: 'Consultar resguardos', path: '/resguardos/consultar' },
-                {title: 'Consultar bajas', path: '/resguardos/consultar/bajas'},
+                { title: 'Consultar bajas', path: '/resguardos/consultar/bajas' },
             ]
         },
         {
@@ -262,7 +262,34 @@ export default function NavigationBar() {
                             </Link>
                         </div>
                         <div className="hidden md:ml-8 md:flex md:space-x-1">
-                            {menuItems.map((item) => (
+                            <RoleGuard roles={["admin", "superadmin"]} userRole={userData.rol}>
+                                <div className="relative">
+                                    <button
+                                        onClick={() => toggleMenu("Inventario")}
+                                        className={`flex items-center px-4 py-2 rounded-md ${isActive("/inventario") ? 'text-blue-400 bg-blue-950' : 'text-gray-300 hover:text-white hover:bg-gray-800'}`}
+                                    >
+                                        <span className="mr-2"><Database className="w-4 h-4" /></span>
+                                        Inventario
+                                        <ChevronDown className={`ml-1 w-3 h-3 transition-transform ${openMenu === "Inventario" ? 'rotate-180' : ''}`} />
+                                    </button>
+                                    {openMenu === "Inventario" && (
+                                        <div className="absolute left-0 mt-1 w-56 rounded-md bg-black shadow-lg z-20">
+                                            <div className="py-1">
+                                                <RoleGuard roles={["admin", "superadmin"]} userRole={userData.rol}>
+                                                    <Link
+                                                        href="/inventario/registro"
+                                                        onClick={closeAll}
+                                                        className={`block px-4 py-2 text-sm ${pathname === "/inventario/registro" ? 'text-blue-400 bg-black' : 'text-gray-300 hover:bg-gray-800 hover:text-white'}`}
+                                                    >
+                                                        Registro de nuevos bienes
+                                                    </Link>
+                                                </RoleGuard>
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
+                            </RoleGuard>
+                            {menuItems.slice(1, 4).map((item) => (
                                 <div key={item.title} className="relative">
                                     {item.submenu ? (
                                         <>
@@ -332,31 +359,65 @@ export default function NavigationBar() {
                                     )}
                                 </div>
                             ))}
+                            <RoleGuard roles={["admin", "superadmin"]} userRole={userData.rol}>
+                                <div className="relative">
+                                    <button
+                                        onClick={() => toggleMenu("Administración")}
+                                        className={`flex items-center px-4 py-2 rounded-md ${isActive("/admin") ? 'text-blue-400 bg-blue-950' : 'text-gray-300 hover:text-white hover:bg-gray-800'}`}
+                                    >
+                                        <span className="mr-2"><Settings className="w-4 h-4" /></span>
+                                        Administración
+                                        <ChevronDown className={`ml-1 w-3 h-3 transition-transform ${openMenu === "Administración" ? 'rotate-180' : ''}`} />
+                                    </button>
+                                    {openMenu === "Administración" && (
+                                        <div className="absolute left-0 mt-1 w-56 rounded-md bg-black shadow-lg z-20">
+                                            <div className="py-1">
+                                                <Link
+                                                    href="/admin/areas"
+                                                    onClick={closeAll}
+                                                    className={`block px-4 py-2 text-sm ${pathname === "/admin/areas" ? 'text-blue-400 bg-black' : 'text-gray-300 hover:bg-gray-800 hover:text-white'}`}
+                                                >
+                                                    Configuración General
+                                                </Link>
+                                                <Link
+                                                    href="/admin/personal"
+                                                    onClick={closeAll}
+                                                    className={`block px-4 py-2 text-sm ${pathname === "/admin/personal" ? 'text-blue-400 bg-black' : 'text-gray-300 hover:bg-gray-800 hover:text-white'}`}
+                                                >
+                                                    Directorio de Personal
+                                                </Link>
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
+                            </RoleGuard>
                         </div>
                     </div>
 
                     <div className="hidden md:flex items-center">
                         <WelcomeMessage />
                         <div className="flex items-center space-x-3">
-                        <RoleGuard roles={["superadmin"]} userRole={userData.rol}>
-                            <Link
-                                href="/register"
+                            <RoleGuard roles={["superadmin"]} userRole={userData.rol}>
+                                <Link
+                                    href="/register"
+                                    className="p-2 text-gray-300 hover:text-white hover:bg-gray-800 rounded-full"
+                                    title="Añadir usuario"
+                                >
+                                    <User className="h-5 w-5" />
+                                </Link>
+                            </RoleGuard>
+                            <RoleGuard roles={["superadmin"]} userRole={userData.rol}>
+                                <Link
+                                    href="/dashboard"
+                                    className={`p-2 text-gray-300 hover:text-white hover:bg-gray-800 rounded-full ${pathname === '/dashboard' ? 'text-blue-400 bg-blue-950' : ''}`}
+                                    title="Dashboard"
+                                >
+                                    <Grid className="h-5 w-5" />
+                                </Link>
+                            </RoleGuard>
+                            <button
+                                onClick={initiateLogout}
                                 className="p-2 text-gray-300 hover:text-white hover:bg-gray-800 rounded-full"
-                                title="Añadir usuario"
-                            >
-                                <User className="h-5 w-5" />
-                            </Link>
-                        </RoleGuard>
-                            <Link
-                                href="/dashboard"
-                                className={`p-2 text-gray-300 hover:text-white hover:bg-gray-800 rounded-full ${pathname === '/dashboard' ? 'text-blue-400 bg-blue-950' : ''}`}
-                                title="Dashboard"
-                            >
-                                <Grid className="h-5 w-5" />
-                            </Link>
-                            <button 
-                                onClick={initiateLogout} 
-                                className="p-2 text-gray-300 hover:text-white hover:bg-gray-800 rounded-full" 
                                 title='Cerrar sesión'
                             >
                                 <LogOut className="h-5 w-5" />
@@ -377,7 +438,34 @@ export default function NavigationBar() {
             {mobileMenuOpen && (
                 <div className="md:hidden bg-black">
                     <div className="px-2 pt-2 pb-3 space-y-1">
-                        {menuItems.map((item) => (
+                        <RoleGuard roles={["superadmin"]} userRole={userData.rol}>
+                            <div>
+                                <button
+                                    onClick={() => toggleMenu("Inventario")}
+                                    className={`flex justify-between w-full px-3 py-2 rounded-md ${isActive("/inventario") ? 'text-blue-400 bg-black' : 'text-gray-300 hover:text-white hover:bg-gray-800'}`}
+                                >
+                                    <div className="flex items-center">
+                                        <span className="mr-3"><Database className="w-4 h-4" /></span>
+                                        Inventario
+                                    </div>
+                                    <ChevronDown className={`w-4 h-4 transition-transform ${openMenu === "Inventario" ? 'rotate-180' : ''}`} />
+                                </button>
+                                {openMenu === "Inventario" && (
+                                    <div className="pl-6 py-1">
+                                        <RoleGuard roles={["superadmin"]} userRole={userData.rol}>
+                                            <Link
+                                                href="/inventario/registro"
+                                                onClick={closeAll}
+                                                className={`block px-3 py-2 rounded-md text-sm ${pathname === "/inventario/registro" ? 'text-blue-400 bg-gray-700' : 'text-gray-400 hover:text-white hover:bg-gray-800'}`}
+                                            >
+                                                Registro de nuevos bienes
+                                            </Link>
+                                        </RoleGuard>
+                                    </div>
+                                )}
+                            </div>
+                        </RoleGuard>
+                        {menuItems.slice(1, 4).map((item) => (
                             <div key={item.title}>
                                 <button
                                     onClick={() => toggleMenu(item.title)}
@@ -434,6 +522,38 @@ export default function NavigationBar() {
                                 )}
                             </div>
                         ))}
+                        <RoleGuard roles={["superadmin"]} userRole={userData.rol}>
+                            <div>
+                                <button
+                                    onClick={() => toggleMenu("Administración")}
+                                    className={`flex justify-between w-full px-3 py-2 rounded-md ${isActive("/admin") ? 'text-blue-400 bg-black' : 'text-gray-300 hover:text-white hover:bg-gray-800'}`}
+                                >
+                                    <div className="flex items-center">
+                                        <span className="mr-3"><Settings className="w-4 h-4" /></span>
+                                        Administración
+                                    </div>
+                                    <ChevronDown className={`w-4 h-4 transition-transform ${openMenu === "Administración" ? 'rotate-180' : ''}`} />
+                                </button>
+                                {openMenu === "Administración" && (
+                                    <div className="pl-6 py-1">
+                                        <Link
+                                            href="/admin/areas"
+                                            onClick={closeAll}
+                                            className={`block px-3 py-2 rounded-md text-sm ${pathname === "/admin/areas" ? 'text-blue-400 bg-gray-700' : 'text-gray-400 hover:text-white hover:bg-gray-800'}`}
+                                        >
+                                            Configuración General
+                                        </Link>
+                                        <Link
+                                            href="/admin/personal"
+                                            onClick={closeAll}
+                                            className={`block px-3 py-2 rounded-md text-sm ${pathname === "/admin/personal" ? 'text-blue-400 bg-gray-700' : 'text-gray-400 hover:text-white hover:bg-gray-800'}`}
+                                        >
+                                            Directorio de Personal
+                                        </Link>
+                                    </div>
+                                )}
+                            </div>
+                        </RoleGuard>
                     </div>
 
                     <div className="pt-4 pb-3 border-t border-gray-800 px-4">
@@ -448,9 +568,9 @@ export default function NavigationBar() {
                                 )}
                             </div>
                             <div className="ml-auto flex space-x-2">
-                                <button 
-                                    onClick={initiateLogout} 
-                                    className="p-2 text-gray-300 hover:text-white hover:bg-gray-800 rounded-full" 
+                                <button
+                                    onClick={initiateLogout}
+                                    className="p-2 text-gray-300 hover:text-white hover:bg-gray-800 rounded-full"
                                     title='Cerrar sesión'
                                 >
                                     <LogOut className="h-5 w-5" />
@@ -463,7 +583,7 @@ export default function NavigationBar() {
 
             {/* Logout Confirmation Popover */}
             {showLogoutModal && (
-                <div 
+                <div
                     className="fixed z-50"
                     style={{
                         position: 'fixed',
@@ -472,7 +592,7 @@ export default function NavigationBar() {
                         transform: 'translateX(-50%)',
                     }}
                 >
-                    <div 
+                    <div
                         className="bg-gray-900/95 backdrop-blur-sm rounded-lg border border-blue-500/20 overflow-visible w-64 popover-content"
                         data-position={popoverPosition}
                         style={{
@@ -489,7 +609,7 @@ export default function NavigationBar() {
                                 </div>
                                 <div>
                                     <p className="text-sm text-gray-300">
-                                        {userData.firstName 
+                                        {userData.firstName
                                             ? `¿Cerrar sesión, ${userData.firstName}?`
                                             : "¿Cerrar sesión?"}
                                     </p>

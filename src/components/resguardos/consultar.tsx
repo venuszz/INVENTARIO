@@ -7,13 +7,10 @@ import {
     Info, RefreshCw, FileDigit, Building2, CircleX, XOctagon
 } from 'lucide-react';
 import supabase from '@/app/lib/supabase/client';
-import { PDFDownloadLink } from '@react-pdf/renderer';
-import { ResguardoPDF } from './ResguardoPDFReport';
-import dynamic from 'next/dynamic';
 import { SupabaseClient } from '@supabase/supabase-js';
-
-// Importar el componente PDF de forma dinámica para evitar SSR
-const ResguardoPDFReport = dynamic(() => import('./ResguardoPDFReport'), { ssr: false });
+import { generateResguardoPDF } from './ResguardoPDFReport';
+import { useUserRole } from "@/hooks/useUserRole";
+import RoleGuard from "@/components/roleGuard";
 
 interface Resguardo {
     id: number;
@@ -161,6 +158,9 @@ export default function ConsultarResguardos() {
 
     const [pdfBajaData, setPdfBajaData] = useState<PdfDataBaja | null>(null);
     const [showPDFBajaButton, setShowPDFBajaButton] = useState(false);
+
+    // Estado para controlar la generación del PDF
+    const [generatingPDF, setGeneratingPDF] = useState(false);
 
     // Seleccionar/deseleccionar un artículo
     const toggleArticuloSelection = (num_inventario: string) => {
@@ -603,6 +603,22 @@ export default function ConsultarResguardos() {
         }
     };
 
+    // Función para manejar la generación del PDF
+    const handleGeneratePDF = async () => {
+        setGeneratingPDF(true);
+        try {
+            if (pdfData) {
+                await generateResguardoPDF(pdfData);
+            }
+        } catch (error) {
+            setError('Error al generar el PDF');
+            console.error(error);
+        } finally {
+            setGeneratingPDF(false);
+            setShowPDFButton(false); // Cerrar el modal después de la descarga
+        }
+    };
+
     // Handle sort
     const handleSort = (field: 'folio' | 'f_resguardo' | 'dir_area' | 'usufinal') => {
         if (sortField === field) {
@@ -680,6 +696,8 @@ export default function ConsultarResguardos() {
     const getArticuloCount = (folio: string) => {
         return allResguardos.filter(r => r.folio === folio).length;
     };
+
+    const userRole = useUserRole();
 
     return (
         <div className="bg-black text-white min-h-screen p-2 sm:p-4 md:p-6 lg:p-8">
@@ -1103,6 +1121,7 @@ export default function ConsultarResguardos() {
                                         <Download className="h-4 w-4" />
                                         Generar PDF
                                     </button>
+                                    <RoleGuard roles={["admin", "superadmin"]} userRole={userRole}>
                                     <button
                                         onClick={() => setShowDeleteAllModal(true)}
                                         className="mt-2 w-full py-2.5 bg-red-900/20 border border-red-800 text-red-300 rounded-lg hover:bg-red-900/40 transition-colors flex items-center justify-center gap-2"
@@ -1110,6 +1129,7 @@ export default function ConsultarResguardos() {
                                         <XOctagon className="h-4 w-4" />
                                         Borrar resguardo
                                     </button>
+                                    </RoleGuard>
                                 </>
                             ) : (
                                 <div className="flex flex-col items-center justify-center h-full min-h-[200px] text-gray-500">
@@ -1136,7 +1156,8 @@ export default function ConsultarResguardos() {
                                     <>
                                         {/* Botones de acciones para selección múltiple */}
                                         {selectedArticulos.length > 0 && (
-                                            <div className="flex justify-end items-center gap-2 mb-4 overflow-auto max-h-[10ch">
+                                            <div className="flex justify-end items-center gap-2 mb-4 overflow-auto">
+                                                <RoleGuard roles={["admin", "superadmin"]} userRole={userRole}>
                                                 <button
                                                     className="px-4 py-2 bg-gradient-to-r from-red-700 to-red-500 text-white rounded-lg text-sm font-semibold flex items-center gap-2 hover:from-red-800 hover:to-red-600 border border-red-900/50 transition-colors shadow-lg"
                                                     onClick={() => setShowDeleteSelectedModal(true)}
@@ -1144,6 +1165,7 @@ export default function ConsultarResguardos() {
                                                     <XOctagon className="h-4 w-4" />
                                                     Eliminar seleccionados ({selectedArticulos.length})
                                                 </button>
+                                                </RoleGuard>
                                                 <button
                                                     className="px-3 py-2 bg-gray-800 text-gray-200 rounded-lg text-xs font-medium flex items-center gap-2 hover:bg-gray-700 border border-gray-700 transition-colors"
                                                     onClick={() => setSelectedArticulos([])}
@@ -1238,6 +1260,7 @@ export default function ConsultarResguardos() {
                                                                     {articulo.rubro}
                                                                 </div>
                                                             </div>
+                                                            <RoleGuard roles={["admin", "superadmin"]} userRole={userRole}>
                                                             <button
                                                                 title="Eliminar artículo"
                                                                 onClick={() => setShowDeleteItemModal({ index, articulo })}
@@ -1245,12 +1268,14 @@ export default function ConsultarResguardos() {
                                                             >
                                                                 <CircleX className="h-4 w-4" />
                                                             </button>
+                                                            </RoleGuard>
                                                         </li>
                                                     ))}
                                                 </ul>
                                                 {/* Pie de la tarjeta: eliminación múltiple minimalista */}
                                                 {articulos.length > 1 && (
                                                     <div className="flex justify-end items-center gap-2 px-6 py-2 bg-transparent border-t border-violet-900/10">
+                                                        <RoleGuard roles={["admin", "superadmin"]} userRole={userRole}>
                                                         <button
                                                             className="px-3 py-1.5 bg-violet-700/10 text-violet-100 rounded-md text-xs font-normal flex items-center gap-2 hover:bg-violet-700/20 border border-violet-700/10 transition-colors"
                                                             onClick={() => setShowDeleteSelectedModal(true)}
@@ -1259,6 +1284,7 @@ export default function ConsultarResguardos() {
                                                             <XOctagon className="h-4 w-4" />
                                                             Eliminar seleccionados ({selectedArticulos.length})
                                                         </button>
+                                                        </RoleGuard>
                                                     </div>
                                                 )}
                                             </div>
@@ -1302,7 +1328,6 @@ export default function ConsultarResguardos() {
                     <div className="bg-black rounded-2xl shadow-2xl border border-green-600/30 w-full max-w-md overflow-hidden transition-all duration-300 transform">
                         <div className="relative p-6 bg-gradient-to-b from-black to-gray-900">
                             <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-green-500/60 via-green-400 to-green-500/60"></div>
-
                             <button
                                 onClick={() => setShowPDFButton(false)}
                                 className="absolute top-3 right-3 p-2 rounded-full bg-black/60 hover:bg-gray-900 text-green-400 hover:text-green-500 border border-green-500/30 transition-colors"
@@ -1310,7 +1335,6 @@ export default function ConsultarResguardos() {
                             >
                                 <X className="h-4 w-4" />
                             </button>
-
                             <div className="flex flex-col items-center text-center mb-4">
                                 <div className="p-3 bg-green-500/10 rounded-full border border-green-500/30 mb-3">
                                     <FileDigit className="h-8 w-8 text-green-500" />
@@ -1320,7 +1344,6 @@ export default function ConsultarResguardos() {
                                     Descarga el PDF del resguardo para imprimir o compartir
                                 </p>
                             </div>
-
                             <div className="space-y-5 mt-6">
                                 <div className="rounded-lg border border-gray-800 bg-gray-900/50 p-4">
                                     <label className="block text-xs uppercase tracking-wider text-gray-500 mb-1">Documento generado</label>
@@ -1331,26 +1354,14 @@ export default function ConsultarResguardos() {
                                         <span className="text-white font-medium">Resguardo {pdfData.folio}</span>
                                     </div>
                                 </div>
-
-                                <div className="w-full flex flex-col items-center gap-4">
-                                    <div className="w-full rounded-lg overflow-hidden border border-gray-700">
-                                        <ResguardoPDFReport data={pdfData} onClose={() => setShowPDFButton(false)} />
-                                    </div>
-                                    <div className="w-full">
-                                        <PDFDownloadLink
-                                            document={<ResguardoPDF data={pdfData} />}
-                                            fileName={`resguardo_${pdfData.folio}.pdf`}
-                                            className="w-full py-3 px-4 bg-gradient-to-r from-green-600 to-green-500 hover:from-green-500 hover:to-green-400 text-black font-medium rounded-lg flex items-center justify-center gap-2 transition-all transform hover:scale-[1.02] shadow-lg"
-                                        >
-                                            {({ loading }) => (
-                                                <>
-                                                    <Download className="h-5 w-5" />
-                                                    {loading ? 'Generando PDF...' : 'Descargar PDF'}
-                                                </>
-                                            )}
-                                        </PDFDownloadLink>
-                                    </div>
-                                </div>
+                                <button
+                                    onClick={handleGeneratePDF}
+                                    disabled={generatingPDF}
+                                    className="w-full py-3 px-4 bg-gradient-to-r from-green-600 to-green-500 hover:from-green-500 hover:to-green-400 text-black font-medium rounded-lg flex items-center justify-center gap-2 transition-all transform hover:scale-[1.02] shadow-lg"
+                                >
+                                    <Download className="h-4 w-4" />
+                                    {generatingPDF ? 'Generando PDF...' : 'Descargar PDF'}
+                                </button>
                             </div>
                         </div>
                     </div>

@@ -7,6 +7,8 @@ import {
 } from 'lucide-react';
 import supabase from '@/app/lib/supabase/client';
 import Cookies from 'js-cookie';
+import { useUserRole } from "@/hooks/useUserRole";
+import RoleGuard from "@/components/roleGuard";
 
 interface Mueble {
     id: number;
@@ -829,6 +831,8 @@ export default function ConsultasIteaGeneral() {
         if (!text) return "No Data";
         return text.length > length ? `${text.substring(0, length)}...` : text;
     };
+
+    const userRole = useUserRole();
 
     return (
         <div className="bg-black text-white min-h-screen p-2 sm:p-4 md:p-6 lg:p-8">
@@ -1796,7 +1800,7 @@ export default function ConsultasIteaGeneral() {
                                                 </div>
                                             )}
                                         </div>
-
+                                        <RoleGuard roles={["admin", "superadmin"]} userRole={userRole}>
                                         <div className="flex items-center space-x-4 pt-6 border-t border-gray-800">
                                             <button
                                                 onClick={handleStartEdit}
@@ -1820,6 +1824,7 @@ export default function ConsultasIteaGeneral() {
                                                 Dar de Baja
                                             </button>
                                         </div>
+                                        </RoleGuard>
                                     </div>
                                 )}
                             </div>

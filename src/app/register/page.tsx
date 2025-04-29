@@ -633,7 +633,6 @@ export default function RegisterPage() {
                                                 >
                                                     <option value="usuario">Usuario Normal</option>
                                                     <option value="admin">Administrador</option>
-                                                    <option value="superadmin">Super Administrador</option>
                                                 </select>
                                             </div>
 
