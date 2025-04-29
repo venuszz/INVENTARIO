@@ -1198,6 +1198,7 @@ export default function ConsultarResguardos() {
                                     Artículos del Resguardo ({selectedResguardo?.articulos.length || 0})
                                 </h2>
                                 {selectedResguardo && (
+                                    <RoleGuard roles={["admin", "superadmin"]} userRole={userRole}>
                                     <button
                                         title={editResguardanteMode ? 'Cancelar edición' : 'Editar resguardantes'}
                                         onClick={() => setEditResguardanteMode(e => !e)}
@@ -1206,6 +1207,7 @@ export default function ConsultarResguardos() {
                                         <Pencil className="h-4 w-4" />
                                         <span className="hidden sm:inline text-xs">{editResguardanteMode ? 'Cancelar' : 'Editar'}</span>
                                     </button>
+                                    </RoleGuard>
                                 )}
                             </div>
                             {/* Contenido scrolleable */}
