@@ -11,6 +11,7 @@ import {
 import supabase from '@/app/lib/supabase/client';
 import Cookies from 'js-cookie';
 import { generateResguardoPDF } from './ResguardoPDFReport';
+import { useUserRole } from "@/hooks/useUserRole";
 
 interface Mueble {
     id: number;
@@ -135,6 +136,8 @@ export default function CrearResguardos() {
     const [generatingPDF, setGeneratingPDF] = useState(false);
 
     const [pdfData, setPdfData] = useState<PdfData | null>(null);
+    const role = useUserRole();
+    const isUsuario = role === "usuario";
 
     // Validación de campos obligatorios
     const isFormValid =
@@ -1269,7 +1272,11 @@ export default function CrearResguardos() {
                                         onChange={(e) => setDirectorFormData({ ...directorFormData, area: e.target.value })}
                                         placeholder="Ej: Desarrollo, Marketing, Ventas..."
                                         className="block w-full bg-gray-900 border border-gray-700 rounded-lg py-3 px-4 text-white placeholder-gray-500 focus:outline-none focus:border-yellow-500 focus:ring-1 focus:ring-yellow-500 transition-colors"
+                                        disabled={isUsuario}
                                     />
+                                    {isUsuario && (
+                                        <div className="text-xs text-yellow-400 mt-1">Solo un administrador puede editar estos campos</div>
+                                    )}
                                 </div>
 
                                 <div>
@@ -1283,8 +1290,12 @@ export default function CrearResguardos() {
                                         onChange={(e) => setDirectorFormData({ ...directorFormData, puesto: e.target.value })}
                                         placeholder="Ej: Director General, Gerente, Supervisor..."
                                         className="block w-full bg-gray-900 border border-gray-700 rounded-lg py-3 px-4 text-white placeholder-gray-500 focus:outline-none focus:border-yellow-500 focus:ring-1 focus:ring-yellow-500 transition-colors"
+                                        disabled={isUsuario}
                                     />
-                                    {(!directorFormData.area || !directorFormData.puesto) && (
+                                    {isUsuario && (
+                                        <div className="text-xs text-yellow-400 mt-1">Solo un administrador puede editar estos campos</div>
+                                    )}
+                                    {(!directorFormData.area || !directorFormData.puesto) && !isUsuario && (
                                         <p className="text-xs text-yellow-500/80 mt-2 flex items-center gap-1">
                                             <AlertCircle className="h-3 w-3" />
                                             Ambos campos son requeridos para continuar
@@ -1304,9 +1315,9 @@ export default function CrearResguardos() {
                             </button>
                             <button
                                 onClick={saveDirectorInfo}
-                                disabled={savingDirector || !directorFormData.area || !directorFormData.puesto}
+                                disabled={savingDirector || !directorFormData.area || !directorFormData.puesto || isUsuario}
                                 className={`px-5 py-2.5 rounded-lg text-sm flex items-center gap-2 transition-all duration-300 
-                    ${savingDirector || !directorFormData.area || !directorFormData.puesto ?
+                                    ${savingDirector || !directorFormData.area || !directorFormData.puesto || isUsuario ?
                                         'bg-gray-900 text-gray-500 cursor-not-allowed border border-gray-800' :
                                         'bg-gradient-to-r from-yellow-600 to-yellow-500 text-black font-medium hover:shadow-lg hover:shadow-yellow-500/20'}`}
                             >

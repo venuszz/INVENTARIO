@@ -1005,7 +1005,9 @@ export default function LevantamientoUnificado() {
                                         <div className="w-full flex flex-col items-center gap-4 mt-4">
                                             <button
                                                 type="submit"
-                                                className="w-full py-3 px-4 font-medium rounded-lg flex items-center justify-center gap-2 transition-all transform hover:scale-[1.02] shadow-lg bg-gradient-to-r from-fuchsia-600 to-fuchsia-500 hover:from-fuchsia-500 hover:to-fuchsia-400 text-black"
+                                                className={`w-full py-3 px-4 font-medium rounded-lg flex items-center justify-center gap-2 transition-all transform hover:scale-[1.02] shadow-lg bg-gradient-to-r from-fuchsia-600 to-fuchsia-500 hover:from-fuchsia-500 hover:to-fuchsia-400 text-black ${
+                                                    areaPDFLoading || !areaDirectorForm.nombre || !areaDirectorForm.puesto || !areaPDFTarget.area ? 'opacity-50 cursor-not-allowed' : ''
+                                                }`}
                                                 disabled={areaPDFLoading || !areaDirectorForm.nombre || !areaDirectorForm.puesto || !areaPDFTarget.area}
                                             >
                                                 {areaPDFLoading ? (
