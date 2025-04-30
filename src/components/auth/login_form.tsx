@@ -122,7 +122,7 @@ export default function LoginPage() {
             // Primero obtenemos los datos completos del usuario
             const { data: userData, error: userError } = await supabase
                 .from('users')
-                .select('email, rol, first_name, last_name')
+                .select('id, email, rol, first_name, last_name')
                 .eq('username', username)
                 .single()
 
@@ -160,6 +160,7 @@ export default function LoginPage() {
 
                 // Guardar información extendida del usuario en la cookie
                 Cookies.set('userData', JSON.stringify({
+                    id: userData.id, // <-- Guardar el id (uuid)
                     username: username,
                     firstName: userData.first_name,
                     lastName: userData.last_name,
