@@ -1,5 +1,5 @@
 import React from 'react';
-import { PDFDocument, StandardFonts, rgb } from 'pdf-lib';
+import { PDFDocument, StandardFonts, rgb, PDFPage, PDFFont } from 'pdf-lib';
 import { saveAs } from 'file-saver';
 
 interface PdfDataBaja {
@@ -64,29 +64,42 @@ export async function generateBajaPDF({
     encabezado: PdfDataBaja;
 }) {
     const pdfDoc = await PDFDocument.create();
-
     const ineaImageBytes = await fetch('/images/INEA NACIONAL.png').then(res => res.arrayBuffer());
     const iteaImageBytes = await fetch('/images/LOGO-ITEA.png').then(res => res.arrayBuffer());
-
     const ineaImage = await pdfDoc.embedPng(ineaImageBytes);
     const iteaImage = await pdfDoc.embedPng(iteaImageBytes);
-
-    const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
+    const font = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
     const regularFont = await pdfDoc.embedFont(StandardFonts.Helvetica);
-
-    const normalizeText = (text: string) => {
-        return text.normalize('NFKD').replace(/[\u0300-\u036f]/g, '');
-    };
-
     const margin = 40;
     const pageWidth = 595;
     const pageHeight = 842;
     const minCellPadding = 2;
-    const fontSize = 6;
-    const headerFontSize = 8;
-    const verticalPadding = 3;
+    const fontSize = 8;
+    const headerFontSize = 9;
+    const verticalPadding = 4;
 
-    const wrapText = (text: string, maxWidth: number, font: import('pdf-lib').PDFFont, fontSize: number) => {
+    // Paleta de colores rojos
+    const colorPalette = {
+        primary: rgb(0.8, 0.1, 0.1), // Rojo oscuro
+        secondary: rgb(1, 0.85, 0.85), // Rojo claro
+        accent: rgb(0.9, 0.2, 0.2), // Rojo medio
+        textOnDark: rgb(1, 1, 1), // Blanco
+        textOnLight: rgb(0.2, 0.2, 0.2) // Gris oscuro
+    };
+
+    // Paleta de colores para orígenes
+    const origenColors: Record<string, { bg: [number, number, number], text: [number, number, number] }> = {
+        'INEA': { bg: [0.8, 0.1, 0.1], text: [1, 1, 1] }, // Rojo oscuro para INEA
+        'ITEA': { bg: [0.9, 0.2, 0.2], text: [1, 1, 1] }, // Rojo medio para ITEA
+        'SIN ORIGEN': { bg: [1, 0.4, 0.4], text: [1, 1, 1] }, // Rojo claro para sin origen
+    };
+
+    const normalizeText = (text: string | null | undefined): string => {
+        if (!text) return '';
+        return text.normalize('NFKD').replace(/[\u0300-\u036f]/g, '');
+    };
+
+    const wrapText = (text: string, maxWidth: number, font: PDFFont, fontSize: number) => {
         const words = text.toString().split(' ');
         const lines: string[] = [];
         let currentLine = '';
@@ -101,14 +114,11 @@ export async function generateBajaPDF({
                 let remainingWord = word;
                 while (remainingWord !== '') {
                     let i = 1;
-                    while (i <= remainingWord.length &&
-                        font.widthOfTextAtSize(remainingWord.slice(0, i), fontSize) <= maxWidth) {
+                    while (i <= remainingWord.length && font.widthOfTextAtSize(remainingWord.slice(0, i), fontSize) <= maxWidth) {
                         i++;
                     }
                     i--;
-
                     if (i === 0) i = 1;
-
                     lines.push(remainingWord.slice(0, i));
                     remainingWord = remainingWord.slice(i);
                 }
@@ -147,26 +157,57 @@ export async function generateBajaPDF({
         return Math.max(25, (maxLines * (fontSize + 2)) + (2 * verticalPadding));
     };
 
-    const centerTextInCell = (text: string, cellWidth: number, font: import('pdf-lib').PDFFont, fontSize: number) => {
+    const centerTextInCell = (text: string, cellWidth: number, font: PDFFont, fontSize: number) => {
         const textWidth = font.widthOfTextAtSize(text, fontSize);
         return (cellWidth - textWidth) / 2;
     };
 
-    const numberColWidth = 30;
-    // Calcular el ancho de cada columna para que se ajusten al ancho de la hoja
-    const availableWidth = pageWidth - 2 * margin - numberColWidth;
-    const colCount = columns.length;
-    const colWidth = Math.floor(availableWidth / colCount);
-    // Ajustar el ancho de la última columna para ocupar cualquier espacio restante
-    columns = columns.map((col, idx) => ({
-        ...col,
-        width: idx === colCount - 1 ? availableWidth - colWidth * (colCount - 1) : colWidth
-    }));
-    const adjustedWidths = columns.map((col: Column) => col.width!);
+    // Ajuste de anchos
+    const numberColWidth = 40;
+    const totalWidth = pageWidth - (2 * margin); // Ancho total disponible
+    const contentWidth = totalWidth - numberColWidth; // Ancho disponible para las columnas
 
-    const wrapHeaderText = (text: string, colWidth: number) => {
-        return wrapText(text, colWidth - 2 * minCellPadding, font, headerFontSize);
-    };
+    // Asegurarse de que todas las columnas tengan un ancho inicial válido
+    columns.forEach(col => {
+        if (!col.width || isNaN(col.width)) {
+            col.width = 100; // Ancho por defecto si no está definido o es inválido
+        }
+    });
+
+    // Calcular la suma total de los anchos definidos
+    const totalDefinedWidth = columns.reduce((sum, col) => sum + col.width!, 0);
+    
+    // Calcular el factor de escala para ajustar los anchos proporcionalmente
+    const scaleFactor = contentWidth / totalDefinedWidth;
+    
+    // Ajustar los anchos de las columnas manteniendo las proporciones
+    const adjustedWidths = columns.map(col => Math.max(50, Math.floor((col.width || 100) * scaleFactor)));
+    
+    // Asegurarse de que la suma de los anchos ajustados no exceda el ancho disponible
+    const totalAdjustedWidth = adjustedWidths.reduce((sum, width) => sum + width, 0);
+    if (totalAdjustedWidth > contentWidth) {
+        const reductionFactor = contentWidth / totalAdjustedWidth;
+        adjustedWidths.forEach((_, i) => {
+            adjustedWidths[i] = Math.floor(adjustedWidths[i] * reductionFactor);
+        });
+    }
+    
+    // Distribuir los píxeles restantes
+    let remainingWidth = contentWidth - adjustedWidths.reduce((sum, width) => sum + width, 0);
+    let index = 0;
+    while (remainingWidth > 0) {
+        adjustedWidths[index % adjustedWidths.length]++;
+        remainingWidth--;
+        index++;
+    }
+
+    // Agrupar artículos por origen
+    const articulosPorOrigen: Record<string, Record<string, unknown>[]> = {};
+    for (const articulo of data) {
+        const origen = (articulo.origen as string) || 'SIN ORIGEN';
+        if (!articulosPorOrigen[origen]) articulosPorOrigen[origen] = [];
+        articulosPorOrigen[origen].push(articulo);
+    }
 
     const encabezadoCompleto = 180;
     const headerHeight = 25;
@@ -182,7 +223,7 @@ export async function generateBajaPDF({
             const pageRows: Record<string, unknown>[] = [];
             while (idx < dataArr.length) {
                 const row = dataArr[idx];
-                const rowHeight = calculateRowHeight(row, columns.map((col: Column) => col.width!));
+                const rowHeight = calculateRowHeight(row, adjustedWidths);
                 if (pageRows.length === 0 && rowHeight > yDisponible) {
                     pageRows.push(row);
                     idx++;
@@ -199,151 +240,99 @@ export async function generateBajaPDF({
         return pages;
     };
 
-    const drawHeaders = (page: import('pdf-lib').PDFPage, startY: number) => {
+    const drawTableHeader = (page: PDFPage, yPos: number, origen: string) => {
+        const colorConfig = origenColors[origen] || origenColors['SIN ORIGEN'];
+        const bgColor = rgb(...colorConfig.bg);
+        const textColor = rgb(...colorConfig.text);
         let xPos = margin;
-        const currentY = startY;
 
+        // Número
         page.drawRectangle({
             x: xPos,
-            y: currentY - 25,
+            y: yPos - headerHeight,
             width: numberColWidth,
-            height: 25,
-            color: rgb(1, 0.85, 0.85), // Rojo sutil
+            height: headerHeight,
+            color: bgColor,
         });
 
-        const numberHeaderLines = wrapHeaderText('No.', numberColWidth);
-        numberHeaderLines.forEach((line, idx) => {
-            page.drawText(normalizeText(line), {
-                x: xPos + centerTextInCell(line, numberColWidth, font, headerFontSize),
-                y: currentY - 18 - (idx * (headerFontSize + 1)),
-                size: headerFontSize,
-                font: font,
-                color: rgb(1, 0, 0) // Rojo
-            });
+        const numberText = 'No.';
+        page.drawText(numberText, {
+            x: xPos + centerTextInCell(numberText, numberColWidth, font, headerFontSize),
+            y: yPos - 18,
+            size: headerFontSize,
+            font: font,
+            color: textColor
         });
 
         xPos += numberColWidth;
 
+        // Columnas
         columns.forEach((col: Column, idx: number) => {
             const colWidth = adjustedWidths[idx];
             page.drawRectangle({
                 x: xPos,
-                y: currentY - 25,
+                y: yPos - headerHeight,
                 width: colWidth,
-                height: 25,
-                color: rgb(1, 0.85, 0.85), // Rojo sutil
+                height: headerHeight,
+                color: bgColor,
             });
 
-            const headerLines = wrapHeaderText(col.header, colWidth);
-            headerLines.forEach((line, lineIdx) => {
-                page.drawText(normalizeText(line), {
-                    x: xPos + centerTextInCell(line, colWidth, font, headerFontSize),
-                    y: currentY - 18 - (lineIdx * (headerFontSize + 1)),
-                    size: headerFontSize,
-                    font: font,
-                    color: rgb(1, 0, 0) // Rojo
-                });
+            const headerText = col.header;
+            page.drawText(headerText, {
+                x: xPos + centerTextInCell(headerText, colWidth, font, headerFontSize),
+                y: yPos - 18,
+                size: headerFontSize,
+                font: font,
+                color: textColor
             });
 
             xPos += colWidth;
         });
 
-        return currentY - 25;
+        return yPos - headerHeight;
     };
 
-    const processPage = async (pageData: Record<string, unknown>[], pageIndex: number, totalPages: number, globalStartIndex: number) => {
-        const page = pdfDoc.addPage([pageWidth, pageHeight]);
-        const { height } = page.getSize();
-        let yPos = height - margin;
+    const drawTableRow = (page: PDFPage, row: Record<string, unknown>, yPos: number, rowHeight: number, rowNumber: number) => {
+        let xPos = margin;
 
-        const fontTitleSize = 8;
-        const fontSubtitleSize = 7;
-        const maxImageHeight = 28;
+        // Línea horizontal
+        page.drawLine({
+            start: { x: margin, y: yPos },
+            end: { x: pageWidth - margin, y: yPos },
+            thickness: 0.5,
+            color: rgb(0.7, 0.7, 0.7),
+        });
 
-        if (pageIndex === 0) {
-            const ineaAspectRatio = ineaImage.width / ineaImage.height;
-            const iteaAspectRatio = iteaImage.width / iteaImage.height;
-            const ineaHeight = maxImageHeight;
-            const iteaHeight = maxImageHeight;
-            const ineaWidth = ineaHeight * ineaAspectRatio;
-            const iteaWidth = iteaHeight * iteaAspectRatio;
-            page.drawImage(ineaImage, {
-                x: margin,
-                y: yPos - maxImageHeight,
-                width: ineaWidth,
-                height: ineaHeight,
-            });
-            page.drawImage(iteaImage, {
-                x: pageWidth - margin - iteaWidth,
-                y: yPos - maxImageHeight,
-                width: iteaWidth,
-                height: iteaHeight,
-            });
+        // Número de fila
+        page.drawRectangle({
+            x: xPos,
+            y: yPos - rowHeight,
+            width: numberColWidth,
+            height: rowHeight,
+            borderColor: rgb(0.7, 0.7, 0.7),
+            borderWidth: 0.5,
+            color: rgb(1, 1, 1),
+            opacity: 0
+        });
 
-            const titles = [
-                'INSTITUTO TLAXCALTECA PARA LA EDUCACIÓN DE LOS ADULTOS',
-                'DIRECCIÓN DE ADMINISTRACIÓN Y FINANZAS',
-                'OFICINA DE RECURSOS MATERIALES',
-                title.toUpperCase()
-            ];
+        const numberText = rowNumber.toString();
+        page.drawText(numberText, {
+            x: xPos + centerTextInCell(numberText, numberColWidth, regularFont, fontSize),
+            y: yPos - (rowHeight / 2) + (fontSize / 2),
+            size: fontSize,
+            font: regularFont,
+            color: colorPalette.textOnLight
+        });
 
-            titles.forEach((text, index) => {
-                const textWidth = font.widthOfTextAtSize(text, fontTitleSize);
-                const xPos = (pageWidth - textWidth) / 2;
-                page.drawText(normalizeText(text), {
-                    x: xPos,
-                    y: yPos - (index * 12),
-                    size: fontTitleSize,
-                    font: font,
-                    color: rgb(0, 0, 0)
-                });
-            });
+        xPos += numberColWidth;
 
-            yPos -= 48;
-
-            const infoLines = [
-                `FOLIO DE RESGUARDO ORIGINAL:  ${encabezado.folio_resguardo}`,
-                `FOLIO DE BAJA:  ${encabezado.folio_baja}`,
-                `DIRECTOR:  ${encabezado.director}`,
-                `ÁREA:  ${encabezado.area}`,
-                `PUESTO:  ${encabezado.puesto}`,
-                `FECHA DE BAJA:  ${encabezado.fecha}`
-            ];
-
-            infoLines.forEach((line, index) => {
-                page.drawText(normalizeText(line), {
-                    x: margin,
-                    y: yPos - (index * 12),
-                    size: fontSubtitleSize,
-                    font: regularFont,
-                    color: rgb(0, 0, 0)
-                });
-            });
-
-            const minTableY = yPos - (infoLines.length * 12) - 40;
-            const tableYPos = Math.max(pageHeight - 140, minTableY);
-            yPos = await drawHeaders(page, tableYPos);
-        } else {
-            yPos = height - margin - 5;
-        }
-
-        for (let i = 0; i < pageData.length; i++) {
-            const row = pageData[i];
-            const rowHeight = calculateRowHeight(row, adjustedWidths);
-            let xPos = margin;
-
-            page.drawLine({
-                start: { x: margin, y: yPos },
-                end: { x: pageWidth - margin, y: yPos },
-                thickness: 0.5,
-                color: rgb(0.7, 0.7, 0.7),
-            });
-
-            // Dibuja el rectángulo para la celda de numeración
+        // Celdas de datos
+        columns.forEach((col: Column, idx: number) => {
+            const colWidth = adjustedWidths[idx];
             page.drawRectangle({
-                x: margin,
+                x: xPos,
                 y: yPos - rowHeight,
-                width: numberColWidth,
+                width: colWidth,
                 height: rowHeight,
                 borderColor: rgb(0.7, 0.7, 0.7),
                 borderWidth: 0.5,
@@ -351,132 +340,156 @@ export async function generateBajaPDF({
                 opacity: 0
             });
 
-            const numberText = (globalStartIndex + i + 1).toString();
-            page.drawText(numberText, {
-                x: margin + centerTextInCell(numberText, numberColWidth, regularFont, fontSize),
-                y: yPos - (rowHeight / 2) + (fontSize / 2),
-                size: fontSize,
-                font: regularFont,
-                color: rgb(0.2, 0.2, 0.2)
-            });
+            let value = '';
+            if (col.isComposite && col.keys) {
+                value = col.keys.map((key: string) => (row[key]?.toString() || '').toUpperCase()).filter(Boolean).join(' / ');
+            } else if (col.key) {
+                value = (row[col.key]?.toString() || '').toUpperCase();
+            }
 
-            xPos += numberColWidth;
-
-            columns.forEach((col: Column, idx: number) => {
-                const colWidth = adjustedWidths[idx];
-                page.drawRectangle({
-                    x: xPos,
-                    y: yPos - rowHeight,
-                    width: colWidth,
-                    height: rowHeight,
-                    borderColor: rgb(0.7, 0.7, 0.7),
-                    borderWidth: 0.5,
-                    color: rgb(1, 1, 1),
-                    opacity: 0
+            const lines = wrapText(value, colWidth - (2 * minCellPadding), regularFont, fontSize);
+            lines.forEach((line, lineIndex) => {
+                const lineX = xPos + centerTextInCell(line.trim(), colWidth, regularFont, fontSize);
+                const lineY = yPos - verticalPadding - (fontSize + 4) - (lineIndex * (fontSize + 2)) - ((rowHeight - (verticalPadding * 2) - ((lines.length * (fontSize + 2)))) / 2);
+                page.drawText(normalizeText(line.trim()), {
+                    x: lineX,
+                    y: lineY,
+                    size: fontSize,
+                    font: regularFont,
+                    color: colorPalette.textOnLight
                 });
-                if (col.isComposite && col.keys) {
-                    const combinedValue = col.keys
-                        .map((key: string) => (row[key]?.toString() || '').toUpperCase())
-                        .filter(Boolean)
-                        .join(' / ');
-
-                    const lines = wrapText(combinedValue, colWidth - (2 * minCellPadding), regularFont, fontSize);
-                    lines.forEach((line, lineIndex) => {
-                        const lineX = xPos + centerTextInCell(line.trim(), colWidth, regularFont, fontSize);
-                        const lineY = yPos - verticalPadding - (fontSize + 4) - (lineIndex * (fontSize + 2)) - ((rowHeight - (verticalPadding * 2) - ((lines.length * (fontSize + 2)))) / 2);
-
-                        page.drawText(normalizeText(line.trim()), {
-                            x: lineX,
-                            y: lineY,
-                            size: fontSize,
-                            font: regularFont,
-                            color: rgb(0.2, 0.2, 0.2)
-                        });
-                    });
-                } else if (col.key) {
-                    const value = (row[col.key]?.toString() || '').toUpperCase();
-
-                    const lines = wrapText(value, colWidth - (2 * minCellPadding), regularFont, fontSize);
-                    lines.forEach((line, lineIndex) => {
-                        const lineX = xPos + centerTextInCell(line.trim(), colWidth, regularFont, fontSize);
-                        const lineY = yPos - verticalPadding - (fontSize + 4) - (lineIndex * (fontSize + 2)) - ((rowHeight - (verticalPadding * 2) - ((lines.length * (fontSize + 2)))) / 2);
-
-                        page.drawText(normalizeText(line.trim()), {
-                            x: lineX,
-                            y: lineY,
-                            size: fontSize,
-                            font: regularFont,
-                            color: rgb(0.2, 0.2, 0.2)
-                        });
-                    });
-                }
-
-                xPos += colWidth;
             });
 
-            yPos -= rowHeight;
-        }
-
-        const pageText = `PÁGINA ${pageIndex + 1} DE ${totalPages}`;
-        const pageTextWidth = regularFont.widthOfTextAtSize(pageText, 10);
-
-        page.drawText(normalizeText(pageText), {
-            x: pageWidth - margin - pageTextWidth,
-            y: margin - 20,
-            size: 10,
-            font: regularFont,
-            color: rgb(0.6, 0.6, 0.6)
+            xPos += colWidth;
         });
 
-        return yPos;
+        return yPos - rowHeight;
     };
 
-    const drawSignatureSection = (page: import('pdf-lib').PDFPage, yPosition: number) => {
+    const drawHeaderContent = (page: PDFPage, yPos: number) => {
+        const maxImageHeight = 28;
+        const ineaAspectRatio = ineaImage.width / ineaImage.height;
+        const iteaAspectRatio = iteaImage.width / iteaImage.height;
+        const ineaHeight = maxImageHeight;
+        const iteaHeight = maxImageHeight;
+        const ineaWidth = ineaHeight * ineaAspectRatio;
+        const iteaWidth = iteaHeight * iteaAspectRatio;
+
+        // Logos
+        page.drawImage(ineaImage, {
+            x: margin,
+            y: yPos - ineaHeight,
+            width: ineaWidth,
+            height: ineaHeight,
+        });
+        page.drawImage(iteaImage, {
+            x: pageWidth - margin - iteaWidth,
+            y: yPos - iteaHeight,
+            width: iteaWidth,
+            height: iteaHeight,
+        });
+
+        // Títulos
+        const titles = [
+            'INSTITUTO TLAXCALTECA PARA LA EDUCACIÓN DE LOS ADULTOS',
+            'DIRECCIÓN DE ADMINISTRACIÓN Y FINANZAS',
+            'OFICINA DE RECURSOS MATERIALES',
+            title.toUpperCase()
+        ];
+
+        titles.forEach((text, index) => {
+            const textWidth = font.widthOfTextAtSize(text, 9);
+            const xPos = (pageWidth - textWidth) / 2;
+            page.drawText(normalizeText(text), {
+                x: xPos,
+                y: yPos - (index * 12),
+                size: 9,
+                font: font,
+                color: colorPalette.primary
+            });
+        });
+
+        yPos -= 50; // Aumentado de 40 a 50 para dar más espacio
+
+        // Información del documento
+        const infoLines = [
+            `FOLIO DE RESGUARDO ORIGINAL:  ${encabezado.folio_resguardo}`,
+            `FOLIO DE BAJA:  ${encabezado.folio_baja}`,
+            `DIRECTOR:  ${encabezado.director}`,
+            `ÁREA:  ${encabezado.area}`,
+            `PUESTO:  ${encabezado.puesto}`,
+            `FECHA DE RESGUARDO:  ${encabezado.fecha}`
+        ];
+
+        infoLines.forEach((line, index) => {
+            page.drawText(normalizeText(line), {
+                x: margin,
+                y: yPos - (index * 12), // Aumentado de 10 a 12 para dar más espacio entre líneas
+                size: 8,
+                font: regularFont,
+                color: colorPalette.textOnLight
+            });
+        });
+
+        return yPos - (infoLines.length * 12) - 15; // Aumentado el espacio final
+    };
+
+    const drawSignatureSection = (page: PDFPage, yPosition: number) => {
         const signatureCount = Math.min(2, firmas.length);
         const signatureBoxWidth = (pageWidth - (2 * margin)) / (signatureCount + 1);
         const signatureSectionY = yPosition - 100;
         const lineY = signatureSectionY + 40;
-        const signatureFontSize = 6;
+        const signatureFontSize = 8;
 
+        // Firmas de autorización
         for (let i = 0; i < signatureCount; i++) {
             const firma = firmas[i];
             const xPos = margin + (i * signatureBoxWidth);
+
+            // Concepto
             page.drawText(normalizeText(firma.concepto?.toUpperCase() || ''), {
                 x: xPos + (signatureBoxWidth / 2) - (regularFont.widthOfTextAtSize(firma.concepto?.toUpperCase() || '', signatureFontSize) / 2),
                 y: lineY + 30,
                 size: signatureFontSize,
-                font: regularFont,
-                color: rgb(0, 0, 0),
+                font: font,
+                color: rgb(0, 0, 0)
             });
+
+            // Línea de firma
             page.drawLine({
                 start: { x: xPos + 20, y: lineY },
                 end: { x: xPos + signatureBoxWidth - 20, y: lineY },
                 thickness: 1,
                 color: rgb(0, 0, 0),
             });
+
+            // Nombre
             page.drawText(normalizeText(firma.nombre?.toUpperCase() || ''), {
                 x: xPos + (signatureBoxWidth / 2) - (regularFont.widthOfTextAtSize(firma.nombre?.toUpperCase() || '', signatureFontSize) / 2),
                 y: lineY - 15,
                 size: signatureFontSize,
                 font: regularFont,
-                color: rgb(0, 0, 0),
+                color: rgb(0.2, 0.2, 0.2)
             });
+
+            // Puesto
             page.drawText(normalizeText(firma.puesto?.toUpperCase() || ''), {
                 x: xPos + (signatureBoxWidth / 2) - (regularFont.widthOfTextAtSize(firma.puesto?.toUpperCase() || '', signatureFontSize) / 2),
                 y: lineY - 30,
                 size: signatureFontSize,
                 font: regularFont,
-                color: rgb(0, 0, 0),
+                color: rgb(0.2, 0.2, 0.2)
             });
         }
 
+        // Firma del ex-resguardante
         const xPos = margin + (signatureCount) * signatureBoxWidth;
         page.drawText('EX-RESGUARDANTE', {
             x: xPos + (signatureBoxWidth / 2) - (regularFont.widthOfTextAtSize('EX-RESGUARDANTE', signatureFontSize) / 2),
             y: lineY + 30,
             size: signatureFontSize,
-            font: regularFont,
-            color: rgb(0, 0, 0),
+            font: font,
+            color: rgb(0, 0, 0)
         });
         page.drawLine({
             start: { x: xPos + 20, y: lineY },
@@ -489,7 +502,7 @@ export async function generateBajaPDF({
             y: lineY - 15,
             size: signatureFontSize,
             font: regularFont,
-            color: rgb(0, 0, 0),
+            color: rgb(0.2, 0.2, 0.2)
         });
         const puestoArea = `${encabezado.puesto?.toUpperCase() || ''} DE ${encabezado.area?.toUpperCase() || ''}`;
         page.drawText(normalizeText(puestoArea), {
@@ -497,41 +510,157 @@ export async function generateBajaPDF({
             y: lineY - 30,
             size: signatureFontSize,
             font: regularFont,
-            color: rgb(0, 0, 0),
+            color: rgb(0.2, 0.2, 0.2)
         });
 
         return signatureSectionY;
     };
 
-    const paginadas = paginarPorAltura(data);
-    const totalPages = paginadas.length;
+    // Procesar cada grupo de artículos por origen
+    let globalPageCount = 0;
     let globalIndex = 0;
-    for (let currentPage = 0; currentPage < paginadas.length; currentPage++) {
-        const pageData = paginadas[currentPage];
-        const yPos = await processPage(pageData, currentPage, totalPages, globalIndex);
-        if (currentPage === paginadas.length - 1 && firmas.length > 0) {
-            const page = pdfDoc.getPages()[currentPage];
-            const signatureBoxHeight = 100;
-            const minYForSignatures = margin + signatureBoxHeight + 10;
-            if (yPos > minYForSignatures) {
-                drawSignatureSection(page, signatureBoxHeight + margin);
-            } else {
-                const newPage = pdfDoc.addPage([pageWidth, pageHeight]);
-                drawSignatureSection(newPage, signatureBoxHeight + margin);
-                const pageText = `PÁGINA ${totalPages + 1} DE ${totalPages + 1}`;
-                const pageTextWidth = regularFont.widthOfTextAtSize(pageText, 10);
-                newPage.drawText(normalizeText(pageText), {
-                    x: pageWidth - margin - pageTextWidth,
-                    y: margin - 20,
-                    size: 10,
-                    font: regularFont,
-                    color: rgb(0.6, 0.6, 0.6)
-                });
+    const origenes = Object.keys(articulosPorOrigen);
+    let currentPage: PDFPage | null = null;
+    let currentYPos: number = 0;
+
+    for (let o = 0; o < origenes.length; o++) {
+        const origen = origenes[o];
+        const articulos = articulosPorOrigen[origen];
+
+        // Paginar los artículos de este origen
+        const paginadas = paginarPorAltura(articulos);
+
+        for (let currentPageIndex = 0; currentPageIndex < paginadas.length; currentPageIndex++) {
+            const pageData = paginadas[currentPageIndex];
+
+            // Crear nueva página si es necesario
+            if (!currentPage || currentYPos < 120) {
+                currentPage = pdfDoc.addPage([pageWidth, pageHeight]);
+                currentYPos = pageHeight - margin;
+
+                // Encabezado solo en la primera página del primer origen
+                if (globalPageCount === 0) {
+                    currentYPos = drawHeaderContent(currentPage, currentYPos);
+                }
+            }
+
+            // Título del origen y encabezados
+            const origenTitle = `ORIGEN: ${origen}`;
+            const titleWidth = font.widthOfTextAtSize(origenTitle, 10);
+            const colorConfig = origenColors[origen] || origenColors['SIN ORIGEN'];
+            const bgColor = rgb(...colorConfig.bg);
+            const textColor = rgb(...colorConfig.text);
+
+            // Espacio antes del título
+            currentYPos -= 10;
+
+            // Fondo del título
+            currentPage.drawRectangle({
+                x: margin,
+                y: currentYPos - 20,
+                width: pageWidth - 2 * margin,
+                height: 20,
+                color: bgColor,
+            });
+
+            // Texto del título
+            currentPage.drawText(origenTitle, {
+                x: (pageWidth - titleWidth) / 2,
+                y: currentYPos - 15,
+                size: 10,
+                font: font,
+                color: textColor
+            });
+
+            // Espacio después del título
+            currentYPos -= 25;
+
+            // Dibujar encabezado de tabla usando los mismos colores del título
+            currentYPos = drawTableHeader(currentPage, currentYPos, origen);
+
+            // Dibujar filas de la tabla
+            for (let i = 0; i < pageData.length; i++) {
+                const row = pageData[i];
+                const rowHeight = calculateRowHeight(row, adjustedWidths);
+
+                // Verificar si hay espacio para la fila
+                if (currentYPos - rowHeight < 80) {
+                    // No hay espacio, crear nueva página
+                    currentPage = pdfDoc.addPage([pageWidth, pageHeight]);
+                    currentYPos = pageHeight - margin;
+                    globalPageCount++;
+
+                    // Repetir título y encabezado en la nueva página
+                    currentPage.drawRectangle({
+                        x: margin,
+                        y: currentYPos - 20,
+                        width: pageWidth - 2 * margin,
+                        height: 20,
+                        color: colorPalette.primary,
+                    });
+                    currentPage.drawText(`${origenTitle} (CONTINUACIÓN)`, {
+                        x: (pageWidth - titleWidth) / 2,
+                        y: currentYPos - 15,
+                        size: 10,
+                        font: font,
+                        color: colorPalette.textOnDark
+                    });
+                    currentYPos -= 25;
+                    currentYPos = drawTableHeader(currentPage, currentYPos, origen);
+                }
+
+                // Dibujar fila
+                currentYPos = drawTableRow(currentPage, row, currentYPos, rowHeight, globalIndex + i + 1);
+            }
+
+            globalIndex += pageData.length;
+            globalPageCount++;
+
+            // Pie de página
+            const pageText = `PÁGINA ${globalPageCount}`;
+            const pageTextWidth = regularFont.widthOfTextAtSize(pageText, 10);
+            currentPage.drawText(normalizeText(pageText), {
+                x: pageWidth - margin - pageTextWidth,
+                y: margin - 20,
+                size: 10,
+                font: regularFont,
+                color: colorPalette.primary
+            });
+
+            // Espacio entre tablas de diferentes orígenes
+            if (o < origenes.length - 1 && currentPageIndex === paginadas.length - 1) {
+                currentYPos -= 15;
             }
         }
-        globalIndex += pageData.length;
     }
 
+    // Agregar sección de firmas en la última página
+    if (currentPage && firmas.length > 0) {
+        const signatureBoxHeight = 100;
+        const minYForSignatures = margin + signatureBoxHeight + 10;
+
+        if (currentYPos > minYForSignatures) {
+            // Hay espacio en la última página
+            drawSignatureSection(currentPage, signatureBoxHeight + margin);
+        } else {
+            // Crear nueva página para firmas
+            const signaturePage = pdfDoc.addPage([pageWidth, pageHeight]);
+            drawSignatureSection(signaturePage, signatureBoxHeight + margin);
+
+            // Pie de página
+            const pageText = `PÁGINA ${globalPageCount + 1}`;
+            const pageTextWidth = regularFont.widthOfTextAtSize(pageText, 10);
+            signaturePage.drawText(normalizeText(pageText), {
+                x: pageWidth - margin - pageTextWidth,
+                y: margin - 20,
+                size: 10,
+                font: regularFont,
+                color: colorPalette.primary
+            });
+        }
+    }
+
+    // Guardar y descargar el PDF
     const pdfBytes = await pdfDoc.save();
     const blob = new Blob([pdfBytes], { type: 'application/pdf' });
     saveAs(blob, `${fileName}.pdf`);
@@ -544,15 +673,15 @@ const BajaPDFReport: React.FC<BajaPDFReportProps> = ({ data }) => {
             const showFolioBajaColumn = foliosBaja.length > 1;
 
             const columns: Column[] = [
-                { header: 'No. Inventario', key: 'id_inv' },
-                { header: 'Descripción', key: 'descripcion' },
-                { header: 'Rubro', key: 'rubro' },
-                { header: 'Condición', key: 'estado' },
-                { header: 'Origen', key: 'origen' },
-                { header: 'Resguardante', key: 'resguardante' },
+                { header: 'No. Inventario', key: 'id_inv', width: 80 },
+                { header: 'Descripción', key: 'descripcion', width: 180 },
+                { header: 'Rubro', key: 'rubro', width: 80 },
+                { header: 'Condición', key: 'estado', width: 60 },
+                { header: 'Origen', key: 'origen', width: 60 },
+                { header: 'Resguardante', key: 'resguardante', width: 100 },
             ];
             if (showFolioBajaColumn) {
-                columns.splice(1, 0, { header: 'Folio Baja', key: 'folio_baja' });
+                columns.splice(1, 0, { header: 'Folio Baja', key: 'folio_baja', width: 80 });
             }
 
             const firmas = data.firmas ?? [];
@@ -570,7 +699,14 @@ const BajaPDFReport: React.FC<BajaPDFReportProps> = ({ data }) => {
             const title = `BAJA DE RESGUARDO FOLIO ${data.folio_baja}`;
             const fileName = `baja_${data.folio_baja}`;
 
-            await generateBajaPDF({ data: pdfData, columns, title, fileName, firmas, encabezado: data });
+            await generateBajaPDF({
+                data: pdfData,
+                columns,
+                title,
+                fileName,
+                firmas,
+                encabezado: data
+            });
         };
 
         generatePDF();
