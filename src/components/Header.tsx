@@ -2,12 +2,14 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { ChevronDown, ChevronRight, User, LogOut, Database, FileText, Settings, Menu, X, Grid } from 'lucide-react';
+import { ChevronDown, ChevronRight, User, LogOut, Database, FileText, Settings, Menu, X, Grid, Bell } from 'lucide-react';
 import Cookies from 'js-cookie';
 import { useRouter } from 'next/navigation';
 import supabase from '@/app/lib/supabase/client';
 import { WelcomeMessage } from "@/components/WelcomeMessage";
 import RoleGuard from "@/components/roleGuard";
+import NotificationsPanel from './NotificationCenter';
+import { useNotifications } from '@/hooks/useNotifications';
 
 type MenuItem = {
     title: string;
@@ -53,11 +55,14 @@ export default function NavigationBar() {
     const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
     const [openMenu, setOpenMenu] = useState<string | null>(null);
     const [openSubmenu, setOpenSubmenu] = useState<string | null>(null);
+    const [notificationsOpen, setNotificationsOpen] = useState(false);
     const [userData, setUserData] = useState<{ firstName?: string; lastName?: string; username?: string; email?: string; rol?: string }>({});
     const [showLogoutModal, setShowLogoutModal] = useState(false);
     const [modalPosition, setModalPosition] = useState({ x: 0, y: 0 });
     const [popoverPosition, setPopoverPosition] = useState<'top' | 'bottom'>('bottom');
     const handleLogout = useCerrarSesion();
+    const { notifications } = useNotifications();
+    const unreadCount = notifications.filter(n => !n.is_read).length;
 
     // Cerrar menús al hacer clic fuera
     useEffect(() => {
@@ -397,6 +402,21 @@ export default function NavigationBar() {
                     <div className="hidden md:flex items-center">
                         <WelcomeMessage />
                         <div className="flex items-center space-x-3">
+                        <RoleGuard roles={["superadmin", "admin"]} userRole={userData.rol}>
+                            <button
+                                onClick={() => setNotificationsOpen(true)}
+                                className="p-2 text-gray-300 hover:text-white hover:bg-gray-800 rounded-full relative"
+                                title="Notificaciones"
+                            >
+                                <Bell className="h-5 w-5" />
+                                {unreadCount > 0 && (
+                                    <>
+                                        <span className="absolute top-0 right-0 h-2 w-2 rounded-full bg-blue-500"></span>
+                                        <span className="absolute -top-2 -right-2 bg-blue-600 text-white text-xs font-bold rounded-full px-1.5 min-w-[18px] text-center border border-black shadow">{unreadCount}</span>
+                                    </>
+                                )}
+                            </button>
+                        </RoleGuard>
                             <RoleGuard roles={["superadmin"]} userRole={userData.rol}>
                                 <Link
                                     href="/register"
@@ -577,6 +597,16 @@ export default function NavigationBar() {
                                 </button>
                             </div>
                         </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Notifications Panel */}
+            {notificationsOpen && (
+                <div className="fixed inset-0 z-50 overflow-hidden">
+                    <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={() => setNotificationsOpen(false)} />
+                    <div className="absolute right-0 top-0 h-full">
+                        <NotificationsPanel />
                     </div>
                 </div>
             )}

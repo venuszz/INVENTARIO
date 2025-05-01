@@ -12,6 +12,7 @@ import supabase from '@/app/lib/supabase/client';
 import Cookies from 'js-cookie';
 import { generateResguardoPDF } from './ResguardoPDFReport';
 import { useUserRole } from "@/hooks/useUserRole";
+import { useNotifications } from '@/hooks/useNotifications';
 
 interface Mueble {
     id: number;
@@ -66,6 +67,7 @@ interface PdfData {
     }>;
     firmas?: PdfFirma[];
 }
+
 
 // Utilidad para asignar color a áreas y responsables
 const colorPalette = [
@@ -138,6 +140,7 @@ export default function CrearResguardos() {
     const [pdfData, setPdfData] = useState<PdfData | null>(null);
     const role = useUserRole();
     const isUsuario = role === "usuario";
+    const { createNotification } = useNotifications();
 
     // Validación de campos obligatorios
     const isFormValid =
@@ -536,6 +539,30 @@ export default function CrearResguardos() {
             await Promise.all(resguardoPromises);
 
             sessionStorage.setItem('pdfDownloaded', 'false');
+
+            // Crear notificación tras guardar exitosamente
+            try {
+                const notificationDescription = `Se ha creado un nuevo resguardo para el área "${formData.area}" bajo la dirección de "${directorio.find(d => d.id_directorio.toString() === formData.directorId)?.nombre || ''}" con ${selectedMuebles.length} artículo(s). ${JSON.stringify({
+                    quantity: selectedMuebles.length,
+                    director: directorio.find(d => d.id_directorio.toString() === formData.directorId)?.nombre || '',
+                    area: formData.area,
+                    puesto: formData.puesto,
+                    resguardante: formData.resguardante,
+                    folio: folioToUse
+                })}`;
+
+                await createNotification({
+                    title: `Nuevo resguardo creado: ${folioToUse}`,
+                    description: notificationDescription,
+                    type: 'success',
+                    category: 'system',
+                    device: navigator.userAgent,
+                    importance: 'high'
+                });
+            } catch (notifErr) {
+                // No bloquear el flujo si falla la notificación
+                console.error('No se pudo crear la notificación:', notifErr);
+            }
 
             // Reset form but keep the folio for next group if needed
             setFormData(prev => ({
