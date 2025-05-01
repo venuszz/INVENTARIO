@@ -1015,6 +1015,13 @@ const ConsultarBajasResguardos = () => {
                                                                     <span className="text-xs bg-gray-800 text-gray-400 px-2 py-0.5 rounded">
                                                                         {articulo.rubro}
                                                                     </span>
+                                                                    <span className={`text-xs px-2 py-0.5 rounded-full ${
+                                                                        articulo.origen?.startsWith('INEA') || articulo.num_inventario.startsWith('INEA')
+                                                                        ? 'bg-blue-900/70 text-blue-200 border border-blue-700'
+                                                                        : 'bg-purple-900/70 text-purple-200 border border-purple-700'
+                                                                    }`}>
+                                                                        {articulo.origen?.startsWith('INEA') || articulo.num_inventario.startsWith('INEA') ? 'INEA' : 'ITEA'}
+                                                                    </span>
                                                                 </div>
                                                                 <p className="text-sm text-gray-300">
                                                                     {articulo.descripcion}
