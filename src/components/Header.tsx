@@ -400,23 +400,25 @@ export default function NavigationBar() {
                     </div>
 
                     <div className="hidden md:flex items-center">
-                        <WelcomeMessage />
                         <div className="flex items-center space-x-3">
-                        <RoleGuard roles={["superadmin", "admin"]} userRole={userData.rol}>
-                            <button
-                                onClick={() => setNotificationsOpen(true)}
-                                className="p-2 text-gray-300 hover:text-white hover:bg-gray-800 rounded-full relative"
-                                title="Notificaciones"
-                            >
-                                <Bell className="h-5 w-5" />
-                                {unreadCount > 0 && (
-                                    <>
-                                        <span className="absolute top-0 right-0 h-2 w-2 rounded-full bg-blue-500"></span>
-                                        <span className="absolute -top-2 -right-2 bg-blue-600 text-white text-xs font-bold rounded-full px-1.5 min-w-[18px] text-center border border-black shadow">{unreadCount}</span>
-                                    </>
-                                )}
-                            </button>
-                        </RoleGuard>
+                            <div className="text-xs text-gray-400">
+                                <WelcomeMessage />
+                            </div>
+                            <RoleGuard roles={["superadmin", "admin"]} userRole={userData.rol}>
+                                <button
+                                    onClick={() => setNotificationsOpen(true)}
+                                    className="p-2 text-gray-300 hover:text-white hover:bg-gray-800 rounded-full relative"
+                                    title="Notificaciones"
+                                >
+                                    <Bell className="h-5 w-5" />
+                                    {unreadCount > 0 && (
+                                        <>
+                                            <span className="absolute top-0 right-0 h-2 w-2 rounded-full bg-blue-500"></span>
+                                            <span className="absolute -top-2 -right-2 bg-blue-600 text-white text-xs font-bold rounded-full px-1.5 min-w-[18px] text-center border border-black shadow">{unreadCount}</span>
+                                        </>
+                                    )}
+                                </button>
+                            </RoleGuard>
                             <RoleGuard roles={["superadmin"]} userRole={userData.rol}>
                                 <Link
                                     href="/register"

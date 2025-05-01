@@ -8,7 +8,6 @@ export function WelcomeMessage() {
         rol?: string;
     } | null>(null);
 
-    // Obtener datos del usuario de las cookies
     useEffect(() => {
         const userDataCookie = Cookies.get('userData');
         if (userDataCookie) {
@@ -26,13 +25,13 @@ export function WelcomeMessage() {
     }
 
     return (
-        <div className="hidden md:flex items-center mr-6">
-            <div className="overflow-hidden relative flex flex-col">
-                <div className="text-sm font-extralight text-gray-300">
+        <div className="flex items-center">
+            <div className="flex flex-col">
+                <div className="text-xs font-light text-gray-300">
                     {userData.firstName}
                 </div>
                 {userData.rol && (
-                    <div className="text-xs text-gray-400 leading-tight">{userData.rol}</div>
+                    <div className="text-[10px] text-gray-400 leading-none">{userData.rol}</div>
                 )}
             </div>
         </div>
