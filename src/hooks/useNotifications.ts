@@ -37,6 +37,7 @@ export function useNotifications() {
     const [error, setError] = useState<string | null>(null);
 
     const userRole = JSON.parse(Cookies.get('userData') || '{}').rol;
+    const userId = JSON.parse(Cookies.get('userData') || '{}').id;
 
     const fetchNotifications = async () => {
         try {
@@ -60,17 +61,17 @@ export function useNotifications() {
         if (!userRole || userRole === 'superadmin') {
             throw new Error('No tienes permisos para crear notificaciones');
         }
+        if (!userId) {
+            throw new Error('No se encontró el id del usuario autenticado');
+        }
 
         try {
-            const userData = JSON.parse(Cookies.get('userData') || '{}');
-            
             const { data, error } = await supabase
                 .from('notifications')
                 .insert([{
                     ...notification,
                     is_read: false,
-                    created_by: userData.username || 'unknown',
-                    created_by_role: userData.rol
+                    created_by: userId
                 }])
                 .select();
 
