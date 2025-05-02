@@ -2,7 +2,7 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { ChevronDown, ChevronRight, User, LogOut, Database, FileText, Settings, Menu, X, Grid, Bell } from 'lucide-react';
+import { ChevronDown, ChevronRight, User, LogOut, Database, FileText, Settings, Menu, X, Grid, Bell, Moon } from 'lucide-react';
 import Cookies from 'js-cookie';
 import { useRouter } from 'next/navigation';
 import supabase from '@/app/lib/supabase/client';
@@ -61,8 +61,14 @@ export default function NavigationBar() {
     const [modalPosition, setModalPosition] = useState({ x: 0, y: 0 });
     const [popoverPosition, setPopoverPosition] = useState<'top' | 'bottom'>('bottom');
     const handleLogout = useCerrarSesion();
-    const { notifications } = useNotifications();
-    const unreadCount = notifications.filter(n => !n.is_read).length;
+    const { notifications, doNotDisturb } = useNotifications();
+    const unreadCount = notifications.filter(n => !n.is_read && !n.data?.is_deleted).length;
+
+    // Efecto para actualizar el estado cuando cambia doNotDisturb
+    useEffect(() => {
+        // Este efecto se ejecutará cada vez que doNotDisturb cambie
+        // asegurando que el Header se actualice inmediatamente
+    }, [doNotDisturb]);
 
     // Cerrar menús al hacer clic fuera
     useEffect(() => {
@@ -408,13 +414,24 @@ export default function NavigationBar() {
                                 <button
                                     onClick={() => setNotificationsOpen(true)}
                                     className="p-2 text-gray-300 hover:text-white hover:bg-gray-800 rounded-full relative"
-                                    title="Notificaciones"
+                                    title={doNotDisturb ? "Modo No Molestar activo" : "Notificaciones"}
                                 >
                                     <Bell className="h-5 w-5" />
                                     {unreadCount > 0 && (
                                         <>
-                                            <span className="absolute top-0 right-0 h-2 w-2 rounded-full bg-blue-500"></span>
-                                            <span className="absolute -top-2 -right-2 bg-blue-600 text-white text-xs font-bold rounded-full px-1.5 min-w-[18px] text-center border border-black shadow">{unreadCount}</span>
+                                            <span className={`absolute top-0 right-0 h-2 w-2 rounded-full ${
+                                                doNotDisturb ? 'bg-purple-500' : 'bg-blue-500'
+                                            }`}></span>
+                                            {!doNotDisturb && (
+                                                <span className="absolute -top-2 -right-2 bg-blue-600 text-white text-xs font-bold rounded-full px-1.5 min-w-[18px] text-center border border-black shadow">
+                                                    {unreadCount}
+                                                </span>
+                                            )}
+                                            {doNotDisturb && (
+                                                <span className="absolute -top-2 -right-2 bg-purple-600 text-white text-xs font-bold rounded-full p-1 min-w-[18px] text-center border border-black shadow">
+                                                    <Moon size={10} />
+                                                </span>
+                                            )}
                                         </>
                                     )}
                                 </button>

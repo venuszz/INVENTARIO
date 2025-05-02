@@ -32,6 +32,7 @@ interface ResguardoDetalle extends Resguardo {
 }
 
 interface ResguardoArticulo {
+    id: number;
     num_inventario: string;
     descripcion: string;
     rubro: string;
@@ -165,7 +166,7 @@ export default function ConsultarResguardos() {
 
     // Estado para edición de resguardantes
     const [editResguardanteMode, setEditResguardanteMode] = useState(false);
-    const [editedResguardantes, setEditedResguardantes] = useState<{ [num_inventario: string]: string }>({});
+    const [editedResguardantes, setEditedResguardantes] = useState<{ [id: number]: string }>({});
     const [savingResguardantes, setSavingResguardantes] = useState(false);
 
     const { createNotification } = useNotifications();
@@ -173,9 +174,9 @@ export default function ConsultarResguardos() {
     // Sincronizar los resguardantes editables cuando cambia el resguardo seleccionado
     useEffect(() => {
         if (selectedResguardo) {
-            const initial: { [num_inventario: string]: string } = {};
+            const initial: { [id: number]: string } = {};
             selectedResguardo.articulos.forEach(a => {
-                initial[a.num_inventario] = a.resguardante || '';
+                initial[a.id] = a.resguardante || '';
             });
             setEditedResguardantes(initial);
             setEditResguardanteMode(false);
@@ -189,15 +190,14 @@ export default function ConsultarResguardos() {
         try {
             const cambios: string[] = [];
             for (const articulo of selectedResguardo.articulos) {
-                const nuevoResguardante = editedResguardantes[articulo.num_inventario] || '';
+                const nuevoResguardante = editedResguardantes[articulo.id] || '';
                 if (nuevoResguardante !== (articulo.resguardante || '')) {
                     cambios.push(`${articulo.num_inventario}: '${articulo.resguardante || 'Sin asignar'}' → '${nuevoResguardante || 'Sin asignar'}'`);
-                    // Actualizar en la tabla resguardos
+                    // Actualizar en la tabla resguardos usando id
                     await supabase
                         .from('resguardos')
                         .update({ usufinal: nuevoResguardante })
-                        .eq('folio', selectedResguardo.folio)
-                        .eq('num_inventario', articulo.num_inventario);
+                        .eq('id', articulo.id);
                     // Actualizar también en muebles/mueblesitea
                     const tabla = articulo.origen === 'ITEA' ? 'mueblesitea' : 'muebles';
                     await supabase
@@ -502,6 +502,7 @@ export default function ConsultarResguardos() {
                 const detalles: ResguardoDetalle = {
                     ...firstItem,
                     articulos: data.map(item => ({
+                        id: item.id,
                         num_inventario: item.num_inventario,
                         descripcion: item.descripcion,
                         rubro: item.rubro,
@@ -1363,15 +1364,15 @@ export default function ConsultarResguardos() {
                                                                     <div className="mt-3 flex items-center gap-2">
                                                                         <input
                                                                             type="text"
-                                                                            value={editedResguardantes[articulo.num_inventario] || ''}
-                                                                            onChange={e => setEditedResguardantes(prev => ({ ...prev, [articulo.num_inventario]: e.target.value }))}
+                                                                            value={editedResguardantes[articulo.id] || ''}
+                                                                            onChange={e => setEditedResguardantes(prev => ({ ...prev, [articulo.id]: e.target.value }))}
                                                                             placeholder="Resguardante (opcional)"
                                                                             className="block w-full bg-gray-900/50 border border-gray-800 rounded-lg py-1.5 px-3 text-white placeholder-gray-500 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
                                                                         />
-                                                                        {editedResguardantes[articulo.num_inventario] && (
+                                                                        {editedResguardantes[articulo.id] && (
                                                                             <button
                                                                                 title="Limpiar resguardante"
-                                                                                onClick={() => setEditedResguardantes(prev => ({ ...prev, [articulo.num_inventario]: '' }))}
+                                                                                onClick={() => setEditedResguardantes(prev => ({ ...prev, [articulo.id]: '' }))}
                                                                                 className="p-1 rounded-full text-gray-400 hover:text-red-400 hover:bg-gray-900/40"
                                                                             >
                                                                                 <X className="h-4 w-4" />

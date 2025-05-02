@@ -1,4 +1,4 @@
-import Consultar from "@/components/resguardos/consultar"
+import Consultar from "@/components/maintainance"
 import { Metadata } from "next";
 
 export const metadata: Metadata = {

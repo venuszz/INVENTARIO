@@ -1,4 +1,4 @@
-import Personal from "@/components/admin/directorio"
+import Personal from "@/components/maintainance"
 
 export default function Add() {
     return (

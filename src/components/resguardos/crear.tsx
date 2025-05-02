@@ -48,6 +48,8 @@ interface PdfFirma {
     concepto: string;
     nombre: string;
     puesto: string;
+    cargo: string;
+    firma?: string;
 }
 
 interface PdfData {

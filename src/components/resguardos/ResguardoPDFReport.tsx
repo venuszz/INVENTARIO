@@ -17,8 +17,10 @@ interface PdfArticulo {
 }
 
 interface PdfFirma {
-    concepto: string;
+    cargo: string;
     nombre: string;
+    firma?: string;
+    concepto: string;
     puesto: string;
 }
 
@@ -161,16 +163,19 @@ export async function generateResguardoPDF(data: PdfData) {
     const defaultFirmas: PdfFirma[] = [
         {
             concepto: 'Autoriza',
+            cargo: 'Autoriza',
             nombre: 'Por asignar',
             puesto: 'DIRECTOR(A) ADMIN. Y FINANZAS'
         },
         {
             concepto: 'Conocimiento',
+            cargo: 'Conocimiento',
             nombre: 'Por asignar',
             puesto: 'DIRECTOR(A) RECURSOS MATERIALES'
         },
         {
             concepto: 'Responsable',
+            cargo: 'Responsable',
             nombre: data.director || '',
             puesto: data.puesto || ''
         }
@@ -435,6 +440,7 @@ export async function generateResguardoPDF(data: PdfData) {
             });
         }
 
+        // Última firma (RESGUARDANTE) igual que antes
         const xPos = margin + (signatureCount) * signatureBoxWidth;
         page.drawText('RESGUARDANTE', {
             x: xPos + (signatureBoxWidth / 2) - (regularFont.widthOfTextAtSize('RESGUARDANTE', signatureFontSize) / 2),

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import supabase from '@/app/lib/supabase/client';
 import Cookies from 'js-cookie';
 
@@ -37,11 +37,19 @@ export function useNotifications() {
     const [notifications, setNotifications] = useState<Notification[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
+    const [doNotDisturb, setDoNotDisturb] = useState(() => {
+        // Recuperar el estado inicial de localStorage
+        if (typeof window !== 'undefined') {
+            const saved = localStorage.getItem('doNotDisturb');
+            return saved ? JSON.parse(saved) : false;
+        }
+        return false;
+    });
 
     const userRole = JSON.parse(Cookies.get('userData') || '{}').rol;
     const userId = JSON.parse(Cookies.get('userData') || '{}').id;
 
-    const fetchNotifications = async () => {
+    const fetchNotifications = useCallback(async () => {
         try {
             setLoading(true);
             // Obtener notificaciones con información del creador
@@ -82,7 +90,23 @@ export function useNotifications() {
         } finally {
             setLoading(false);
         }
-    };
+    }, [userId]);
+
+    // Persistir el estado en localStorage cuando cambie
+    useEffect(() => {
+        if (typeof window !== 'undefined') {
+            localStorage.setItem('doNotDisturb', JSON.stringify(doNotDisturb));
+        }
+    }, [doNotDisturb]);
+
+    useEffect(() => {
+        fetchNotifications();
+        // Polling para actualizar notificaciones cada 10 segundos
+        const interval = setInterval(() => {
+            fetchNotifications();
+        }, 1000000); // 10 segundos
+        return () => clearInterval(interval);
+    }, [fetchNotifications]);
 
     const createNotification = async (notification: Omit<Notification, 'id' | 'created_at' | 'is_read' | 'created_by' | 'created_by_role'>) => {
         if (!userRole) {
@@ -167,15 +191,6 @@ export function useNotifications() {
         }
     };
 
-    useEffect(() => {
-        fetchNotifications();
-        // Polling para actualizar notificaciones cada 10 segundos
-        const interval = setInterval(() => {
-            fetchNotifications();
-        }, 10000); // 10 segundos
-        return () => clearInterval(interval);
-    }, []);
-
     return {
         notifications,
         loading,
@@ -183,6 +198,8 @@ export function useNotifications() {
         createNotification,
         markAsRead,
         deleteNotification,
-        refresh: fetchNotifications
+        refresh: fetchNotifications,
+        doNotDisturb,
+        setDoNotDisturb
     };
 }

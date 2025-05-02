@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Bell, Check, AlertCircle, Info, X, ChevronRight, AlertTriangle, ArrowLeft, Clock } from 'lucide-react';
+import { Bell, Check, AlertCircle, Info, X, ChevronRight, AlertTriangle, ArrowLeft, Clock, Moon } from 'lucide-react';
 import { useNotifications, Notification } from '@/hooks/useNotifications';
 
 export default function NotificationsPanel({ onClose }: { onClose?: () => void }) {
@@ -10,9 +10,8 @@ export default function NotificationsPanel({ onClose }: { onClose?: () => void }
     const [modalAnimate, setModalAnimate] = useState(false);
     const [showRead, setShowRead] = useState(false);
 
-
     // Extraer deleteNotification del hook
-    const { notifications, loading, markAsRead, deleteNotification, refresh } = useNotifications();
+    const { notifications, loading, markAsRead, deleteNotification, refresh, doNotDisturb, setDoNotDisturb } = useNotifications();
 
     // Activar animaciones
     useEffect(() => {
@@ -172,16 +171,7 @@ export default function NotificationsPanel({ onClose }: { onClose?: () => void }
                                 }`}>
                                 {selectedNotification.importance}
                             </div>
-
-                            <div className="inline-flex px-2 py-1 rounded-md text-xs font-medium bg-gray-900 text-gray-400">
-                                {selectedNotification.device}
-                            </div>
-
-                            {selectedNotification.category && (
-                                <div className="inline-flex px-2 py-1 rounded-md text-xs font-medium bg-gray-900 text-gray-400">
-                                    {selectedNotification.category}
-                                </div>
-                            )}
+                            {/* Eliminado: device y category badges */}
                         </div>
 
                         {/* Descripción */}
@@ -224,17 +214,30 @@ export default function NotificationsPanel({ onClose }: { onClose?: () => void }
             <div className={`flex flex-col w-full max-w-sm ml-auto rounded-lg overflow-hidden bg-black text-white shadow-xl border border-gray-900 transition-all duration-500 transform ${animateIn ? 'translate-y-0 opacity-100' : 'translate-y-4 opacity-0'
                 }`}>
                 {/* Barra superior minimalista */}
-                <div className="px-5 pt-5 pb-4 flex justify-between items-center">
+                <div className="flex items-center justify-between px-5 pt-5 pb-4">
                     <h1 className="text-base font-medium">Notificaciones</h1>
-                    {onClose && (
+                    <div className="flex items-center gap-2">
                         <button
-                            title='Cerrar panel'
-                            onClick={onClose}
-                            className="w-7 h-7 flex items-center justify-center rounded-full hover:bg-gray-900 transition-colors"
+                            onClick={() => setDoNotDisturb(!doNotDisturb)}
+                            title={doNotDisturb ? 'Desactivar modo No Molestar' : 'Activar modo No Molestar'}
+                            className={`p-2 rounded-full transition-colors ${
+                                doNotDisturb 
+                                ? 'bg-purple-900/30 text-purple-400' 
+                                : 'hover:bg-gray-800 text-gray-400 hover:text-gray-300'
+                            }`}
                         >
-                            <X size={14} className="text-gray-500" />
+                            <Moon size={16} />
                         </button>
-                    )}
+                        {onClose && (
+                            <button
+                                title='Cerrar panel'
+                                onClick={onClose}
+                                className="p-2 rounded-full hover:bg-gray-800 text-gray-400 hover:text-gray-300 transition-colors"
+                            >
+                                <X size={14} />
+                            </button>
+                        )}
+                    </div>
                 </div>
 
                 {/* Filtros minimal */}

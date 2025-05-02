@@ -1,4 +1,4 @@
-import General from "@/components/consultas/itea/general"
+import General from "@/components/maintainance"
 import { Metadata } from "next";
 
 export const metadata: Metadata = {
