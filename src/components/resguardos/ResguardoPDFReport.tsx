@@ -2,7 +2,6 @@ import React from 'react';
 import { PDFDocument, StandardFonts, rgb, PDFPage, PDFFont } from 'pdf-lib';
 import { saveAs } from 'file-saver';
 
-// Add normalizeText function
 const normalizeText = (text: string | null | undefined): string => {
     if (!text) return '';
     return text.normalize('NFKD').replace(/[\u0300-\u036f]/g, '');
@@ -60,11 +59,10 @@ export async function generateResguardoPDF(data: PdfData) {
     const headerFontSize = 9;
     const verticalPadding = 4;
 
-    // Paleta de colores para orígenes
     const origenColors: Record<string, { bg: [number, number, number], text: [number, number, number] }> = {
-        'INEA': { bg: [0.063, 0.157, 0.251], text: [1, 1, 1] }, // Azul oscuro para INEA
-        'ITEA': { bg: [0.075, 0.196, 0.102], text: [1, 1, 1] }, // Verde oscuro para ITEA
-        'SIN ORIGEN': { bg: [0.5, 0.5, 0.5], text: [1, 1, 1] }, // Gris para sin origen
+        'INEA': { bg: [0.063, 0.157, 0.251], text: [1, 1, 1] },
+        'ITEA': { bg: [0.075, 0.196, 0.102], text: [1, 1, 1] },
+        'SIN ORIGEN': { bg: [0.5, 0.5, 0.5], text: [1, 1, 1] },
     };
 
     const wrapText = (text: string, maxWidth: number, font: PDFFont, fontSize: number) => {
@@ -125,7 +123,6 @@ export async function generateResguardoPDF(data: PdfData) {
         return (cellWidth - textWidth) / 2;
     };
 
-    // Columnas
     const showResguardanteColumn = data.articulos.some(a => a.resguardante);
     const columns: Column[] = [
         { header: 'No. Inventario', key: 'id_inv', width: 80 },
@@ -137,21 +134,14 @@ export async function generateResguardoPDF(data: PdfData) {
         columns.push({ header: 'Resguardante', key: 'resguardante', width: 120 });
     }
 
-    // Ajuste de anchos
     const numberColWidth = 40;
-    const totalWidth = pageWidth - (2 * margin); // Ancho total disponible
-    const contentWidth = totalWidth - numberColWidth; // Ancho disponible para las columnas
+    const totalWidth = pageWidth - (2 * margin);
+    const contentWidth = totalWidth - numberColWidth;
 
-    // Calcular la suma total de los anchos definidos
     const totalDefinedWidth = columns.reduce((sum, col) => sum + (col.width || 0), 0);
-    
-    // Calcular el factor de escala para ajustar los anchos proporcionalmente
     const scaleFactor = contentWidth / totalDefinedWidth;
-    
-    // Ajustar los anchos de las columnas manteniendo las proporciones
     const adjustedWidths = columns.map(col => Math.floor((col.width || 0) * scaleFactor));
-    
-    // Distribuir los píxeles restantes para evitar espacios en blanco
+
     let remainingWidth = contentWidth - adjustedWidths.reduce((sum, width) => sum + width, 0);
     while (remainingWidth > 0) {
         for (let i = 0; i < adjustedWidths.length && remainingWidth > 0; i++) {
@@ -168,7 +158,6 @@ export async function generateResguardoPDF(data: PdfData) {
         articulosPorOrigen[origen].push(articulo);
     }
 
-    // Firmas
     const defaultFirmas: PdfFirma[] = [
         {
             concepto: 'Autoriza',
@@ -188,7 +177,6 @@ export async function generateResguardoPDF(data: PdfData) {
     ];
     const firmas = data.firmas?.length ? data.firmas : defaultFirmas;
 
-    // Paginación
     const headerHeight = 25;
     const margenInferior = margin;
     const paginarPorAltura = (dataArr: Record<string, unknown>[]) => {
@@ -222,10 +210,12 @@ export async function generateResguardoPDF(data: PdfData) {
         return wrapText(text, colWidth - 2 * minCellPadding, font, headerFontSize);
     };
 
-    const drawTableHeader = (page: PDFPage, yPos: number, color: { bg: [number, number, number], text: [number, number, number] }) => {
+    const drawTableHeader = (page: PDFPage, yPos: number, origen: string, isFirstPage: boolean) => {
+        if (!isFirstPage) return yPos;
+
+        const color = origenColors[origen] || origenColors['SIN ORIGEN'];
         let xPos = margin;
 
-        // Número
         page.drawRectangle({
             x: xPos,
             y: yPos - headerHeight,
@@ -245,7 +235,6 @@ export async function generateResguardoPDF(data: PdfData) {
         });
         xPos += numberColWidth;
 
-        // Columnas
         columns.forEach((col: Column, idx: number) => {
             const colWidth = adjustedWidths[idx];
             page.drawRectangle({
@@ -274,7 +263,6 @@ export async function generateResguardoPDF(data: PdfData) {
     const drawTableRow = (page: PDFPage, row: Record<string, unknown>, yPos: number, rowHeight: number, rowNumber: number) => {
         let xPos = margin;
 
-        // Línea horizontal
         page.drawLine({
             start: { x: margin, y: yPos },
             end: { x: pageWidth - margin, y: yPos },
@@ -282,7 +270,6 @@ export async function generateResguardoPDF(data: PdfData) {
             color: rgb(0.7, 0.7, 0.7),
         });
 
-        // Número de fila
         page.drawRectangle({
             x: xPos,
             y: yPos - rowHeight,
@@ -303,7 +290,6 @@ export async function generateResguardoPDF(data: PdfData) {
         });
         xPos += numberColWidth;
 
-        // Celdas de datos
         columns.forEach((col: Column, idx: number) => {
             const colWidth = adjustedWidths[idx];
             page.drawRectangle({
@@ -351,7 +337,6 @@ export async function generateResguardoPDF(data: PdfData) {
         const ineaWidth = ineaHeight * ineaAspectRatio;
         const iteaWidth = iteaHeight * iteaAspectRatio;
 
-        // Logos
         page.drawImage(ineaImage, {
             x: margin,
             y: yPos - ineaHeight,
@@ -365,7 +350,6 @@ export async function generateResguardoPDF(data: PdfData) {
             height: iteaHeight,
         });
 
-        // Títulos
         const titles = [
             'INSTITUTO TLAXCALTECA PARA LA EDUCACIÓN DE LOS ADULTOS',
             'DIRECCIÓN DE ADMINISTRACIÓN Y FINANZAS',
@@ -377,15 +361,14 @@ export async function generateResguardoPDF(data: PdfData) {
             const xPos = (pageWidth - textWidth) / 2;
             page.drawText(normalizeText(text), {
                 x: xPos,
-                y: yPos - (index * 12), // Aumentado el espaciado
+                y: yPos - (index * 12),
                 size: 9,
                 font: font,
                 color: rgb(0, 0, 0)
             });
         });
-        yPos -= 50; // Aumentado el espacio después del título
+        yPos -= 50;
 
-        // Información del resguardo
         const infoLines = [
             `FOLIO:  ${data.folio}`,
             `DIRECTOR:  ${data.director || ''}`,
@@ -399,14 +382,14 @@ export async function generateResguardoPDF(data: PdfData) {
         infoLines.forEach((line, index) => {
             page.drawText(normalizeText(line), {
                 x: margin,
-                y: yPos - (index * 12), // Aumentado el espaciado entre líneas
+                y: yPos - (index * 12),
                 size: 8,
                 font: regularFont,
                 color: rgb(0, 0, 0)
             });
         });
 
-        return yPos - (infoLines.length * 12) - 15; // Aumentado el espacio final
+        return yPos - (infoLines.length * 12) - 15;
     };
 
     const drawSignatureSection = (page: PDFPage, yPosition: number) => {
@@ -416,21 +399,18 @@ export async function generateResguardoPDF(data: PdfData) {
         const lineY = signatureSectionY + 40;
         const signatureFontSize = 8;
 
-        // Firmas de autorización
         for (let i = 0; i < signatureCount; i++) {
             const firma = firmas[i];
             const xPos = margin + (i * signatureBoxWidth);
 
-            // Concepto
             page.drawText(normalizeText(firma.concepto?.toUpperCase() || ''), {
                 x: xPos + (signatureBoxWidth / 2) - (regularFont.widthOfTextAtSize(firma.concepto?.toUpperCase() || '', signatureFontSize) / 2),
                 y: lineY + 30,
                 size: signatureFontSize,
                 font: font,
-                color: rgb(0, 0, 0),
+                color: rgb(0, 0, 0)
             });
 
-            // Línea de firma
             page.drawLine({
                 start: { x: xPos + 20, y: lineY },
                 end: { x: xPos + signatureBoxWidth - 20, y: lineY },
@@ -438,33 +418,30 @@ export async function generateResguardoPDF(data: PdfData) {
                 color: rgb(0, 0, 0),
             });
 
-            // Nombre
             page.drawText(normalizeText(firma.nombre?.toUpperCase() || ''), {
                 x: xPos + (signatureBoxWidth / 2) - (regularFont.widthOfTextAtSize(firma.nombre?.toUpperCase() || '', signatureFontSize) / 2),
                 y: lineY - 15,
                 size: signatureFontSize,
                 font: regularFont,
-                color: rgb(0, 0, 0),
+                color: rgb(0, 0, 0)
             });
 
-            // Puesto
             page.drawText(normalizeText(firma.puesto?.toUpperCase() || ''), {
                 x: xPos + (signatureBoxWidth / 2) - (regularFont.widthOfTextAtSize(firma.puesto?.toUpperCase() || '', signatureFontSize) / 2),
                 y: lineY - 30,
                 size: signatureFontSize,
                 font: regularFont,
-                color: rgb(0, 0, 0),
+                color: rgb(0, 0, 0)
             });
         }
 
-        // Firma del resguardante
         const xPos = margin + (signatureCount) * signatureBoxWidth;
         page.drawText('RESGUARDANTE', {
             x: xPos + (signatureBoxWidth / 2) - (regularFont.widthOfTextAtSize('RESGUARDANTE', signatureFontSize) / 2),
             y: lineY + 30,
             size: signatureFontSize,
             font: font,
-            color: rgb(0, 0, 0),
+            color: rgb(0, 0, 0)
         });
         page.drawLine({
             start: { x: xPos + 20, y: lineY },
@@ -477,7 +454,7 @@ export async function generateResguardoPDF(data: PdfData) {
             y: lineY - 15,
             size: signatureFontSize,
             font: regularFont,
-            color: rgb(0, 0, 0),
+            color: rgb(0, 0, 0)
         });
         const puestoArea = `${data.puesto?.toUpperCase() || ''} DE ${data.area?.toUpperCase() || ''}`;
         page.drawText(normalizeText(puestoArea), {
@@ -485,13 +462,12 @@ export async function generateResguardoPDF(data: PdfData) {
             y: lineY - 30,
             size: signatureFontSize,
             font: regularFont,
-            color: rgb(0, 0, 0),
+            color: rgb(0, 0, 0)
         });
 
         return signatureSectionY;
     };
 
-    // Procesar cada grupo de artículos por origen
     let globalPageCount = 0;
     let globalIndex = 0;
     const origenes = Object.keys(articulosPorOrigen);
@@ -509,93 +485,61 @@ export async function generateResguardoPDF(data: PdfData) {
             resguardante: a.resguardante || data.resguardante || '',
         }));
 
-        // Paginar los artículos de este origen
         const paginadas = paginarPorAltura(articulos);
 
         for (let currentPageIndex = 0; currentPageIndex < paginadas.length; currentPageIndex++) {
             const pageData = paginadas[currentPageIndex];
 
-            // Crear nueva página si es necesario
             if (!currentPage || currentYPos < 120) {
                 currentPage = pdfDoc.addPage([pageWidth, pageHeight]);
                 currentYPos = pageHeight - margin;
-
-                // Encabezado solo en la primera página del primer origen
                 if (globalPageCount === 0) {
                     currentYPos = drawHeaderContent(currentPage, currentYPos);
                 }
             }
 
-            // Título del origen
-            const origenTitle = `ORIGEN: ${origen}`;
-            const titleWidth = font.widthOfTextAtSize(origenTitle, 10);
+            // Mostrar título de origen para todos los orígenes en su primera página
+            if (currentPageIndex === 0) {
+                const origenTitle = `ORIGEN: ${origen}`;
+                const titleWidth = font.widthOfTextAtSize(origenTitle, 10);
 
-            // Espacio antes del título
-            currentYPos -= 10;
+                currentYPos -= 10;
+                currentPage.drawRectangle({
+                    x: margin,
+                    y: currentYPos - 20,
+                    width: pageWidth - 2 * margin,
+                    height: 20,
+                    color: rgb(...color.bg),
+                });
+                currentPage.drawText(origenTitle, {
+                    x: (pageWidth - titleWidth) / 2,
+                    y: currentYPos - 15,
+                    size: 10,
+                    font: font,
+                    color: rgb(...color.text)
+                });
+                currentYPos -= 25;
+            }
 
-            // Fondo del título
-            currentPage.drawRectangle({
-                x: margin,
-                y: currentYPos - 20,
-                width: pageWidth - 2 * margin,
-                height: 20,
-                color: rgb(...color.bg),
-            });
+            currentYPos = drawTableHeader(currentPage, currentYPos, origen, currentPageIndex === 0);
 
-            // Texto del título
-            currentPage.drawText(origenTitle, {
-                x: (pageWidth - titleWidth) / 2,
-                y: currentYPos - 15,
-                size: 10,
-                font: font,
-                color: rgb(...color.text)
-            });
-
-            // Espacio después del título
-            currentYPos -= 25;
-
-            // Dibujar encabezado de tabla
-            currentYPos = drawTableHeader(currentPage, currentYPos, color);
-
-            // Dibujar filas de la tabla
             for (let i = 0; i < pageData.length; i++) {
                 const row = pageData[i];
                 const rowHeight = calculateRowHeight(row, adjustedWidths, columns);
 
-                // Verificar si hay espacio para la fila
                 if (currentYPos - rowHeight < 80) {
-                    // No hay espacio, crear nueva página
                     currentPage = pdfDoc.addPage([pageWidth, pageHeight]);
                     currentYPos = pageHeight - margin;
                     globalPageCount++;
-
-                    // Repetir título y encabezado en la nueva página
-                    currentPage.drawRectangle({
-                        x: margin,
-                        y: currentYPos - 20,
-                        width: pageWidth - 2 * margin,
-                        height: 20,
-                        color: rgb(...color.bg),
-                    });
-                    currentPage.drawText(`${origenTitle} (CONTINUACIÓN)`, {
-                        x: (pageWidth - titleWidth) / 2,
-                        y: currentYPos - 15,
-                        size: 10,
-                        font: font,
-                        color: rgb(...color.text)
-                    });
-                    currentYPos -= 25;
-                    currentYPos = drawTableHeader(currentPage, currentYPos, color);
+                    currentYPos = drawTableHeader(currentPage, currentYPos, origen, true);
                 }
 
-                // Dibujar fila
                 currentYPos = drawTableRow(currentPage, row, currentYPos, rowHeight, globalIndex + i + 1);
             }
 
             globalIndex += pageData.length;
             globalPageCount++;
 
-            // Pie de página
             const pageText = `PÁGINA ${globalPageCount}`;
             const pageTextWidth = regularFont.widthOfTextAtSize(pageText, 10);
             currentPage.drawText(normalizeText(pageText), {
@@ -606,27 +550,21 @@ export async function generateResguardoPDF(data: PdfData) {
                 color: rgb(0.6, 0.6, 0.6)
             });
 
-            // Espacio entre tablas de diferentes orígenes
             if (o < origenes.length - 1 && currentPageIndex === paginadas.length - 1) {
                 currentYPos -= 15;
             }
         }
     }
 
-    // Agregar sección de firmas en la última página
     if (currentPage && firmas.length > 0) {
         const signatureBoxHeight = 100;
         const minYForSignatures = margin + signatureBoxHeight + 10;
 
         if (currentYPos > minYForSignatures) {
-            // Hay espacio en la última página
             drawSignatureSection(currentPage, signatureBoxHeight + margin);
         } else {
-            // Crear nueva página para firmas
             const signaturePage = pdfDoc.addPage([pageWidth, pageHeight]);
             drawSignatureSection(signaturePage, signatureBoxHeight + margin);
-
-            // Pie de página
             const pageText = `PÁGINA ${globalPageCount + 1}`;
             const pageTextWidth = regularFont.widthOfTextAtSize(pageText, 10);
             signaturePage.drawText(normalizeText(pageText), {
@@ -639,7 +577,6 @@ export async function generateResguardoPDF(data: PdfData) {
         }
     }
 
-    // Guardar y descargar el PDF
     const pdfBytes = await pdfDoc.save();
     const blob = new Blob([pdfBytes], { type: 'application/pdf' });
     saveAs(blob, `resguardo_${data.folio}.pdf`);
