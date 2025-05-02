@@ -2,6 +2,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { Plus, Trash2, Edit, AlertTriangle, CheckCircle, X, Search, RefreshCw, CheckSquare, XSquare } from 'lucide-react';
 import supabase from "@/app/lib/supabase/client";
+import { useNotifications } from '@/hooks/useNotifications';
 
 interface Directorio {
     id_directorio: number;
@@ -31,6 +32,7 @@ export default function DirectorioManagementComponent() {
 
     const addInputRef = useRef<HTMLInputElement>(null);
     const editInputRef = useRef<HTMLInputElement>(null);
+    const { createNotification } = useNotifications();
 
     // Cargar datos del directorio
     const fetchDirectorio = useCallback(async () => {
@@ -143,11 +145,33 @@ export default function DirectorioManagementComponent() {
             setIsAddingNew(false);
             setNewEmployee({ id_directorio: 0, nombre: '', area: '', puesto: '' });
             fetchDirectorio();
+
+            // Notificación de alta
+            await createNotification({
+                title: 'Nuevo empleado agregado',
+                description: `Se agregó a ${nombreEmployee} (Área: ${areaEmployee}, Puesto: ${puestoEmployee}) al directorio.`,
+                type: 'success',
+                category: 'directorio',
+                device: 'web',
+                importance: 'medium',
+                data: { changes: [`Alta: ${nombreEmployee}, Área: ${areaEmployee}, Puesto: ${puestoEmployee}`], affectedTables: ['directorio'] }
+            });
         } catch (error: unknown) {
             console.error('Error:', error);
             const errorMessage = (error instanceof Error) ? error.message : 'Ha ocurrido un error';
             setError(errorMessage);
             setMessage({ type: 'error', text: errorMessage });
+
+            // Notificación de error
+            await createNotification({
+                title: 'Error al agregar empleado',
+                description: errorMessage,
+                type: 'danger',
+                category: 'directorio',
+                device: 'web',
+                importance: 'high',
+                data: { affectedTables: ['directorio'] }
+            });
         } finally {
             setIsSubmitting(false);
         }
@@ -193,11 +217,33 @@ export default function DirectorioManagementComponent() {
             setEditingId(null);
             setEditEmployee({ id_directorio: 0, nombre: '', area: '', puesto: '' });
             fetchDirectorio();
+
+            // Notificación de edición
+            await createNotification({
+                title: 'Empleado actualizado',
+                description: `Se actualizó a ${nombreEmployee} (Área: ${areaEmployee}, Puesto: ${puestoEmployee}) en el directorio.`,
+                type: 'info',
+                category: 'directorio',
+                device: 'web',
+                importance: 'medium',
+                data: { changes: [`Edición: ${nombreEmployee}, Área: ${areaEmployee}, Puesto: ${puestoEmployee}`], affectedTables: ['directorio'] }
+            });
         } catch (error: unknown) {
             console.error('Error:', error);
             const errorMessage = (error instanceof Error) ? error.message : 'Ha ocurrido un error';
             setError(errorMessage);
             setMessage({ type: 'error', text: errorMessage });
+
+            // Notificación de error
+            await createNotification({
+                title: 'Error al editar empleado',
+                description: errorMessage,
+                type: 'danger',
+                category: 'directorio',
+                device: 'web',
+                importance: 'high',
+                data: { affectedTables: ['directorio'] }
+            });
         } finally {
             setIsSubmitting(false);
         }
@@ -206,6 +252,7 @@ export default function DirectorioManagementComponent() {
     const handleConfirmDelete = async (id: number) => {
         setIsSubmitting(true);
         try {
+            const empleado = directorio.find(e => e.id_directorio === id);
             const { error } = await supabase
                 .from('directorio')
                 .delete()
@@ -216,10 +263,32 @@ export default function DirectorioManagementComponent() {
             setMessage({ type: 'success', text: 'Empleado eliminado correctamente' });
             setDeletingId(null);
             fetchDirectorio();
+
+            // Notificación de baja
+            await createNotification({
+                title: 'Empleado eliminado',
+                description: `Se eliminó a ${empleado?.nombre || ''} (Área: ${empleado?.area || ''}, Puesto: ${empleado?.puesto || ''}) del directorio.`,
+                type: 'danger',
+                category: 'directorio',
+                device: 'web',
+                importance: 'high',
+                data: { changes: [`Baja: ${empleado?.nombre || ''}, Área: ${empleado?.area || ''}, Puesto: ${empleado?.puesto || ''}`], affectedTables: ['directorio'] }
+            });
         } catch (error: unknown) {
             console.error('Error:', error);
             const errorMessage = (error instanceof Error) ? error.message : 'Ha ocurrido un error';
             setMessage({ type: 'error', text: errorMessage });
+
+            // Notificación de error
+            await createNotification({
+                title: 'Error al eliminar empleado',
+                description: errorMessage,
+                type: 'danger',
+                category: 'directorio',
+                device: 'web',
+                importance: 'high',
+                data: { affectedTables: ['directorio'] }
+            });
         } finally {
             setIsSubmitting(false);
         }
@@ -546,19 +615,18 @@ export default function DirectorioManagementComponent() {
                         Mostrando {filteredDirectorio.length} de {directorio.length} empleados en el directorio
                     </div>
                 </div>
+                {/* Estilos CSS adicionales */}
+                <style jsx>{`
+                    @keyframes fadeIn {
+                        from { opacity: 0; transform: translateY(-10px); }
+                        to { opacity: 1; transform: translateY(0); }
+                    }
+                    
+                    .animate-fadeIn {
+                        animation: fadeIn 0.3s ease-out forwards;
+                    }
+                `}</style>
             </div>
-
-            {/* Estilos CSS adicionales */}
-            <style jsx>{`
-                @keyframes fadeIn {
-                    from { opacity: 0; transform: translateY(-10px); }
-                    to { opacity: 1; transform: translateY(0); }
-                }
-                
-                .animate-fadeIn {
-                    animation: fadeIn 0.3s ease-out forwards;
-                }
-            `}</style>
         </div>
     );
 }

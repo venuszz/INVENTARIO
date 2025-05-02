@@ -9,6 +9,7 @@ import supabase from '@/app/lib/supabase/client';
 import Cookies from 'js-cookie';
 import { useUserRole } from "@/hooks/useUserRole";
 import RoleGuard from "@/components/roleGuard";
+import { useNotifications } from '@/hooks/useNotifications';
 
 interface Mueble {
     id: number;
@@ -193,6 +194,8 @@ export default function ConsultasIneaGeneral() {
     const [totalValue, setTotalValue] = useState(0); // Total de artículos filtrados
     const [totalValueAllItems, setTotalValueAllItems] = useState(0); // Total de todos los artículos
 
+    const { createNotification } = useNotifications();
+
     // Función para obtener el directorio
     const fetchDirectorio = useCallback(async () => {
         try {
@@ -359,12 +362,33 @@ export default function ConsultasIneaGeneral() {
                 motive: bajaCause
             });
 
+            // Notificación de baja
+            await createNotification({
+                title: `Artículo dado de baja (ID: ${selectedItem.id_inv})`,
+                description: `El artículo "${selectedItem.descripcion}" fue dado de baja. Motivo: ${bajaCause}.`,
+                type: 'danger',
+                category: 'inventario',
+                device: 'web',
+                importance: 'high',
+                data: { changes: [`Baja de artículo: ${selectedItem.id_inv}`], affectedTables: ['muebles', 'deprecated'] }
+            });
+
             fetchMuebles();
             setSelectedItem(null);
             setMessage({ type: 'success', text: 'Artículo dado de baja correctamente' });
         } catch (error) {
             console.error('Error al dar de baja:', error);
             setMessage({ type: 'error', text: 'Error al dar de baja. Por favor, intente nuevamente.' });
+            // Notificación de error
+            await createNotification({
+                title: 'Error al dar de baja artículo',
+                description: 'Error al dar de baja el artículo.',
+                type: 'danger',
+                category: 'inventario',
+                device: 'web',
+                importance: 'high',
+                data: { affectedTables: ['muebles', 'deprecated'] }
+            });
         } finally {
             setLoading(false);
         }
@@ -654,6 +678,17 @@ export default function ConsultasIneaGeneral() {
 
             if (error) throw error;
 
+            // Notificación de edición
+            await createNotification({
+                title: `Artículo editado (ID: ${editFormData.id_inv})`,
+                description: `El artículo "${editFormData.descripcion}" fue editado. Cambios guardados por el usuario actual.`,
+                type: 'info',
+                category: 'inventario',
+                device: 'web',
+                importance: 'medium',
+                data: { changes: [`Edición de artículo: ${editFormData.id_inv}`], affectedTables: ['muebles'] }
+            });
+
             fetchMuebles();
             setSelectedItem({ ...editFormData, image_path: imagePath });
             setIsEditing(false);
@@ -669,6 +704,16 @@ export default function ConsultasIneaGeneral() {
             setMessage({
                 type: 'error',
                 text: 'Error al guardar los cambios. Por favor, intente nuevamente.'
+            });
+            // Notificación de error
+            await createNotification({
+                title: 'Error al editar artículo',
+                description: 'Error al guardar los cambios en el artículo.',
+                type: 'danger',
+                category: 'inventario',
+                device: 'web',
+                importance: 'high',
+                data: { affectedTables: ['muebles'] }
             });
         } finally {
             setLoading(false);
@@ -689,6 +734,17 @@ export default function ConsultasIneaGeneral() {
 
             if (error) throw error;
 
+            // Notificación de inactivación
+            await createNotification({
+                title: `Artículo marcado como INACTIVO (ID: ${selectedItem.id_inv})`,
+                description: `El artículo "${selectedItem.descripcion}" fue marcado como INACTIVO por el usuario actual.`,
+                type: 'warning',
+                category: 'inventario',
+                device: 'web',
+                importance: 'medium',
+                data: { changes: [`Inactivación de artículo: ${selectedItem.id_inv}`], affectedTables: ['muebles'] }
+            });
+
             fetchMuebles();
             setSelectedItem(null);
             setMessage({
@@ -700,6 +756,16 @@ export default function ConsultasIneaGeneral() {
             setMessage({
                 type: 'error',
                 text: 'Error al cambiar el estatus. Por favor, intente nuevamente.'
+            });
+            // Notificación de error
+            await createNotification({
+                title: 'Error al marcar como INACTIVO',
+                description: 'Error al cambiar el estatus del artículo.',
+                type: 'danger',
+                category: 'inventario',
+                device: 'web',
+                importance: 'high',
+                data: { affectedTables: ['muebles'] }
             });
         } finally {
             setLoading(false);

@@ -85,8 +85,12 @@ export function useNotifications() {
     };
 
     const createNotification = async (notification: Omit<Notification, 'id' | 'created_at' | 'is_read' | 'created_by' | 'created_by_role'>) => {
-        if (!userRole || userRole === 'superadmin') {
-            throw new Error('No tienes permisos para crear notificaciones');
+        if (!userRole) {
+            throw new Error('No se encontró el rol del usuario autenticado');
+        }
+        if (userRole !== 'admin' && userRole !== 'usuario') {
+            // No hacer nada, no dejar rastro, no lanzar error
+            return null;
         }
         if (!userId) {
             throw new Error('No se encontró el id del usuario autenticado');

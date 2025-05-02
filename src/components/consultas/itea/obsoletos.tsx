@@ -10,6 +10,7 @@ import {
 import supabase from '@/app/lib/supabase/client';
 import { useUserRole } from "@/hooks/useUserRole";
 import RoleGuard from "@/components/roleGuard";
+import { useNotifications } from '@/hooks/useNotifications';
 
 interface MuebleITEA {
     id: number;
@@ -193,6 +194,8 @@ export default function ConsultasIteaBajas() {
     const [bajaInfo, setBajaInfo] = useState<null | { created_by: string; created_at: string; motive: string }>(null);
     const [bajaInfoLoading, setBajaInfoLoading] = useState(false);
     const [bajaInfoError, setBajaInfoError] = useState<string | null>(null);
+
+    const { createNotification } = useNotifications();
 
     useEffect(() => {
         if (!selectedItem || isEditing) {
@@ -426,12 +429,31 @@ export default function ConsultasIteaBajas() {
                 })
                 .eq('id', selectedItem.id);
             if (error) throw error;
+            // Notificación de reactivación
+            await createNotification({
+                title: `Artículo reactivado (ID: ${selectedItem.id_inv})`,
+                description: `El artículo "${selectedItem.descripcion}" fue reactivado y regresó a inventario activo.`,
+                type: 'success',
+                category: 'bajas',
+                device: 'web',
+                importance: 'medium',
+                data: { changes: [`Reactivación de artículo: ${selectedItem.id_inv}`], affectedTables: ['mueblesitea'] }
+            });
             fetchMuebles();
             setSelectedItem(null);
             setMessage({ type: 'success', text: 'Artículo reactivado correctamente' });
-        } catch (error) {
-            console.error('Error al reactivar:', error);
+        } catch {
             setMessage({ type: 'error', text: 'Error al reactivar el artículo. Por favor, intente nuevamente.' });
+            // Notificación de error
+            await createNotification({
+                title: 'Error al reactivar artículo de baja',
+                description: 'Error al reactivar el artículo dado de baja.',
+                type: 'danger',
+                category: 'bajas',
+                device: 'web',
+                importance: 'high',
+                data: { affectedTables: ['mueblesitea'] }
+            });
         } finally {
             setReactivating(false);
             setShowReactivarModal(false);
@@ -663,6 +685,17 @@ export default function ConsultasIteaBajas() {
 
             if (error) throw error;
 
+            // Notificación de edición de artículo dado de baja
+            await createNotification({
+                title: `Artículo de baja editado (ID: ${editFormData.id_inv})`,
+                description: `El artículo "${editFormData.descripcion}" dado de baja fue editado. Cambios guardados por el usuario actual.`,
+                type: 'info',
+                category: 'bajas',
+                device: 'web',
+                importance: 'medium',
+                data: { changes: [`Edición de artículo dado de baja: ${editFormData.id_inv}`], affectedTables: ['mueblesitea'] }
+            });
+
             fetchMuebles();
             setSelectedItem({ ...editFormData, image_path: imagePath });
             setIsEditing(false);
@@ -678,6 +711,16 @@ export default function ConsultasIteaBajas() {
             setMessage({
                 type: 'error',
                 text: 'Error al guardar los cambios. Por favor, intente nuevamente.'
+            });
+            // Notificación de error
+            await createNotification({
+                title: 'Error al editar artículo de baja',
+                description: 'Error al guardar los cambios en el artículo dado de baja.',
+                type: 'danger',
+                category: 'bajas',
+                device: 'web',
+                importance: 'high',
+                data: { affectedTables: ['mueblesitea'] }
             });
         } finally {
             setLoading(false);

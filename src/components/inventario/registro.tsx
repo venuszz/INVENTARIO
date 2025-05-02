@@ -2,6 +2,7 @@
 import { useState, useEffect, useCallback, useRef, ChangeEvent } from 'react';
 import { Calendar, Save, AlertTriangle, CheckCircle, X, ChevronRight, ChevronLeft, Camera, Eye, User, AlertCircle, RefreshCw } from 'lucide-react';
 import supabase from "@/app/lib/supabase/client";
+import { useNotifications } from '@/hooks/useNotifications';
 
 // Tipos dinámicos basados en los valores de la base de datos
 type Estado = string;
@@ -101,6 +102,7 @@ export default function RegistroBienesForm() {
     });
 
     const imageFileRef = useRef<File | null>(null);
+    const { createNotification } = useNotifications();
 
     // Función para obtener el directorio
     const fetchDirectorio = useCallback(async () => {
@@ -374,12 +376,34 @@ export default function RegistroBienesForm() {
                 text: `Bien registrado correctamente en ${institucion}`
             });
 
+            // Notificación de registro exitoso
+            await createNotification({
+                title: `Nuevo bien registrado (${institucion})`,
+                description: `Se registró el bien "${formData.descripcion}" con ID ${formData.id_inv} en el área "${formData.area}".`,
+                type: 'success',
+                category: 'inventario',
+                device: 'web',
+                importance: 'medium',
+                data: { changes: [`Registro de bien: ${formData.id_inv}`], affectedTables: [tableName] }
+            });
+
             resetForm();
         } catch (error) {
             console.error('Error al guardar:', error);
             setMessage({
                 type: 'error',
                 text: "Error al guardar el registro. Intente nuevamente."
+            });
+
+            // Notificación de error
+            await createNotification({
+                title: 'Error al registrar bien',
+                description: 'Ocurrió un error al guardar el registro de un bien.',
+                type: 'danger',
+                category: 'inventario',
+                device: 'web',
+                importance: 'high',
+                data: { affectedTables: [institucion === 'INEA' ? 'muebles' : 'mueblesitea'] }
             });
         } finally {
             setIsSubmitting(false);

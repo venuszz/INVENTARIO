@@ -2,6 +2,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { Plus, Save, Trash2, Edit, AlertTriangle, CheckCircle, X, Search, RefreshCw, Layers } from 'lucide-react';
 import supabase from "@/app/lib/supabase/client";
+import { useNotifications } from '@/hooks/useNotifications';
 
 interface ConfigItem {
     id: number;
@@ -38,6 +39,8 @@ export default function ConfigManagementComponent() {
 
     const inputRef = useRef<HTMLInputElement>(null);
     const editInputRef = useRef<HTMLInputElement>(null);
+
+    const { createNotification } = useNotifications();
 
     // Cargar datos de configuración
     const fetchConfigItems = useCallback(async () => {
@@ -129,7 +132,7 @@ export default function ConfigManagementComponent() {
     const confirmDelete = async (itemId: number) => {
         setIsSubmitting(true);
         try {
-            // Eliminar configuración
+            const item = configItems.find(i => i.id === itemId);
             const { error } = await supabase
                 .from('config')
                 .delete()
@@ -140,10 +143,32 @@ export default function ConfigManagementComponent() {
             setMessage({ type: 'success', text: 'Registro eliminado correctamente' });
             setDeletingRow(null);
             fetchConfigItems();
+
+            // Notificación de eliminación
+            await createNotification({
+                title: `Concepto eliminado (${item?.tipo})`,
+                description: `Se eliminó el concepto "${item?.concepto}" del tipo "${item?.tipo}" en configuración.`,
+                type: 'danger',
+                category: 'config',
+                device: 'web',
+                importance: 'high',
+                data: { changes: [`Eliminado: ${item?.concepto}`], affectedTables: ['config'] }
+            });
         } catch (error: unknown) {
             console.error('Error:', error);
             const errorMessage = (error instanceof Error) ? error.message : 'Ha ocurrido un error';
             setMessage({ type: 'error', text: errorMessage || 'Ha ocurrido un error al eliminar el registro' });
+
+            // Notificación de error
+            await createNotification({
+                title: 'Error al eliminar concepto',
+                description: errorMessage,
+                type: 'danger',
+                category: 'config',
+                device: 'web',
+                importance: 'high',
+                data: { affectedTables: ['config'] }
+            });
         } finally {
             setIsSubmitting(false);
         }
@@ -173,6 +198,8 @@ export default function ConfigManagementComponent() {
                 throw new Error('Este concepto ya existe');
             }
 
+            const oldItem = configItems.find(item => item.id === itemId);
+
             // Editar configuración existente
             const { error } = await supabase
                 .from('config')
@@ -184,11 +211,33 @@ export default function ConfigManagementComponent() {
             setMessage({ type: 'success', text: 'Registro actualizado correctamente' });
             setEditingRow(null);
             fetchConfigItems();
+
+            // Notificación de edición
+            await createNotification({
+                title: `Concepto actualizado (${oldItem?.tipo})`,
+                description: `Se actualizó el concepto "${oldItem?.concepto}" a "${conceptoValue}" en el tipo "${oldItem?.tipo}" de configuración.`,
+                type: 'info',
+                category: 'config',
+                device: 'web',
+                importance: 'medium',
+                data: { changes: [`Edición: ${oldItem?.concepto} → ${conceptoValue}`], affectedTables: ['config'] }
+            });
         } catch (error: unknown) {
             console.error('Error:', error);
             const errorMessage = (error instanceof Error) ? error.message : 'Ha ocurrido un error';
             setError(errorMessage);
             setMessage({ type: 'error', text: errorMessage || 'Ha ocurrido un error al actualizar el registro' });
+
+            // Notificación de error
+            await createNotification({
+                title: 'Error al editar concepto',
+                description: errorMessage,
+                type: 'danger',
+                category: 'config',
+                device: 'web',
+                importance: 'high',
+                data: { affectedTables: ['config'] }
+            });
         } finally {
             setIsSubmitting(false);
         }
@@ -232,11 +281,33 @@ export default function ConfigManagementComponent() {
             fetchConfigItems();
             setFormMode('');
             setCurrentItem({ id: 0, tipo: activeTab, concepto: '' });
+
+            // Notificación de alta
+            await createNotification({
+                title: `Concepto agregado (${activeTab})`,
+                description: `Se agregó el concepto "${conceptoValue}" al tipo "${activeTab}" en configuración.`,
+                type: 'success',
+                category: 'config',
+                device: 'web',
+                importance: 'medium',
+                data: { changes: [`Alta: ${conceptoValue}`], affectedTables: ['config'] }
+            });
         } catch (error: unknown) {
             console.error('Error:', error);
             const errorMessage = (error instanceof Error) ? error.message : 'Ha ocurrido un error';
             setError(errorMessage);
             setMessage({ type: 'error', text: errorMessage || 'Ha ocurrido un error al procesar la solicitud' });
+
+            // Notificación de error
+            await createNotification({
+                title: 'Error al agregar concepto',
+                description: errorMessage,
+                type: 'danger',
+                category: 'config',
+                device: 'web',
+                importance: 'high',
+                data: { affectedTables: ['config'] }
+            });
         } finally {
             setIsSubmitting(false);
         }

@@ -11,6 +11,7 @@ import { SupabaseClient } from '@supabase/supabase-js';
 import { generateResguardoPDF } from './ResguardoPDFReport';
 import { useUserRole } from "@/hooks/useUserRole";
 import RoleGuard from "@/components/roleGuard";
+import { useNotifications } from '@/hooks/useNotifications';
 
 interface Resguardo {
     id: number;
@@ -167,6 +168,8 @@ export default function ConsultarResguardos() {
     const [editedResguardantes, setEditedResguardantes] = useState<{ [num_inventario: string]: string }>({});
     const [savingResguardantes, setSavingResguardantes] = useState(false);
 
+    const { createNotification } = useNotifications();
+
     // Sincronizar los resguardantes editables cuando cambia el resguardo seleccionado
     useEffect(() => {
         if (selectedResguardo) {
@@ -184,9 +187,11 @@ export default function ConsultarResguardos() {
         if (!selectedResguardo) return;
         setSavingResguardantes(true);
         try {
+            const cambios: string[] = [];
             for (const articulo of selectedResguardo.articulos) {
                 const nuevoResguardante = editedResguardantes[articulo.num_inventario] || '';
                 if (nuevoResguardante !== (articulo.resguardante || '')) {
+                    cambios.push(`${articulo.num_inventario}: '${articulo.resguardante || 'Sin asignar'}' → '${nuevoResguardante || 'Sin asignar'}'`);
                     // Actualizar en la tabla resguardos
                     await supabase
                         .from('resguardos')
@@ -200,6 +205,18 @@ export default function ConsultarResguardos() {
                         .update({ resguardante: nuevoResguardante })
                         .eq('id_inv', articulo.num_inventario);
                 }
+            }
+            // Notificación de edición de resguardantes
+            if (cambios.length > 0) {
+                await createNotification({
+                    title: `Resguardantes editados en folio ${selectedResguardo.folio}`,
+                    description: `Se actualizaron los resguardantes del resguardo (folio ${selectedResguardo.folio}, director ${selectedResguardo.dir_area}, área ${selectedResguardo.area_resguardo || ''}). Cambios: ${cambios.join('; ')}`,
+                    type: 'info',
+                    category: 'resguardos',
+                    device: 'web',
+                    importance: 'medium',
+                    data: { changes: cambios, affectedTables: ['resguardos', 'muebles', 'mueblesitea'] }
+                });
             }
             // Refrescar detalles
             await fetchResguardoDetails(selectedResguardo.folio);
@@ -343,6 +360,17 @@ export default function ConsultarResguardos() {
             for (const articulo of articulosSeleccionados) {
                 await limpiarDatosArticulo(supabase, articulo, selectedResguardo.area_resguardo || '');
             }
+
+            // Notificación de eliminación de artículos
+            await createNotification({
+                title: `Artículos eliminados del resguardo ${selectedResguardo.folio}`,
+                description: `Se eliminaron ${selectedArticulos.length} artículo(s) del resguardo (folio ${selectedResguardo.folio}, director ${selectedResguardo.dir_area}, área ${selectedResguardo.area_resguardo || ''}). Inventarios: ${selectedArticulos.join(', ')}`,
+                type: 'danger',
+                category: 'resguardos',
+                device: 'web',
+                importance: 'high',
+                data: { affectedTables: ['resguardos', 'resguardos_bajas'], changes: selectedArticulos }
+            });
 
             await fetchResguardoDetails(selectedResguardo.folio);
             setShowDeleteSelectedModal(false);
@@ -574,6 +602,17 @@ export default function ConsultarResguardos() {
             for (const articulo of selectedResguardo.articulos) {
                 await limpiarDatosArticulo(supabase, articulo, selectedResguardo.area_resguardo || '');
             }
+
+            // Notificación de eliminación de resguardo completo
+            await createNotification({
+                title: `Resguardo dado de baja (folio ${selectedResguardo.folio})`,
+                description: `Se eliminó el resguardo completo (folio ${selectedResguardo.folio}, director ${selectedResguardo.dir_area}, área ${selectedResguardo.area_resguardo || ''}) con ${selectedResguardo.articulos.length} artículo(s).`,
+                type: 'danger',
+                category: 'resguardos',
+                device: 'web',
+                importance: 'high',
+                data: { affectedTables: ['resguardos', 'resguardos_bajas'], changes: selectedResguardo.articulos.map(a => a.num_inventario) }
+            });
 
             setSelectedResguardo(null);
             setShowDeleteAllModal(false);

@@ -10,6 +10,7 @@ import supabase from '@/app/lib/supabase/client';
 import { generateBajaPDF } from './BajaPDFReport';
 import { useUserRole } from "@/hooks/useUserRole";
 import RoleGuard from "@/components/roleGuard";
+import { useNotifications } from '@/hooks/useNotifications';
 
 interface ResguardoBaja {
     id: number;
@@ -41,6 +42,7 @@ interface ResguardoBajaArticulo {
     origen: string;
     folio_baja: string;
     usufinal?: string | null;
+    area_resguardo?: string | null;
 }
 
 interface PdfDataBaja {
@@ -97,6 +99,7 @@ const ConsultarBajasResguardos = () => {
         articulos?: ResguardoBajaArticulo[];
         singleArticulo?: ResguardoBajaArticulo;
     } | null>(null);
+    const { createNotification } = useNotifications();
 
     // Fetch bajas with pagination and sorting
     const fetchBajas = useCallback(async () => {
@@ -297,6 +300,16 @@ const ConsultarBajasResguardos = () => {
                 firmas: firmas || undefined
             });
             setShowPDFModal(true);
+            // Notificación de generación de PDF de baja
+            await createNotification({
+                title: `PDF de baja generado (${firstGroup.folio_baja})`,
+                description: `Se generó un PDF de baja para el folio ${firstGroup.folio_baja} (director: ${selectedBaja.dir_area}, área: ${selectedBaja.area_resguardo || ''}) con ${firstGroup.articulos.length} artículo(s).`,
+                type: 'info',
+                category: 'bajas',
+                device: 'web',
+                importance: 'medium' as const,
+                data: { affectedTables: ['resguardos_bajas'], changes: firstGroup.articulos.map(a => a.num_inventario) }
+            });
         } catch (err) {
             setError('Error al preparar el PDF de baja');
             console.error(err);
@@ -443,14 +456,27 @@ const ConsultarBajasResguardos = () => {
         setLoading(true);
         try {
             let result;
+            let notificationData = null;
 
             switch (deleteType) {
                 case 'folio':
                     if (itemToDelete.folioResguardo) {
+                        // Buscar info para la notificación
+                        const folioBajaArticulos = allBajas.filter(b => b.folio_resguardo === itemToDelete.folioResguardo);
                         result = await supabase
                             .from('resguardos_bajas')
                             .delete()
                             .eq('folio_resguardo', itemToDelete.folioResguardo);
+                        const notificationType = 'danger' as const;
+                        notificationData = {
+                            title: `Folio de baja eliminado (${folioBajaArticulos[0]?.folio_baja || ''})`,
+                            description: `Se eliminó el folio de baja ${folioBajaArticulos[0]?.folio_baja || ''} (director: ${folioBajaArticulos[0]?.dir_area || ''}, área: ${folioBajaArticulos[0]?.area_resguardo ?? ''}) con ${folioBajaArticulos.length} artículo(s).`,
+                            type: notificationType,
+                            category: 'bajas',
+                            device: 'web',
+                            importance: 'high' as const,
+                            data: { affectedTables: ['resguardos_bajas'], changes: folioBajaArticulos.map(a => a.num_inventario) }
+                        };
                     }
                     break;
 
@@ -461,6 +487,16 @@ const ConsultarBajasResguardos = () => {
                             .from('resguardos_bajas')
                             .delete()
                             .in('id', ids);
+                        const notificationType = 'danger' as const;
+                        notificationData = {
+                            title: `Artículos eliminados de baja (${itemToDelete.articulos[0]?.folio_baja || ''})`,
+                            description: `Se eliminaron ${itemToDelete.articulos.length} artículo(s) del folio de baja ${itemToDelete.articulos[0]?.folio_baja || ''} (director: ${selectedBaja?.dir_area || ''}, área: ${selectedBaja?.area_resguardo || ''}). Inventarios: ${itemToDelete.articulos.map(a => a.num_inventario).join(', ')}`,
+                            type: notificationType as 'danger',
+                            category: 'bajas',
+                            device: 'web',
+                            importance: 'high' as const,
+                            data: { affectedTables: ['resguardos_bajas'], changes: itemToDelete.articulos.map(a => a.num_inventario) }
+                        };
                     }
                     break;
 
@@ -470,11 +506,25 @@ const ConsultarBajasResguardos = () => {
                             .from('resguardos_bajas')
                             .delete()
                             .eq('id', itemToDelete.singleArticulo.id);
+                        const notificationType = 'danger' as const;
+                        notificationData = {
+                            title: `Artículo eliminado de baja (${itemToDelete.singleArticulo.folio_baja})`,
+                            description: `Se eliminó el artículo ${itemToDelete.singleArticulo.num_inventario} del folio de baja ${itemToDelete.singleArticulo.folio_baja}.`,
+                            type: notificationType as 'danger',
+                            category: 'bajas',
+                            device: 'web',
+                            importance: 'high' as const,
+                            data: { affectedTables: ['resguardos_bajas'], changes: [itemToDelete.singleArticulo.num_inventario] }
+                        };
                     }
                     break;
             }
 
             if (result?.error) throw result.error;
+
+            if (notificationData) {
+                await createNotification(notificationData);
+            }
 
             await fetchBajas();
             setSelectedBaja(null);
