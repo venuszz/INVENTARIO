@@ -792,13 +792,15 @@ export default function ConsultarResguardos() {
         <div className="bg-black text-white min-h-screen p-2 sm:p-4 md:p-6 lg:p-8">
             <div className="w-full mx-auto bg-black rounded-lg sm:rounded-xl shadow-2xl overflow-hidden transition-all duration-500 transform border border-gray-800">
                 {/* Header */}
-                <div className="bg-black p-4 sm:p-6 flex flex-col sm:flex-row justify-between items-start sm:items-center border-b border-gray-800 gap-2 sm:gap-0">
+                <div className="bg-gradient-to-r from-purple-900/30 to-blue-900/30 p-4 sm:p-6 flex flex-col sm:flex-row justify-between items-start sm:items-center border-b border-gray-800 gap-2 sm:gap-0">
                     <h1 className="text-xl sm:text-2xl md:text-3xl font-bold flex items-center">
-                        <span className="mr-2 sm:mr-3 bg-gray-900 text-white p-1 sm:p-2 rounded-lg border border-gray-700 text-sm sm:text-base">RES</span>
-                        Consulta de Resguardos
+                        <span className="mr-2 sm:mr-3 bg-gradient-to-br from-blue-600 to-purple-600 text-white p-1 sm:p-2 rounded-lg border border-blue-400/20 text-sm sm:text-base shadow-lg">RES</span>
+                        <span className="bg-clip-text text-transparent bg-gradient-to-r from-blue-300 to-purple-200">
+                            Consulta de Resguardos
+                        </span>
                     </h1>
                     <div className="flex items-center gap-2 text-sm text-gray-400">
-                        <ListChecks className="h-4 w-4 text-blue-400" />
+                        <ListChecks className="h-4 w-4 text-blue-400 animate-pulse" />
                         <span>{totalCount} resguardos registrados</span>
                     </div>
                 </div>
@@ -808,7 +810,7 @@ export default function ConsultarResguardos() {
                     {/* Left panel - Resguardos table */}
                     <div className="flex-1 min-w-0 flex flex-col p-4 lg:col-span-3">
                         {/* Search */}
-                        <div className="mb-6 bg-gray-900/20 p-4 rounded-xl border border-gray-800 shadow-inner">
+                        <div className="mb-6 bg-gradient-to-br from-gray-900/50 to-blue-900/10 p-4 rounded-xl border border-gray-800 shadow-inner">
                             <div className="flex flex-col gap-4">
                                 <div className="relative flex-grow">
                                     <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -819,7 +821,7 @@ export default function ConsultarResguardos() {
                                         value={searchTerm}
                                         onChange={(e) => setSearchTerm(e.target.value)}
                                         placeholder="Buscar por folio..."
-                                        className="pl-10 pr-4 py-3 w-full bg-black border border-gray-800 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                        className="pl-10 pr-4 py-3 w-full bg-black border border-gray-800 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-300 hover:border-blue-500/50"
                                     />
                                 </div>
 
@@ -828,7 +830,7 @@ export default function ConsultarResguardos() {
                                         <button
                                             onClick={resetSearch}
                                             disabled={!searchTerm}
-                                            className={`px-4 py-2 bg-black border border-gray-800 text-gray-400 rounded-lg hover:bg-gray-900 transition-colors flex items-center gap-2 text-sm ${!searchTerm ? 'opacity-50 cursor-not-allowed' : ''}`}
+                                            className={`px-4 py-2 bg-black border border-gray-800 text-gray-400 rounded-lg hover:bg-gray-900 transition-colors flex items-center gap-2 text-sm ${!searchTerm ? 'opacity-50 cursor-not-allowed' : 'hover:border-blue-500/50 hover:text-blue-300'}`}
                                         >
                                             <X className="h-4 w-4" />
                                             Limpiar búsqueda
@@ -840,7 +842,7 @@ export default function ConsultarResguardos() {
                                             setPdfData(null);
                                             fetchResguardos();
                                         }}
-                                        className="px-4 py-2 bg-gray-900/50 border border-gray-700 text-gray-300 rounded-lg hover:bg-gray-800 transition-colors flex items-center gap-2 text-sm"
+                                        className="px-4 py-2 bg-gradient-to-r from-blue-900/30 to-blue-800/20 border border-gray-700 text-gray-300 rounded-lg hover:bg-gray-800 transition-colors flex items-center gap-2 text-sm hover:border-blue-500/50 hover:text-blue-300"
                                     >
                                         <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
                                         Actualizar
@@ -850,7 +852,7 @@ export default function ConsultarResguardos() {
                         </div>
 
                         {/* Filtro avanzado */}
-                        <div className="mb-6 bg-gray-900/20 p-4 rounded-xl border border-gray-800 shadow-inner">
+                        <div className="mb-6 bg-gradient-to-br from-gray-900/50 to-purple-900/10 p-4 rounded-xl border border-gray-800 shadow-inner">
                             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                                 <div>
                                     <label className="block text-xs uppercase tracking-wider text-gray-500 mb-1">Filtrar por fecha</label>
@@ -863,7 +865,7 @@ export default function ConsultarResguardos() {
                                             setCurrentPage(1);
                                             setFilterDate(e.target.value);
                                         }}
-                                        className="w-full bg-black border border-gray-800 rounded-lg text-white py-2 px-3 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                        className="w-full bg-black border border-gray-800 rounded-lg text-white py-2 px-3 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all duration-300 hover:border-blue-500/50"
                                     />
                                 </div>
                                 <div>
@@ -876,7 +878,7 @@ export default function ConsultarResguardos() {
                                             setCurrentPage(1);
                                             setFilterDirector(e.target.value);
                                         }}
-                                        className="w-full bg-black border border-gray-800 rounded-lg text-white py-2 px-3 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                        className="w-full bg-black border border-gray-800 rounded-lg text-white py-2 px-3 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all duration-300 hover:border-blue-500/50"
                                     />
                                 </div>
                                 <div>
@@ -891,7 +893,7 @@ export default function ConsultarResguardos() {
                                             setCurrentPage(1);
                                             setFilterResguardante(e.target.value);
                                         }}
-                                        className="w-full bg-black border border-gray-800 rounded-lg text-white py-2 px-3 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                        className="w-full bg-black border border-gray-800 rounded-lg text-white py-2 px-3 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all duration-300 hover:border-blue-500/50"
                                     />
                                 </div>
                             </div>
@@ -903,7 +905,7 @@ export default function ConsultarResguardos() {
                                         setFilterResguardante('');
                                         setCurrentPage(1);
                                     }}
-                                    className="px-4 py-2 bg-black border border-gray-800 text-gray-400 rounded-lg hover:bg-gray-900 transition-colors flex items-center gap-2 text-sm"
+                                    className="px-4 py-2 bg-black border border-gray-800 text-gray-400 rounded-lg hover:bg-gray-900 transition-colors flex items-center gap-2 text-sm hover:border-blue-500/50 hover:text-blue-300"
                                 >
                                     <X className="h-4 w-4" />
                                     Limpiar filtros
@@ -912,36 +914,36 @@ export default function ConsultarResguardos() {
                         </div>
 
                         {/* Table */}
-                        <div className="bg-gray-900/20 rounded-xl border border-gray-800 overflow-x-auto overflow-y-auto mb-6 flex flex-col flex-grow shadow-lg h-[40vh] max-h-[78vh]">
+                        <div className="bg-gradient-to-br from-gray-900/30 to-blue-900/10 rounded-xl border border-gray-800 overflow-x-auto overflow-y-auto mb-6 flex flex-col flex-grow shadow-lg h-[40vh] max-h-[78vh]">
                             <div className="flex-grow min-w-[800px]">
                                 <table className="min-w-full divide-y divide-gray-800">
                                     <thead className="bg-black sticky top-0 z-10">
                                         <tr>
                                             <th
                                                 onClick={() => handleSort('folio')}
-                                                className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider cursor-pointer hover:bg-gray-900 transition-colors"
+                                                className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider cursor-pointer hover:bg-gray-900 transition-colors group"
                                             >
                                                 <div className="flex items-center gap-1">
                                                     Folio
-                                                    <ArrowUpDown className={`h-3.5 w-3.5 ${sortField === 'folio' ? 'text-blue-400' : 'text-gray-500'}`} />
+                                                    <ArrowUpDown className={`h-3.5 w-3.5 ${sortField === 'folio' ? 'text-blue-400 animate-bounce' : 'text-gray-500 group-hover:text-blue-300'}`} />
                                                 </div>
                                             </th>
                                             <th
                                                 onClick={() => handleSort('f_resguardo')}
-                                                className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider cursor-pointer hover:bg-gray-900 transition-colors"
+                                                className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider cursor-pointer hover:bg-gray-900 transition-colors group"
                                             >
                                                 <div className="flex items-center gap-1">
                                                     Fecha
-                                                    <ArrowUpDown className={`h-3.5 w-3.5 ${sortField === 'f_resguardo' ? 'text-blue-400' : 'text-gray-500'}`} />
+                                                    <ArrowUpDown className={`h-3.5 w-3.5 ${sortField === 'f_resguardo' ? 'text-blue-400 animate-bounce' : 'text-gray-500 group-hover:text-blue-300'}`} />
                                                 </div>
                                             </th>
                                             <th
                                                 onClick={() => handleSort('dir_area')}
-                                                className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider cursor-pointer hover:bg-gray-900 transition-colors"
+                                                className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider cursor-pointer hover:bg-gray-900 transition-colors group"
                                             >
                                                 <div className="flex items-center gap-1">
                                                     Director
-                                                    <ArrowUpDown className={`h-3.5 w-3.5 ${sortField === 'dir_area' ? 'text-blue-400' : 'text-gray-500'}`} />
+                                                    <ArrowUpDown className={`h-3.5 w-3.5 ${sortField === 'dir_area' ? 'text-blue-400 animate-bounce' : 'text-gray-500 group-hover:text-blue-300'}`} />
                                                 </div>
                                             </th>
                                             <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
@@ -968,7 +970,7 @@ export default function ConsultarResguardos() {
                                                         <p className="text-sm text-gray-400">{error}</p>
                                                         <button
                                                             onClick={fetchResguardos}
-                                                            className="px-4 py-2 bg-black text-blue-300 rounded-lg text-sm hover:bg-gray-900 transition-colors border border-gray-800"
+                                                            className="px-4 py-2 bg-black text-blue-300 rounded-lg text-sm hover:bg-gray-900 transition-colors border border-gray-800 hover:border-blue-500/50"
                                                         >
                                                             Intentar nuevamente
                                                         </button>
@@ -984,7 +986,7 @@ export default function ConsultarResguardos() {
                                                         {searchTerm && (
                                                             <button
                                                                 onClick={resetSearch}
-                                                                className="px-4 py-2 bg-black text-blue-400 rounded-lg text-sm hover:bg-gray-900 transition-colors flex items-center gap-2 border border-gray-800"
+                                                                className="px-4 py-2 bg-black text-blue-400 rounded-lg text-sm hover:bg-gray-900 transition-colors flex items-center gap-2 border border-gray-800 hover:border-blue-500/50"
                                                             >
                                                                 <X className="h-4 w-4" />
                                                                 Limpiar búsqueda
@@ -1005,17 +1007,17 @@ export default function ConsultarResguardos() {
                                                 return (
                                                     <tr
                                                         key={resguardo.folio}
-                                                        className={`hover:bg-gray-900/50 cursor-pointer transition-colors ${selectedResguardo?.folio === resguardo.folio ? 'bg-blue-900/10 border-l-2 border-blue-500' : ''}`}
+                                                        className={`hover:bg-gray-900/50 cursor-pointer transition-colors group ${selectedResguardo?.folio === resguardo.folio ? 'bg-blue-900/10 border-l-4 border-blue-500' : ''}`}
                                                         onClick={() => fetchResguardoDetails(resguardo.folio)}
                                                     >
                                                         <td className="px-4 py-4">
-                                                            <div className="text-sm font-medium text-blue-400 flex items-center gap-2">
+                                                            <div className="text-sm font-medium text-blue-400 flex items-center gap-2 group-hover:text-blue-300 transition-colors">
                                                                 <FileDigit className="h-4 w-4" />
                                                                 {resguardo.folio}
                                                             </div>
                                                         </td>
                                                         <td className="px-4 py-4">
-                                                            <div className="text-sm text-white">
+                                                            <div className="text-sm text-white group-hover:text-blue-200 transition-colors">
                                                                 {resguardo.f_resguardo.slice(0, 10).split('-').reverse().join('/')}
                                                             </div>
                                                         </td>
@@ -1024,7 +1026,7 @@ export default function ConsultarResguardos() {
                                                                 {resguardo.dir_area}
                                                             </div>
                                                             <div className="text-xs text-gray-500">{resguardo.area_resguardo}</div>
-                                                            
+
                                                             {/* Si hay un filtro de resguardante activo, mostrar un indicador */}
                                                             {filterResguardante && (
                                                                 <div className="mt-1">
@@ -1068,7 +1070,7 @@ export default function ConsultarResguardos() {
                                                             </div>
                                                         </td>
                                                         <td className="px-4 py-4">
-                                                            <div className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border border-gray-800 text-blue-100 ${bgColor}`}>
+                                                            <div className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border border-gray-800 text-blue-100 ${bgColor} group-hover:bg-blue-700/50 transition-colors`}>
                                                                 {itemCount} artículo{itemCount !== 1 ? 's' : ''}
                                                             </div>
                                                         </td>
@@ -1083,7 +1085,7 @@ export default function ConsultarResguardos() {
 
                         {/* Pagination */}
                         {resguardos.length > 0 && (
-                            <div className="flex items-center justify-between bg-gray-900/20 p-4 rounded-xl border border-gray-800 shadow-inner mb-4">
+                            <div className="flex items-center justify-between bg-gradient-to-br from-gray-900/30 to-blue-900/10 p-4 rounded-xl border border-gray-800 shadow-inner mb-4">
                                 <div className="flex items-center space-x-4">
                                     <span className="text-sm text-gray-400">
                                         Página {currentPage} de {totalPages}
@@ -1095,7 +1097,7 @@ export default function ConsultarResguardos() {
                                             setRowsPerPage(Number(e.target.value));
                                             setCurrentPage(1);
                                         }}
-                                        className="bg-black border border-gray-800 rounded-lg text-white text-sm py-1.5 px-3 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                        className="bg-black border border-gray-800 rounded-lg text-white text-sm py-1.5 px-3 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all duration-300 hover:border-blue-500/50"
                                     >
                                         <option value={10}>10 por página</option>
                                         <option value={25}>25 por página</option>
@@ -1108,7 +1110,7 @@ export default function ConsultarResguardos() {
                                         title='Anterior'
                                         onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
                                         disabled={currentPage === 1}
-                                        className={`p-2 rounded-lg ${currentPage === 1 ? 'text-gray-600 bg-black cursor-not-allowed' : 'text-white bg-black hover:bg-gray-900 border border-gray-800'}`}
+                                        className={`p-2 rounded-lg ${currentPage === 1 ? 'text-gray-600 bg-black cursor-not-allowed' : 'text-white bg-black hover:bg-gray-900 border border-gray-800 hover:border-blue-500/50 transition-colors'}`}
                                     >
                                         <ChevronLeft className="h-5 w-5" />
                                     </button>
@@ -1116,7 +1118,7 @@ export default function ConsultarResguardos() {
                                         title='Siguiente'
                                         onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
                                         disabled={currentPage >= totalPages}
-                                        className={`p-2 rounded-lg ${currentPage >= totalPages ? 'text-gray-600 bg-black cursor-not-allowed' : 'text-white bg-black hover:bg-gray-900 border border-gray-800'}`}
+                                        className={`p-2 rounded-lg ${currentPage >= totalPages ? 'text-gray-600 bg-black cursor-not-allowed' : 'text-white bg-black hover:bg-gray-900 border border-gray-800 hover:border-blue-500/50 transition-colors'}`}
                                     >
                                         <ChevronRight className="h-5 w-5" />
                                     </button>
@@ -1127,7 +1129,7 @@ export default function ConsultarResguardos() {
 
                     {/* Right panel - Details */}
                     <div ref={detailRef} className="flex-1 bg-black p-4 border-t lg:border-t-0 lg:border-l border-gray-800 flex flex-col lg:col-span-2">
-                        <div className="bg-gray-900/20 rounded-xl border border-gray-800 p-4 mb-4 shadow-inner">
+                        <div className="bg-gradient-to-br from-gray-900/30 to-purple-900/10 rounded-xl border border-gray-800 p-4 mb-4 shadow-inner">
                             <h2 className="text-lg font-medium text-gray-100 mb-4 flex items-center gap-2">
                                 <FileText className="h-5 w-5 text-blue-400" />
                                 Detalles del Resguardo
@@ -1205,19 +1207,19 @@ export default function ConsultarResguardos() {
 
                                     <button
                                         onClick={() => setShowPDFButton(true)}
-                                        className="mt-6 w-full py-2.5 bg-blue-600/20 border border-blue-800 text-blue-400 rounded-lg hover:bg-blue-600/30 transition-colors flex items-center justify-center gap-2"
+                                        className="mt-6 w-full py-2.5 bg-gradient-to-r from-blue-600/30 to-blue-500/20 border border-blue-800 text-blue-400 rounded-lg hover:bg-blue-600/30 transition-all duration-300 hover:scale-[1.02] flex items-center justify-center gap-2 shadow-lg hover:shadow-blue-500/20"
                                     >
                                         <Download className="h-4 w-4" />
                                         Generar PDF
                                     </button>
                                     <RoleGuard roles={["admin", "superadmin"]} userRole={userRole}>
-                                    <button
-                                        onClick={() => setShowDeleteAllModal(true)}
-                                        className="mt-2 w-full py-2.5 bg-red-900/20 border border-red-800 text-red-300 rounded-lg hover:bg-red-900/40 transition-colors flex items-center justify-center gap-2"
-                                    >
-                                        <XOctagon className="h-4 w-4" />
-                                        Borrar resguardo
-                                    </button>
+                                        <button
+                                            onClick={() => setShowDeleteAllModal(true)}
+                                            className="mt-2 w-full py-2.5 bg-gradient-to-r from-red-900/30 to-red-800/20 border border-red-800 text-red-300 rounded-lg hover:bg-red-900/40 transition-all duration-300 hover:scale-[1.02] flex items-center justify-center gap-2 shadow-lg hover:shadow-red-500/20"
+                                        >
+                                            <XOctagon className="h-4 w-4" />
+                                            Borrar resguardo
+                                        </button>
                                     </RoleGuard>
                                 </>
                             ) : (
@@ -1230,7 +1232,7 @@ export default function ConsultarResguardos() {
                         </div>
 
                         {/* Selected Items */}
-                        <div className="bg-gray-900/20 rounded-xl border border-gray-800 flex-grow shadow-inner flex flex-col overflow-hidden">
+                        <div className="bg-gradient-to-br from-gray-900/30 to-purple-900/10 rounded-xl border border-gray-800 flex-grow shadow-inner flex flex-col overflow-hidden">
                             {/* Título fijo */}
                             <div className="p-4 bg-black/80 backdrop-blur-md border-b border-gray-800 sticky top-0 z-20 flex items-center justify-between">
                                 <h2 className="text-lg font-medium text-gray-100 flex items-center gap-2">
@@ -1239,14 +1241,14 @@ export default function ConsultarResguardos() {
                                 </h2>
                                 {selectedResguardo && (
                                     <RoleGuard roles={["admin", "superadmin"]} userRole={userRole}>
-                                    <button
-                                        title={editResguardanteMode ? 'Cancelar edición' : 'Editar resguardantes'}
-                                        onClick={() => setEditResguardanteMode(e => !e)}
-                                        className={`ml-2 p-2 rounded-lg border border-blue-800 bg-blue-900/20 text-blue-300 hover:bg-blue-800/30 transition-colors flex items-center gap-1 ${editResguardanteMode ? 'ring-2 ring-blue-400' : ''}`}
-                                    >
-                                        <Pencil className="h-4 w-4" />
-                                        <span className="hidden sm:inline text-xs">{editResguardanteMode ? 'Cancelar' : 'Editar'}</span>
-                                    </button>
+                                        <button
+                                            title={editResguardanteMode ? 'Cancelar edición' : 'Editar resguardantes'}
+                                            onClick={() => setEditResguardanteMode(e => !e)}
+                                            className={`ml-2 p-2 rounded-lg border border-blue-800 bg-blue-900/20 text-blue-300 hover:bg-blue-800/30 transition-all duration-300 hover:scale-110 flex items-center gap-1 ${editResguardanteMode ? 'ring-2 ring-blue-400' : ''}`}
+                                        >
+                                            <Pencil className="h-4 w-4" />
+                                            <span className="hidden sm:inline text-xs">{editResguardanteMode ? 'Cancelar' : 'Editar'}</span>
+                                        </button>
                                     </RoleGuard>
                                 )}
                             </div>
@@ -1258,13 +1260,13 @@ export default function ConsultarResguardos() {
                                         {selectedArticulos.length > 0 && (
                                             <div className="flex justify-end items-center gap-2 mb-4 overflow-auto">
                                                 <RoleGuard roles={["admin", "superadmin"]} userRole={userRole}>
-                                                <button
-                                                    className="px-4 py-2 bg-gradient-to-r from-red-700 to-red-500 text-white rounded-lg text-sm font-semibold flex items-center gap-2 hover:from-red-800 hover:to-red-600 border border-red-900/50 transition-colors shadow-lg"
-                                                    onClick={() => setShowDeleteSelectedModal(true)}
-                                                >
-                                                    <XOctagon className="h-4 w-4" />
-                                                    Eliminar seleccionados ({selectedArticulos.length})
-                                                </button>
+                                                    <button
+                                                        className="px-4 py-2 bg-gradient-to-r from-red-700 to-red-500 text-white rounded-lg text-sm font-semibold flex items-center gap-2 hover:from-red-800 hover:to-red-600 border border-red-900/50 transition-all duration-300 hover:scale-[1.02] shadow-lg"
+                                                        onClick={() => setShowDeleteSelectedModal(true)}
+                                                    >
+                                                        <XOctagon className="h-4 w-4" />
+                                                        Eliminar seleccionados ({selectedArticulos.length})
+                                                    </button>
                                                 </RoleGuard>
                                                 <button
                                                     className="px-3 py-2 bg-gray-800 text-gray-200 rounded-lg text-xs font-medium flex items-center gap-2 hover:bg-gray-700 border border-gray-700 transition-colors"
@@ -1314,7 +1316,7 @@ export default function ConsultarResguardos() {
                                                             });
                                                             setShowPDFButton(true);
                                                         }}
-                                                        className="flex items-center gap-1 px-2.5 py-1 rounded bg-blue-800/10 hover:bg-blue-700/20 text-blue-200 text-xs font-normal border border-blue-800/10 transition-colors shadow-none"
+                                                        className="flex items-center gap-1 px-2.5 py-1 rounded bg-blue-800/10 hover:bg-blue-700/20 text-blue-200 text-xs font-normal border border-blue-800/10 transition-all duration-300 hover:scale-105 shadow-none"
                                                     >
                                                         <FileText className="h-4 w-4" />
                                                         <span className="hidden sm:inline">PDF</span>
@@ -1326,14 +1328,14 @@ export default function ConsultarResguardos() {
                                                         <li
                                                             key={`${selectedResguardo.folio}-${index}`}
                                                             className={`flex items-start gap-4 px-6 py-3 transition-all duration-200 ${selectedArticulos.includes(articulo.num_inventario)
-                                                                    ? 'bg-blue-900/10' : 'hover:bg-blue-900/5'
+                                                                ? 'bg-blue-900/10' : 'hover:bg-blue-900/5'
                                                                 }`}
                                                         >
                                                             <div
                                                                 onClick={() => toggleArticuloSelection(articulo.num_inventario)}
                                                                 className={`flex items-center justify-center w-5 h-5 rounded border cursor-pointer transition-all duration-200 mt-1 mr-2 ${selectedArticulos.includes(articulo.num_inventario)
-                                                                        ? 'bg-black border-blue-400'
-                                                                        : 'border-blue-700/30 hover:blue-400 hover:bg-blue-500/10'
+                                                                    ? 'bg-black border-blue-400'
+                                                                    : 'border-blue-700/30 hover:blue-400 hover:bg-blue-500/10'
                                                                     }`}
                                                                 title="Seleccionar artículo"
                                                             >
@@ -1345,13 +1347,13 @@ export default function ConsultarResguardos() {
                                                                 <div className="flex flex-wrap items-center gap-2">
                                                                     <span className="text-sm font-medium text-white truncate">{articulo.num_inventario}</span>
                                                                     <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-normal border ${articulo.condicion === 'B' ? 'bg-green-900/10 text-green-200 border border-green-900/20' :
-                                                                            articulo.condicion === 'R' ? 'bg-yellow-900/10 text-yellow-200 border border-yellow-900/20' :
-                                                                                articulo.condicion === 'M' ? 'bg-red-900/10 text-red-200 border border-red-900/20' :
-                                                                                    'bg-gray-900/10 text-gray-300 border-gray-900/20'
+                                                                        articulo.condicion === 'R' ? 'bg-yellow-900/10 text-yellow-200 border border-yellow-900/20' :
+                                                                            articulo.condicion === 'M' ? 'bg-red-900/10 text-red-200 border border-red-900/20' :
+                                                                                'bg-gray-900/10 text-gray-300 border-gray-900/20'
                                                                         }`}>{articulo.condicion}</span>
                                                                     <span className={`ml-2 px-2 py-0.5 rounded-full text-xs font-normal border ${articulo.origen === 'INEA' ? 'bg-blue-900/10 text-blue-200 border-blue-700/20' :
-                                                                            articulo.origen === 'ITEA' ? 'bg-pink-900/10 text-pink-200 border-pink-700/20' :
-                                                                                'bg-gray-900/10 text-gray-400 border-gray-800/20'
+                                                                        articulo.origen === 'ITEA' ? 'bg-pink-900/10 text-pink-200 border-pink-700/20' :
+                                                                            'bg-gray-900/10 text-gray-400 border-gray-800/20'
                                                                         }`}>{articulo.origen}</span>
                                                                 </div>
                                                                 <div className="text-xs text-gray-300 mt-1">{articulo.descripcion}</div>
@@ -1367,13 +1369,13 @@ export default function ConsultarResguardos() {
                                                                             value={editedResguardantes[articulo.id] || ''}
                                                                             onChange={e => setEditedResguardantes(prev => ({ ...prev, [articulo.id]: e.target.value }))}
                                                                             placeholder="Resguardante (opcional)"
-                                                                            className="block w-full bg-gray-900/50 border border-gray-800 rounded-lg py-1.5 px-3 text-white placeholder-gray-500 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
+                                                                            className="block w-full bg-gray-900/50 border border-gray-800 rounded-lg py-1.5 px-3 text-white placeholder-gray-500 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 transition-all duration-300 hover:border-blue-500/50"
                                                                         />
                                                                         {editedResguardantes[articulo.id] && (
                                                                             <button
                                                                                 title="Limpiar resguardante"
                                                                                 onClick={() => setEditedResguardantes(prev => ({ ...prev, [articulo.id]: '' }))}
-                                                                                className="p-1 rounded-full text-gray-400 hover:text-red-400 hover:bg-gray-900/40"
+                                                                                className="p-1 rounded-full text-gray-400 hover:text-red-400 hover:bg-gray-900/40 transition-colors"
                                                                             >
                                                                                 <X className="h-4 w-4" />
                                                                             </button>
@@ -1387,13 +1389,13 @@ export default function ConsultarResguardos() {
                                                                 )}
                                                             </div>
                                                             <RoleGuard roles={["admin", "superadmin"]} userRole={userRole}>
-                                                            <button
-                                                                title="Eliminar artículo"
-                                                                onClick={() => setShowDeleteItemModal({ index, articulo })}
-                                                                className="p-1 text-gray-400 hover:text-red-400 rounded-full hover:bg-gray-900/30 self-center ml-auto btn-delete-articulo"
-                                                            >
-                                                                <CircleX className="h-4 w-4" />
-                                                            </button>
+                                                                <button
+                                                                    title="Eliminar artículo"
+                                                                    onClick={() => setShowDeleteItemModal({ index, articulo })}
+                                                                    className="p-1 text-gray-400 hover:text-red-400 rounded-full hover:bg-gray-900/30 self-center ml-auto btn-delete-articulo transition-colors"
+                                                                >
+                                                                    <CircleX className="h-4 w-4" />
+                                                                </button>
                                                             </RoleGuard>
                                                         </li>
                                                     ))}
@@ -1402,14 +1404,14 @@ export default function ConsultarResguardos() {
                                                 {editResguardanteMode && (
                                                     <div className="flex justify-end items-center gap-2 px-6 py-2 bg-transparent border-t border-violet-900/10">
                                                         <button
-                                                            className="px-4 py-2 bg-black border border-gray-700 text-gray-300 rounded-lg hover:bg-gray-900 transition-colors text-sm"
+                                                            className="px-4 py-2 bg-black border border-gray-700 text-gray-300 rounded-lg hover:bg-gray-900 transition-colors text-sm hover:border-blue-500/50"
                                                             onClick={() => setEditResguardanteMode(false)}
                                                             disabled={savingResguardantes}
                                                         >
                                                             Cancelar
                                                         </button>
                                                         <button
-                                                            className="px-4 py-2 bg-gradient-to-r from-blue-600 to-blue-500 text-white rounded-lg font-medium hover:from-blue-500 hover:to-blue-400 transition-colors text-sm"
+                                                            className="px-4 py-2 bg-gradient-to-r from-blue-600 to-blue-500 text-white rounded-lg font-medium hover:from-blue-500 hover:to-blue-400 transition-all duration-300 hover:scale-[1.02] shadow-lg text-sm"
                                                             onClick={handleSaveResguardantes}
                                                             disabled={savingResguardantes}
                                                         >
@@ -1444,7 +1446,7 @@ export default function ConsultarResguardos() {
                         <button
                             title='Cerrar alerta'
                             onClick={() => setError(null)}
-                            className="ml-4 flex-shrink-0 p-1 rounded-full text-red-200 hover:text-white hover:bg-red-800"
+                            className="ml-4 flex-shrink-0 p-1 rounded-full text-red-200 hover:text-white hover:bg-red-800 transition-colors"
                         >
                             <X className="h-4 w-4" />
                         </button>
@@ -1466,7 +1468,7 @@ export default function ConsultarResguardos() {
                                 <X className="h-4 w-4" />
                             </button>
                             <div className="flex flex-col items-center text-center mb-4">
-                                <div className="p-3 bg-green-500/10 rounded-full border border-green-500/30 mb-3">
+                                <div className="p-3 bg-green-500/10 rounded-full border border-green-500/30 mb-3 animate-pulse">
                                     <FileDigit className="h-8 w-8 text-green-500" />
                                 </div>
                                 <h3 className="text-2xl font-bold text-white">Resguardo generado</h3>
@@ -1487,7 +1489,7 @@ export default function ConsultarResguardos() {
                                 <button
                                     onClick={handleGeneratePDF}
                                     disabled={generatingPDF}
-                                    className="w-full py-3 px-4 bg-gradient-to-r from-green-600 to-green-500 hover:from-green-500 hover:to-green-400 text-black font-medium rounded-lg flex items-center justify-center gap-2 transition-all transform hover:scale-[1.02] shadow-lg"
+                                    className="w-full py-3 px-4 bg-gradient-to-r from-green-600 to-green-500 hover:from-green-500 hover:to-green-400 text-black font-medium rounded-lg flex items-center justify-center gap-2 transition-all transform hover:scale-[1.02] shadow-lg hover:shadow-green-500/30"
                                 >
                                     <Download className="h-4 w-4" />
                                     {generatingPDF ? 'Generando PDF...' : 'Descargar PDF'}
@@ -1517,7 +1519,7 @@ export default function ConsultarResguardos() {
                             </button>
 
                             <div className="flex flex-col items-center text-center mb-4">
-                                <div className="p-3 bg-red-500/10 rounded-full border border-red-500/30 mb-3">
+                                <div className="p-3 bg-red-500/10 rounded-full border border-red-500/30 mb-3 animate-pulse">
                                     <FileDigit className="h-8 w-8 text-red-500" />
                                 </div>
                                 <h3 className="text-2xl font-bold text-white">Baja generada</h3>
@@ -1584,7 +1586,7 @@ export default function ConsultarResguardos() {
                                                 setPdfBajaData(null);
                                             }
                                         }}
-                                        className="w-full py-3 px-4 bg-red-600 text-white rounded-lg font-medium hover:bg-red-700 transition-colors flex items-center justify-center gap-2"
+                                        className="w-full py-3 px-4 bg-gradient-to-r from-red-600 to-red-500 text-white rounded-lg font-medium hover:from-red-500 hover:to-red-400 transition-all duration-300 hover:scale-[1.02] shadow-lg hover:shadow-red-500/30"
                                     >
                                         <Download className="h-4 w-4" />
                                         Descargar PDF
@@ -1610,7 +1612,7 @@ export default function ConsultarResguardos() {
                                 <X className="h-4 w-4" />
                             </button>
                             <div className="flex flex-col items-center text-center mb-4">
-                                <div className="p-3 bg-red-500/10 rounded-full border border-red-500/30 mb-3">
+                                <div className="p-3 bg-red-500/10 rounded-full border border-red-500/30 mb-3 animate-pulse">
                                     <XOctagon className="h-8 w-8 text-red-500" />
                                 </div>
                                 <h3 className="text-2xl font-bold text-white">¿Borrar todo el resguardo?</h3>
@@ -1621,7 +1623,7 @@ export default function ConsultarResguardos() {
                             <div className="flex gap-3 w-full mt-2">
                                 <button
                                     onClick={() => setShowDeleteAllModal(false)}
-                                    className="flex-1 py-2 px-4 border border-gray-700 text-gray-300 hover:bg-gray-800 rounded-lg transition-colors"
+                                    className="flex-1 py-2 px-4 border border-gray-700 text-gray-300 hover:bg-gray-800 rounded-lg transition-colors hover:border-blue-500/50"
                                 >
                                     Cancelar
                                 </button>
@@ -1652,7 +1654,7 @@ export default function ConsultarResguardos() {
                                 <X className="h-4 w-4" />
                             </button>
                             <div className="flex flex-col items-center text-center mb-4">
-                                <div className="p-3 bg-red-500/10 rounded-full border border-red-500/30 mb-3">
+                                <div className="p-3 bg-red-500/10 rounded-full border border-red-500/30 mb-3 animate-pulse">
                                     <CircleX className="h-8 w-8 text-red-500" />
                                 </div>
                                 <h3 className="text-2xl font-bold text-white">¿Eliminar este artículo?</h3>
@@ -1663,7 +1665,7 @@ export default function ConsultarResguardos() {
                             <div className="flex gap-3 w-full mt-2">
                                 <button
                                     onClick={() => setShowDeleteItemModal(null)}
-                                    className="flex-1 py-2 px-4 border border-gray-700 text-gray-300 hover:bg-gray-800 rounded-lg transition-colors"
+                                    className="flex-1 py-2 px-4 border border-gray-700 text-gray-300 hover:bg-gray-800 rounded-lg transition-colors hover:border-blue-500/50"
                                 >
                                     Cancelar
                                 </button>
@@ -1694,7 +1696,7 @@ export default function ConsultarResguardos() {
                                 <X className="h-4 w-4" />
                             </button>
                             <div className="flex flex-col items-center text-center mb-4">
-                                <div className="p-3 bg-red-500/10 rounded-full border border-red-500/30 mb-3">
+                                <div className="p-3 bg-red-500/10 rounded-full border border-red-500/30 mb-3 animate-pulse">
                                     <XOctagon className="h-8 w-8 text-red-500" />
                                 </div>
                                 <h3 className="text-2xl font-bold text-white">¿Eliminar artículos seleccionados?</h3>
@@ -1713,7 +1715,7 @@ export default function ConsultarResguardos() {
                             <div className="flex gap-3 w-full mt-2">
                                 <button
                                     onClick={() => setShowDeleteSelectedModal(false)}
-                                    className="flex-1 py-2 px-4 border border-gray-700 text-gray-300 hover:bg-gray-800 rounded-lg transition-colors"
+                                    className="flex-1 py-2 px-4 border border-gray-700 text-gray-300 hover:bg-gray-800 rounded-lg transition-colors hover:border-blue-500/50"
                                 >
                                     Cancelar
                                 </button>

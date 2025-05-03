@@ -331,30 +331,31 @@ export default function ConfigManagementComponent() {
     };
 
     return (
-        <div className="bg-black text-white min-h-screen p-2 sm:p-4 md:p-6 lg:p-8">
-            <div className="w-full mx-auto bg-black rounded-lg sm:rounded-xl shadow-2xl overflow-hidden transition-all duration-500 transform border border-gray-800">
-                {/* Header con título */}
-                <div className="bg-black p-4 sm:p-6 flex flex-col sm:flex-row justify-between items-start sm:items-center border-b border-gray-800 gap-2 sm:gap-0">
-                    <h1 className="text-xl sm:text-2xl md:text-3xl font-bold flex items-center">
-                        <span className="mr-2 sm:mr-3 bg-gray-900 text-white p-1 sm:p-2 rounded-lg border border-gray-700 text-sm sm:text-base">ADM</span>
+        <div className="bg-black text-white min-h-screen p-2 sm:p-4 md:p-6 lg:p-8 animate-gradient-x">
+            <div className="w-full mx-auto bg-black/50 rounded-lg sm:rounded-xl shadow-2xl overflow-hidden transition-all duration-500 transform border border-gray-800/50 backdrop-blur-sm hover:border-gray-700/50">
+                {/* Header con título y efecto glassmorphism */}
+                <div className="bg-gradient-to-r from-gray-900 via-black to-gray-900 p-4 sm:p-6 flex flex-col sm:flex-row justify-between items-start sm:items-center border-b border-gray-800/50 gap-2 sm:gap-0">
+                    <h1 className="text-xl sm:text-2xl md:text-3xl font-bold flex items-center bg-clip-text text-transparent bg-gradient-to-r from-blue-400 via-blue-200 to-blue-400 animate-text">
+                        <span className="mr-2 sm:mr-3 bg-blue-500/10 text-blue-300 p-1 sm:p-2 rounded-lg border border-blue-500/20 text-sm sm:text-base shadow-lg shadow-blue-500/5 hover:shadow-blue-500/10 transition-all">ADM</span>
                         Gestión de Configuración
                     </h1>
                 </div>
 
-                {/* Tabs de navegación */}
+                {/* Tabs con efecto hover y gradientes */}
                 <div className="px-2 sm:px-4 md:px-6 pt-4 sm:pt-6 border-b border-gray-800">
                     <div className="flex flex-wrap gap-1 sm:gap-2">
                         {CONFIG_TYPES.map((type) => (
                             <button
                                 key={type.id}
                                 onClick={() => handleTabChange(type.id)}
-                                className={`px-3 py-2 rounded-t-lg text-sm font-medium transition-colors ${activeTab === type.id
-                                        ? 'bg-gray-800 text-white border-t border-l border-r border-gray-700'
-                                        : 'text-gray-400 hover:text-white hover:bg-gray-900'
-                                    }`}
+                                className={`px-3 py-2 rounded-t-lg text-sm font-medium transition-all duration-300 transform hover:scale-105 ${
+                                    activeTab === type.id
+                                        ? 'bg-gradient-to-r from-blue-900/50 via-blue-800/50 to-blue-900/50 text-blue-200 border-t border-l border-r border-blue-500/30 shadow-lg shadow-blue-500/20'
+                                        : 'text-gray-400 hover:text-white hover:bg-gray-900/50 hover:shadow-md'
+                                }`}
                             >
                                 <div className="flex items-center">
-                                    <Layers size={16} className="mr-1.5" />
+                                    <Layers size={16} className={`mr-1.5 ${activeTab === type.id ? 'text-blue-400 animate-pulse' : ''}`} />
                                     {type.label}
                                 </div>
                             </button>
@@ -362,9 +363,13 @@ export default function ConfigManagementComponent() {
                     </div>
                 </div>
 
-                {/* Mensajes de notificación */}
+                {/* Mensajes con animación mejorada */}
                 {message.text && (
-                    <div className={`mx-2 sm:mx-4 md:mx-6 mt-4 sm:mt-6 p-3 sm:p-4 rounded-lg flex items-center justify-between transition-all duration-500 animate-fadeIn ${message.type === 'success' ? 'bg-green-900' : 'bg-red-900'} border ${message.type === 'success' ? 'border-green-700' : 'border-red-700'}`}>
+                    <div className={`mx-2 sm:mx-4 md:mx-6 mt-4 sm:mt-6 p-3 sm:p-4 rounded-lg flex items-center justify-between transition-all duration-500 animate-slide-in-right ${
+                        message.type === 'success' 
+                            ? 'bg-gradient-to-r from-green-900/80 via-green-800/80 to-green-900/80 border-green-500/30' 
+                            : 'bg-gradient-to-r from-red-900/80 via-red-800/80 to-red-900/80 border-red-500/30'
+                    } backdrop-blur-sm border shadow-lg`}>
                         <div className="flex items-center">
                             {message.type === 'success' ?
                                 <CheckCircle className="mr-2 sm:mr-3" size={20} /> :
@@ -378,44 +383,43 @@ export default function ConfigManagementComponent() {
                     </div>
                 )}
 
-                {/* Contenido principal */}
+                {/* Contenido principal con glassmorphism */}
                 <div className="px-2 sm:px-4 md:px-6 py-4 sm:py-6">
+                    {/* Búsqueda y botones con efectos */}
                     <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 sm:mb-6 gap-2 sm:gap-0">
-                        {/* Búsqueda */}
-                        <div className="w-full sm:w-auto relative mb-2 sm:mb-0">
+                        <div className="w-full sm:w-auto relative mb-2 sm:mb-0 group">
                             <input
                                 type="text"
                                 placeholder={`Buscar ${getActiveTabLabel().toLowerCase()}...`}
                                 value={searchTerm}
                                 onChange={(e) => setSearchTerm(e.target.value)}
-                                className="w-full sm:w-64 bg-black border border-gray-700 rounded-lg p-2 pl-8 focus:border-white focus:ring focus:ring-gray-700 focus:ring-opacity-50 transition-all text-sm"
+                                className="w-full sm:w-64 bg-black/50 border border-gray-700 rounded-lg p-2 pl-8 focus:border-blue-500/50 focus:ring-2 focus:ring-blue-500/20 transition-all duration-300 text-sm backdrop-blur-sm group-hover:border-gray-600"
                             />
-                            <Search size={18} className="absolute left-2 top-2.5 text-gray-500" />
+                            <Search size={18} className="absolute left-2 top-2.5 text-gray-500 group-hover:text-gray-400 transition-colors" />
                         </div>
 
-                        {/* Botones de acción */}
+                        {/* Botones con gradientes y efectos hover */}
                         <div className="flex gap-2">
                             <button
                                 onClick={handleAdd}
-                                className="flex items-center px-3 py-2 bg-gray-800 hover:bg-gray-700 rounded-lg transition-colors text-sm"
-                                title={`Agregar ${getActiveTabLabel().toLowerCase()}`}
+                                className="flex items-center px-4 py-2 bg-gradient-to-r from-blue-600/20 via-blue-500/20 to-blue-600/20 hover:from-blue-600/30 hover:via-blue-500/30 hover:to-blue-600/30 border border-blue-500/30 rounded-lg transition-all duration-300 text-sm transform hover:scale-105 hover:shadow-lg hover:shadow-blue-500/20 group"
                             >
-                                <Plus size={16} className="mr-1" />
+                                <Plus size={16} className="mr-1.5 text-blue-400 group-hover:rotate-90 transition-transform duration-300" />
                                 Agregar {getActiveTabLabel()}
                             </button>
                             <button
+                                title='Recargar'
                                 onClick={fetchConfigItems}
-                                className="p-2 bg-gray-800 hover:bg-gray-700 rounded-lg transition-colors"
-                                title="Refrescar datos"
+                                className="p-2 bg-gradient-to-r from-gray-800 via-gray-700 to-gray-800 hover:from-gray-700 hover:via-gray-600 hover:to-gray-700 rounded-lg transition-all duration-300 transform hover:scale-105 hover:shadow-lg group"
                             >
-                                <RefreshCw size={16} />
+                                <RefreshCw size={16} className="text-gray-300 group-hover:rotate-180 transition-transform duration-500" />
                             </button>
                         </div>
                     </div>
 
-                    {/* Formulario para agregar (visible solo en modo add) */}
+                    {/* Formulario con efectos de glassmorphism */}
                     {formMode === 'add' && (
-                        <div className="mb-6 bg-gray-900 p-4 rounded-lg border border-gray-800 animate-fadeIn">
+                        <div className="mb-6 bg-gradient-to-br from-gray-900/50 via-black/50 to-gray-900/50 p-4 rounded-lg border border-gray-800/50 animate-fade-in backdrop-blur-sm shadow-xl hover:shadow-2xl transition-all duration-300">
                             <h2 className="text-lg font-semibold mb-4 pb-2 border-b border-gray-800">
                                 Agregar Nuevo {getActiveTabLabel()}
                             </h2>
@@ -466,10 +470,10 @@ export default function ConfigManagementComponent() {
                         </div>
                     )}
 
-                    {/* Tabla de configuración */}
-                    <div className="overflow-x-auto border border-gray-800 rounded-lg">
-                        <table className="min-w-full divide-y divide-gray-800">
-                            <thead className="bg-gray-900">
+                    {/* Tabla con efectos mejorados */}
+                    <div className="overflow-x-auto border border-gray-800/50 rounded-lg backdrop-blur-sm shadow-xl">
+                        <table className="min-w-full divide-y divide-gray-800/50">
+                            <thead className="bg-gradient-to-r from-gray-900 via-black to-gray-900">
                                 <tr>
                                     <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
                                         {getActiveTabLabel()}
@@ -479,7 +483,7 @@ export default function ConfigManagementComponent() {
                                     </th>
                                 </tr>
                             </thead>
-                            <tbody className="bg-black divide-y divide-gray-800">
+                            <tbody className="bg-black/50 divide-y divide-gray-800/30">
                                 {loading ? (
                                     <tr>
                                         <td colSpan={3} className="px-4 py-4 text-center text-sm">
@@ -622,15 +626,40 @@ export default function ConfigManagementComponent() {
                 </div>
             </div>
 
-            {/* Estilos CSS adicionales */}
+            {/* Estilos CSS con nuevas animaciones */}
             <style jsx>{`
-                @keyframes fadeIn {
+                @keyframes gradient-x {
+                    0% { background-position: 0% 50%; }
+                    50% { background-position: 100% 50%; }
+                    100% { background-position: 0% 50%; }
+                }
+
+                @keyframes slide-in-right {
+                    from { transform: translateX(100%); opacity: 0; }
+                    to { transform: translateX(0); opacity: 1; }
+                }
+
+                @keyframes fade-in {
                     from { opacity: 0; transform: translateY(-10px); }
                     to { opacity: 1; transform: translateY(0); }
                 }
-                
-                .animate-fadeIn {
-                    animation: fadeIn 0.3s ease-out forwards;
+
+                .animate-gradient-x {
+                    animation: gradient-x 15s ease infinite;
+                    background-size: 200% 200%;
+                }
+
+                .animate-slide-in-right {
+                    animation: slide-in-right 0.3s ease-out forwards;
+                }
+
+                .animate-text {
+                    animation: gradient-x 4s linear infinite;
+                    background-size: 200% auto;
+                }
+
+                .animate-fade-in {
+                    animation: fade-in 0.3s ease-out forwards;
                 }
             `}</style>
         </div>

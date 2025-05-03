@@ -297,19 +297,23 @@ export default function DirectorioManagementComponent() {
     const handleCloseMessage = () => setMessage({ type: '', text: '' });
 
     return (
-        <div className="bg-black text-white min-h-screen p-2 sm:p-4 md:p-6 lg:p-8">
-            <div className="w-full mx-auto bg-black rounded-lg sm:rounded-xl shadow-2xl overflow-hidden transition-all duration-500 transform border border-gray-800">
-                {/* Header con título */}
-                <div className="bg-black p-4 sm:p-6 flex flex-col sm:flex-row justify-between items-start sm:items-center border-b border-gray-800 gap-2 sm:gap-0">
-                    <h1 className="text-xl sm:text-2xl md:text-3xl font-bold flex items-center">
-                        <span className="mr-2 sm:mr-3 bg-gray-900 text-white p-1 sm:p-2 rounded-lg border border-gray-700 text-sm sm:text-base">DIR</span>
+        <div className="bg-black text-white min-h-screen p-2 sm:p-4 md:p-6 lg:p-8 animate-gradient-x">
+            <div className="w-full mx-auto bg-black/50 rounded-lg sm:rounded-xl shadow-2xl overflow-hidden transition-all duration-500 transform border border-gray-800/50 backdrop-blur-sm hover:border-gray-700/50">
+                {/* Header con título y efecto glassmorphism */}
+                <div className="bg-gradient-to-r from-gray-900 via-black to-gray-900 p-4 sm:p-6 flex flex-col sm:flex-row justify-between items-start sm:items-center border-b border-gray-800/50 gap-2 sm:gap-0">
+                    <h1 className="text-xl sm:text-2xl md:text-3xl font-bold flex items-center bg-clip-text text-transparent bg-gradient-to-r from-emerald-400 via-emerald-200 to-emerald-400 animate-text">
+                        <span className="mr-2 sm:mr-3 bg-emerald-500/10 text-emerald-300 p-1 sm:p-2 rounded-lg border border-emerald-500/20 text-sm sm:text-base shadow-lg shadow-emerald-500/5 hover:shadow-emerald-500/10 transition-all">DIR</span>
                         Directorio de Personal Autorizado
                     </h1>
                 </div>
 
-                {/* Mensajes de notificación */}
+                {/* Mensajes con animación mejorada */}
                 {message.text && (
-                    <div className={`mx-2 sm:mx-4 md:mx-6 mt-4 sm:mt-6 p-3 sm:p-4 rounded-lg flex items-center justify-between transition-all duration-500 animate-fadeIn ${message.type === 'success' ? 'bg-green-900' : 'bg-red-900'} border ${message.type === 'success' ? 'border-green-700' : 'border-red-700'}`}>
+                    <div className={`mx-2 sm:mx-4 md:mx-6 mt-4 sm:mt-6 p-3 sm:p-4 rounded-lg flex items-center justify-between transition-all duration-500 animate-slide-in-right ${
+                        message.type === 'success' 
+                            ? 'bg-gradient-to-r from-green-900/80 via-green-800/80 to-green-900/80 border-green-500/30' 
+                            : 'bg-gradient-to-r from-red-900/80 via-red-800/80 to-red-900/80 border-red-500/30'
+                    } backdrop-blur-sm border shadow-lg`}>
                         <div className="flex items-center">
                             {message.type === 'success' ?
                                 <CheckCircle className="mr-2 sm:mr-3" size={20} /> :
@@ -323,50 +327,47 @@ export default function DirectorioManagementComponent() {
                     </div>
                 )}
 
-                {/* Contenido principal */}
+                {/* Contenido principal con glassmorphism */}
                 <div className="px-2 sm:px-4 md:px-6 py-4 sm:py-6">
+                    {/* Búsqueda y botones con efectos */}
                     <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 sm:mb-6 gap-2 sm:gap-0">
-                        {/* Búsqueda */}
-                        <div className="w-full sm:w-auto relative mb-2 sm:mb-0">
+                        <div className="w-full sm:w-auto relative mb-2 sm:mb-0 group">
                             <input
                                 type="text"
                                 placeholder="Buscar personal autorizado..."
                                 value={searchTerm}
                                 onChange={(e) => setSearchTerm(e.target.value)}
-                                className="w-full sm:w-64 bg-black border border-gray-700 rounded-lg p-2 pl-8 focus:border-white focus:ring focus:ring-gray-700 focus:ring-opacity-50 transition-all text-sm"
+                                className="w-full sm:w-64 bg-black/50 border border-gray-700 rounded-lg p-2 pl-8 focus:border-emerald-500/50 focus:ring-2 focus:ring-emerald-500/20 transition-all duration-300 text-sm backdrop-blur-sm group-hover:border-gray-600"
                             />
-                            <Search size={18} className="absolute left-2 top-2.5 text-gray-500" />
+                            <Search size={18} className="absolute left-2 top-2.5 text-gray-500 group-hover:text-gray-400 transition-colors" />
                         </div>
 
-                        {/* Botones de acción */}
+                        {/* Botones con gradientes y efectos hover */}
                         <div className="flex gap-2">
                             <button
                                 onClick={handleAddNew}
-                                className="flex items-center px-3 py-2 bg-gray-800 hover:bg-gray-700 rounded-lg transition-colors text-sm"
-                                title="Agregar nuevo personal autorizado"
                                 disabled={isAddingNew}
+                                className="flex items-center px-4 py-2 bg-gradient-to-r from-emerald-600/20 via-emerald-500/20 to-emerald-600/20 hover:from-emerald-600/30 hover:via-emerald-500/30 hover:to-emerald-600/30 border border-emerald-500/30 rounded-lg transition-all duration-300 text-sm transform hover:scale-105 hover:shadow-lg hover:shadow-emerald-500/20 group disabled:opacity-50"
                             >
-                                <Plus size={16} className="mr-1" />
+                                <Plus size={16} className="mr-1.5 text-emerald-400 group-hover:rotate-90 transition-transform duration-300" />
                                 Agregar Personal
                             </button>
                             <button
+                                title="Recargar datos"
                                 onClick={fetchDirectorio}
-                                className="p-2 bg-gray-800 hover:bg-gray-700 rounded-lg transition-colors"
-                                title="Refrescar datos"
+                                className="p-2 bg-gradient-to-r from-gray-800 via-gray-700 to-gray-800 hover:from-gray-700 hover:via-gray-600 hover:to-gray-700 rounded-lg transition-all duration-300 transform hover:scale-105 hover:shadow-lg group"
                             >
-                                <RefreshCw size={16} />
+                                <RefreshCw size={16} className="text-gray-300 group-hover:rotate-180 transition-transform duration-500" />
                             </button>
                         </div>
                     </div>
 
-                    {/* Tabla de directorio */}
-                    <div className="overflow-x-auto border border-gray-800 rounded-lg">
-                        <table className="min-w-full divide-y divide-gray-800">
-                            <thead className="bg-gray-900">
+                    {/* Tabla mejorada con efectos */}
+                    <div className="overflow-x-auto border border-gray-800/50 rounded-lg backdrop-blur-sm shadow-xl">
+                        <table className="min-w-full divide-y divide-gray-800/50">
+                            <thead className="bg-gradient-to-r from-gray-900 via-black to-gray-900">
                                 <tr>
-                                    <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
-                                        ID
-                                    </th>
+                                    {/* Eliminamos la columna ID */}
                                     <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
                                         NOMBRE DEL PERSONAL
                                     </th>
@@ -381,13 +382,11 @@ export default function DirectorioManagementComponent() {
                                     </th>
                                 </tr>
                             </thead>
-                            <tbody className="bg-black divide-y divide-gray-800">
+                            <tbody className="bg-black/50 divide-y divide-gray-800/30">
                                 {/* Fila para agregar nuevo empleado */}
                                 {isAddingNew && (
                                     <tr className="bg-gray-900 bg-opacity-50 animate-fadeIn">
-                                        <td className="px-4 py-2 text-sm">
-                                            <span className="text-gray-500">Auto</span>
-                                        </td>
+                                        {/* Eliminamos la celda del ID */}
                                         <td className="px-4 py-2 text-sm">
                                             <input
                                                 ref={addInputRef}
@@ -444,7 +443,7 @@ export default function DirectorioManagementComponent() {
 
                                 {loading ? (
                                     <tr>
-                                        <td colSpan={5} className="px-4 py-4 text-center text-sm">
+                                        <td colSpan={4} className="px-4 py-4 text-center text-sm">
                                             <div className="flex justify-center items-center">
                                                 <div className="w-5 h-5 border-2 border-gray-500 border-t-white rounded-full animate-spin mr-2"></div>
                                                 Cargando directorio de personal...
@@ -453,15 +452,14 @@ export default function DirectorioManagementComponent() {
                                     </tr>
                                 ) : filteredDirectorio.length === 0 ? (
                                     <tr>
-                                        <td colSpan={5} className="px-4 py-4 text-center text-sm">
+                                        <td colSpan={4} className="px-4 py-4 text-center text-sm">
                                             {searchTerm ? 'No se encontró personal con el término de búsqueda.' : 'No hay personal registrado.'}
                                         </td>
                                     </tr>
                                 ) : (
                                     filteredDirectorio.map((employee) => (
                                         <tr key={employee.id_directorio} className={`hover:bg-gray-900 transition-colors ${editingId === employee.id_directorio ? 'bg-gray-900 bg-opacity-80' : ''}`}>
-                                            <td className="px-4 py-3 text-sm">{employee.id_directorio}</td>
-
+                                            {/* Eliminamos la celda del ID */}
                                             {editingId === employee.id_directorio ? (
                                                 <>
                                                     <td className="px-4 py-2 text-sm">
@@ -603,30 +601,57 @@ export default function DirectorioManagementComponent() {
                         </table>
                     </div>
 
-                    {/* Error message */}
+                    {/* Error message con estilo mejorado */}
                     {error && (
-                        <div className="mt-3 text-red-500 text-sm bg-red-900 bg-opacity-20 p-2 rounded border border-red-800">
+                        <div className="mt-3 text-red-400 text-sm bg-gradient-to-r from-red-900/20 via-red-800/20 to-red-900/20 p-3 rounded-lg border border-red-500/30 backdrop-blur-sm animate-fade-in">
+                            <AlertTriangle size={16} className="inline-block mr-2 mb-1" />
                             {error}
                         </div>
                     )}
 
-                    {/* Contador de resultados */}
-                    <div className="mt-4 text-sm text-gray-400">
+                    {/* Contador de resultados con estilo mejorado */}
+                    <div className="mt-4 text-sm text-gray-400 bg-gray-900/30 p-2 rounded-lg border border-gray-800/30 backdrop-blur-sm">
                         Mostrando {filteredDirectorio.length} de {directorio.length} empleados en el directorio
                     </div>
                 </div>
-                {/* Estilos CSS adicionales */}
-                <style jsx>{`
-                    @keyframes fadeIn {
-                        from { opacity: 0; transform: translateY(-10px); }
-                        to { opacity: 1; transform: translateY(0); }
-                    }
-                    
-                    .animate-fadeIn {
-                        animation: fadeIn 0.3s ease-out forwards;
-                    }
-                `}</style>
             </div>
+
+            {/* Estilos CSS con nuevas animaciones */}
+            <style jsx>{`
+                @keyframes gradient-x {
+                    0% { background-position: 0% 50%; }
+                    50% { background-position: 100% 50%; }
+                    100% { background-position: 0% 50%; }
+                }
+
+                @keyframes slide-in-right {
+                    from { transform: translateX(100%); opacity: 0; }
+                    to { transform: translateX(0); opacity: 1; }
+                }
+
+                @keyframes fade-in {
+                    from { opacity: 0; transform: translateY(-10px); }
+                    to { opacity: 1; transform: translateY(0); }
+                }
+
+                .animate-gradient-x {
+                    animation: gradient-x 15s ease infinite;
+                    background-size: 200% 200%;
+                }
+
+                .animate-slide-in-right {
+                    animation: slide-in-right 0.3s ease-out forwards;
+                }
+
+                .animate-text {
+                    animation: gradient-x 4s linear infinite;
+                    background-size: 200% auto;
+                }
+
+                .animate-fade-in {
+                    animation: fade-in 0.3s ease-out forwards;
+                }
+            `}</style>
         </div>
     );
 }

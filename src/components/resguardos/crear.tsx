@@ -24,8 +24,8 @@ interface Mueble {
     rubro: string | null;
     usufinal: string | null;
     area?: string | null;
-    origen?: string; // Nuevo campo para identificar el origen
-    resguardanteAsignado?: string; // Campo para el resguardante individual
+    origen?: string;
+    resguardanteAsignado?: string;
 }
 
 interface Directorio {
@@ -43,7 +43,6 @@ interface ResguardoForm {
     resguardante: string;
 }
 
-// Interfaces para PDF, igual que en consultar.tsx
 interface PdfFirma {
     concepto: string;
     nombre: string;
@@ -65,28 +64,27 @@ interface PdfData {
         rubro: string | null;
         estado: string | null;
         origen?: string | null;
-        resguardante: string; // Incluir el resguardante individual
+        resguardante: string;
     }>;
     firmas?: PdfFirma[];
 }
 
-
-// Utilidad para asignar color a áreas y responsables
 const colorPalette = [
-    'bg-blue-900/30 text-blue-200 border-blue-700',
-    'bg-green-900/30 text-green-200 border-green-700',
-    'bg-yellow-900/30 text-yellow-200 border-yellow-700',
-    'bg-purple-900/30 text-purple-200 border-purple-700',
-    'bg-pink-900/30 text-pink-200 border-pink-700',
-    'bg-red-900/30 text-red-200 border-red-700',
-    'bg-cyan-900/30 text-cyan-200 border-cyan-700',
-    'bg-orange-900/30 text-orange-200 border-orange-700',
-    'bg-teal-900/30 text-teal-200 border-teal-700',
-    'bg-indigo-900/30 text-indigo-200 border-indigo-700',
-    'bg-gray-900/30 text-gray-200 border-gray-700',
+    'bg-blue-900/30 text-blue-200 border-blue-700 hover:bg-blue-900/40 transition-colors',
+    'bg-green-900/30 text-green-200 border-green-700 hover:bg-green-900/40 transition-colors',
+    'bg-yellow-900/30 text-yellow-200 border-yellow-700 hover:bg-yellow-900/40 transition-colors',
+    'bg-purple-900/30 text-purple-200 border-purple-700 hover:bg-purple-900/40 transition-colors',
+    'bg-pink-900/30 text-pink-200 border-pink-700 hover:bg-pink-900/40 transition-colors',
+    'bg-red-900/30 text-red-200 border-red-700 hover:bg-red-900/40 transition-colors',
+    'bg-cyan-900/30 text-cyan-200 border-cyan-700 hover:bg-cyan-900/40 transition-colors',
+    'bg-orange-900/30 text-orange-200 border-orange-700 hover:bg-orange-900/40 transition-colors',
+    'bg-teal-900/30 text-teal-200 border-teal-700 hover:bg-teal-900/40 transition-colors',
+    'bg-indigo-900/30 text-indigo-200 border-indigo-700 hover:bg-indigo-900/40 transition-colors',
+    'bg-gray-900/30 text-gray-200 border-gray-700 hover:bg-gray-900/40 transition-colors',
 ];
+
 function getColorClass(value: string | null | undefined) {
-    if (!value) return 'bg-gray-900/20 text-gray-300 border border-gray-900';
+    if (!value) return 'bg-gray-900/20 text-gray-300 border border-gray-900 hover:bg-gray-900/30';
     let hash = 0;
     for (let i = 0; i < value.length; i++) {
         hash = value.charCodeAt(i) + ((hash << 5) - hash);
@@ -95,7 +93,6 @@ function getColorClass(value: string | null | undefined) {
     return colorPalette[idx];
 }
 
-// Truncar texto para la lista principal
 function truncateText(text: string | null | undefined, length: number = 40) {
     if (!text) return '';
     return text.length > length ? text.substring(0, length) + '...' : text;
@@ -111,7 +108,7 @@ export default function CrearResguardos() {
         directorId: '',
         area: '',
         puesto: '',
-        resguardante: '' // Añadiendo el campo resguardante con valor inicial
+        resguardante: ''
     });
     const [showDirectorModal, setShowDirectorModal] = useState(false);
     const [incompleteDirector, setIncompleteDirector] = useState<Directorio | null>(null);
@@ -138,20 +135,17 @@ export default function CrearResguardos() {
     const [directorSearchTerm, setDirectorSearchTerm] = useState('');
     const [totalCount, setTotalCount] = useState(0);
     const [generatingPDF, setGeneratingPDF] = useState(false);
-
     const [pdfData, setPdfData] = useState<PdfData | null>(null);
     const role = useUserRole();
     const isUsuario = role === "usuario";
     const { createNotification } = useNotifications();
 
-    // Validación de campos obligatorios
     const isFormValid =
         selectedMuebles.length > 0 &&
         formData.directorId.trim() !== '' &&
         formData.area.trim() !== '' &&
         formData.puesto.trim() !== '';
 
-    // Fetch directorio y firmas data
     useEffect(() => {
         const fetchData = async () => {
             try {
@@ -167,17 +161,14 @@ export default function CrearResguardos() {
                 if (allMueblesInea.error) throw allMueblesInea.error;
                 if (allMueblesItea.error) throw allMueblesItea.error;
 
-                // Combinar áreas y responsables de ambas tablas
                 const allItems = [...(allMueblesInea.data || []), ...(allMueblesItea.data || [])];
-                
-                // Obtener valores únicos para los filtros
                 const areas = Array.from(new Set(allItems.map(m => m.area).filter(Boolean)));
                 const responsables = Array.from(new Set(allItems.map(m => m.usufinal).filter(Boolean)));
-                
+
                 setUniqueAreas(areas);
                 setUniqueResponsables(responsables);
                 setDirectorio(directorioResult.data || []);
-                
+
                 return firmasResult.data;
             } catch (err) {
                 setError('Error al cargar los datos');
@@ -188,7 +179,6 @@ export default function CrearResguardos() {
         fetchData();
     }, []);
 
-    // Utilidad para traer todos los registros de una tabla en lotes
     async function fetchAllRows<T = unknown>(table: string, filter: object = {}, batchSize = 1000): Promise<T[]> {
         let allRows: T[] = [];
         let from = 0;
@@ -196,7 +186,6 @@ export default function CrearResguardos() {
         let keepFetching = true;
         while (keepFetching) {
             let query = supabase.from(table).select('*').range(from, to);
-            // Agregar filtros
             Object.entries(filter).forEach(([key, value]) => {
                 query = query.eq(key, value);
             });
@@ -213,7 +202,6 @@ export default function CrearResguardos() {
         return allRows;
     }
 
-    // Fetch data with pagination directly from database
     const fetchData = useCallback(async (
         page = 1,
         rowsPerPage = 10,
@@ -225,19 +213,16 @@ export default function CrearResguardos() {
     ) => {
         setLoading(true);
         try {
-            // 1. Obtener los detalles de los artículos que ya están en resguardos
             const { data: resguardados } = await supabase
                 .from('resguardos')
                 .select('num_inventario, descripcion, rubro, condicion, area_resguardo');
 
-            // Crear un Set con la combinación de campos relevantes para búsqueda más eficiente
             const resguardadosSet = new Set(
                 (resguardados || []).map(r => `${r.num_inventario}-${r.descripcion}-${r.rubro}-${r.condicion}-${r.area_resguardo}`.toLowerCase())
             );
 
-            // 2. Obtener todos los muebles activos de ambas tablas (en lotes)
             const [dataInea, dataItea] = await Promise.all([
-                fetchAllRows('muebles', {}), // <-- ahora sin filtro de estatus
+                fetchAllRows('muebles', {}),
                 fetchAllRows('mueblesitea', { estatus: 'ACTIVO' })
             ]);
             let combinedData = [
@@ -245,13 +230,11 @@ export default function CrearResguardos() {
                 ...((Array.isArray(dataItea) ? dataItea as Mueble[] : [] as Mueble[]).map((item: Mueble) => ({ ...item, origen: 'ITEA' }))),
             ];
 
-            // 3. Filtrar: solo mostrar los que NO están en resguardos, considerando todos los campos relevantes
             combinedData = combinedData.filter(item => {
                 const itemKey = `${item.id_inv}-${item.descripcion}-${item.rubro}-${item.estado}-${item.area}`.toLowerCase();
                 return !resguardadosSet.has(itemKey);
             });
 
-            // 4. Aplicar filtros de búsqueda, área y responsable en frontend
             if (searchQuery) {
                 const searchPattern = searchQuery.toLowerCase();
                 combinedData = combinedData.filter(item =>
@@ -266,14 +249,12 @@ export default function CrearResguardos() {
                 combinedData = combinedData.filter(item => item.usufinal === responsableFilter);
             }
 
-            // 5. Ordenar
             combinedData.sort((a, b) => {
                 const aValue = String(a[sortField as keyof typeof a] ?? '').toLowerCase();
                 const bValue = String(b[sortField as keyof typeof b] ?? '').toLowerCase();
                 return sortDir === 'asc' ? aValue.localeCompare(bValue) : bValue.localeCompare(aValue);
             });
 
-            // 6. Paginación manual
             setTotalCount(combinedData.length);
             const paginated = combinedData.slice((page - 1) * rowsPerPage, page * rowsPerPage);
             setFilteredMuebles(paginated);
@@ -290,21 +271,17 @@ export default function CrearResguardos() {
         fetchData(currentPage, rowsPerPage, searchTerm, sortField, sortDirection, areaFilter, responsableFilter);
     }, [fetchData, currentPage, rowsPerPage, searchTerm, sortField, sortDirection, areaFilter, responsableFilter]);
 
-    // Generate unique folio
     const generateFolio = useCallback(async () => {
         try {
-            // Formato: RES-YYYYMMDD-XXX (XXX es un número secuencial diario)
             const today = new Date();
             const year = today.getFullYear();
             const month = String(today.getMonth() + 1).padStart(2, '0');
             const day = String(today.getDate()).padStart(2, '0');
             const datePart = `${year}${month}${day}`;
 
-            // Obtener los folios únicos creados hoy para calcular el secuencial
             const startOfDay = new Date(today.setHours(0, 0, 0, 0)).toISOString();
             const endOfDay = new Date(today.setHours(23, 59, 59, 999)).toISOString();
 
-            // Traer todos los folios del día
             const { data, error } = await supabase
                 .from('resguardos')
                 .select('folio')
@@ -313,7 +290,6 @@ export default function CrearResguardos() {
 
             if (error) throw error;
 
-            // Contar folios únicos
             const foliosUnicos = Array.from(new Set((data || []).map(r => r.folio)));
             const sequential = String(foliosUnicos.length + 1).padStart(3, '0');
             const newFolio = `RES-${datePart}-${sequential}`;
@@ -328,23 +304,18 @@ export default function CrearResguardos() {
     }, []);
 
     useEffect(() => {
-        // Generate folio when component mounts
         if (!formData.folio) {
             generateFolio();
         }
     }, [formData.folio, generateFolio]);
 
-    // Select/deselect mueble
     const toggleMuebleSelection = (mueble: Mueble) => {
-        // Check if already selected
         const isAlreadySelected = selectedMuebles.some(m => m.id === mueble.id);
 
         let newSelectedMuebles: Mueble[];
         if (isAlreadySelected) {
-            // If already selected, remove it
             newSelectedMuebles = selectedMuebles.filter(m => m.id !== mueble.id);
         } else {
-            // Validar que todos los seleccionados tengan el mismo usufinal
             const currentUsufinal = selectedMuebles[0]?.usufinal?.trim().toUpperCase();
             const newUsufinal = mueble.usufinal?.trim().toUpperCase();
             if (selectedMuebles.length > 0 && currentUsufinal && newUsufinal && currentUsufinal !== newUsufinal) {
@@ -361,7 +332,6 @@ export default function CrearResguardos() {
             setFormData({ folio: formData.folio, directorId: '', area: '', puesto: '', resguardante: '' });
             setDirectorInputDisabled(false);
         } else if (!isAlreadySelected && newSelectedMuebles.length === 1) {
-            // Si es el primer seleccionado, intentar seleccionar director
             const matchingDirector = directorio.find(dir => dir.nombre.toLowerCase() === mueble.usufinal?.toLowerCase());
             if (matchingDirector) {
                 setFormData(prev => ({
@@ -376,7 +346,6 @@ export default function CrearResguardos() {
                 setDirectorInputDisabled(false);
             }
         } else if (!isAlreadySelected && newSelectedMuebles.length > 1) {
-            // Si hay más de un artículo, asegurar que el director corresponde al usufinal
             const first = newSelectedMuebles[0];
             const matchingDirector = directorio.find(dir => dir.nombre.toLowerCase() === first.usufinal?.toLowerCase());
             if (matchingDirector) {
@@ -400,7 +369,6 @@ export default function CrearResguardos() {
         }
     };
 
-    // Save director info
     const saveDirectorInfo = async () => {
         if (!incompleteDirector) return;
 
@@ -416,14 +384,12 @@ export default function CrearResguardos() {
 
             if (updateError) throw updateError;
 
-            // Update local state
             setDirectorio(prev => prev.map(d =>
                 d.id_directorio === incompleteDirector.id_directorio
                     ? { ...d, area: directorFormData.area, puesto: directorFormData.puesto }
                     : d
             ));
 
-            // Update form data
             setFormData(prev => ({
                 ...prev,
                 directorId: incompleteDirector.id_directorio.toString(),
@@ -442,7 +408,6 @@ export default function CrearResguardos() {
         }
     };
 
-    // Handle form submit
     const handleSubmit = async () => {
         if (!isFormValid) {
             setError('Complete todos los campos obligatorios');
@@ -455,7 +420,6 @@ export default function CrearResguardos() {
             if (!folioToUse) return;
         }
 
-        // Obtener usuario logueado de la cookie
         let createdBy = '';
         try {
             const userDataCookie = Cookies.get('userData');
@@ -468,7 +432,6 @@ export default function CrearResguardos() {
         try {
             setLoading(true);
 
-            // Obtener las firmas
             const { data: firmasData, error: firmasError } = await supabase
                 .from('firmas')
                 .select('*')
@@ -476,10 +439,8 @@ export default function CrearResguardos() {
 
             if (firmasError) throw firmasError;
 
-            // Activar el botón de PDF antes de crear el PDF
             setShowPDFButton(true);
 
-            // Guardar datos para el PDF
             setPdfData({
                 folio: folioToUse,
                 fecha: new Date().toLocaleDateString(),
@@ -499,19 +460,14 @@ export default function CrearResguardos() {
             });
 
             const resguardoPromises = selectedMuebles.map(async (mueble) => {
-                // Usar el campo origen para determinar la tabla
                 const tableName = mueble.origen === 'ITEA' ? 'mueblesitea' : 'muebles';
-                // CORREGIDO: buscar director por ID, no por nombre
                 const directorNombre = directorio.find(dir => dir.id_directorio.toString() === formData.directorId)?.nombre;
-                
-                // Determinar el resguardante a usar (individual o general)
                 const resguardanteToUse = mueble.resguardanteAsignado || formData.resguardante;
 
-                // Update mueble: ahora también actualiza usufinal, area y resguardante
                 const { error: updateError } = await supabase
                     .from(tableName)
                     .update({
-                        resguardante: resguardanteToUse, // Actualizar resguardante en tabla origen
+                        resguardante: resguardanteToUse,
                         usufinal: directorNombre,
                         area: formData.area
                     })
@@ -519,7 +475,6 @@ export default function CrearResguardos() {
 
                 if (updateError) throw updateError;
 
-                // Create resguardo
                 const { error: insertError } = await supabase.from('resguardos').insert({
                     folio: folioToUse,
                     f_resguardo: new Date(new Date().getFullYear(), new Date().getMonth(), new Date().getDate()).toISOString(),
@@ -529,7 +484,7 @@ export default function CrearResguardos() {
                     descripcion: mueble.descripcion,
                     rubro: mueble.rubro,
                     condicion: mueble.estado,
-                    usufinal: resguardanteToUse, // Usar el resguardante individual o general
+                    usufinal: resguardanteToUse,
                     created_by: createdBy,
                     puesto: formData.puesto,
                     origen: mueble.origen || '',
@@ -542,7 +497,6 @@ export default function CrearResguardos() {
 
             sessionStorage.setItem('pdfDownloaded', 'false');
 
-            // Crear notificación tras guardar exitosamente
             try {
                 const notificationDescription = `Se ha creado un nuevo resguardo para el área "${formData.area}" bajo la dirección de "${directorio.find(d => d.id_directorio.toString() === formData.directorId)?.nombre || ''}" con ${selectedMuebles.length} artículo(s).`;
                 await createNotification({
@@ -563,11 +517,9 @@ export default function CrearResguardos() {
                     }
                 });
             } catch (notifErr) {
-                // No bloquear el flujo si falla la notificación
                 console.error('No se pudo crear la notificación:', notifErr);
             }
 
-            // Reset form but keep the folio for next group if needed
             setFormData(prev => ({
                 ...prev,
                 resguardante: ''
@@ -576,10 +528,7 @@ export default function CrearResguardos() {
             setSuccessMessage(`Resguardo ${folioToUse} creado correctamente con ${selectedMuebles.length} artículo(s)`);
             setTimeout(() => setSuccessMessage(null), 3000);
 
-            // Actualizar folio automáticamente tras guardar
             await generateFolio();
-
-            // Refresh data
             fetchData(currentPage, rowsPerPage, searchTerm, sortField, sortDirection, areaFilter, responsableFilter);
 
         } catch (err) {
@@ -590,7 +539,6 @@ export default function CrearResguardos() {
         }
     };
 
-    // Handle sort
     const handleSort = (field: keyof Mueble) => {
         if (sortField === field) {
             setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
@@ -598,25 +546,20 @@ export default function CrearResguardos() {
             setSortField(field);
             setSortDirection('asc');
         }
-        setCurrentPage(1); // Reset to first page on sort change
+        setCurrentPage(1);
     };
 
-    // Remove item from selection
     const removeSelectedMueble = (mueble: Mueble) => {
         setSelectedMuebles(prev => prev.filter(m => m.id !== mueble.id));
     };
 
-    // Reset folio to generate a new one
     const resetFolio = () => {
         generateFolio();
     };
 
-    // Calculate total pages
     const totalPages = Math.ceil(totalCount / rowsPerPage);
-
     const inputsDisabled = selectedMuebles.length === 0;
 
-    // Función para manejar la generación del PDF (igual que en consultar.tsx)
     const handleGeneratePDF = async () => {
         setGeneratingPDF(true);
         try {
@@ -629,7 +572,7 @@ export default function CrearResguardos() {
             console.error(error);
         } finally {
             setGeneratingPDF(false);
-            setShowPDFButton(false); // Cerrar el modal después de la descarga
+            setShowPDFButton(false);
         }
     };
 
@@ -638,25 +581,27 @@ export default function CrearResguardos() {
             {/* Success message toast */}
             {successMessage && (
                 <div className="fixed top-4 right-4 z-50 flex items-center gap-2 bg-green-900/80 text-green-100 px-4 py-2 rounded-lg shadow-lg border border-green-700 backdrop-blur-sm animate-fade-in">
-                    <CheckCircle className="h-5 w-5 text-green-400" />
-                    <span>{successMessage}</span>
+                    <CheckCircle className="h-5 w-5 text-green-400 animate-pulse" />
+                    <span className="animate-bounce">{successMessage}</span>
                 </div>
             )}
 
-            <div className="w-full mx-auto bg-black rounded-lg sm:rounded-xl shadow-2xl overflow-hidden transition-all duration-500 transform border border-gray-800">
+            <div className="w-full mx-auto bg-black rounded-lg sm:rounded-xl shadow-2xl overflow-hidden transition-all duration-500 transform border border-gray-800 hover:border-gray-700">
                 {/* Header */}
-                <div className="bg-black p-4 sm:p-6 flex flex-col sm:flex-row justify-between items-start sm:items-center border-b border-gray-800 gap-2 sm:gap-0">
+                <div className="bg-gradient-to-r from-black to-gray-900 p-4 sm:p-6 flex flex-col sm:flex-row justify-between items-start sm:items-center border-b border-gray-800 gap-2 sm:gap-0">
                     <h1 className="text-xl sm:text-2xl md:text-3xl font-bold flex items-center">
-                        <span className="mr-2 sm:mr-3 bg-gray-900 text-white p-1 sm:p-2 rounded-lg border border-gray-700 text-sm sm:text-base">RES</span>
-                        Creación de Resguardos
+                        <span className="mr-2 sm:mr-3 bg-gradient-to-br from-blue-600 to-blue-800 text-white p-1 sm:p-2 rounded-lg border border-blue-700 text-sm sm:text-base shadow-lg">RES</span>
+                        <span className="bg-clip-text text-transparent bg-gradient-to-r from-blue-300 to-blue-100">
+                            Creación de Resguardos
+                        </span>
                     </h1>
                     <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-4">
                         <p className="text-gray-400 text-sm sm:text-base flex items-center gap-2">
-                            <ListChecks className="h-4 w-4 text-blue-400" />
-                            <span className="font-medium">{selectedMuebles.length}</span> artículos seleccionados
+                            <ListChecks className="h-4 w-4 text-blue-400 animate-pulse" />
+                            <span className="font-medium text-blue-300">{selectedMuebles.length}</span> artículos seleccionados
                         </p>
                         <p className="text-gray-400 text-sm sm:text-base flex items-center gap-2">
-                            <Info className="h-4 w-4 text-blue-400" />
+                            <Info className="h-4 w-4 text-blue-400 animate-pulse" />
                             Seleccione artículos para el resguardo
                         </p>
                     </div>
@@ -667,29 +612,29 @@ export default function CrearResguardos() {
                     {/* Left panel - Muebles table */}
                     <div className="flex-1 min-w-0 flex flex-col p-4 lg:col-span-3">
                         {/* Folio and director information */}
-                        <div className="mb-6 bg-gray-900/20 p-4 rounded-xl border border-gray-800 shadow-inner">
+                        <div className="mb-6 bg-gradient-to-br from-gray-900/20 to-gray-900/40 p-4 rounded-xl border border-gray-800 shadow-inner hover:shadow-lg transition-shadow">
                             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                                <div className="bg-black p-3 rounded-lg border border-gray-800 flex flex-col">
+                                <div className="bg-gradient-to-br from-black to-gray-900 p-3 rounded-lg border border-gray-800 flex flex-col hover:border-blue-500 transition-colors">
                                     <div className="flex justify-between items-center mb-1">
                                         <span className="text-xs uppercase text-gray-500 font-medium">Folio</span>
                                         <button
                                             onClick={resetFolio}
-                                            className="text-xs text-blue-400 hover:text-blue-300 flex items-center gap-1"
+                                            className="text-xs bg-blue-900/20 hover:bg-blue-900/30 text-blue-400 hover:text-blue-300 flex items-center gap-1 px-2 py-1 rounded border border-blue-800/50 transition-all"
                                         >
                                             <RefreshCw className="h-3 w-3" />
                                             Nuevo
                                         </button>
                                     </div>
                                     <div className="flex items-center">
-                                        <FileDigit className="h-4 w-4 text-blue-400 mr-2" />
+                                        <FileDigit className="h-4 w-4 text-blue-400 mr-2 animate-pulse" />
                                         <span className="text-sm font-medium text-white">{formData.folio || 'Generando...'}</span>
                                     </div>
                                 </div>
 
-                                <div className="bg-black p-3 rounded-lg border border-gray-800 flex flex-col">
+                                <div className="bg-gradient-to-br from-black to-gray-900 p-3 rounded-lg border border-gray-800 flex flex-col hover:border-blue-500 transition-colors">
                                     <span className="text-xs uppercase text-gray-500 font-medium mb-1">Director de Área</span>
                                     <div className="flex items-center">
-                                        <Building2 className="h-4 w-4 text-blue-400 mr-2" />
+                                        <Building2 className="h-4 w-4 text-blue-400 mr-2 animate-pulse" />
                                         <span className="text-sm text-white">
                                             {formData.directorId ?
                                                 directorio.find(d => d.id_directorio.toString() === formData.directorId)?.nombre || 'Seleccionar' :
@@ -698,10 +643,10 @@ export default function CrearResguardos() {
                                     </div>
                                 </div>
 
-                                <div className="bg-black p-3 rounded-lg border border-gray-800 flex flex-col">
+                                <div className="bg-gradient-to-br from-black to-gray-900 p-3 rounded-lg border border-gray-800 flex flex-col hover:border-blue-500 transition-colors">
                                     <span className="text-xs uppercase text-gray-500 font-medium mb-1">Fecha</span>
                                     <div className="flex items-center">
-                                        <Calendar className="h-4 w-4 text-blue-400 mr-2" />
+                                        <Calendar className="h-4 w-4 text-blue-400 mr-2 animate-pulse" />
                                         <span className="text-sm text-white">{new Date().toLocaleDateString()}</span>
                                     </div>
                                 </div>
@@ -709,19 +654,19 @@ export default function CrearResguardos() {
                         </div>
 
                         {/* Search and filters */}
-                        <div className="mb-6 bg-gray-900/20 p-4 rounded-xl border border-gray-800 shadow-inner">
+                        <div className="mb-6 bg-gradient-to-br from-gray-900/20 to-gray-900/40 p-4 rounded-xl border border-gray-800 shadow-inner hover:shadow-lg transition-shadow">
                             <div className="flex flex-col gap-4">
                                 {/* Búsqueda */}
                                 <div className="relative flex-grow">
                                     <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                                        <Search className="h-5 w-5 text-blue-400/80" />
+                                        <Search className="h-5 w-5 text-blue-400/80 animate-pulse" />
                                     </div>
                                     <input
                                         type="text"
                                         value={searchTerm}
                                         onChange={(e) => setSearchTerm(e.target.value)}
                                         placeholder="Buscar por ID o descripción..."
-                                        className="pl-10 pr-4 py-3 w-full bg-black border border-gray-800 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                        className="pl-10 pr-4 py-3 w-full bg-black border border-gray-800 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent hover:border-blue-500 transition-colors"
                                     />
                                 </div>
 
@@ -734,7 +679,7 @@ export default function CrearResguardos() {
                                             title='Filtro para Áreas'
                                             value={areaFilter}
                                             onChange={(e) => setAreaFilter(e.target.value)}
-                                            className="w-full bg-black border border-gray-800 rounded-xl text-white py-2.5 px-3 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                            className="w-full bg-black border border-gray-800 rounded-xl text-white py-2.5 px-3 focus:outline-none focus:ring-2 focus:ring-blue-500 hover:border-blue-500 transition-colors"
                                         >
                                             <option value="">Todas las áreas</option>
                                             {uniqueAreas.map((area) => (
@@ -749,7 +694,7 @@ export default function CrearResguardos() {
                                             title='Filtro de los Responsables'
                                             value={responsableFilter}
                                             onChange={(e) => setResponsableFilter(e.target.value)}
-                                            className="w-full bg-black border border-gray-800 rounded-xl text-white py-2.5 px-3 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                            className="w-full bg-black border border-gray-800 rounded-xl text-white py-2.5 px-3 focus:outline-none focus:ring-2 focus:ring-blue-500 hover:border-blue-500 transition-colors"
                                         >
                                             <option value="">Todos los responsables</option>
                                             {uniqueResponsables.map((resp) => (
@@ -768,14 +713,14 @@ export default function CrearResguardos() {
                                                 setAreaFilter('');
                                                 setResponsableFilter('');
                                             }}
-                                            className="px-4 py-2 bg-black border border-gray-800 text-gray-400 rounded-lg hover:bg-gray-900 transition-colors flex items-center gap-2 text-sm"
+                                            className="px-4 py-2 bg-black border border-gray-800 text-gray-400 rounded-lg hover:bg-gray-900 transition-colors flex items-center gap-2 text-sm hover:border-blue-500 hover:text-blue-300"
                                         >
                                             <X className="h-4 w-4" />
                                             Limpiar filtros
                                         </button>
                                         <button
                                             onClick={() => fetchData(1, rowsPerPage, searchTerm, sortField, sortDirection, areaFilter, responsableFilter)}
-                                            className="px-4 py-2 bg-blue-600/20 border border-blue-800 text-blue-400 rounded-lg hover:bg-blue-600/30 transition-colors flex items-center gap-2 text-sm"
+                                            className="px-4 py-2 bg-blue-600/20 border border-blue-800 text-blue-400 rounded-lg hover:bg-blue-600/30 transition-colors flex items-center gap-2 text-sm hover:border-blue-500 hover:text-blue-300"
                                         >
                                             <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
                                             Actualizar
@@ -786,14 +731,14 @@ export default function CrearResguardos() {
                                             className={`h-4 w-4 text-blue-400 cursor-pointer hover:text-blue-300 ${loading ? 'animate-spin' : ''}`}
                                             onClick={() => fetchData(currentPage, rowsPerPage, searchTerm, sortField, sortDirection, areaFilter, responsableFilter)}
                                         />
-                                        <span>Total: {totalCount} registros</span>
+                                        <span>Total: <span className="text-blue-300">{totalCount}</span> registros</span>
                                     </div>
                                 </div>
                             </div>
                         </div>
 
                         {/* Table */}
-                        <div className="bg-gray-900/20 rounded-xl border border-gray-800 overflow-x-auto overflow-y-auto mb-6 flex flex-col flex-grow max-h-[60vh] shadow-lg">
+                        <div className="bg-gradient-to-br from-gray-900/20 to-gray-900/40 rounded-xl border border-gray-800 overflow-x-auto overflow-y-auto mb-6 flex flex-col flex-grow max-h-[60vh] shadow-lg hover:shadow-xl transition-shadow">
                             <div className="flex-grow min-w-[800px]">
                                 <table className="min-w-full divide-y divide-gray-800">
                                     <thead className="bg-black sticky top-0 z-10">
@@ -805,47 +750,47 @@ export default function CrearResguardos() {
                                             </th>
                                             <th
                                                 onClick={() => handleSort('id_inv')}
-                                                className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider cursor-pointer hover:bg-gray-900 transition-colors"
+                                                className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider cursor-pointer hover:bg-gray-900 transition-colors group"
                                             >
                                                 <div className="flex items-center gap-1">
                                                     ID Inventario
-                                                    <ArrowUpDown className={`h-3.5 w-3.5 ${sortField === 'id_inv' ? 'text-blue-400' : 'text-gray-500'}`} />
+                                                    <ArrowUpDown className={`h-3.5 w-3.5 ${sortField === 'id_inv' ? 'text-blue-400 animate-pulse' : 'text-gray-500'} group-hover:text-blue-300 transition-colors`} />
                                                 </div>
                                             </th>
                                             <th
                                                 onClick={() => handleSort('descripcion')}
-                                                className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider cursor-pointer hover:bg-gray-900 transition-colors"
+                                                className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider cursor-pointer hover:bg-gray-900 transition-colors group"
                                             >
                                                 <div className="flex items-center gap-1">
                                                     Descripción
-                                                    <ArrowUpDown className={`h-3.5 w-3.5 ${sortField === 'descripcion' ? 'text-blue-400' : 'text-gray-500'}`} />
+                                                    <ArrowUpDown className={`h-3.5 w-3.5 ${sortField === 'descripcion' ? 'text-blue-400 animate-pulse' : 'text-gray-500'} group-hover:text-blue-300 transition-colors`} />
                                                 </div>
                                             </th>
                                             <th
                                                 onClick={() => handleSort('area')}
-                                                className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider cursor-pointer hover:bg-gray-900 transition-colors"
+                                                className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider cursor-pointer hover:bg-gray-900 transition-colors group"
                                             >
                                                 <div className="flex items-center gap-1">
                                                     Área
-                                                    <ArrowUpDown className={`h-3.5 w-3.5 ${sortField === 'area' ? 'text-blue-400' : 'text-gray-500'}`} />
+                                                    <ArrowUpDown className={`h-3.5 w-3.5 ${sortField === 'area' ? 'text-blue-400 animate-pulse' : 'text-gray-500'} group-hover:text-blue-300 transition-colors`} />
                                                 </div>
                                             </th>
                                             <th
                                                 onClick={() => handleSort('usufinal')}
-                                                className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider cursor-pointer hover:bg-gray-900 transition-colors"
+                                                className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider cursor-pointer hover:bg-gray-900 transition-colors group"
                                             >
                                                 <div className="flex items-center gap-1">
                                                     Responsable
-                                                    <ArrowUpDown className={`h-3.5 w-3.5 ${sortField === 'usufinal' ? 'text-blue-400' : 'text-gray-500'}`} />
+                                                    <ArrowUpDown className={`h-3.5 w-3.5 ${sortField === 'usufinal' ? 'text-blue-400 animate-pulse' : 'text-gray-500'} group-hover:text-blue-300 transition-colors`} />
                                                 </div>
                                             </th>
                                             <th
                                                 onClick={() => handleSort('estado')}
-                                                className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider cursor-pointer hover:bg-gray-900 transition-colors"
+                                                className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider cursor-pointer hover:bg-gray-900 transition-colors group"
                                             >
                                                 <div className="flex items-center gap-1">
                                                     Estado
-                                                    <ArrowUpDown className={`h-3.5 w-3.5 ${sortField === 'estado' ? 'text-blue-400' : 'text-gray-500'}`} />
+                                                    <ArrowUpDown className={`h-3.5 w-3.5 ${sortField === 'estado' ? 'text-blue-400 animate-pulse' : 'text-gray-500'} group-hover:text-blue-300 transition-colors`} />
                                                 </div>
                                             </th>
                                         </tr>
@@ -869,7 +814,7 @@ export default function CrearResguardos() {
                                                         <p className="text-sm text-gray-400">{error}</p>
                                                         <button
                                                             onClick={() => fetchData(currentPage, rowsPerPage, searchTerm, sortField, sortDirection, areaFilter, responsableFilter)}
-                                                            className="px-4 py-2 bg-black text-blue-300 rounded-lg text-sm hover:bg-gray-900 transition-colors border border-gray-800"
+                                                            className="px-4 py-2 bg-black text-blue-300 rounded-lg text-sm hover:bg-gray-900 transition-colors border border-gray-800 hover:border-blue-500"
                                                         >
                                                             Intentar nuevamente
                                                         </button>
@@ -885,7 +830,7 @@ export default function CrearResguardos() {
                                                         {searchTerm && (
                                                             <button
                                                                 onClick={() => setSearchTerm('')}
-                                                                className="px-4 py-2 bg-black text-blue-400 rounded-lg text-sm hover:bg-gray-900 transition-colors flex items-center gap-2 border border-gray-800"
+                                                                className="px-4 py-2 bg-black text-blue-400 rounded-lg text-sm hover:bg-gray-900 transition-colors flex items-center gap-2 border border-gray-800 hover:border-blue-500"
                                                             >
                                                                 <X className="h-4 w-4" />
                                                                 Limpiar búsqueda
@@ -905,8 +850,8 @@ export default function CrearResguardos() {
                                                     >
                                                         <td className="px-2 py-4">
                                                             <div className="flex justify-center">
-                                                                <div className={`h-5 w-5 rounded border ${isSelected ? 'bg-blue-500 border-blue-300' : 'border-gray-700'} flex items-center justify-center`}>
-                                                                    {isSelected && <CheckCircle className="h-4 w-4 text-white" />}
+                                                                <div className={`h-5 w-5 rounded border ${isSelected ? 'bg-blue-500 border-blue-300' : 'border-gray-700'} flex items-center justify-center transition-colors hover:border-blue-400`}>
+                                                                    {isSelected && <CheckCircle className="h-4 w-4 text-white animate-pulse" />}
                                                                 </div>
                                                             </div>
                                                         </td>
@@ -929,7 +874,9 @@ export default function CrearResguardos() {
                                                             <div className="text-sm text-white">{truncateText(mueble.descripcion, 40)}</div>
                                                         </td>
                                                         <td className="px-4 py-4">
-                                                            <div className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border ${getColorClass(mueble.area)}`}>{mueble.area || 'No especificada'}</div>
+                                                            <div className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border ${getColorClass(mueble.area)}`}>
+                                                                {mueble.area || 'No especificada'}
+                                                            </div>
                                                         </td>
                                                         <td className="px-4 py-4">
                                                             <div className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border gap-1 ${getColorClass(mueble.usufinal)}`}>
@@ -968,10 +915,10 @@ export default function CrearResguardos() {
 
                         {/* Pagination */}
                         {filteredMuebles.length > 0 && (
-                            <div className="flex items-center justify-between bg-gray-900/20 p-4 rounded-xl border border-gray-800 shadow-inner mb-4">
+                            <div className="flex items-center justify-between bg-gradient-to-br from-gray-900/20 to-gray-900/40 p-4 rounded-xl border border-gray-800 shadow-inner mb-4 hover:shadow-lg transition-shadow">
                                 <div className="flex items-center space-x-4">
                                     <span className="text-sm text-gray-400">
-                                        Página {currentPage} de {totalPages}
+                                        Página <span className="text-blue-300">{currentPage}</span> de <span className="text-blue-300">{totalPages}</span>
                                     </span>
                                     <select
                                         title='Artículos por página'
@@ -980,7 +927,7 @@ export default function CrearResguardos() {
                                             setRowsPerPage(Number(e.target.value));
                                             setCurrentPage(1);
                                         }}
-                                        className="bg-black border border-gray-800 rounded-lg text-white text-sm py-1.5 px-3 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                        className="bg-black border border-gray-800 rounded-lg text-white text-sm py-1.5 px-3 focus:outline-none focus:ring-2 focus:ring-blue-500 hover:border-blue-500 transition-colors"
                                     >
                                         <option value={10}>10 por página</option>
                                         <option value={25}>25 por página</option>
@@ -993,7 +940,7 @@ export default function CrearResguardos() {
                                         title='Anterior'
                                         onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
                                         disabled={currentPage === 1}
-                                        className={`p-2 rounded-lg ${currentPage === 1 ? 'text-gray-600 bg-black cursor-not-allowed' : 'text-white bg-black hover:bg-gray-900 border border-gray-800'}`}
+                                        className={`p-2 rounded-lg ${currentPage === 1 ? 'text-gray-600 bg-black cursor-not-allowed' : 'text-white bg-black hover:bg-gray-900 border border-gray-800 hover:border-blue-500'} transition-colors`}
                                     >
                                         <ChevronLeft className="h-5 w-5" />
                                     </button>
@@ -1001,7 +948,7 @@ export default function CrearResguardos() {
                                         title='Siguiente'
                                         onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
                                         disabled={currentPage >= totalPages}
-                                        className={`p-2 rounded-lg ${currentPage >= totalPages ? 'text-gray-600 bg-black cursor-not-allowed' : 'text-white bg-black hover:bg-gray-900 border border-gray-800'}`}
+                                        className={`p-2 rounded-lg ${currentPage >= totalPages ? 'text-gray-600 bg-black cursor-not-allowed' : 'text-white bg-black hover:bg-gray-900 border border-gray-800 hover:border-blue-500'} transition-colors`}
                                     >
                                         <ChevronRight className="h-5 w-5" />
                                     </button>
@@ -1012,10 +959,12 @@ export default function CrearResguardos() {
 
                     {/* Right panel - Details */}
                     <div ref={detailRef} className="flex-1 bg-black p-4 border-t lg:border-t-0 lg:border-l border-gray-800 flex flex-col lg:col-span-2">
-                        <div className="bg-gray-900/20 rounded-xl border border-gray-800 p-4 mb-4 shadow-inner">
+                        <div className="bg-gradient-to-br from-gray-900/20 to-gray-900/40 rounded-xl border border-gray-800 p-4 mb-4 shadow-inner hover:shadow-lg transition-shadow">
                             <h2 className="text-lg font-medium text-gray-100 mb-4 flex items-center gap-2">
-                                <ActivitySquare className="h-5 w-5 text-blue-400" />
-                                Información del Resguardo
+                                <ActivitySquare className="h-5 w-5 text-blue-400 animate-pulse" />
+                                <span className="bg-clip-text text-transparent bg-gradient-to-r from-blue-300 to-blue-100">
+                                    Información del Resguardo
+                                </span>
                             </h2>
 
                             {/* Director selection */}
@@ -1027,7 +976,6 @@ export default function CrearResguardos() {
                                         value={formData.directorId ? directorio.find(d => d.id_directorio.toString() === formData.directorId)?.nombre || directorSearchTerm : directorSearchTerm}
                                         onChange={e => {
                                             setDirectorSearchTerm(e.target.value);
-                                            // Buscar coincidencia exacta
                                             const found = directorio.find(d => d.nombre.trim().toLowerCase() === e.target.value.trim().toLowerCase());
                                             if (found) {
                                                 setFormData(prev => ({
@@ -1046,28 +994,26 @@ export default function CrearResguardos() {
                                             }
                                         }}
                                         placeholder="Buscar director por nombre..."
-                                        className="block w-full bg-black border border-gray-800 rounded-lg py-2.5 px-4 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-gray-300 appearance-none"
+                                        className="block w-full bg-black border border-gray-800 rounded-lg py-2.5 px-4 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-gray-300 appearance-none hover:border-blue-500 transition-colors"
                                         list="directores-list"
                                         disabled={inputsDisabled || directorInputDisabled}
                                         autoComplete="off"
                                     />
-                                    {/* Lista de sugerencias filtrada por el término de búsqueda */}
                                     <datalist id="directores-list">
                                         {directorio.filter(d => d.nombre.toLowerCase().includes(directorSearchTerm.toLowerCase())).map(d => (
                                             <option key={d.id_directorio} value={d.nombre} />
                                         ))}
                                     </datalist>
                                 </div>
-                                {/* Advertencia de área o puesto solo si hay artículos seleccionados y falta info */}
                                 {selectedMuebles.length > 0 && formData.directorId && (
                                     <>
                                         {(!formData.area || !formData.puesto) && (
                                             <div className="mt-2 text-yellow-400 text-xs flex items-center gap-2">
-                                                <AlertCircle className="h-4 w-4" />
+                                                <AlertCircle className="h-4 w-4 animate-pulse" />
                                                 Falta información de área o puesto del director.
                                                 <button
                                                     type="button"
-                                                    className="ml-2 underline text-yellow-300 hover:text-yellow-200"
+                                                    className="ml-2 underline text-yellow-300 hover:text-yellow-200 transition-colors"
                                                     onClick={() => {
                                                         const dir = directorio.find(d => d.id_directorio.toString() === formData.directorId);
                                                         if (dir) {
@@ -1093,7 +1039,7 @@ export default function CrearResguardos() {
                                     value={formData.resguardante}
                                     onChange={(e) => setFormData({ ...formData, resguardante: e.target.value })}
                                     placeholder="Nombre del resguardante"
-                                    className="block w-full bg-black border border-gray-800 rounded-lg py-2.5 px-4 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                    className="block w-full bg-black border border-gray-800 rounded-lg py-2.5 px-4 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 hover:border-blue-500 transition-colors"
                                     disabled={inputsDisabled}
                                 />
                             </div>
@@ -1107,7 +1053,7 @@ export default function CrearResguardos() {
                                         value={formData.area}
                                         readOnly
                                         placeholder="Área"
-                                        className="block w-full bg-black border border-gray-800 rounded-lg py-2.5 px-4 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-gray-300"
+                                        className="block w-full bg-black border border-gray-800 rounded-lg py-2.5 px-4 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-gray-300 hover:border-blue-500 transition-colors"
                                         disabled={inputsDisabled}
                                     />
                                 </div>
@@ -1118,7 +1064,7 @@ export default function CrearResguardos() {
                                         value={formData.puesto}
                                         readOnly
                                         placeholder="Puesto"
-                                        className="block w-full bg-black border border-gray-800 rounded-lg py-2.5 px-4 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-gray-300"
+                                        className="block w-full bg-black border border-gray-800 rounded-lg py-2.5 px-4 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-gray-300 hover:border-blue-500 transition-colors"
                                         disabled={inputsDisabled}
                                     />
                                 </div>
@@ -1126,10 +1072,12 @@ export default function CrearResguardos() {
                         </div>
 
                         {/* Selected Items */}
-                        <div className="bg-gray-900/20 rounded-xl border border-gray-800 p-4 flex-grow overflow-y-hidden shadow-inner relative max-h-[70vh]">
+                        <div className="bg-gradient-to-br from-gray-900/20 to-gray-900/40 rounded-xl border border-gray-800 p-4 flex-grow overflow-y-hidden shadow-inner relative max-h-[70vh] hover:shadow-lg transition-shadow">
                             <h2 className="text-lg font-medium text-gray-100 mb-2 flex items-center gap-2 sticky top-0 z-20 bg-black/80 p-2 -m-2 backdrop-blur-md">
-                                <LayoutGrid className="h-5 w-5 text-blue-400" />
-                                Artículos Seleccionados ({selectedMuebles.length})
+                                <LayoutGrid className="h-5 w-5 text-blue-400 animate-pulse" />
+                                <span className="bg-clip-text text-transparent bg-gradient-to-r from-blue-300 to-blue-100">
+                                    Artículos Seleccionados ({selectedMuebles.length})
+                                </span>
                             </h2>
 
                             {selectedMuebles.length === 0 ? (
@@ -1141,7 +1089,7 @@ export default function CrearResguardos() {
                             ) : (
                                 <div className="space-y-3 mt-2 max-h-[60vh] overflow-y-auto pr-1">
                                     {selectedMuebles.map((mueble) => (
-                                        <div key={`selected-${mueble.id}`} className="bg-black rounded-lg p-3 flex justify-between items-start border border-gray-800 shadow-sm hover:shadow-md transition-shadow">
+                                        <div key={`selected-${mueble.id}`} className="bg-black rounded-lg p-3 flex justify-between items-start border border-gray-800 shadow-sm hover:shadow-md transition-all hover:border-blue-500">
                                             <div className="flex-1 min-w-0">
                                                 <div className="flex items-center gap-2">
                                                     <div className="text-sm font-medium text-white truncate">
@@ -1170,7 +1118,7 @@ export default function CrearResguardos() {
                                                 >
                                                     {mueble.origen}
                                                 </div>
-                                                
+
                                                 {/* Campo de resguardante individual */}
                                                 <div className="mt-3 flex items-center gap-2">
                                                     <input
@@ -1183,7 +1131,7 @@ export default function CrearResguardos() {
                                                             setSelectedMuebles(newSelectedMuebles);
                                                         }}
                                                         placeholder="Resguardante individual (opcional)"
-                                                        className="block w-full bg-gray-900/50 border border-gray-800 rounded-lg py-1.5 px-3 text-white placeholder-gray-500 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
+                                                        className="block w-full bg-gray-900/50 border border-gray-800 rounded-lg py-1.5 px-3 text-white placeholder-gray-500 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 hover:border-blue-500 transition-colors"
                                                     />
                                                 </div>
                                             </div>
@@ -1193,7 +1141,7 @@ export default function CrearResguardos() {
                                                     e.stopPropagation();
                                                     removeSelectedMueble(mueble);
                                                 }}
-                                                className="ml-2 p-1 text-gray-400 hover:text-red-400 rounded-full hover:bg-gray-900/50"
+                                                className="ml-2 p-1 text-gray-400 hover:text-red-400 rounded-full hover:bg-gray-900/50 transition-colors"
                                             >
                                                 <Trash2 className="h-4 w-4" />
                                             </button>
@@ -1218,8 +1166,8 @@ export default function CrearResguardos() {
                                     setDirectorInputDisabled(false);
                                 }}
                                 disabled={selectedMuebles.length === 0 || loading}
-                                className={`px-4 py-2 rounded-lg text-sm flex items-center justify-center gap-2 
-                                    ${selectedMuebles.length === 0 ? 'bg-black text-gray-600 border border-gray-800 cursor-not-allowed' : 'bg-black text-gray-300 border border-gray-700 hover:bg-gray-900'}`}
+                                className={`px-4 py-2 rounded-lg text-sm flex items-center justify-center gap-2 transition-all
+                                    ${selectedMuebles.length === 0 ? 'bg-black text-gray-600 border border-gray-800 cursor-not-allowed' : 'bg-black text-gray-300 border border-gray-700 hover:bg-gray-900 hover:border-blue-500 hover:text-blue-300'}`}
                             >
                                 <X className="h-4 w-4" />
                                 Limpiar Selección
@@ -1227,10 +1175,10 @@ export default function CrearResguardos() {
                             <button
                                 onClick={handleSubmit}
                                 disabled={!isFormValid || loading}
-                                className={`px-4 py-2 rounded-lg text-sm flex items-center justify-center gap-2 flex-grow sm:flex-grow-0 
+                                className={`px-4 py-2 rounded-lg text-sm flex items-center justify-center gap-2 flex-grow sm:flex-grow-0 transition-all transform hover:scale-[1.02]
                                     ${!isFormValid || loading ?
                                         'bg-blue-900/10 text-blue-300/50 border border-blue-900/20 cursor-not-allowed' :
-                                        'bg-blue-600 text-white hover:bg-blue-500'}`}
+                                        'bg-gradient-to-r from-blue-600 to-blue-500 text-white hover:from-blue-500 hover:to-blue-400 shadow-lg hover:shadow-blue-500/30'}`}
                             >
                                 {loading ? (
                                     <RefreshCw className="h-4 w-4 animate-spin" />
@@ -1248,14 +1196,14 @@ export default function CrearResguardos() {
             {error && (
                 <div className="fixed bottom-4 left-4 right-4 md:left-auto md:right-4 md:w-96 bg-red-900/80 text-red-100 px-4 py-3 rounded-lg shadow-lg border border-red-800 z-50 backdrop-blur-sm animate-fade-in">
                     <div className="flex items-center">
-                        <AlertTriangle className="h-5 w-5 text-red-400 mr-3 flex-shrink-0" />
+                        <AlertTriangle className="h-5 w-5 text-red-400 mr-3 flex-shrink-0 animate-pulse" />
                         <div className="flex-1 min-w-0">
                             <p className="text-sm font-medium">{error}</p>
                         </div>
                         <button
                             title='Cerrar alerta'
                             onClick={() => setError(null)}
-                            className="ml-4 flex-shrink-0 p-1 rounded-full text-red-200 hover:text-white hover:bg-red-800"
+                            className="ml-4 flex-shrink-0 p-1 rounded-full text-red-200 hover:text-white hover:bg-red-800 transition-colors"
                         >
                             <X className="h-4 w-4" />
                         </button>
@@ -1266,12 +1214,12 @@ export default function CrearResguardos() {
             {/* Director Modal */}
             {showDirectorModal && (
                 <div className="fixed inset-0 bg-black/90 flex items-center justify-center z-50 px-4 animate-fadeIn">
-                    <div className="bg-black rounded-2xl shadow-2xl border border-yellow-600/30 w-full max-w-md overflow-hidden transition-all duration-300 transform">
+                    <div className="bg-black rounded-2xl shadow-2xl border border-yellow-600/30 w-full max-w-md overflow-hidden transition-all duration-300 transform hover:border-yellow-500/50">
                         <div className="relative p-6 bg-gradient-to-b from-black to-gray-900">
-                            <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-yellow-500/60 via-yellow-400 to-yellow-500/60"></div>
+                            <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-yellow-500/60 via-yellow-400 to-yellow-500/60 animate-pulse"></div>
 
                             <div className="flex flex-col items-center text-center mb-4">
-                                <div className="p-3 bg-yellow-500/10 rounded-full border border-yellow-500/30 mb-3">
+                                <div className="p-3 bg-yellow-500/10 rounded-full border border-yellow-500/30 mb-3 animate-pulse">
                                     <AlertTriangle className="h-8 w-8 text-yellow-500" />
                                 </div>
                                 <h3 className="text-2xl font-bold text-white">¡Ups! Falta información</h3>
@@ -1281,11 +1229,11 @@ export default function CrearResguardos() {
                             </div>
 
                             <div className="space-y-5 mt-6">
-                                <div className="rounded-lg border border-gray-800 bg-gray-900/50 p-4">
+                                <div className="rounded-lg border border-gray-800 bg-gray-900/50 p-4 hover:border-yellow-500 transition-colors">
                                     <label className="block text-xs uppercase tracking-wider text-gray-500 mb-1">Director seleccionado</label>
                                     <div className="flex items-center gap-3">
                                         <div className="p-2 bg-gray-800 rounded-lg">
-                                            <UserCheck className="h-4 w-4 text-yellow-400" />
+                                            <UserCheck className="h-4 w-4 text-yellow-400 animate-pulse" />
                                         </div>
                                         <span className="text-white font-medium">{incompleteDirector?.nombre || 'Director'}</span>
                                     </div>
@@ -1327,7 +1275,7 @@ export default function CrearResguardos() {
                                     )}
                                     {(!directorFormData.area || !directorFormData.puesto) && !isUsuario && (
                                         <p className="text-xs text-yellow-500/80 mt-2 flex items-center gap-1">
-                                            <AlertCircle className="h-3 w-3" />
+                                            <AlertCircle className="h-3 w-3 animate-pulse" />
                                             Ambos campos son requeridos para continuar
                                         </p>
                                     )}
@@ -1338,7 +1286,7 @@ export default function CrearResguardos() {
                         <div className="p-5 bg-black border-t border-gray-800 flex justify-end gap-3">
                             <button
                                 onClick={() => setShowDirectorModal(false)}
-                                className="px-5 py-2.5 bg-gray-900 text-white rounded-lg text-sm hover:bg-gray-800 border border-gray-800 transition-colors flex items-center gap-2"
+                                className="px-5 py-2.5 bg-gray-900 text-white rounded-lg text-sm hover:bg-gray-800 border border-gray-800 transition-colors flex items-center gap-2 hover:border-yellow-500"
                             >
                                 <X className="h-4 w-4" />
                                 Cancelar
@@ -1346,7 +1294,7 @@ export default function CrearResguardos() {
                             <button
                                 onClick={saveDirectorInfo}
                                 disabled={savingDirector || !directorFormData.area || !directorFormData.puesto || isUsuario}
-                                className={`px-5 py-2.5 rounded-lg text-sm flex items-center gap-2 transition-all duration-300 
+                                className={`px-5 py-2.5 rounded-lg text-sm flex items-center gap-2 transition-all duration-300 transform hover:scale-[1.02]
                                     ${savingDirector || !directorFormData.area || !directorFormData.puesto || isUsuario ?
                                         'bg-gray-900 text-gray-500 cursor-not-allowed border border-gray-800' :
                                         'bg-gradient-to-r from-yellow-600 to-yellow-500 text-black font-medium hover:shadow-lg hover:shadow-yellow-500/20'}`}
@@ -1366,11 +1314,11 @@ export default function CrearResguardos() {
             {/* Modal de advertencia por usufinal diferente */}
             {showUsufinalModal && (
                 <div className="fixed inset-0 bg-black/90 flex items-center justify-center z-50 px-4 animate-fadeIn">
-                    <div className="bg-black rounded-2xl shadow-2xl border border-red-600/30 w-full max-w-md overflow-hidden transition-all duration-300 transform">
+                    <div className="bg-black rounded-2xl shadow-2xl border border-red-600/30 w-full max-w-md overflow-hidden transition-all duration-300 transform hover:border-red-500/50">
                         <div className="relative p-6 bg-gradient-to-b from-black to-gray-900">
-                            <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-red-500/60 via-red-400 to-red-500/60"></div>
+                            <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-red-500/60 via-red-400 to-red-500/60 animate-pulse"></div>
                             <div className="flex flex-col items-center text-center mb-4">
-                                <div className="p-3 bg-red-500/10 rounded-full border border-red-500/30 mb-3">
+                                <div className="p-3 bg-red-500/10 rounded-full border border-red-500/30 mb-3 animate-pulse">
                                     <AlertTriangle className="h-8 w-8 text-red-500" />
                                 </div>
                                 <h3 className="text-2xl font-bold text-white">No se puede agregar</h3>
@@ -1386,7 +1334,7 @@ export default function CrearResguardos() {
                         <div className="p-5 bg-black border-t border-gray-800 flex justify-end gap-3">
                             <button
                                 onClick={() => setShowUsufinalModal(false)}
-                                className="px-5 py-2.5 bg-gray-900 text-white rounded-lg text-sm hover:bg-gray-800 border border-gray-800 transition-colors flex items-center gap-2"
+                                className="px-5 py-2.5 bg-gray-900 text-white rounded-lg text-sm hover:bg-gray-800 border border-gray-800 transition-colors flex items-center gap-2 hover:border-red-500"
                             >
                                 <X className="h-4 w-4" />
                                 Cerrar
@@ -1400,35 +1348,28 @@ export default function CrearResguardos() {
             {showPDFButton && pdfData && (
                 <div
                     className="fixed inset-0 bg-black/90 flex items-center justify-center z-50 px-4 animate-fadeIn"
-                    tabIndex={-1} // Previene cierre por Escape
+                    tabIndex={-1}
                     onKeyDown={e => {
-                        // Previene cierre con Escape
                         if (e.key === 'Escape') {
                             e.stopPropagation();
                             e.preventDefault();
                         }
                     }}
-                    onClick={e => e.stopPropagation()} // Previene cierre por clic fuera
+                    onClick={e => e.stopPropagation()}
                 >
                     <div
-                        className="bg-black rounded-2xl shadow-2xl border border-green-600/30 w-full max-w-md overflow-hidden transition-all duration-300 transform"
-                        onClick={e => e.stopPropagation()} // Previene propagación de clics internos
+                        className="bg-black rounded-2xl shadow-2xl border border-green-600/30 w-full max-w-md overflow-hidden transition-all duration-300 transform hover:border-green-500/50"
+                        onClick={e => e.stopPropagation()}
                     >
                         <div className="relative p-6 bg-gradient-to-b from-black to-gray-900">
-                            {/* Línea decorativa superior */}
-                            <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-green-500/60 via-green-400 to-green-500/60"></div>
+                            <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-green-500/60 via-green-400 to-green-500/60 animate-pulse"></div>
 
-                            {/* Botón de cerrar con advertencia mejorada */}
                             <button
                                 onClick={() => {
-                                    // Verificar si el PDF ya fue descargado
                                     const hasPdfBeenDownloaded = sessionStorage.getItem('pdfDownloaded') === 'true';
-
                                     if (!hasPdfBeenDownloaded) {
-                                        // Si no se ha descargado, mostrar modal de advertencia personalizado
                                         setShowWarningModal(true);
                                     } else {
-                                        // Si ya se descargó, cerrar directamente
                                         setShowPDFButton(false);
                                     }
                                 }}
@@ -1439,7 +1380,7 @@ export default function CrearResguardos() {
                             </button>
 
                             <div className="flex flex-col items-center text-center mb-4">
-                                <div className="p-3 bg-green-500/10 rounded-full border border-green-500/30 mb-3">
+                                <div className="p-3 bg-green-500/10 rounded-full border border-green-500/30 mb-3 animate-pulse">
                                     <FileDigit className="h-8 w-8 text-green-500" />
                                 </div>
                                 <h3 className="text-2xl font-bold text-white">Resguardo generado</h3>
@@ -1449,11 +1390,11 @@ export default function CrearResguardos() {
                             </div>
 
                             <div className="space-y-5 mt-6">
-                                <div className="rounded-lg border border-gray-800 bg-gray-900/50 p-4">
+                                <div className="rounded-lg border border-gray-800 bg-gray-900/50 p-4 hover:border-green-500 transition-colors">
                                     <label className="block text-xs uppercase tracking-wider text-gray-500 mb-1">Documento generado</label>
                                     <div className="flex items-center gap-3">
                                         <div className="p-2 bg-gray-800 rounded-lg">
-                                            <FileText className="h-4 w-4 text-green-400" />
+                                            <FileText className="h-4 w-4 text-green-400 animate-pulse" />
                                         </div>
                                         <span className="text-white font-medium">Resguardo {pdfData.folio}</span>
                                     </div>
@@ -1461,7 +1402,7 @@ export default function CrearResguardos() {
                                 <button
                                     onClick={handleGeneratePDF}
                                     disabled={generatingPDF}
-                                    className="w-full py-3 px-4 bg-gradient-to-r from-green-600 to-green-500 hover:from-green-500 hover:to-green-400 text-black font-medium rounded-lg flex items-center justify-center gap-2 transition-all transform hover:scale-[1.02] shadow-lg"
+                                    className="w-full py-3 px-4 bg-gradient-to-r from-green-600 to-green-500 hover:from-green-500 hover:to-green-400 text-black font-medium rounded-lg flex items-center justify-center gap-2 transition-all transform hover:scale-[1.02] shadow-lg hover:shadow-green-500/30"
                                 >
                                     <Download className="h-4 w-4" />
                                     {generatingPDF ? 'Generando PDF...' : 'Descargar PDF'}
@@ -1475,9 +1416,9 @@ export default function CrearResguardos() {
             {/* Modal de advertencia personalizado */}
             {showWarningModal && (
                 <div className="fixed inset-0 bg-black/95 flex items-center justify-center z-[60] px-4 animate-fadeIn">
-                    <div className="bg-gray-900 rounded-xl shadow-2xl border border-red-500/30 w-full max-w-sm p-6">
+                    <div className="bg-gray-900 rounded-xl shadow-2xl border border-red-500/30 w-full max-w-sm p-6 hover:border-red-500/50 transition-colors">
                         <div className="flex flex-col items-center text-center gap-4">
-                            <div className="p-3 bg-red-500/10 rounded-full border border-red-500/30">
+                            <div className="p-3 bg-red-500/10 rounded-full border border-red-500/30 animate-pulse">
                                 <AlertTriangle className="h-7 w-7 text-red-500" />
                             </div>
 
@@ -1491,7 +1432,7 @@ export default function CrearResguardos() {
                             <div className="flex gap-3 w-full mt-2">
                                 <button
                                     onClick={() => setShowWarningModal(false)}
-                                    className="flex-1 py-2 px-4 border border-gray-700 text-gray-300 hover:bg-gray-800 rounded-lg transition-colors"
+                                    className="flex-1 py-2 px-4 border border-gray-700 text-gray-300 hover:bg-gray-800 rounded-lg transition-colors hover:border-blue-500"
                                 >
                                     Cancelar
                                 </button>
@@ -1500,7 +1441,7 @@ export default function CrearResguardos() {
                                         setShowWarningModal(false);
                                         setShowPDFButton(false);
                                     }}
-                                    className="flex-1 py-2 px-4 bg-red-600 hover:bg-red-500 text-white rounded-lg transition-colors"
+                                    className="flex-1 py-2 px-4 bg-red-600 hover:bg-red-500 text-white rounded-lg transition-colors hover:border-red-500 border border-transparent"
                                 >
                                     Cerrar
                                 </button>
