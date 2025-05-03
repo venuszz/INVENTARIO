@@ -237,7 +237,7 @@ export default function CrearResguardos() {
 
             // 2. Obtener todos los muebles activos de ambas tablas (en lotes)
             const [dataInea, dataItea] = await Promise.all([
-                fetchAllRows('muebles', { estatus: 'ACTIVO' }),
+                fetchAllRows('muebles', {}), // <-- ahora sin filtro de estatus
                 fetchAllRows('mueblesitea', { estatus: 'ACTIVO' })
             ]);
             let combinedData = [

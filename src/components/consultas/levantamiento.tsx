@@ -704,17 +704,26 @@ export default function LevantamientoUnificado() {
                             </div>
                         </div>
                         <div className="flex gap-2">
+                            {/* Excel Export Button */}
                             <button
                                 onClick={() => {
                                     setExportType('excel');
                                     setShowExportModal(true);
                                 }}
-                                className="px-4 py-2 bg-green-700 text-white rounded-md font-medium flex items-center gap-2 hover:bg-green-800 transition-colors border border-green-800"
+                                className="group relative px-4 py-2 bg-gradient-to-br from-green-600 to-emerald-600 text-white rounded-md font-medium flex items-center gap-2 hover:from-emerald-600 hover:to-green-600 transition-all duration-300 shadow-lg hover:shadow-emerald-500/30 border border-emerald-700/50 hover:border-emerald-500"
                                 title="Exportar a Excel"
                             >
-                                <FileUp className="h-4 w-4" />
-                                <span className="hidden sm:inline">Excel</span>
+                                <div className="absolute inset-0 bg-gradient-to-r from-emerald-600/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 rounded-md"></div>
+                                <FileUp className="h-4 w-4 transition-transform group-hover:scale-110 group-hover:-translate-y-0.5 duration-300" />
+                                <span className="hidden sm:flex items-center gap-1">
+                                    Excel
+                                    <span className="text-xs text-emerald-300 opacity-0 group-hover:opacity-100 transition-all duration-300 -translate-x-2 group-hover:translate-x-0">
+                                        .xlsx
+                                    </span>
+                                </span>
                             </button>
+
+                            {/* PDF Export Button */}
                             <button
                                 onClick={() => {
                                     if (isAreaOrUserFiltered) {
@@ -724,51 +733,86 @@ export default function LevantamientoUnificado() {
                                         setShowExportModal(true);
                                     }
                                 }}
-                                className={`flip-card border shadow-lg transition-transform transform hover:scale-105 ${isAreaOrUserFiltered ? 'bg-gradient-to-r from-purple-800 to-fuchsia-700 text-white border-fuchsia-800 px-6 py-3 text-base' : 'bg-red-700 text-white border-red-800 px-4 py-2 text-sm'} rounded-md font-medium flex items-center gap-2`}
+                                className={`
+                                    group relative px-4 py-2 rounded-md font-medium flex items-center gap-2 transition-all duration-300 shadow-lg border
+                                    ${isAreaOrUserFiltered 
+                                        ? 'bg-gradient-to-br from-fuchsia-600 to-purple-600 hover:from-purple-600 hover:to-fuchsia-600 text-white hover:shadow-fuchsia-500/30 border-fuchsia-700/50 hover:border-fuchsia-500' 
+                                        : 'bg-gradient-to-br from-red-600 to-rose-600 hover:from-rose-600 hover:to-red-600 text-white hover:shadow-red-500/30 border-red-700/50 hover:border-red-500'
+                                    }`}
                                 title={isAreaOrUserFiltered ? 'Exportar PDF personalizado por área/usuario' : 'Exportar a PDF'}
-                                style={{ perspective: '600px', minWidth: isAreaOrUserFiltered ? 170 : 110 }}
+                                style={{ minWidth: isAreaOrUserFiltered ? '140px' : '120px' }}
                             >
-                                <span className={`flip-card-inner${isAreaOrUserFiltered ? ' flipped' : ''}`}>
-                                    <span className="flip-card-front flex items-center gap-2">
-                                        <File className="h-4 w-4 text-red-300" />
-                                        <span className="hidden sm:inline">PDF</span>
-                                    </span>
-                                    <span className="flip-card-back flex items-center gap-2">
-                                        <FileText className="h-5 w-5 text-fuchsia-300 animate-bounce" />
-                                        <span className="hidden sm:inline text-base">PDF</span>
-                                    </span>
-                                </span>
+                                <div className={`
+                                    absolute inset-0 bg-gradient-to-r opacity-0 group-hover:opacity-100 transition-opacity duration-300 rounded-md
+                                    ${isAreaOrUserFiltered ? 'from-fuchsia-600/20' : 'from-red-600/20'} to-transparent
+                                `}></div>
+                                <div className="relative">
+                                    {isAreaOrUserFiltered ? (
+                                        <div className="flex items-center gap-2">
+                                            <FileText className="h-4 w-4 transition-transform group-hover:scale-110 group-hover:-translate-y-0.5 duration-300" />
+                                            <span className="hidden sm:flex items-center gap-1">
+                                                PDF
+                                                <span className={`
+                                                    text-xs opacity-0 group-hover:opacity-100 transition-all duration-300 -translate-x-2 group-hover:translate-x-0
+                                                    ${isAreaOrUserFiltered ? 'text-fuchsia-300' : 'text-red-300'}
+                                                `}>
+                                                    personalizado
+                                                </span>
+                                            </span>
+                                        </div>
+                                    ) : (
+                                        <div className="flex items-center gap-2">
+                                            <File className="h-4 w-4 transition-transform group-hover:scale-110 group-hover:-translate-y-0.5 duration-300" />
+                                            <span className="hidden sm:flex items-center gap-1">
+                                                PDF
+                                                <span className="text-xs text-red-300 opacity-0 group-hover:opacity-100 transition-all duration-300 -translate-x-2 group-hover:translate-x-0">
+                                                    .pdf
+                                                </span>
+                                            </span>
+                                        </div>
+                                    )}
+                                </div>
                             </button>
+                            {/* Refresh Button */}
                             <button
                                 onClick={() => { setLoading(true); fetchMuebles(); }}
-                                className="px-4 py-2 bg-black text-gray-300 rounded-md font-medium flex items-center gap-2 hover:bg-gray-700 transition-colors"
+                                className="group relative px-4 py-2 bg-gradient-to-br from-gray-700 to-gray-800 text-gray-300 rounded-md font-medium flex items-center gap-2 hover:from-gray-600 hover:to-gray-700 transition-all duration-300 shadow-lg hover:shadow-gray-800/30 border border-gray-700/50"
                                 title="Actualizar"
                             >
-                                <RefreshCw className="h-4 w-4" />
+                                <div className="absolute inset-0 bg-gradient-to-r from-gray-600/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 rounded-md"></div>
+                                <RefreshCw className={`h-4 w-4 transition-all duration-500 ${loading ? 'animate-spin' : 'group-hover:rotate-180'}`} />
                                 <span className="hidden sm:inline">Actualizar</span>
                             </button>
+
+                            {/* Filters Button */}
                             <button
                                 onClick={() => setShowFilters(!showFilters)}
-                                className={`px-4 py-2 rounded-md font-medium flex items-center gap-2 transition-colors ${Object.values(filters).some(value => value.length > 0)
-                                    ? 'bg-gray-900 text-blue-200 hover:bg-gray-800'
-                                    : 'bg-gray-800 text-gray-300 hover:bg-gray-700'
-                                    }`}
+                                className={`group relative px-4 py-2 rounded-md font-medium flex items-center gap-2 transition-all duration-300 shadow-lg border ${
+                                    Object.values(filters).some(value => value.length > 0)
+                                        ? 'bg-gradient-to-br from-indigo-700 to-blue-800 text-blue-200 border-blue-700/50 hover:from-indigo-600 hover:to-blue-700'
+                                        : 'bg-gradient-to-br from-gray-700 to-gray-800 text-gray-300 border-gray-700/50 hover:from-gray-600 hover:to-gray-700'
+                                }`}
                                 title="Mostrar/ocultar filtros avanzados"
                             >
-                                <Filter className="h-4 w-4" />
-                                Filtros
+                                <div className="absolute inset-0 bg-gradient-to-r from-blue-600/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 rounded-md"></div>
+                                <Filter className="h-4 w-4 transition-transform group-hover:scale-110 duration-300" />
+                                <span>Filtros</span>
                                 {Object.values(filters).some(value => value.length > 0) && (
-                                    <span className="ml-1 bg-black text-white rounded-full w-5 h-5 flex items-center justify-center text-xs">
+                                    <span className="flex items-center justify-center min-w-5 h-5 bg-black/40 text-white rounded-full text-xs font-bold shadow-inner">
                                         {Object.values(filters).filter(value => value.length > 0).length}
                                     </span>
                                 )}
                             </button>
+
+                            {/* Clear Button */}
                             <button
                                 onClick={clearFilters}
-                                className="px-4 py-2 bg-gray-800 text-blue-400 rounded-md text-sm hover:bg-gray-700 transition-colors flex items-center gap-2"
+                                className="group relative px-4 py-2 bg-gradient-to-br from-gray-700 to-gray-800 text-blue-400 rounded-md text-sm font-medium flex items-center gap-2 hover:from-gray-600 hover:to-gray-700 transition-all duration-300 shadow-lg hover:shadow-gray-800/30 border border-gray-700/50 hover:text-blue-300"
                                 title="Limpiar filtros"
                             >
-                                <X className="h-4 w-4" /> Limpiar
+                                <div className="absolute inset-0 bg-gradient-to-r from-blue-600/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 rounded-md"></div>
+                                <X className="h-4 w-4 transition-transform group-hover:scale-110 duration-300" />
+                                <span>Limpiar</span>
                             </button>
                         </div>
                     </div>
