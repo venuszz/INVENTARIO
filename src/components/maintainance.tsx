@@ -14,7 +14,7 @@ interface MaintenancePageProps {
 
 export default function MaintenancePage({
     pageTitle = "Mantenimiento Programado",
-    maintenanceEndTime = "2025-05-02T18:45:00",
+    maintenanceEndTime = "2025-05-02T19:30:00",
     maintenanceReason = "Actualización de base de Datos",
     showHomeButton = true,
     showBackButton = true,
