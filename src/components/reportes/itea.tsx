@@ -11,6 +11,7 @@ import { generateExcel } from './excelgenerator';
 import { generatePDF } from './pdfgenerator';
 import { useUserRole } from "@/hooks/useUserRole";
 import RoleGuard from "@/components/roleGuard";
+import { useNotifications } from '@/hooks/useNotifications';
 
 // Firma interface
 interface Firma {
@@ -30,6 +31,8 @@ export default function ReportesIteaDashboard() {
     const [firmasModalOpen, setFirmasModalOpen] = useState(false);
     const [firmas, setFirmas] = useState<Firma[]>([]);
     const [editingFirma, setEditingFirma] = useState<Firma | null>(null);
+
+    const { createNotification } = useNotifications();
 
     // Fetch firmas on component mount
     useEffect(() => {
@@ -278,9 +281,29 @@ export default function ReportesIteaDashboard() {
                 a.click();
             }
             setExportModalOpen(false);
+            // Notificación de exportación exitosa
+            await createNotification({
+                title: `Reporte ITEA exportado (${format})`,
+                description: `El usuario exportó el reporte ITEA en formato ${format} para la categoría "${selectedReport}".`,
+                type: 'success',
+                category: 'reportes',
+                device: 'web',
+                importance: 'medium',
+                data: { changes: [`Exportación de reporte: ${selectedReport}`], affectedTables: ['mueblesitea'] }
+            });
         } catch (error: unknown) {
             setError('Error al exportar el reporte: ' + (error instanceof Error ? error.message : 'Error desconocido'));
             console.error(error);
+            // Notificación de error al exportar
+            await createNotification({
+                title: 'Error al exportar reporte ITEA',
+                description: `Error al exportar el reporte ITEA: ${(error instanceof Error ? error.message : 'Error desconocido')}`,
+                type: 'danger',
+                category: 'reportes',
+                device: 'web',
+                importance: 'high',
+                data: { affectedTables: ['mueblesitea'] }
+            });
         }
     };
 
@@ -482,8 +505,28 @@ export default function ReportesIteaDashboard() {
                                                                 : f
                                                         ));
                                                         setEditingFirma(null);
+                                                        // Notificación de edición de firma exitosa
+                                                        await createNotification({
+                                                            title: 'Firma editada',
+                                                            description: `La firma "${firma.concepto}" fue editada correctamente (ITEA).`,
+                                                            type: 'info',
+                                                            category: 'firmas',
+                                                            device: 'web',
+                                                            importance: 'medium',
+                                                            data: { changes: [`Edición de firma: ${firma.concepto}`], affectedTables: ['firmas'] }
+                                                        });
                                                     } else {
                                                         setError('Error al actualizar la firma');
+                                                        // Notificación de error al editar firma
+                                                        await createNotification({
+                                                            title: 'Error al editar firma',
+                                                            description: 'Error al editar la firma (ITEA).',
+                                                            type: 'danger',
+                                                            category: 'firmas',
+                                                            device: 'web',
+                                                            importance: 'high',
+                                                            data: { affectedTables: ['firmas'] }
+                                                        });
                                                     }
                                                 }} className="space-y-3">
                                                     <h4 className="font-medium text-amber-500 text-sm mb-2">{firma.concepto}</h4>

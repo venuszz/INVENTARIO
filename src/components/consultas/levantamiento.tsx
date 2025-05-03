@@ -776,43 +776,151 @@ export default function LevantamientoUnificado() {
                             {/* Refresh Button */}
                             <button
                                 onClick={() => { setLoading(true); fetchMuebles(); }}
-                                className="group relative px-4 py-2 bg-gradient-to-br from-gray-700 to-gray-800 text-gray-300 rounded-md font-medium flex items-center gap-2 hover:from-gray-600 hover:to-gray-700 transition-all duration-300 shadow-lg hover:shadow-gray-800/30 border border-gray-700/50"
-                                title="Actualizar"
+                                className={`
+                                    group relative px-4 py-2.5 rounded-lg font-medium 
+                                    flex items-center gap-2.5 transition-all duration-300
+                                    bg-gradient-to-br from-cyan-600/20 to-blue-600/20 
+                                    hover:from-cyan-500/30 hover:to-blue-500/30
+                                    text-cyan-300 hover:text-cyan-200
+                                    border border-cyan-500/30 hover:border-cyan-400/50
+                                    shadow-lg hover:shadow-cyan-500/20
+                                    hover:scale-[1.02] active:scale-[0.98]
+                                    overflow-hidden
+                                `}
+                                title="Actualizar datos"
+                                disabled={loading}
                             >
-                                <div className="absolute inset-0 bg-gradient-to-r from-gray-600/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 rounded-md"></div>
-                                <RefreshCw className={`h-4 w-4 transition-all duration-500 ${loading ? 'animate-spin' : 'group-hover:rotate-180'}`} />
-                                <span className="hidden sm:inline">Actualizar</span>
+                                {/* Animated gradient background */}
+                                <div className="absolute inset-0 bg-gradient-to-r from-cyan-500/20 via-blue-500/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 animate-gradient-x"></div>
+
+                                {/* Icon wrapper with animation */}
+                                <div className="relative">
+                                    <RefreshCw className={`
+                                        h-4 w-4 transition-transform duration-500 
+                                        ${loading ? 'animate-spin' : 'group-hover:rotate-180 group-hover:scale-110'}
+                                    `} />
+                                </div>
+
+                                {/* Text with underline animation */}
+                                <span className="relative hidden sm:block">
+                                    Actualizar
+                                    <span className="absolute inset-x-0 -bottom-0.5 h-px bg-gradient-to-r from-transparent via-cyan-400/50 to-transparent opacity-0 group-hover:opacity-100 transition-all duration-300"></span>
+                                </span>
+
+                                {/* Loading ripple effect */}
+                                {loading && (
+                                    <span className="absolute inset-0 flex items-center justify-center">
+                                        <span className="absolute w-full h-full animate-ping rounded-lg bg-cyan-400/20"></span>
+                                    </span>
+                                )}
                             </button>
 
                             {/* Filters Button */}
                             <button
-                                onClick={() => setShowFilters(!showFilters)}
-                                className={`group relative px-4 py-2 rounded-md font-medium flex items-center gap-2 transition-all duration-300 shadow-lg border ${
-                                    Object.values(filters).some(value => value.length > 0)
-                                        ? 'bg-gradient-to-br from-indigo-700 to-blue-800 text-blue-200 border-blue-700/50 hover:from-indigo-600 hover:to-blue-700'
-                                        : 'bg-gradient-to-br from-gray-700 to-gray-800 text-gray-300 border-gray-700/50 hover:from-gray-600 hover:to-gray-700'
-                                }`}
+                                onClick={() => setShowFilters(!showFilters)} 
+                                className={`
+                                    group relative px-4 py-2.5 rounded-lg font-medium 
+                                    flex items-center gap-2.5 transition-all duration-300
+                                    ${Object.values(filters).some(value => value.length > 0)
+                                        ? 'bg-gradient-to-br from-fuchsia-600/20 to-purple-600/20 text-fuchsia-300 hover:text-fuchsia-200'
+                                        : 'bg-gradient-to-br from-gray-800 to-gray-900 text-gray-400 hover:text-gray-300'
+                                    }
+                                    border
+                                    ${Object.values(filters).some(value => value.length > 0)
+                                        ? 'border-fuchsia-500/30 hover:border-fuchsia-400/50'
+                                        : 'border-gray-700 hover:border-gray-600'
+                                    }
+                                    shadow-lg
+                                    ${Object.values(filters).some(value => value.length > 0)
+                                        ? 'hover:shadow-fuchsia-500/10'
+                                        : 'hover:shadow-gray-800/30'
+                                    }
+                                    hover:scale-[1.02] active:scale-[0.98]
+                                    overflow-hidden
+                                `}
                                 title="Mostrar/ocultar filtros avanzados"
                             >
-                                <div className="absolute inset-0 bg-gradient-to-r from-blue-600/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 rounded-md"></div>
-                                <Filter className="h-4 w-4 transition-transform group-hover:scale-110 duration-300" />
-                                <span>Filtros</span>
+                                {/* Animated gradient background */}
+                                <div className={`
+                                    absolute inset-0 bg-gradient-to-r 
+                                    ${Object.values(filters).some(value => value.length > 0)
+                                        ? 'from-fuchsia-500/20 via-purple-500/20 to-transparent'
+                                        : 'from-gray-700/20 via-gray-600/20 to-transparent'
+                                    }
+                                    opacity-0 group-hover:opacity-100 transition-opacity duration-500
+                                    animate-gradient-x
+                                `}/>
+
+                                {/* Icon wrapper with animation */}
+                                <div className="relative">
+                                    <Filter className={`
+                                        h-4 w-4 transition-all duration-300
+                                        group-hover:scale-110 group-hover:rotate-[-10deg]
+                                        ${Object.values(filters).some(value => value.length > 0)
+                                            ? 'text-fuchsia-300 group-hover:text-fuchsia-200'
+                                            : 'text-gray-400 group-hover:text-gray-300'
+                                        }
+                                    `} />
+                                </div>
+
+                                {/* Text with underline animation */}
+                                <span className="relative">
+                                    Filtros
+                                    <span className={`
+                                        absolute inset-x-0 -bottom-0.5 h-px
+                                        ${Object.values(filters).some(value => value.length > 0)
+                                            ? 'bg-gradient-to-r from-transparent via-fuchsia-400/50 to-transparent'
+                                            : 'bg-gradient-to-r from-transparent via-gray-400/50 to-transparent'
+                                        }
+                                        opacity-0 group-hover:opacity-100 transition-all duration-300
+                                    `}/>
+                                </span>
+
+                                {/* Counter badge with animations */}
                                 {Object.values(filters).some(value => value.length > 0) && (
-                                    <span className="flex items-center justify-center min-w-5 h-5 bg-black/40 text-white rounded-full text-xs font-bold shadow-inner">
+                                    <span className={`
+                                        flex items-center justify-center
+                                        min-w-5 h-5 px-1.5
+                                        rounded-full text-xs font-bold
+                                        transition-all duration-300
+                                        ${Object.values(filters).some(value => value.length > 0)
+                                            ? 'bg-fuchsia-500/20 text-fuchsia-200 border border-fuchsia-400/30'
+                                            : 'bg-gray-800/80 text-gray-300 border border-gray-700'
+                                        }
+                                        group-hover:scale-110 group-hover:rotate-3
+                                        shadow-inner
+                                    `}>
                                         {Object.values(filters).filter(value => value.length > 0).length}
                                     </span>
                                 )}
                             </button>
 
-                            {/* Clear Button */}
+                            {/* Clear Filters Button */}
                             <button
                                 onClick={clearFilters}
-                                className="group relative px-4 py-2 bg-gradient-to-br from-gray-700 to-gray-800 text-blue-400 rounded-md text-sm font-medium flex items-center gap-2 hover:from-gray-600 hover:to-gray-700 transition-all duration-300 shadow-lg hover:shadow-gray-800/30 border border-gray-700/50 hover:text-blue-300"
-                                title="Limpiar filtros"
+                                className="group relative px-4 py-2 bg-gradient-to-br from-red-950 to-rose-950 text-rose-300 rounded-lg font-medium flex items-center gap-2.5 hover:from-rose-900 hover:to-red-900 transition-all duration-300 shadow-lg hover:shadow-rose-900/30 border border-rose-800/30 hover:border-rose-700/50"
+                                title="Limpiar todos los filtros aplicados"
                             >
-                                <div className="absolute inset-0 bg-gradient-to-r from-blue-600/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 rounded-md"></div>
-                                <X className="h-4 w-4 transition-transform group-hover:scale-110 duration-300" />
-                                <span>Limpiar</span>
+                                <div className="absolute inset-0 bg-gradient-to-r from-rose-500/10 via-red-500/10 to-transparent opacity-0 group-hover:opacity-100 transition-all duration-300 rounded-lg"></div>
+                                <svg 
+                                    xmlns="http://www.w3.org/2000/svg" 
+                                    className="h-4 w-4 transition-all duration-300 group-hover:rotate-180 group-hover:scale-110" 
+                                    viewBox="0 0 24 24" 
+                                    fill="none" 
+                                    stroke="currentColor" 
+                                    strokeWidth="2.5" 
+                                    strokeLinecap="round" 
+                                    strokeLinejoin="round"
+                                >
+                                    <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/>
+                                    <line x1="17" y1="17" x2="7" y2="17"/>
+                                    <polyline points="7 13 7 17 11 17"/>
+                                    <line x1="17" y1="8" x2="12" y2="8"/>
+                                </svg>
+                                <span className="relative">
+                                    Limpiar filtros
+                                    <span className="absolute inset-x-0 -bottom-px h-px bg-gradient-to-r from-transparent via-rose-400/50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></span>
+                                </span>
                             </button>
                         </div>
                     </div>

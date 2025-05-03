@@ -11,6 +11,7 @@ import { generateExcel } from './excelgenerator';
 import { generatePDF } from './pdfgenerator';
 import { useUserRole } from "@/hooks/useUserRole";
 import RoleGuard from "@/components/roleGuard";
+import { useNotifications } from '@/hooks/useNotifications';
 
 interface Mueble {
     id: number;
@@ -52,6 +53,8 @@ export default function ReportesIneaDashboard() {
     const [firmasModalOpen, setFirmasModalOpen] = useState(false);
     const [firmas, setFirmas] = useState<Firma[]>([]);
     const [editingFirma, setEditingFirma] = useState<Firma | null>(null);
+
+    const { createNotification } = useNotifications();
 
     // Fetch firmas on component mount
     useEffect(() => {
@@ -285,9 +288,29 @@ export default function ReportesIneaDashboard() {
                 a.click();
             }
             setExportModalOpen(false);
+            // Notificación de exportación exitosa
+            await createNotification({
+                title: `Reporte INEA exportado (${format})`,
+                description: `El usuario exportó el reporte INEA en formato ${format} para la categoría "${selectedReport}".`,
+                type: 'success',
+                category: 'reportes',
+                device: 'web',
+                importance: 'medium',
+                data: { changes: [`Exportación de reporte: ${selectedReport}`], affectedTables: ['muebles'] }
+            });
         } catch (error: Error | unknown) {
             setError('Error al exportar el reporte: ' + (error instanceof Error ? error.message : 'Error desconocido'));
             console.error(error);
+            // Notificación de error al exportar
+            await createNotification({
+                title: 'Error al exportar reporte INEA',
+                description: `Error al exportar el reporte INEA: ${(error instanceof Error ? error.message : 'Error desconocido')}`,
+                type: 'danger',
+                category: 'reportes',
+                device: 'web',
+                importance: 'high',
+                data: { affectedTables: ['muebles'] }
+            });
         }
     };
 
@@ -491,8 +514,28 @@ export default function ReportesIneaDashboard() {
                                                                 : f
                                                         ));
                                                         setEditingFirma(null);
+                                                        // Notificación de edición de firma exitosa
+                                                        await createNotification({
+                                                            title: 'Firma editada',
+                                                            description: `La firma "${firma.concepto}" fue editada correctamente.`,
+                                                            type: 'info',
+                                                            category: 'firmas',
+                                                            device: 'web',
+                                                            importance: 'medium',
+                                                            data: { changes: [`Edición de firma: ${firma.concepto}`], affectedTables: ['firmas'] }
+                                                        });
                                                     } else {
                                                         setError('Error al actualizar la firma');
+                                                        // Notificación de error al editar firma
+                                                        await createNotification({
+                                                            title: 'Error al editar firma',
+                                                            description: 'Error al editar la firma.',
+                                                            type: 'danger',
+                                                            category: 'firmas',
+                                                            device: 'web',
+                                                            importance: 'high',
+                                                            data: { affectedTables: ['firmas'] }
+                                                        });
                                                     }
                                                 }} className="space-y-3">
                                                     <h4 className="font-medium text-rose-500 text-sm mb-2">{firma.concepto}</h4>
