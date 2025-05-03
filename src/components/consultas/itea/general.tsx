@@ -967,18 +967,48 @@ export default function ConsultasIteaGeneral() {
                     <p className="text-gray-400 text-sm sm:text-base">Vista general de todos los bienes registrados en el sistema.</p>
                 </div>
 
-                {/* Nuevo componente de valor total */}
-                <div className="bg-black p-4 border-b border-gray-800 flex justify-center items-center">
-                    <div className="flex justify-between items-center">
-                        <div className="flex items-center gap-3">
-                            <div className="p-2 bg-blue-500/20 rounded-lg border border-blue-500/30">
-                                <DollarSign className="h-6 w-6 text-blue-400" />
+                {/* Nuevo componente de valor total mejorado */}
+                <div className="bg-gradient-to-b from-gray-900 via-black to-black p-8 border-b border-gray-800">
+                    <div className="flex flex-col lg:flex-row justify-between items-stretch gap-6">
+                        {/* Panel de valor total */}
+                        <div className="flex-grow">
+                            <div className="group relative overflow-hidden bg-gradient-to-br from-indigo-950/30 via-purple-900/20 to-gray-900/30 p-6 rounded-2xl border border-indigo-800/30 hover:border-indigo-700/50 transition-all duration-500 hover:shadow-lg hover:shadow-indigo-500/10">
+                                <div className="absolute inset-0 bg-gradient-to-r from-indigo-500/5 via-purple-500/5 to-pink-500/5 opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
+                                <div className="flex items-start gap-6">
+                                    <div className="relative">
+                                        <div className="absolute inset-0 bg-gradient-to-br from-indigo-500/20 via-purple-500/20 to-pink-500/20 blur-xl"></div>
+                                        <div className="relative p-4 bg-gradient-to-br from-indigo-500/20 via-purple-500/20 to-pink-500/20 rounded-xl border border-white/10 transform group-hover:scale-110 transition-all duration-500">
+                                            <DollarSign className="h-8 w-8 text-white/90" />
+                                        </div>
+                                    </div>
+                                    <div className="flex flex-col">
+                                        <h3 className="text-sm font-medium text-gray-400 mb-1 group-hover:text-indigo-300 transition-colors">Valor Total del Inventario</h3>
+                                        <div className="relative">
+                                            <p className="text-4xl font-bold bg-gradient-to-r from-indigo-200 via-purple-200 to-pink-200 bg-clip-text text-transparent group-hover:from-indigo-300 group-hover:via-purple-300 group-hover:to-pink-300 transition-all duration-500">
+                                                ${(Object.values(filters).some(value => value !== '') ? totalValue : totalValueAllItems).toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                            </p>
+                                            <div className="absolute -bottom-2 left-0 w-full h-px bg-gradient-to-r from-indigo-500/50 via-purple-500/50 to-pink-500/50"></div>
+                                        </div>
+                                        <p className="text-sm text-gray-500 mt-2 group-hover:text-gray-400 transition-colors">
+                                            {Object.values(filters).some(value => value !== '') ? 'Valor de artículos filtrados' : 'Valor total de todos los artículos'}
+                                        </p>
+                                    </div>
+                                </div>
                             </div>
-                            <div className="flex flex-col items-center justify-center text-center">
-                                <h3 className="text-sm font-medium text-gray-400">Valor Total del Inventario</h3>
-                                <p className="text-2xl font-bold text-white">
-                                    ${(Object.values(filters).some(value => value !== '') ? totalValue : totalValueAllItems).toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                                </p>
+                        </div>
+
+                        {/* Panel de conteo */}
+                        <div className="flex-shrink-0">
+                            <div className="group bg-gradient-to-br from-emerald-950/30 via-teal-900/20 to-gray-900/30 p-6 rounded-2xl border border-emerald-800/30 hover:border-emerald-700/50 transition-all duration-500">
+                                <div className="text-center">
+                                    <p className="text-sm text-gray-400 mb-2 group-hover:text-emerald-300 transition-colors">Artículos Registrados</p>
+                                    <div className="relative">
+                                        <div className="absolute inset-0 bg-gradient-to-r from-emerald-500/10 via-teal-500/10 to-cyan-500/10 opacity-0 group-hover:opacity-100 transition-opacity duration-500 rounded-xl"></div>
+                                        <span className="relative text-3xl font-bold bg-gradient-to-r from-emerald-200 via-teal-200 to-cyan-200 bg-clip-text text-transparent group-hover:from-emerald-300 group-hover:via-teal-300 group-hover:to-cyan-300 transition-all duration-500 px-6 py-3">
+                                            {filteredCount}
+                                        </span>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -988,34 +1018,38 @@ export default function ConsultasIteaGeneral() {
                 <div className={getMainContainerClass()}>
                     {/* Panel izquierdo: Búsqueda, filtros y tabla */}
                     <div className={`flex-1 min-w-0 flex flex-col ${selectedItem ? '' : 'w-full'}`}>
-                        {/* Panel de acciones y búsqueda */}
-                        <div className="mb-6 bg-black p-4 rounded-lg border border-gray-800">
+                        {/* Panel de acciones y búsqueda mejorado */}
+                        <div className="mb-6 bg-gradient-to-br from-gray-900 via-black to-black p-6 rounded-xl border border-gray-800 shadow-lg">
                             <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-4">
-                                <div className="relative flex-grow">
-                                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                                        <Search className="h-5 w-5 text-gray-500" />
+                                <div className="relative flex-grow group">
+                                    <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                                        <Search className="h-5 w-5 text-gray-500 group-hover:text-blue-400 transition-colors duration-300" />
                                     </div>
                                     <input
                                         type="text"
                                         value={searchTerm}
                                         onChange={(e) => setSearchTerm(e.target.value)}
                                         placeholder="Buscar por ID, descripción o usuario..."
-                                        className="pl-10 pr-4 py-2 w-full bg-black border border-gray-700 rounded-md text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:border-gray-500"
+                                        className="pl-12 pr-4 py-3 w-full bg-gradient-to-r from-gray-900 to-gray-800 border border-gray-700 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-300 hover:border-gray-600"
                                     />
                                 </div>
 
-                                <div className="flex gap-2">
+                                <div className="flex gap-3">
                                     <button
                                         onClick={() => setShowFilters(!showFilters)}
-                                        className={`px-4 py-2 rounded-md font-medium flex items-center gap-2 transition-colors ${Object.values(filters).some(value => value !== '')
-                                            ? 'bg-gray-900 text-blue-200 hover:bg-gray-800'
-                                            : 'bg-gray-800 text-gray-300 hover:bg-gray-700'
-                                            }`}
+                                        className={`group relative px-5 py-3 rounded-xl font-medium flex items-center gap-2 transition-all duration-300 overflow-hidden ${
+                                            Object.values(filters).some(value => value !== '')
+                                                ? 'bg-gradient-to-r from-blue-600/20 to-blue-900/20 text-blue-300 border border-blue-500/50 hover:border-blue-400'
+                                                : 'bg-gradient-to-r from-gray-800 to-gray-900 text-gray-300 border border-gray-700 hover:border-gray-600'
+                                        }`}
                                     >
-                                        <Filter className="h-4 w-4" />
-                                        Filtros
+                                        <div className="absolute inset-0 bg-gradient-to-r from-blue-500/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+                                        <Filter className={`h-5 w-5 transition-transform duration-300 group-hover:scale-110 ${
+                                            Object.values(filters).some(value => value !== '') ? 'text-blue-400' : 'text-gray-400'
+                                        }`} />
+                                        <span>Filtros</span>
                                         {Object.values(filters).some(value => value !== '') && (
-                                            <span className="ml-1 bg-black text-white rounded-full w-5 h-5 flex items-center justify-center text-xs">
+                                            <span className="ml-1.5 bg-blue-500/20 text-blue-300 rounded-lg px-2 py-0.5 text-sm border border-blue-500/30">
                                                 {Object.values(filters).filter(value => value !== '').length}
                                             </span>
                                         )}
@@ -1023,37 +1057,39 @@ export default function ConsultasIteaGeneral() {
 
                                     <button
                                         onClick={fetchMuebles}
-                                        className="px-4 py-2 bg-black text-gray-300 rounded-md font-medium flex items-center gap-2 hover:bg-gray-700 transition-colors"
+                                        className="group relative px-5 py-3 bg-gradient-to-r from-gray-800 to-gray-900 text-gray-300 rounded-xl font-medium flex items-center gap-2 hover:text-white transition-all duration-300 border border-gray-700 hover:border-gray-600"
                                     >
-                                        <RefreshCw className="h-4 w-4" />
+                                        <div className="absolute inset-0 bg-gradient-to-r from-gray-500/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+                                        <RefreshCw className="h-5 w-5 text-gray-400 group-hover:text-gray-300 transition-transform duration-300 group-hover:rotate-180" />
                                         <span className="hidden sm:inline">Actualizar</span>
                                     </button>
                                 </div>
                             </div>
 
-                            {/* Panel de filtros */}
+                            {/* Panel de filtros mejorado */}
                             {showFilters && (
-                                <div className="mt-6 border border-gray-700 rounded-xl bg-black shadow-lg backdrop-blur-sm transition-all duration-300 overflow-hidden">
-                                    <div className="flex justify-between items-center px-5 py-4 border-b border-gray-700">
-                                        <div className="flex items-center gap-2">
-                                            <Filter className="h-5 w-5 text-gray-400" />
+                                <div className="mt-6 border border-gray-700/50 rounded-xl bg-gradient-to-r from-gray-900/95 to-black/95 shadow-xl backdrop-blur-sm transition-all duration-300 overflow-hidden">
+                                    <div className="flex justify-between items-center px-6 py-4 border-b border-gray-700/50">
+                                        <div className="flex items-center gap-3">
+                                            <div className="p-2 bg-blue-500/10 rounded-lg border border-blue-500/20">
+                                                <Filter className="h-5 w-5 text-blue-400" />
+                                            </div>
                                             <h3 className="font-semibold text-gray-200 text-lg">Filtros avanzados</h3>
                                         </div>
                                         <button
                                             onClick={clearFilters}
-                                            className="text-sm text-gray-400 hover:text-gray-300 flex items-center gap-1.5 transition-colors duration-200 px-3 py-1.5 rounded-lg hover:bg-gray-700/70 border border-transparent hover:border-gray-600"
-                                            aria-label="Limpiar todos los filtros"
+                                            className="text-sm text-gray-400 hover:text-white flex items-center gap-2 transition-all duration-200 px-4 py-2 rounded-lg hover:bg-red-500/10 border border-transparent hover:border-red-500/20"
                                         >
                                             <span>Limpiar filtros</span>
                                             <X className="h-4 w-4" />
                                         </button>
                                     </div>
 
-                                    <div className="p-5">
-                                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5">
+                                    <div className="p-6">
+                                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                                             {/* Estado */}
-                                            <div className="filter-group">
-                                                <label htmlFor="estado-select" className="flex items-center gap-1.5 text-sm font-medium text-gray-300 mb-2">
+                                            <div className="filter-group bg-gray-800/30 p-4 rounded-xl border border-gray-700/50">
+                                                <label htmlFor="estado-select" className="flex items-center gap-2 text-sm font-medium text-gray-300 mb-3">
                                                     <CircleSlash2 className="h-4 w-4 text-gray-400" />
                                                     Estado
                                                 </label>
@@ -1062,7 +1098,7 @@ export default function ConsultasIteaGeneral() {
                                                         id="estado-select"
                                                         value={filters.estado}
                                                         onChange={(e) => setFilters({ ...filters, estado: e.target.value })}
-                                                        className="w-full bg-gray-700 border border-gray-600 rounded-lg px-3 py-2.5 text-white focus:outline-none focus:ring-2 focus:ring-gray-500 focus:border-gray-500 appearance-none transition-all duration-200"
+                                                        className="w-full bg-gray-900/50 border border-gray-700 rounded-lg px-4 py-2.5 text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent appearance-none transition-all duration-200"
                                                     >
                                                         <option value="">Todos los estados</option>
                                                         {uniqueFilterOptions.estados.map((estado) => (
@@ -1076,8 +1112,8 @@ export default function ConsultasIteaGeneral() {
                                             </div>
 
                                             {/* Estatus */}
-                                            <div className="filter-group">
-                                                <label htmlFor="estatus-select" className="flex items-center gap-1.5 text-sm font-medium text-gray-300 mb-2">
+                                            <div className="filter-group bg-gray-800/30 p-4 rounded-xl border border-gray-700/50">
+                                                <label htmlFor="estatus-select" className="flex items-center gap-2 text-sm font-medium text-gray-300 mb-3">
                                                     <ActivitySquare className="h-4 w-4 text-gray-400" />
                                                     Estatus
                                                 </label>
@@ -1086,7 +1122,7 @@ export default function ConsultasIteaGeneral() {
                                                         id="estatus-select"
                                                         value={filters.estatus}
                                                         onChange={(e) => setFilters({ ...filters, estatus: e.target.value })}
-                                                        className="w-full bg-gray-700 border border-gray-600 rounded-lg px-3 py-2.5 text-white focus:outline-none focus:ring-2 focus:ring-gray-500 focus:border-gray-500 appearance-none transition-all duration-200"
+                                                        className="w-full bg-gray-900/50 border border-gray-700 rounded-lg px-4 py-2.5 text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent appearance-none transition-all duration-200"
                                                     >
                                                         <option value="">Todos los estatus</option>
                                                         {uniqueFilterOptions.estatus.map((status) => (
@@ -1100,8 +1136,8 @@ export default function ConsultasIteaGeneral() {
                                             </div>
 
                                             {/* Área */}
-                                            <div className="filter-group">
-                                                <label htmlFor="area-select" className="flex items-center gap-1.5 text-sm font-medium text-gray-300 mb-2">
+                                            <div className="filter-group bg-gray-800/30 p-4 rounded-xl border border-gray-700/50">
+                                                <label htmlFor="area-select" className="flex items-center gap-2 text-sm font-medium text-gray-300 mb-3">
                                                     <LayoutGrid className="h-4 w-4 text-gray-400" />
                                                     Área
                                                 </label>
@@ -1110,7 +1146,7 @@ export default function ConsultasIteaGeneral() {
                                                         id="area-select"
                                                         value={filters.area}
                                                         onChange={(e) => setFilters({ ...filters, area: e.target.value })}
-                                                        className="w-full bg-gray-700 border border-gray-600 rounded-lg px-3 py-2.5 text-white focus:outline-none focus:ring-2 focus:ring-gray-500 focus:border-gray-500 appearance-none transition-all duration-200"
+                                                        className="w-full bg-gray-900/50 border border-gray-700 rounded-lg px-4 py-2.5 text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent appearance-none transition-all duration-200"
                                                     >
                                                         <option value="">Todas las áreas</option>
                                                         {uniqueFilterOptions.areas.map((area) => (
@@ -1124,8 +1160,8 @@ export default function ConsultasIteaGeneral() {
                                             </div>
 
                                             {/* Rubro */}
-                                            <div className="filter-group">
-                                                <label htmlFor="rubro-select" className="flex items-center gap-1.5 text-sm font-medium text-gray-300 mb-2">
+                                            <div className="filter-group bg-gray-800/30 p-4 rounded-xl border border-gray-700/50">
+                                                <label htmlFor="rubro-select" className="flex items-center gap-2 text-sm font-medium text-gray-300 mb-3">
                                                     <TagIcon className="h-4 w-4 text-gray-400" />
                                                     Rubro
                                                 </label>
@@ -1134,7 +1170,7 @@ export default function ConsultasIteaGeneral() {
                                                         id="rubro-select"
                                                         value={filters.rubro}
                                                         onChange={(e) => setFilters({ ...filters, rubro: e.target.value })}
-                                                        className="w-full bg-gray-700 border border-gray-600 rounded-lg px-3 py-2.5 text-white focus:outline-none focus:ring-2 focus:ring-gray-500 focus:border-gray-500 appearance-none transition-all duration-200"
+                                                        className="w-full bg-gray-900/50 border border-gray-700 rounded-lg px-4 py-2.5 text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent appearance-none transition-all duration-200"
                                                     >
                                                         <option value="">Todos los rubros</option>
                                                         {uniqueFilterOptions.rubros.map((rubro) => (
