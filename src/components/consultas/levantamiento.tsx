@@ -679,27 +679,84 @@ export default function LevantamientoUnificado() {
                             <div className="flex gap-2">
                                 <button
                                     onClick={() => handleFilterChange('origen', 'INEA')}
-                                    className={`px-4 py-2 rounded-md font-medium flex items-center gap-2 transition-all duration-200 transform hover:scale-105 ${
-                                        filters.origen?.includes('INEA')
-                                            ? 'bg-blue-900/70 text-blue-200 border border-blue-700 shadow-lg shadow-blue-900/20'
-                                            : 'bg-gray-800 text-gray-400 border border-gray-700 hover:bg-blue-900/20 hover:border-blue-700/50'
-                                    }`}
+                                    className={`
+                                        relative px-4 py-2 rounded-lg font-medium 
+                                        flex items-center gap-2 transition-all duration-300
+                                        ${filters.origen?.includes('INEA')
+                                            ? 'bg-gradient-to-br from-blue-900/70 to-blue-800/70 text-blue-200 border border-blue-700 shadow-lg shadow-blue-900/20'
+                                            : 'bg-gradient-to-br from-gray-800 to-gray-900 text-gray-400 border border-gray-700 hover:border-blue-700/50'
+                                        }
+                                        overflow-hidden
+                                    `}
                                     title="Filtrar origen INEA"
                                 >
-                                    <div className={`w-2 h-2 rounded-full ${filters.origen?.includes('INEA') ? 'bg-blue-400' : 'bg-gray-400'}`} />
-                                    INEA
+                                    {/* Animated gradient background */}
+                                    <div className={`
+                                        absolute inset-0 bg-gradient-to-r from-blue-500/20 to-transparent
+                                        opacity-0 hover:opacity-100 transition-opacity duration-500
+                                    `}></div>
+
+                                    {/* Dot indicator with pulse animation */}
+                                    <div className="relative">
+                                        <div className={`
+                                            w-2 h-2 rounded-full transition-colors duration-300
+                                            ${filters.origen?.includes('INEA') ? 'bg-blue-400' : 'bg-gray-400'}
+                                        `}/>
+                                        {filters.origen?.includes('INEA') && (
+                                            <div className="absolute inset-0 animate-ping rounded-full bg-blue-400/50"></div>
+                                        )}
+                                    </div>
+
+                                    {/* Text with underline animation */}
+                                    <span className="relative">
+                                        INEA
+                                        <span className={`
+                                            absolute inset-x-0 -bottom-0.5 h-px bg-gradient-to-r 
+                                            from-transparent via-blue-400/50 to-transparent
+                                            opacity-0 group-hover:opacity-100 transition-opacity duration-300
+                                        `}></span>
+                                    </span>
                                 </button>
+
                                 <button
                                     onClick={() => handleFilterChange('origen', 'ITEA')}
-                                    className={`px-4 py-2 rounded-md font-medium flex items-center gap-2 transition-all duration-200 transform hover:scale-105 ${
-                                        filters.origen?.includes('ITEA')
-                                            ? 'bg-purple-900/70 text-purple-200 border border-purple-700 shadow-lg shadow-purple-900/20'
-                                            : 'bg-gray-800 text-gray-400 border border-gray-700 hover:bg-purple-900/20 hover:border-purple-700/50'
-                                    }`}
+                                    className={`
+                                        relative px-4 py-2 rounded-lg font-medium 
+                                        flex items-center gap-2 transition-all duration-300
+                                        ${filters.origen?.includes('ITEA')
+                                            ? 'bg-gradient-to-br from-purple-900/70 to-purple-800/70 text-purple-200 border border-purple-700 shadow-lg shadow-purple-900/20'
+                                            : 'bg-gradient-to-br from-gray-800 to-gray-900 text-gray-400 border border-gray-700 hover:border-purple-700/50'
+                                        }
+                                        overflow-hidden
+                                    `}
                                     title="Filtrar origen ITEA"
                                 >
-                                    <div className={`w-2 h-2 rounded-full ${filters.origen?.includes('ITEA') ? 'bg-purple-400' : 'bg-gray-400'}`} />
-                                    ITEA
+                                    {/* Animated gradient background */}
+                                    <div className={`
+                                        absolute inset-0 bg-gradient-to-r from-purple-500/20 to-transparent
+                                        opacity-0 hover:opacity-100 transition-opacity duration-500
+                                    `}></div>
+
+                                    {/* Dot indicator with pulse animation */}
+                                    <div className="relative">
+                                        <div className={`
+                                            w-2 h-2 rounded-full transition-colors duration-300
+                                            ${filters.origen?.includes('ITEA') ? 'bg-purple-400' : 'bg-gray-400'}
+                                        `}/>
+                                        {filters.origen?.includes('ITEA') && (
+                                            <div className="absolute inset-0 animate-ping rounded-full bg-purple-400/50"></div>
+                                        )}
+                                    </div>
+
+                                    {/* Text with underline animation */}
+                                    <span className="relative">
+                                        ITEA
+                                        <span className={`
+                                            absolute inset-x-0 -bottom-0.5 h-px bg-gradient-to-r 
+                                            from-transparent via-purple-400/50 to-transparent
+                                            opacity-0 group-hover:opacity-100 transition-opacity duration-300
+                                        `}></span>
+                                    </span>
                                 </button>
                             </div>
                         </div>
