@@ -69,16 +69,29 @@ export default function LevantamientoUnificado() {
     const [filteredCount, setFilteredCount] = useState(0);
     const [currentPage, setCurrentPage] = useState(1);
     const [rowsPerPage, setRowsPerPage] = useState(10);
+
+    // Add this calculation
+    const totalPages = Math.ceil(filteredCount / rowsPerPage);
+
     const [searchTerm, setSearchTerm] = useState('');
     const [sortField, setSortField] = useState<keyof LevMueble>('id_inv');
     const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
-    const [filters, setFilters] = useState({
-        estado: '',
-        estatus: '',
-        area: '',
-        rubro: '',
-        formadq: '',
-        usufinal: ''
+    const [filters, setFilters] = useState<{
+        estado: string[];
+        estatus: string[];
+        area: string[];
+        rubro: string[];
+        formadq: string[];
+        usufinal: string[];
+        origen: string[];  // Agregamos origen a los filtros
+    }>({
+        estado: [],
+        estatus: [],
+        area: [],
+        rubro: [],
+        formadq: [],
+        usufinal: [],
+        origen: []     // Inicializamos origen
     });
     const [filterOptions, setFilterOptions] = useState<FilterOptions>({
         estados: [],
@@ -96,7 +109,7 @@ export default function LevantamientoUnificado() {
     const [showAreaPDFModal, setShowAreaPDFModal] = useState(false);
     const [areaPDFLoading, setAreaPDFLoading] = useState(false);
     const [areaPDFError, setAreaPDFError] = useState<string | null>(null);
-    const [areaDirectorForm, setAreaDirectorForm] = useState<{nombre: string, puesto: string}>({nombre: '', puesto: ''});
+    const [areaDirectorForm, setAreaDirectorForm] = useState<{ nombre: string, puesto: string }>({ nombre: '', puesto: '' });
     interface DirectorioOption {
         id_directorio: number;
         nombre: string;
@@ -105,15 +118,15 @@ export default function LevantamientoUnificado() {
     }
     const [areaDirectorOptions, setAreaDirectorOptions] = useState<DirectorioOption[]>([]);
     const [areaDirectorAmbiguous, setAreaDirectorAmbiguous] = useState(false);
-    const [areaPDFTarget, setAreaPDFTarget] = useState<{area: string, usufinal: string}>({area: '', usufinal: ''});
+    const [areaPDFTarget, setAreaPDFTarget] = useState<{ area: string, usufinal: string }>({ area: '', usufinal: '' });
 
     // Estado para controlar si los campos fueron auto-completados
-    const [autoCompletedFields, setAutoCompletedFields] = useState<{area: boolean, nombre: boolean, puesto: boolean}>(
+    const [autoCompletedFields, setAutoCompletedFields] = useState<{ area: boolean, nombre: boolean, puesto: boolean }>(
         { area: false, nombre: false, puesto: false }
     );
 
     // Detectar si hay filtro por área o usuario final
-    const isAreaOrUserFiltered = !!filters.area || !!filters.usufinal;
+    const isAreaOrUserFiltered = !!filters.area.length || !!filters.usufinal.length;
 
     // Estado para mostrar/ocultar filtros avanzados
     const [showFilters, setShowFilters] = useState(false);
@@ -158,8 +171,8 @@ export default function LevantamientoUnificado() {
 
     // Manejar click en botón PDF por área/usuario
     const handleAreaPDFClick = () => {
-        setAreaPDFTarget({ area: filters.area, usufinal: filters.usufinal });
-        fetchDirectorFromDirectorio(filters.area);
+        setAreaPDFTarget({ area: filters.area[0], usufinal: filters.usufinal[0] });
+        fetchDirectorFromDirectorio(filters.area[0]);
         setShowAreaPDFModal(true);
     };
 
@@ -223,7 +236,7 @@ export default function LevantamientoUnificado() {
                 data: exportData,
                 columns,
                 title: `LEVANTAMIENTO DE INVENTARIO - ${areaPDFTarget.area}`,
-                fileName: `levantamiento_area_${areaPDFTarget.area || areaPDFTarget.usufinal}_${new Date().toISOString().slice(0,10)}`,
+                fileName: `levantamiento_area_${areaPDFTarget.area || areaPDFTarget.usufinal}_${new Date().toISOString().slice(0, 10)}`,
                 firmas,
             });
             setShowAreaPDFModal(false);
@@ -323,9 +336,9 @@ export default function LevantamientoUnificado() {
                     query = query.or(searchPattern);
                 }
                 // Aplicar otros filtros
-                Object.entries(filters).forEach(([key, value]) => {
-                    if (value) {
-                        query = query.eq(key, value);
+                Object.entries(filters).forEach(([key, values]) => {
+                    if (values.length > 0) {
+                        query = query.in(key, values);
                     }
                 });
 
@@ -383,7 +396,7 @@ export default function LevantamientoUnificado() {
                 return;
             }
 
-            const fileName = `levantamiento_unificado_${new Date().toISOString().slice(0,10)}`;
+            const fileName = `levantamiento_unificado_${new Date().toISOString().slice(0, 10)}`;
 
             // --- OBTENER FIRMAS DE LA BD COMO EN pdfgenerator.tsx ---
             let firmas: { concepto: string; nombre: string; puesto: string }[] = [];
@@ -451,66 +464,84 @@ export default function LevantamientoUnificado() {
         setLoading(true);
         setError(null);
         try {
-            // Obtener el total de registros para el conteo
-            let countInea = supabase.from('muebles').select('*', { count: 'exact', head: true });
-            let countItea = supabase.from('mueblesitea').select('*', { count: 'exact', head: true });
+            // Determinar qué tablas consultar según el filtro de origen
+            const shouldQueryInea = !filters.origen.length || filters.origen.includes('INEA');
+            const shouldQueryItea = !filters.origen.length || filters.origen.includes('ITEA');
 
-            // Crear consultas base para los datos
-            let dataInea = supabase.from('muebles').select('*');
-            let dataItea = supabase.from('mueblesitea').select('*');
+            // Preparar consultas solo para las tablas necesarias
+            const queries = [];
+            const countQueries = [];
 
-            // Aplicar filtros a todas las consultas
-            if (searchTerm) {
-                const search = `%${searchTerm}%`;
-                const searchPattern = `id_inv.ilike.${search},descripcion.ilike.${search},resguardante.ilike.${search}`;
-                countInea = countInea.or(searchPattern);
-                countItea = countItea.or(searchPattern);
-                dataInea = dataInea.or(searchPattern);
-                dataItea = dataItea.or(searchPattern);
+            if (shouldQueryInea) {
+                let countInea = supabase.from('muebles').select('*', { count: 'exact', head: true });
+                let dataInea = supabase.from('muebles').select('*');
+
+                // Aplicar filtros excepto el de origen
+                if (searchTerm) {
+                    const search = `%${searchTerm}%`;
+                    const searchPattern = `id_inv.ilike.${search},descripcion.ilike.${search},resguardante.ilike.${search}`;
+                    countInea = countInea.or(searchPattern);
+                    dataInea = dataInea.or(searchPattern);
+                }
+
+                Object.entries(filters).forEach(([key, values]) => {
+                    if (values.length > 0 && key !== 'origen') {
+                        countInea = countInea.in(key, values);
+                        dataInea = dataInea.in(key, values);
+                    }
+                });
+
+                countQueries.push(countInea);
+                queries.push({ query: dataInea, type: 'INEA' });
             }
 
-            Object.entries(filters).forEach(([key, value]) => {
-                if (value) {
-                    countInea = countInea.eq(key, value);
-                    countItea = countItea.eq(key, value);
-                    dataInea = dataInea.eq(key, value);
-                    dataItea = dataItea.eq(key, value);
+            if (shouldQueryItea) {
+                let countItea = supabase.from('mueblesitea').select('*', { count: 'exact', head: true });
+                let dataItea = supabase.from('mueblesitea').select('*');
+
+                // Aplicar filtros excepto el de origen
+                if (searchTerm) {
+                    const search = `%${searchTerm}%`;
+                    const searchPattern = `id_inv.ilike.${search},descripcion.ilike.${search},resguardante.ilike.${search}`;
+                    countItea = countItea.or(searchPattern);
+                    dataItea = dataItea.or(searchPattern);
                 }
-            });
+
+                Object.entries(filters).forEach(([key, values]) => {
+                    if (values.length > 0 && key !== 'origen') {
+                        countItea = countItea.in(key, values);
+                        dataItea = dataItea.in(key, values);
+                    }
+                });
+
+                countQueries.push(countItea);
+                queries.push({ query: dataItea, type: 'ITEA' });
+            }
 
             // Obtener totales
-            const [countResInea, countResItea] = await Promise.all([countInea, countItea]);
-            const totalInea = countResInea.count || 0;
-            const totalItea = countResItea.count || 0;
-            const total = totalInea + totalItea;
+            const countResults = await Promise.all(countQueries);
+            const total = countResults.reduce((sum, result) => sum + (result.count || 0), 0);
             setFilteredCount(total);
 
             // Calcular rangos de paginación global
             const fromGlobal = (currentPage - 1) * rowsPerPage;
             const toGlobal = fromGlobal + rowsPerPage - 1;
 
-            // Calcular rangos para cada tabla
-            let fromInea = 0, toInea = -1, fromItea = 0, toItea = -1;
-            if (fromGlobal < totalInea) {
-                fromInea = fromGlobal;
-                toInea = Math.min(toGlobal, totalInea - 1);
-            }
-            if (toGlobal >= totalInea) {
-                fromItea = Math.max(0, fromGlobal - totalInea);
-                toItea = Math.min(toGlobal - totalItea, totalItea - 1);
-            }
+            // Obtener datos paginados de las tablas seleccionadas
+            const results = await Promise.all(
+                queries.map(({ query, type }) => 
+                    query
+                        .order(sortField, { ascending: sortDirection === 'asc' })
+                        .range(fromGlobal, toGlobal)
+                        .then(res => ({
+                            data: res.data?.map(item => ({ ...item, origen: type })) || [],
+                            type
+                        }))
+                )
+            );
 
-            // Aplicar ordenamiento y obtener datos paginados
-            const [dataResInea, dataResItea] = await Promise.all([
-                toInea >= fromInea ? dataInea.order(sortField, { ascending: sortDirection === 'asc' }).range(fromInea, toInea) : { data: [] },
-                toItea >= fromItea ? dataItea.order(sortField, { ascending: sortDirection === 'asc' }).range(fromItea, toItea) : { data: [] }
-            ]);
-
-            // Combinar y procesar resultados
-            let pageMuebles = [
-                ...(dataResInea.data?.map(item => ({ ...item, origen: 'INEA' as const })) || []),
-                ...(dataResItea.data?.map(item => ({ ...item, origen: 'ITEA' as const })) || [])
-            ];
+            // Combinar y ordenar resultados
+            let pageMuebles = results.flatMap(result => result.data);
 
             // Ordenar los resultados combinados
             if (pageMuebles.length > 0) {
@@ -532,6 +563,7 @@ export default function LevantamientoUnificado() {
             )) {
                 setSelectedItem(null);
             }
+
         } catch (error) {
             console.error('Error al cargar muebles:', error);
             setError('Error al cargar los datos. Por favor, intente nuevamente.');
@@ -559,29 +591,46 @@ export default function LevantamientoUnificado() {
 
     // useEffect para autocompletar directorio al cambiar el filtro de usuario final
     useEffect(() => {
-        if (filters.usufinal) {
-            fetchDirectorFromDirectorio(filters.area);
+        if (filters.usufinal.length) {
+            fetchDirectorFromDirectorio(filters.area[0]);
         }
         // Solo autocompletar si hay filtro de usuario
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [filters.usufinal]);
 
+    const handleFilterChange = (filterName: keyof typeof filters, value: string) => {
+        setFilters(prev => {
+            const currentValues = prev[filterName];
+            if (currentValues.includes(value)) {
+                return {
+                    ...prev,
+                    [filterName]: currentValues.filter(v => v !== value)
+                };
+            } else {
+                return {
+                    ...prev,
+                    [filterName]: [...currentValues, value]
+                };
+            }
+        });
+        setCurrentPage(1);
+    };
+
     const clearFilters = () => {
         setFilters({
-            estado: '',
-            estatus: '',
-            area: '',
-            rubro: '',
-            formadq: '',
-            usufinal: ''
+            estado: [],
+            estatus: [],
+            area: [],
+            rubro: [],
+            formadq: [],
+            usufinal: [],
+            origen: []
         });
         setSearchTerm('');
         setCurrentPage(1);
     };
-
-    const totalPages = Math.ceil(filteredCount / rowsPerPage);
-
     const changePage = (page: number) => {
+        const totalPages = Math.ceil(filteredCount / rowsPerPage);
         if (page < 1 || page > totalPages) return;
         setCurrentPage(page);
     };
@@ -593,6 +642,10 @@ export default function LevantamientoUnificado() {
 
     const role = useUserRole();
     const isUsuario = role === "usuario";
+
+    function handleClearAllFilters(): void {
+        throw new Error('Function not implemented.');
+    }
 
     return (
         <div className="bg-black text-white min-h-screen p-2 sm:p-4 md:p-6 lg:p-8">
@@ -606,18 +659,49 @@ export default function LevantamientoUnificado() {
                 </div>
                 <div className="flex flex-col gap-4 p-4">
                     <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-4">
-                        <div className="relative flex-grow">
-                            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                                <Search className="h-5 w-5 text-gray-500" />
+                        <div className="flex gap-4 flex-grow">
+                            {/* Barra de búsqueda */}
+                            <div className="relative flex-grow">
+                                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                    <Search className="h-5 w-5 text-gray-500" />
+                                </div>
+                                <input
+                                    spellCheck="false"
+                                    type="text"
+                                    value={searchTerm}
+                                    onChange={e => { setSearchTerm(e.target.value); setCurrentPage(1); }}
+                                    placeholder="Buscar por ID o descripción..."
+                                    className="pl-10 pr-4 py-2 w-full bg-black border border-gray-700 rounded-md text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:border-gray-500"
+                                    title="Buscar"
+                                />
                             </div>
-                            <input
-                                type="text"
-                                value={searchTerm}
-                                onChange={e => { setSearchTerm(e.target.value); setCurrentPage(1); }}
-                                placeholder="Buscar por ID o descripción..."
-                                className="pl-10 pr-4 py-2 w-full bg-black border border-gray-700 rounded-md text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:border-gray-500"
-                                title="Buscar"
-                            />
+                            {/* Botones de filtro por origen */}
+                            <div className="flex gap-2">
+                                <button
+                                    onClick={() => handleFilterChange('origen', 'INEA')}
+                                    className={`px-4 py-2 rounded-md font-medium flex items-center gap-2 transition-all duration-200 transform hover:scale-105 ${
+                                        filters.origen?.includes('INEA')
+                                            ? 'bg-blue-900/70 text-blue-200 border border-blue-700 shadow-lg shadow-blue-900/20'
+                                            : 'bg-gray-800 text-gray-400 border border-gray-700 hover:bg-blue-900/20 hover:border-blue-700/50'
+                                    }`}
+                                    title="Filtrar origen INEA"
+                                >
+                                    <div className={`w-2 h-2 rounded-full ${filters.origen?.includes('INEA') ? 'bg-blue-400' : 'bg-gray-400'}`} />
+                                    INEA
+                                </button>
+                                <button
+                                    onClick={() => handleFilterChange('origen', 'ITEA')}
+                                    className={`px-4 py-2 rounded-md font-medium flex items-center gap-2 transition-all duration-200 transform hover:scale-105 ${
+                                        filters.origen?.includes('ITEA')
+                                            ? 'bg-purple-900/70 text-purple-200 border border-purple-700 shadow-lg shadow-purple-900/20'
+                                            : 'bg-gray-800 text-gray-400 border border-gray-700 hover:bg-purple-900/20 hover:border-purple-700/50'
+                                    }`}
+                                    title="Filtrar origen ITEA"
+                                >
+                                    <div className={`w-2 h-2 rounded-full ${filters.origen?.includes('ITEA') ? 'bg-purple-400' : 'bg-gray-400'}`} />
+                                    ITEA
+                                </button>
+                            </div>
                         </div>
                         <div className="flex gap-2">
                             <button
@@ -665,17 +749,17 @@ export default function LevantamientoUnificado() {
                             </button>
                             <button
                                 onClick={() => setShowFilters(!showFilters)}
-                                className={`px-4 py-2 rounded-md font-medium flex items-center gap-2 transition-colors ${Object.values(filters).some(value => value !== '')
+                                className={`px-4 py-2 rounded-md font-medium flex items-center gap-2 transition-colors ${Object.values(filters).some(value => value.length > 0)
                                     ? 'bg-gray-900 text-blue-200 hover:bg-gray-800'
                                     : 'bg-gray-800 text-gray-300 hover:bg-gray-700'
-                                }`}
+                                    }`}
                                 title="Mostrar/ocultar filtros avanzados"
                             >
                                 <Filter className="h-4 w-4" />
                                 Filtros
-                                {Object.values(filters).some(value => value !== '') && (
+                                {Object.values(filters).some(value => value.length > 0) && (
                                     <span className="ml-1 bg-black text-white rounded-full w-5 h-5 flex items-center justify-center text-xs">
-                                        {Object.values(filters).filter(value => value !== '').length}
+                                        {Object.values(filters).filter(value => value.length > 0).length}
                                     </span>
                                 )}
                             </button>
@@ -689,550 +773,790 @@ export default function LevantamientoUnificado() {
                         </div>
                     </div>
                     {showFilters && (
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-4 mt-6 border border-gray-700 rounded-xl bg-black shadow-lg backdrop-blur-sm transition-all duration-300 overflow-hidden p-6">
-                            <div>
-                                <label className="block text-sm font-medium text-gray-300 mb-1">Estado</label>
-                                <select
-                                    value={filters.estado}
-                                    onChange={e => {
-                                        setFilters(f => ({ ...f, estado: e.target.value }));
-                                        setCurrentPage(1);
-                                    }}
-                                    className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2.5 text-white focus:ring-2 focus:ring-fuchsia-600 focus:border-fuchsia-600 transition-all"
-                                    title="Filtrar por estado"
-                                >
-                                    <option value="">Todos</option>
-                                    {filterOptions.estados.map(e => (
-                                        <option key={e} value={e}>{e}</option>
-                                    ))}
-                                </select>
+                        <div className="mt-6 border border-gray-700 rounded-xl bg-black/80 shadow-xl backdrop-blur-lg transition-all duration-300 overflow-hidden">
+                            <div className="p-4 bg-gradient-to-r from-gray-900 to-black border-b border-gray-700">
+                                <h3 className="text-lg font-semibold text-white flex items-center">
+                                    <span className="mr-2">
+                                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-fuchsia-400" viewBox="0 0 20 20" fill="currentColor">
+                                            <path fillRule="evenodd" d="M3 3a1 1 0 011-1h12a1 1 0 011 1v3a1 1 0 01-.293.707L12 11.414V15a1 1 0 01-.293.707l-2 2A1 1 0 018 17v-5.586L3.293 6.707A1 1 0 013 6V3z" clipRule="evenodd" />
+                                        </svg>
+                                    </span>
+                                    Filtros Aplicados
+                                </h3>
                             </div>
-                            <div>
-                                <label className="block text-sm font-medium text-gray-300 mb-1">Estatus</label>
-                                <select
-                                    value={filters.estatus}
-                                    onChange={e => {
-                                        setFilters(f => ({ ...f, estatus: e.target.value }));
-                                        setCurrentPage(1);
-                                    }}
-                                    className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2.5 text-white focus:ring-2 focus:ring-fuchsia-600 focus:border-fuchsia-600 transition-all"
-                                    title="Filtrar por estatus"
-                                >
-                                    <option value="">Todos</option>
-                                    {filterOptions.estatus.map(e => (
-                                        <option key={e} value={e}>{e}</option>
-                                    ))}
-                                </select>
-                            </div>
-                            <div>
-                                <label className="block text-sm font-medium text-gray-300 mb-1">Área</label>
-                                <select
-                                    value={filters.area}
-                                    onChange={e => {
-                                        setFilters(f => ({ ...f, area: e.target.value }));
-                                        setCurrentPage(1);
-                                    }}
-                                    className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2.5 text-white focus:ring-2 focus:ring-fuchsia-600 focus:border-fuchsia-600 transition-all"
-                                    title="Filtrar por área"
-                                >
-                                    <option value="">Todas</option>
-                                    {filterOptions.areas.map(e => (
-                                        <option key={e} value={e}>{e}</option>
-                                    ))}
-                                </select>
-                            </div>
-                            <div>
-                                <label className="block text-sm font-medium text-gray-300 mb-1">Rubro</label>
-                                <select
-                                    value={filters.rubro}
-                                    onChange={e => {
-                                        setFilters(f => ({ ...f, rubro: e.target.value }));
-                                        setCurrentPage(1);
-                                    }}
-                                    className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2.5 text-white focus:ring-2 focus:ring-fuchsia-600 focus:border-fuchsia-600 transition-all"
-                                    title="Filtrar por rubro"
-                                >
-                                    <option value="">Todos</option>
-                                    {filterOptions.rubros.map(e => (
-                                        <option key={e} value={e}>{e}</option>
-                                    ))}
-                                </select>
-                            </div>
-                            <div>
-                                <label className="block text-sm font-medium text-gray-300 mb-1">Forma Adq.</label>
-                                <select
-                                    value={filters.formadq}
-                                    onChange={e => {
-                                        setFilters(f => ({ ...f, formadq: e.target.value }));
-                                        setCurrentPage(1);
-                                    }}
-                                    className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2.5 text-white focus:ring-2 focus:ring-fuchsia-600 focus:border-fuchsia-600 transition-all"
-                                    title="Filtrar por forma de adquisición"
-                                >
-                                    <option value="">Todas</option>
-                                    {filterOptions.formadq.map(e => (
-                                        <option key={e} value={e}>{e}</option>
-                                    ))}
-                                </select>
-                            </div>
-                            <div>
-                                <label className="block text-sm font-medium text-gray-300 mb-1">Usuario Final</label>
-                                <select
-                                    value={filters.usufinal}
-                                    onChange={e => {
-                                        setFilters(f => ({ ...f, usufinal: e.target.value }));
-                                        setCurrentPage(1);
-                                    }}
-                                    className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2.5 text-white focus:ring-2 focus:ring-fuchsia-600 focus:border-fuchsia-600 transition-all"
-                                    title="Filtrar por usuario final"
-                                >
-                                    <option value="">Todos</option>
-                                    {filterOptions.usufinales?.map(u => (
-                                        <option key={u} value={u}>{u}</option>
-                                    ))}
-                                </select>
-                            </div>
-                        </div>
-                    )}
-                    {message && (
-                        <div className={`p-3 rounded-md ${message.type === 'success' ? 'bg-green-900/50 text-green-300 border border-green-800' :
-                                message.type === 'error' ? 'bg-red-900/50 text-red-300 border border-red-800' :
-                                    message.type === 'warning' ? 'bg-yellow-900/50 text-yellow-300 border border-yellow-800' :
-                                        message.type === 'info' ? 'bg-blue-900/50 text-blue-300 border border-blue-800' : ''
-                            }`}>
-                            {message.text}
-                        </div>
-                    )}
-                    {showExportModal && (
-                        <div className="fixed inset-0 bg-black/90 flex items-center justify-center z-50 px-4 animate-fadeIn">
-                            <div className={`bg-black rounded-2xl shadow-2xl border w-full max-w-md overflow-hidden transition-all duration-300 transform ${
-                                exportType === 'excel' ? 'border-green-600/30' : 'border-red-600/30'
-                            }`}>
-                                <div className={`relative p-6 bg-gradient-to-b from-black to-gray-900 ${
-                                    exportType === 'excel' ? 'from-green-950 to-green-900' : 'from-red-950 to-red-900'
-                                }`}>
-                                    <div className={`absolute top-0 left-0 w-full h-1 bg-gradient-to-r ${
-                                        exportType === 'excel' 
-                                            ? 'from-green-500/60 via-green-400 to-green-500/60'
-                                            : 'from-red-500/60 via-red-400 to-red-500/60'
-                                    }`}></div>
 
-                                    <button
-                                        onClick={() => setShowExportModal(false)}
-                                        className={`absolute top-3 right-3 p-2 rounded-full bg-black/60 hover:bg-gray-900 ${
-                                            exportType === 'excel' ? 'text-green-400 hover:text-green-500 border-green-500/30' : 'text-red-400 hover:text-red-500 border-red-500/30'
-                                        } border transition-colors`}
-                                        title="Cerrar"
-                                    >
-                                        <X className="h-4 w-4" />
-                                    </button>
-
-                                    <div className="flex flex-col items-center text-center mb-4">
-                                        <div className={`p-3 rounded-full border mb-3 ${
-                                            exportType === 'excel' ? 'bg-green-500/10 border-green-500/30' : 'bg-red-500/10 border-red-500/30'
-                                        }`}>
-                                            {exportType === 'excel' ? (
-                                                <FileUp className="h-8 w-8 text-green-500" />
-                                            ) : (
-                                                <File className="h-8 w-8 text-red-500" />
-                                            )}
-                                        </div>
-                                        <h3 className={`text-2xl font-bold ${
-                                            exportType === 'excel' ? 'text-green-400' : 'text-red-400'
-                                        }`}>
-                                            Exportar a {exportType === 'excel' ? 'Excel' : 'PDF'}
-                                        </h3>
-                                        <p className="text-gray-400 mt-2">
-                                            Exportar los datos a un archivo {exportType === 'excel' ? 'Excel para su análisis' : 'PDF para su visualización'}
-                                        </p>
-                                    </div>
-
-                                    <div className="space-y-5 mt-6">
-                                        <div className="rounded-lg border border-gray-800 bg-gray-900/50 p-4">
-                                            <label className="block text-xs uppercase tracking-wider text-gray-500 mb-1">Documento a generar</label>
-                                            <div className="flex items-center gap-3">
-                                                <div className="p-2 bg-gray-800 rounded-lg">
-                                                    {exportType === 'excel' ? (
-                                                        <FileUp className="h-4 w-4 text-green-400" />
-                                                    ) : (
-                                                        <File className="h-4 w-4 text-red-400" />
-                                                    )}
-                                                </div>
-                                                <span className="text-white font-medium">
-                                                    {`Reporte_inventario_${new Date().toISOString().slice(0, 10)}.${exportType === 'excel' ? 'xlsx' : 'pdf'}`}
-                                                </span>
-                                            </div>
-                                        </div>
-
-                                        <div className="w-full flex flex-col items-center gap-4">
-                                            <div className="w-full">
-                                                <button
-                                                    onClick={handleExport}
-                                                    className={`w-full py-3 px-4 font-medium rounded-lg flex items-center justify-center gap-2 transition-all transform hover:scale-[1.02] shadow-lg ${
-                                                        exportType === 'excel'
-                                                            ? 'bg-gradient-to-r from-green-600 to-green-500 hover:from-green-500 hover:to-green-400'
-                                                            : 'bg-gradient-to-r from-red-600 to-red-500 hover:from-red-500 hover:to-red-400'
-                                                    } text-black`}
-                                                >
-                                                    {loading ? (
-                                                        <>
-                                                            <RefreshCw className="h-5 w-5 animate-spin" />
-                                                            {`Generando ${exportType === 'excel' ? 'Excel' : 'PDF'}...`}
-                                                        </>
-                                                    ) : (
-                                                        <>
-                                                            {exportType === 'excel' ? (
-                                                                <FileUp className="h-5 w-5" />
-                                                            ) : (
-                                                                <File className="h-5 w-5" />
-                                                            )}
-                                                            {`Descargar ${exportType === 'excel' ? 'Excel' : 'PDF'}`}
-                                                        </>
-                                                    )}
-                                                </button>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    )}
-                    {showAreaPDFModal && (
-                        <div className="fixed inset-0 bg-black/90 flex items-center justify-center z-50 px-4 animate-fadeIn">
-                            <div className="bg-black rounded-2xl shadow-2xl border border-fuchsia-600/30 w-full max-w-md overflow-hidden transition-all duration-300 transform">
-                                <div className="relative p-6 bg-gradient-to-b from-black to-fuchsia-950">
-                                    <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-fuchsia-500/60 via-fuchsia-400 to-fuchsia-500/60"></div>
-                                    <button
-                                        onClick={() => setShowAreaPDFModal(false)}
-                                        className="absolute top-3 right-3 p-2 rounded-full bg-black/60 hover:bg-gray-900 text-fuchsia-400 hover:text-fuchsia-500 border border-fuchsia-500/30 transition-colors"
-                                        title="Cerrar"
-                                    >
-                                        <X className="h-4 w-4" />
-                                    </button>
-                                    <div className="flex flex-col items-center text-center mb-4">
-                                        <div className="p-3 rounded-full border border-fuchsia-500/30 bg-fuchsia-500/10 mb-3">
-                                            <FileText className="h-8 w-8 text-fuchsia-400" />
-                                        </div>
-                                        <h3 className="text-2xl font-bold text-fuchsia-400">Exportar PDF por Área/Usuario</h3>
-                                        <p className="text-gray-400 mt-2">Genera un PDF con encabezado y firma personalizada para el área o usuario filtrado.</p>
-                                    </div>
-                                    <form className="space-y-4 mt-2" onSubmit={e => { e.preventDefault(); handleAreaPDFGenerate(); }}>
-                                        <div>
-                                            <label className="block text-xs uppercase tracking-wider text-gray-400 mb-1">Área</label>
-                                            <input
-                                                title='Área'
-                                                type="text"
-                                                value={areaPDFTarget.area}
-                                                onChange={e => {
-                                                    setAreaPDFTarget(t => ({ ...t, area: e.target.value }));
-                                                    setAutoCompletedFields(f => ({ ...f, area: false }));
-                                                }}
-                                                placeholder="Área"
-                                                required
-                                                disabled={areaPDFLoading || (isUsuario ? true : autoCompletedFields.area)}
-                                                className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2.5 text-white"
-                                            />
-                                            {isUsuario && (
-                                                <div className="text-xs text-gray-400 mt-1">Solo un administrador puede editar este campo</div>
-                                            )}
-                                        </div>
-                                        <div>
-                                            <label className="block text-xs uppercase tracking-wider text-gray-400 mb-1">Director/Jefe</label>
-                                            {areaDirectorAmbiguous && areaDirectorOptions.length > 0 ? (
-                                                <select
-                                                    title='Director/Jefe'
-                                                    className="w-full bg-gray-800 border border-fuchsia-700 rounded-lg px-3 py-2.5 text-white"
-                                                    value={areaDirectorForm.nombre}
-                                                    onChange={e => {
-                                                        const selected = areaDirectorOptions.find(opt => opt.nombre === e.target.value);
-                                                        setAreaDirectorForm(f => ({
-                                                            ...f,
-                                                            nombre: selected?.nombre || '',
-                                                            puesto: selected?.puesto || ''
-                                                        }));
-                                                        setAreaPDFTarget(t => ({ ...t, area: selected?.area || t.area }));
-                                                        setAutoCompletedFields({
-                                                            area: !!selected?.area,
-                                                            nombre: !!selected?.nombre,
-                                                            puesto: !!selected?.puesto
-                                                        });
-                                                    }}
-                                                    disabled={areaPDFLoading}
-                                                >
-                                                    <option value="">Selecciona...</option>
-                                                    {areaDirectorOptions.map(opt => (
-                                                        <option key={opt.id_directorio} value={opt.nombre}>{opt.nombre}</option>
-                                                    ))}
-                                                </select>
-                                            ) : (
-                                                <input
-                                                    type="text"
-                                                    className="w-full bg-gray-800 border border-fuchsia-700 rounded-lg px-3 py-2.5 text-white"
-                                                    value={areaDirectorForm.nombre}
-                                                    onChange={e => {
-                                                        setAreaDirectorForm(f => ({ ...f, nombre: e.target.value }));
-                                                        setAutoCompletedFields(f => ({ ...f, nombre: false }));
-                                                    }}
-                                                    placeholder="Nombre del director/jefe"
-                                                    required
-                                                    disabled={areaPDFLoading || (isUsuario ? true : autoCompletedFields.nombre)}
-                                                />
-                                            )}
-                                            {isUsuario && (
-                                                <div className="text-xs text-gray-400 mt-1">Solo un administrador puede editar este campo</div>
-                                            )}
-                                        </div>
-                                        <div>
-                                            <label className="block text-xs uppercase tracking-wider text-gray-400 mb-1">Puesto</label>
-                                            <input
-                                                type="text"
-                                                className="w-full bg-gray-800 border border-fuchsia-700 rounded-lg px-3 py-2.5 text-white"
-                                                value={areaDirectorForm.puesto ?? ''}
-                                                onChange={e => {
-                                                    setAreaDirectorForm(f => ({ ...f, puesto: e.target.value }));
-                                                    setAutoCompletedFields(f => ({ ...f, puesto: false }));
-                                                }}
-                                                placeholder="Puesto del director/jefe"
-                                                required
-                                                disabled={areaPDFLoading || (isUsuario ? true : autoCompletedFields.puesto)}
-                                                autoComplete="off"
-                                            />
-                                            {isUsuario && (
-                                                <div className="text-xs text-gray-400 mt-1">Solo un administrador puede editar este campo</div>
-                                            )}
-                                        </div>
-                                        {areaPDFError && <div className="text-red-400 text-sm">{areaPDFError}</div>}
-                                        <div className="w-full flex flex-col items-center gap-4 mt-4">
-                                            <button
-                                                type="submit"
-                                                className={`w-full py-3 px-4 font-medium rounded-lg flex items-center justify-center gap-2 transition-all transform hover:scale-[1.02] shadow-lg bg-gradient-to-r from-fuchsia-600 to-fuchsia-500 hover:from-fuchsia-500 hover:to-fuchsia-400 text-black ${
-                                                    areaPDFLoading || !areaDirectorForm.nombre || !areaDirectorForm.puesto || !areaPDFTarget.area ? 'opacity-50 cursor-not-allowed' : ''
-                                                }`}
-                                                disabled={areaPDFLoading || !areaDirectorForm.nombre || !areaDirectorForm.puesto || !areaPDFTarget.area}
-                                            >
-                                                {areaPDFLoading ? (
-                                                    <>
-                                                        <RefreshCw className="h-5 w-5 animate-spin" />
-                                                        Generando PDF...
-                                                    </>
-                                                ) : (
-                                                    <>
-                                                        <FileText className="h-5 w-5" />
-                                                        Descargar PDF personalizado
-                                                    </>
-                                                )}
-                                            </button>
-                                        </div>
-                                    </form>
-                                </div>
-                            </div>
-                        </div>
-                    )}
-                    <div className="flex flex-col lg:flex-row gap-6">
-                        <div className="w-full">
-                            <div className="bg-black rounded-lg border border-gray-800 overflow-x-auto overflow-y-auto flex flex-col flex-grow max-h-[70vh]">
-                                <table className="min-w-full divide-y divide-gray-800">
-                                    <thead className="bg-black sticky top-0 z-10">
-                                        <tr>
-                                            <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Origen</th>
-                                            <th
-                                                onClick={() => {
-                                                    setSortField('id_inv');
-                                                    setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
-                                                }}
-                                                className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider cursor-pointer hover:bg-gray-700"
-                                            >
-                                                <div className="flex items-center gap-1">ID Inventario<ArrowUpDown className="h-3 w-3" /></div>
-                                            </th>
-                                            <th
-                                                onClick={() => {
-                                                    setSortField('descripcion');
-                                                    setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
-                                                }}
-                                                className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider cursor-pointer hover:bg-gray-700"
-                                            >
-                                                <div className="flex items-center gap-1">Descripción<ArrowUpDown className="h-3 w-3" /></div>
-                                            </th>
-                                            <th
-                                                onClick={() => {
-                                                    setSortField('area');
-                                                    setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
-                                                }}
-                                                className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider cursor-pointer hover:bg-gray-700"
-                                            >
-                                                <div className="flex items-center gap-1">Área<ArrowUpDown className="h-3 w-3" /></div>
-                                            </th>
-                                            <th
-                                                onClick={() => {
-                                                    setSortField('usufinal');
-                                                    setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
-                                                }}
-                                                className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider cursor-pointer hover:bg-gray-700"
-                                            >
-                                                <div className="flex items-center gap-1">Director/Jefe<ArrowUpDown className="h-3 w-3" /></div>
-                                            </th>
-                                            <th
-                                                onClick={() => {
-                                                    setSortField('estatus');
-                                                    setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
-                                                }}
-                                                className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider cursor-pointer hover:bg-gray-700"
-                                            >
-                                                <div className="flex items-center gap-1">Estatus<ArrowUpDown className="h-3 w-3" /></div>
-                                            </th>
-                                        </tr>
-                                    </thead>
-                                    <tbody className="bg-black divide-y divide-gray-800">
-                                        {error ? (
-                                            <tr className="h-96">
-                                                <td colSpan={6} className="px-6 py-24 text-center text-red-400">
-                                                    <AlertCircle className="h-12 w-12" />
-                                                    <p className="text-lg font-medium">{error}</p>
-                                                </td>
-                                            </tr>
-                                        ) : muebles.length === 0 ? (
-                                            <tr className="h-96">
-                                                <td colSpan={6} className="px-6 py-24 text-center text-gray-400">
-                                                    <Search className="h-12 w-12 text-gray-500" />
-                                                    <p className="text-lg font-medium">No se encontraron resultados</p>
-                                                </td>
-                                            </tr>
-                                        ) : (
-                                            muebles.map((item) => (
-                                                <tr
-                                                    key={`${item.origen}-${item.id}`}
-                                                    className={
-                                                        `transition-colors`
-                                                    }
-                                                >
-                                                    <td className="px-4 py-3 text-xs">
-                                                        <span className={`inline-flex items-center px-2.5 py-1 rounded-full font-bold ${ORIGEN_COLORS[item.origen]}`}>
-                                                            {item.origen}
-                                                        </span>
-                                                    </td>
-                                                    <td className="px-4 py-3 whitespace-nowrap text-sm font-medium text-white">
-                                                        {item.id_inv}
-                                                    </td>
-                                                    <td className="px-4 py-3 text-sm text-gray-300">
-                                                        {truncateText(item.descripcion, 40)}
-                                                    </td>
-                                                    <td className="px-4 py-3 text-sm text-gray-300">
-                                                        {truncateText(item.area, 20)}
-                                                    </td>
-                                                    <td className="px-4 py-3 text-sm text-gray-300">
-                                                        {truncateText(item.usufinal, 20)}
-                                                    </td>
-                                                    <td className="px-4 py-3 text-sm">
-                                                        <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium ${item.estatus === 'ACTIVO' ? ESTATUS_COLORS.ACTIVO :
-                                                                item.estatus === 'INACTIVO' ? ESTATUS_COLORS.INACTIVO :
-                                                                    item.estatus === 'NO LOCALIZADO' ? ESTATUS_COLORS['NO LOCALIZADO'] :
-                                                                        ESTATUS_COLORS.DEFAULT
-                                                            }`}>
-                                                            {item.estatus}
-                                                        </span>
-                                                    </td>
-                                                </tr>
-                                            ))
-                                        )}
-                                    </tbody>
-                                </table>
-                            </div>
-                            <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mt-4">
-                                <div className="text-sm text-gray-400 font-medium">
-                                    Mostrando <span className="text-white">{(currentPage - 1) * rowsPerPage + 1}-{Math.min(currentPage * rowsPerPage, filteredCount)}</span> de <span className="text-white">{filteredCount}</span> registros
-                                </div>
-                                <div className="flex items-center gap-4">
-                                    <div className="flex items-center space-x-1 bg-gray-850 rounded-lg p-1">
-                                        <button
-                                            onClick={() => changePage(1)}
-                                            disabled={currentPage === 1}
-                                            className={`p-1.5 rounded-md flex items-center justify-center ${currentPage === 1 ? 'text-gray-600 cursor-not-allowed' : 'text-gray-400 hover:bg-gray-800 hover:text-white'}`}
-                                            title="Primera página"
-                                        >
-                                            <div className="flex">
-                                                <ChevronLeft className="h-4 w-4" />
-                                                <ChevronLeft className="h-4 w-4 -ml-2" />
-                                            </div>
-                                        </button>
-                                        <button
-                                            onClick={() => changePage(currentPage - 1)}
-                                            disabled={currentPage === 1}
-                                            className={`p-1.5 rounded-md ${currentPage === 1 ? 'text-gray-600 cursor-not-allowed' : 'text-gray-400 hover:bg-gray-800 hover:text-white'}`}
-                                            title="Página anterior"
-                                        >
-                                            <ChevronLeft className="h-4 w-4" />
-                                        </button>
-                                        <div className="flex items-center">
-                                            {Array.from({ length: totalPages }, (_, i) => i + 1)
-                                                .filter(page =>
-                                                    page === 1 ||
-                                                    page === totalPages ||
-                                                    (page >= currentPage - 1 && page <= currentPage + 1)
-                                                )
-                                                .map((page, i, arr) => (
-                                                    <React.Fragment key={page}>
-                                                        {i > 0 && arr[i] - arr[i - 1] > 1 && (
-                                                            <span className="px-2 text-gray-400">...</span>
-                                                        )}
-                                                        <button
-                                                            onClick={() => changePage(page)}
-                                                            className={`min-w-[32px] h-8 px-2 rounded-md text-sm font-medium flex items-center justify-center ${currentPage === page ? 'bg-black text-white' : 'text-gray-400 hover:bg-gray-800 hover:text-white'
-                                                                }`}
-                                                            title={`Ir a la página ${page}`}
-                                                        >
-                                                            {page}
-                                                        </button>
-                                                    </React.Fragment>
-                                                ))}
-                                        </div>
-                                        <button
-                                            onClick={() => changePage(currentPage + 1)}
-                                            disabled={currentPage === totalPages || filteredCount === 0}
-                                            className={`p-1.5 rounded-md ${currentPage === totalPages || filteredCount === 0 ? 'text-gray-600 cursor-not-allowed' : 'text-gray-400 hover:bg-gray-800 hover:text-white'}`}
-                                            title="Página siguiente"
-                                        >
-                                            <ChevronRight className="h-4 w-4" />
-                                        </button>
-                                        <button
-                                            onClick={() => changePage(totalPages)}
-                                            disabled={currentPage === totalPages || filteredCount === 0}
-                                            className={`p-1.5 rounded-md flex items-center justify-center ${currentPage === totalPages || filteredCount === 0 ? 'text-gray-600 cursor-not-allowed' : 'text-gray-400 hover:bg-gray-800 hover:text-white'}`}
-                                            title="Última página"
-                                        >
-                                            <div className="flex">
-                                                <ChevronRight className="h-4 w-4" />
-                                                <ChevronRight className="h-4 w-4 -ml-2" />
-                                            </div>
-                                        </button>
-                                    </div>
-                                    <div className="flex items-center bg-gray-850 rounded-lg px-3 py-1.5">
-                                        <label htmlFor="rowsPerPage" className="text-sm text-gray-400 mr-2">Filas:</label>
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-5 p-6">
+                                {/* Filter: Estado */}
+                                <div className="filter-group">
+                                    <label className="block text-sm font-medium text-gray-300 mb-2 flex items-center">
+                                        <span className="h-2 w-2 rounded-full bg-blue-500 mr-2"></span>
+                                        Estado
+                                    </label>
+                                    <div className="relative">
                                         <select
-                                            id="rowsPerPage"
-                                            value={rowsPerPage}
-                                            onChange={e => {
-                                                setRowsPerPage(Number(e.target.value));
-                                                setCurrentPage(1);
-                                            }}
-                                            className="bg-gray-800 border border-gray-700 rounded-md px-2 py-1 text-sm text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                                            title="Filas por página"
+                                            value={filters.estado.length ? filters.estado[0] : ''}
+                                            onChange={e => handleFilterChange('estado', e.target.value)}
+                                            className="w-full bg-gray-800 border border-gray-700 rounded-lg pl-3 pr-10 py-2.5 text-white focus:ring-2 focus:ring-fuchsia-500 focus:border-transparent transition-all appearance-none"
+                                            title="Filtrar por estado"
                                         >
-                                            <option value={10}>10</option>
-                                            <option value={25}>25</option>
-                                            <option value={50}>50</option>
-                                            <option value={100}>100</option>
+                                            <option value="">Todos ({filterOptions.estados.length})</option>
+                                            {filterOptions.estados.map(e => (
+                                                <option
+                                                    key={e}
+                                                    value={e}
+                                                >
+                                                    {e}
+                                                </option>
+                                            ))}
                                         </select>
+                                        <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-fuchsia-400">
+                                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7"></path>
+                                            </svg>
+                                        </div>
+                                    </div>
+
+                                    {filters.estado.length > 0 && (
+                                        <div className="mt-3 flex flex-wrap gap-2">
+                                            {filters.estado.map(e => (
+                                                <span
+                                                    key={e}
+                                                    className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-gradient-to-r from-blue-600/40 to-blue-500/40 text-blue-100 border border-blue-500/50 shadow-sm shadow-blue-900/20"
+                                                >
+                                                    {e}
+                                                    <button
+                                                        onClick={() => handleFilterChange('estado', e)}
+                                                        className="ml-1.5 text-blue-200 hover:text-white rounded-full bg-blue-600/30 hover:bg-blue-600/50 transition-colors w-4 h-4 inline-flex items-center justify-center"
+                                                        aria-label="Eliminar filtro"
+                                                    >
+                                                        <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3" viewBox="0 0 20 20" fill="currentColor">
+                                                            <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
+                                                        </svg>
+                                                    </button>
+                                                </span>
+                                            ))}
+                                        </div>
+                                    )}
+                                </div>
+
+                                {/* Filter: Estatus */}
+                                <div className="filter-group">
+                                    <label className="block text-sm font-medium text-gray-300 mb-2 flex items-center">
+                                        <span className="h-2 w-2 rounded-full bg-green-500 mr-2"></span>
+                                        Estatus
+                                    </label>
+                                    <div className="relative">
+                                        <select
+                                            value={filters.estatus.length ? filters.estatus[0] : ''}
+                                            onChange={e => handleFilterChange('estatus', e.target.value)}
+                                            className="w-full bg-gray-800 border border-gray-700 rounded-lg pl-3 pr-10 py-2.5 text-white focus:ring-2 focus:ring-fuchsia-500 focus:border-transparent transition-all appearance-none"
+                                            title="Filtrar por estatus"
+                                        >
+                                            <option value="">Todos ({filterOptions.estatus.length})</option>
+                                            {filterOptions.estatus.map(e => (
+                                                <option
+                                                    key={e}
+                                                    value={e}
+                                                >
+                                                    {e}
+                                                </option>
+                                            ))}
+                                        </select>
+                                        <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-fuchsia-400">
+                                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7"></path>
+                                            </svg>
+                                        </div>
+                                    </div>
+
+                                    {filters.estatus.length > 0 && (
+                                        <div className="mt-3 flex flex-wrap gap-2">
+                                            {filters.estatus.map(e => (
+                                                <span
+                                                    key={e}
+                                                    className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-gradient-to-r from-green-600/40 to-green-500/40 text-green-100 border border-green-500/50 shadow-sm shadow-green-900/20"
+                                                >
+                                                    {e}
+                                                    <button
+                                                        onClick={() => handleFilterChange('estatus', e)}
+                                                        className="ml-1.5 text-green-200 hover:text-white rounded-full bg-green-600/30 hover:bg-green-600/50 transition-colors w-4 h-4 inline-flex items-center justify-center"
+                                                        aria-label="Eliminar filtro"
+                                                    >
+                                                        <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3" viewBox="0 0 20 20" fill="currentColor">
+                                                            <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
+                                                        </svg>
+                                                    </button>
+                                                </span>
+                                            ))}
+                                        </div>
+                                    )}
+                                </div>
+
+                                {/* Filter: Área */}
+                                <div className="filter-group">
+                                    <label className="block text-sm font-medium text-gray-300 mb-2 flex items-center">
+                                        <span className="h-2 w-2 rounded-full bg-purple-500 mr-2"></span>
+                                        Área
+                                    </label>
+                                    <div className="relative">
+                                        <select
+                                            value={filters.area.length ? filters.area[0] : ''}
+                                            onChange={e => handleFilterChange('area', e.target.value)}
+                                            className="w-full bg-gray-800 border border-gray-700 rounded-lg pl-3 pr-10 py-2.5 text-white focus:ring-2 focus:ring-fuchsia-500 focus:border-transparent transition-all appearance-none"
+                                            title="Filtrar por área"
+                                        >
+                                            <option value="">Todas ({filterOptions.areas.length})</option>
+                                            {filterOptions.areas.map(e => (
+                                                <option
+                                                    key={e}
+                                                    value={e}
+                                                >
+                                                    {e}
+                                                </option>
+                                            ))}
+                                        </select>
+                                        <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-fuchsia-400">
+                                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7"></path>
+                                            </svg>
+                                        </div>
+                                    </div>
+
+                                    {filters.area.length > 0 && (
+                                        <div className="mt-3 flex flex-wrap gap-2">
+                                            {filters.area.map(e => (
+                                                <span
+                                                    key={e}
+                                                    className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-gradient-to-r from-purple-600/40 to-purple-500/40 text-purple-100 border border-purple-500/50 shadow-sm shadow-purple-900/20"
+                                                >
+                                                    {e}
+                                                    <button
+                                                        onClick={() => handleFilterChange('area', e)}
+                                                        className="ml-1.5 text-purple-200 hover:text-white rounded-full bg-purple-600/30 hover:bg-purple-600/50 transition-colors w-4 h-4 inline-flex items-center justify-center"
+                                                        aria-label="Eliminar filtro"
+                                                    >
+                                                        <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3" viewBox="0 0 20 20" fill="currentColor">
+                                                            <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
+                                                        </svg>
+                                                    </button>
+                                                </span>
+                                            ))}
+                                        </div>
+                                    )}
+                                </div>
+
+                                {/* Filter: Rubro */}
+                                <div className="filter-group">
+                                    <label className="block text-sm font-medium text-gray-300 mb-2 flex items-center">
+                                        <span className="h-2 w-2 rounded-full bg-amber-500 mr-2"></span>
+                                        Rubro
+                                    </label>
+                                    <div className="relative">
+                                        <select
+                                            value={filters.rubro.length ? filters.rubro[0] : ''}
+                                            onChange={e => handleFilterChange('rubro', e.target.value)}
+                                            className="w-full bg-gray-800 border border-gray-700 rounded-lg pl-3 pr-10 py-2.5 text-white focus:ring-2 focus:ring-fuchsia-500 focus:border-transparent transition-all appearance-none"
+                                            title="Filtrar por rubro"
+                                        >
+                                            <option value="">Todos ({filterOptions.rubros.length})</option>
+                                            {filterOptions.rubros.map(e => (
+                                                <option
+                                                    key={e}
+                                                    value={e}
+                                                >
+                                                    {e}
+                                                </option>
+                                            ))}
+                                        </select>
+                                        <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-fuchsia-400">
+                                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7"></path>
+                                            </svg>
+                                        </div>
+                                    </div>
+
+                                    {filters.rubro.length > 0 && (
+                                        <div className="mt-3 flex flex-wrap gap-2">
+                                            {filters.rubro.map(e => (
+                                                <span
+                                                    key={e}
+                                                    className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-gradient-to-r from-amber-600/40 to-amber-500/40 text-amber-100 border border-amber-500/50 shadow-sm shadow-amber-900/20"
+                                                >
+                                                    {e}
+                                                    <button
+                                                        onClick={() => handleFilterChange('rubro', e)}
+                                                        className="ml-1.5 text-amber-200 hover:text-white rounded-full bg-amber-600/30 hover:bg-amber-600/50 transition-colors w-4 h-4 inline-flex items-center justify-center"
+                                                        aria-label="Eliminar filtro"
+                                                    >
+                                                        <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3" viewBox="0 0 20 20" fill="currentColor">
+                                                            <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
+                                                        </svg>
+                                                    </button>
+                                                </span>
+                                            ))}
+                                        </div>
+                                    )}
+                                </div>
+
+                                {/* Filter: Forma Adq. */}
+                                <div className="filter-group">
+                                    <label className="block text-sm font-medium text-gray-300 mb-2 flex items-center">
+                                        <span className="h-2 w-2 rounded-full bg-pink-500 mr-2"></span>
+                                        Forma Adq.
+                                    </label>
+                                    <div className="relative">
+                                        <select
+                                            value={filters.formadq.length ? filters.formadq[0] : ''}
+                                            onChange={e => handleFilterChange('formadq', e.target.value)}
+                                            className="w-full bg-gray-800 border border-gray-700 rounded-lg pl-3 pr-10 py-2.5 text-white focus:ring-2 focus:ring-fuchsia-500 focus:border-transparent transition-all appearance-none"
+                                            title="Filtrar por forma de adquisición"
+                                        >
+                                            <option value="">Todas ({filterOptions.formadq.length})</option>
+                                            {filterOptions.formadq.map(e => (
+                                                <option
+                                                    key={e}
+                                                    value={e}
+                                                >
+                                                    {e}
+                                                </option>
+                                            ))}
+                                        </select>
+                                        <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-fuchsia-400">
+                                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7"></path>
+                                            </svg>
+                                        </div>
+                                    </div>
+
+                                    {filters.formadq.length > 0 && (
+                                        <div className="mt-3 flex flex-wrap gap-2">
+                                            {filters.formadq.map(e => (
+                                                <span
+                                                    key={e}
+                                                    className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-gradient-to-r from-pink-600/40 to-pink-500/40 text-pink-100 border border-pink-500/50 shadow-sm shadow-pink-900/20"
+                                                >
+                                                    {e}
+                                                    <button
+                                                        onClick={() => handleFilterChange('formadq', e)}
+                                                        className="ml-1.5 text-pink-200 hover:text-white rounded-full bg-pink-600/30 hover:bg-pink-600/50 transition-colors w-4 h-4 inline-flex items-center justify-center"
+                                                        aria-label="Eliminar filtro"
+                                                    >
+                                                        <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3" viewBox="0 0 20 20" fill="currentColor">
+                                                            <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
+                                                        </svg>
+                                                    </button>
+                                                </span>
+                                            ))}
+                                        </div>
+                                    )}
+                                </div>
+
+                                {/* Filter: Usuario Final */}
+                                <div className="filter-group">
+                                    <label className="block text-sm font-medium text-gray-300 mb-2 flex items-center">
+                                        <span className="h-2 w-2 rounded-full bg-cyan-500 mr-2"></span>
+                                        Usuario Final
+                                    </label>
+                                    <div className="relative">
+                                        <select
+                                            value={filters.usufinal.length ? filters.usufinal[0] : ''}
+                                            onChange={e => handleFilterChange('usufinal', e.target.value)}
+                                            className="w-full bg-gray-800 border border-gray-700 rounded-lg pl-3 pr-10 py-2.5 text-white focus:ring-2 focus:ring-fuchsia-500 focus:border-transparent transition-all appearance-none"
+                                            title="Filtrar por usuario final"
+                                        >
+                                            <option value="">Todos ({filterOptions.usufinales?.length})</option>
+                                            {filterOptions.usufinales?.map(u => (
+                                                <option
+                                                    key={u}
+                                                    value={u}
+                                                >
+                                                    {u}
+                                                </option>
+                                            ))}
+                                        </select>
+                                        <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-fuchsia-400">
+                                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7"></path>
+                                            </svg>
+                                        </div>
+                                    </div>
+
+                                    {filters.usufinal.length > 0 && (
+                                        <div className="mt-3 flex flex-wrap gap-2">
+                                            {filters.usufinal.map(e => (
+                                                <span
+                                                    key={e}
+                                                    className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-gradient-to-r from-cyan-600/40 to-cyan-500/40 text-cyan-100 border border-cyan-500/50 shadow-sm shadow-cyan-900/20"
+                                                >
+                                                    {e}
+                                                    <button
+                                                        onClick={() => handleFilterChange('usufinal', e)}
+                                                        className="ml-1.5 text-cyan-200 hover:text-white rounded-full bg-cyan-600/30 hover:bg-cyan-600/50 transition-colors w-4 h-4 inline-flex items-center justify-center"
+                                                        aria-label="Eliminar filtro"
+                                                    >
+                                                        <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3" viewBox="0 0 20 20" fill="currentColor">
+                                                            <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
+                                                        </svg>
+                                                    </button>
+                                                </span>
+                                            ))}
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+
+                            {/* Active Filters Summary */}
+                            {Object.values(filters).some(arr => arr.length > 0) && (
+                                <div className="px-6 py-4 bg-gray-800/70 border-t border-gray-700 flex flex-wrap items-center justify-between gap-4">
+                                    <div className="flex items-center">
+                                        <span className="text-sm text-gray-400">
+                                            {Object.values(filters).flat().length} {Object.values(filters).flat().length === 1 ? 'filtro activo' : 'filtros activos'}
+                                        </span>
+                                    </div>
+                                    <button
+                                        onClick={() => handleClearAllFilters()}
+                                        className="text-sm text-fuchsia-300 hover:text-fuchsia-100 hover:underline flex items-center transition-colors"
+                                    >
+                                        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" viewBox="0 0 20 20" fill="currentColor">
+                                            <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+                                        </svg>
+                                        Limpiar todos los filtros
+                                    </button>
+                                </div>
+                            )}
+                        </div>
+                    )}
+                </div>
+            </div>
+            {message && (
+                <div className={`p-3 rounded-md ${message.type === 'success' ? 'bg-green-900/50 text-green-300 border border-green-800' :
+                    message.type === 'error' ? 'bg-red-900/50 text-red-300 border border-red-800' :
+                        message.type === 'warning' ? 'bg-yellow-900/50 text-yellow-300 border border-yellow-800' :
+                            message.type === 'info' ? 'bg-blue-900/50 text-blue-300 border border-blue-800' : ''
+                    }`}>
+                    {message.text}
+                </div>
+            )}
+            {showExportModal && (
+                <div className="fixed inset-0 bg-black/90 flex items-center justify-center z-50 px-4 animate-fadeIn">
+                    <div className={`bg-black rounded-2xl shadow-2xl border w-full max-w-md overflow-hidden transition-all duration-300 transform ${exportType === 'excel' ? 'border-green-600/30' : 'border-red-600/30'
+                        }`}>
+                        <div className={`relative p-6 bg-gradient-to-b from-black to-gray-900 ${exportType === 'excel' ? 'from-green-950 to-green-900' : 'from-red-950 to-red-900'
+                            }`}>
+                            <div className={`absolute top-0 left-0 w-full h-1 bg-gradient-to-r ${exportType === 'excel'
+                                    ? 'from-green-500/60 via-green-400 to-green-500/60'
+                                    : 'from-red-500/60 via-red-400 to-red-500/60'
+                                }`}></div>
+
+                            <button
+                                onClick={() => setShowExportModal(false)}
+                                className={`absolute top-3 right-3 p-2 rounded-full bg-black/60 hover:bg-gray-900 ${exportType === 'excel' ? 'text-green-400 hover:text-green-500 border-green-500/30' : 'text-red-400 hover:text-red-500 border-red-500/30'
+                                    } border transition-colors`}
+                                title="Cerrar"
+                            >
+                                <X className="h-4 w-4" />
+                            </button>
+
+                            <div className="flex flex-col items-center text-center mb-4">
+                                <div className={`p-3 rounded-full border mb-3 ${exportType === 'excel' ? 'bg-green-500/10 border-green-500/30' : 'bg-red-500/10 border-red-500/30'
+                                    }`}>
+                                    {exportType === 'excel' ? (
+                                        <FileUp className="h-8 w-8 text-green-500" />
+                                    ) : (
+                                        <File className="h-8 w-8 text-red-500" />
+                                    )}
+                                </div>
+                                <h3 className={`text-2xl font-bold ${exportType === 'excel' ? 'text-green-400' : 'text-red-400'
+                                    }`}>
+                                    Exportar a {exportType === 'excel' ? 'Excel' : 'PDF'}
+                                </h3>
+                                <p className="text-gray-400 mt-2">
+                                    Exportar los datos a un archivo {exportType === 'excel' ? 'Excel para su análisis' : 'PDF para su visualización'}
+                                </p>
+                            </div>
+
+                            <div className="space-y-5 mt-6">
+                                <div className="rounded-lg border border-gray-800 bg-gray-900/50 p-4">
+                                    <label className="block text-xs uppercase tracking-wider text-gray-500 mb-1">Documento a generar</label>
+                                    <div className="flex items-center gap-3">
+                                        <div className="p-2 bg-gray-800 rounded-lg">
+                                            {exportType === 'excel' ? (
+                                                <FileUp className="h-4 w-4 text-green-400" />
+                                            ) : (
+                                                <File className="h-4 w-4 text-red-400" />
+                                            )}
+                                        </div>
+                                        <span className="text-white font-medium">
+                                            {`Reporte_inventario_${new Date().toISOString().slice(0, 10)}.${exportType === 'excel' ? 'xlsx' : 'pdf'}`}
+                                        </span>
+                                    </div>
+                                </div>
+
+                                <div className="w-full flex flex-col items-center gap-4">
+                                    <div className="w-full">
+                                        <button
+                                            onClick={handleExport}
+                                            className={`w-full py-3 px-4 font-medium rounded-lg flex items-center justify-center gap-2 transition-all transform hover:scale-[1.02] shadow-lg ${exportType === 'excel'
+                                                    ? 'bg-gradient-to-r from-green-600 to-green-500 hover:from-green-500 hover:to-green-400'
+                                                    : 'bg-gradient-to-r from-red-600 to-red-500 hover:from-red-500 hover:to-red-400'
+                                                } text-black`}
+                                        >
+                                            {loading ? (
+                                                <>
+                                                    <RefreshCw className="h-5 w-5 animate-spin" />
+                                                    {`Generando ${exportType === 'excel' ? 'Excel' : 'PDF'}...`}
+                                                </>
+                                            ) : (
+                                                <>
+                                                    {exportType === 'excel' ? (
+                                                        <FileUp className="h-5 w-5" />
+                                                    ) : (
+                                                        <File className="h-5 w-5" />
+                                                    )}
+                                                    {`Descargar ${exportType === 'excel' ? 'Excel' : 'PDF'}`}
+                                                </>
+                                            )}
+                                        </button>
                                     </div>
                                 </div>
                             </div>
                         </div>
                     </div>
                 </div>
-            </div>
-            <style jsx>{`
-                .flip-card {
-                    perspective: 600px;
-                    position: relative;
+            )}
+            {showAreaPDFModal && (
+                <div className="fixed inset-0 bg-black/90 flex items-center justify-center z-50 px-4 animate-fadeIn">
+                    <div className="bg-black rounded-2xl shadow-2xl border border-fuchsia-600/30 w-full max-w-md overflow-hidden transition-all duration-300 transform">
+                        <div className="relative p-6 bg-gradient-to-b from-black to-fuchsia-950">
+                            <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-fuchsia-500/60 via-fuchsia-400 to-fuchsia-500/60"></div>
+                            <button
+                                onClick={() => setShowAreaPDFModal(false)}
+                                className="absolute top-3 right-3 p-2 rounded-full bg-black/60 hover:bg-gray-900 text-fuchsia-400 hover:text-fuchsia-500 border border-fuchsia-500/30 transition-colors"
+                                title="Cerrar"
+                            >
+                                <X className="h-4 w-4" />
+                            </button>
+                            <div className="flex flex-col items-center text-center mb-4">
+                                <div className="p-3 rounded-full border border-fuchsia-500/30 bg-fuchsia-500/10 mb-3">
+                                    <FileText className="h-8 w-8 text-fuchsia-400" />
+                                </div>
+                                <h3 className="text-2xl font-bold text-fuchsia-400">Exportar PDF por Área/Usuario</h3>
+                                <p className="text-gray-400 mt-2">Genera un PDF con encabezado y firma personalizada para el área o usuario filtrado.</p>
+                            </div>
+                            <form className="space-y-4 mt-2" onSubmit={e => { e.preventDefault(); handleAreaPDFGenerate(); }}>
+                                <div>
+                                    <label className="block text-xs uppercase tracking-wider text-gray-400 mb-1">Área</label>
+                                    <input
+                                        title='Área'
+                                        type="text"
+                                        value={areaPDFTarget.area}
+                                        onChange={e => {
+                                            setAreaPDFTarget(t => ({ ...t, area: e.target.value }));
+                                            setAutoCompletedFields(f => ({ ...f, area: false }));
+                                        }}
+                                        placeholder="Área"
+                                        required
+                                        disabled={areaPDFLoading || (isUsuario ? true : autoCompletedFields.area)}
+                                        className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2.5 text-white"
+                                    />
+                                    {isUsuario && (
+                                        <div className="text-xs text-gray-400 mt-1">Solo un administrador puede editar este campo</div>
+                                    )}
+                                </div>
+                                <div>
+                                    <label className="block text-xs uppercase tracking-wider text-gray-400 mb-1">Director/Jefe</label>
+                                    {areaDirectorAmbiguous && areaDirectorOptions.length > 0 ? (
+                                        <select
+                                            title='Director/Jefe'
+                                            className="w-full bg-gray-800 border border-fuchsia-700 rounded-lg px-3 py-2.5 text-white"
+                                            value={areaDirectorForm.nombre}
+                                            onChange={e => {
+                                                const selected = areaDirectorOptions.find(opt => opt.nombre === e.target.value);
+                                                setAreaDirectorForm(f => ({
+                                                    ...f,
+                                                    nombre: selected?.nombre || '',
+                                                    puesto: selected?.puesto || ''
+                                                }));
+                                                setAreaPDFTarget(t => ({ ...t, area: selected?.area || t.area }));
+                                                setAutoCompletedFields({
+                                                    area: !!selected?.area,
+                                                    nombre: !!selected?.nombre,
+                                                    puesto: !!selected?.puesto
+                                                });
+                                            }}
+                                            disabled={areaPDFLoading}
+                                        >
+                                            <option value="">Selecciona...</option>
+                                            {areaDirectorOptions.map(opt => (
+                                                <option key={opt.id_directorio} value={opt.nombre}>{opt.nombre}</option>
+                                            ))}
+                                        </select>
+                                    ) : (
+                                        <input
+                                            type="text"
+                                            className="w-full bg-gray-800 border border-fuchsia-700 rounded-lg px-3 py-2.5 text-white"
+                                            value={areaDirectorForm.nombre}
+                                            onChange={e => {
+                                                setAreaDirectorForm(f => ({ ...f, nombre: e.target.value }));
+                                                setAutoCompletedFields(f => ({ ...f, nombre: false }));
+                                            }}
+                                            placeholder="Nombre del director/jefe"
+                                            required
+                                            disabled={areaPDFLoading || (isUsuario ? true : autoCompletedFields.nombre)}
+                                        />
+                                    )}
+                                    {isUsuario && (
+                                        <div className="text-xs text-gray-400 mt-1">Solo un administrador puede editar este campo</div>
+                                    )}
+                                </div>
+                                <div>
+                                    <label className="block text-xs uppercase tracking-wider text-gray-400 mb-1">Puesto</label>
+                                    <input
+                                        type="text"
+                                        className="w-full bg-gray-800 border border-fuchsia-700 rounded-lg px-3 py-2.5 text-white"
+                                        value={areaDirectorForm.puesto ?? ''}
+                                        onChange={e => {
+                                            setAreaDirectorForm(f => ({ ...f, puesto: e.target.value }));
+                                            setAutoCompletedFields(f => ({ ...f, puesto: false }));
+                                        }}
+                                        placeholder="Puesto del director/jefe"
+                                        required
+                                        disabled={areaPDFLoading || (isUsuario ? true : autoCompletedFields.puesto)}
+                                        autoComplete="off"
+                                    />
+                                    {isUsuario && (
+                                        <div className="text-xs text-gray-400 mt-1">Solo un administrador puede editar este campo</div>
+                                    )}
+                                </div>
+                                {areaPDFError && <div className="text-red-400 text-sm">{areaPDFError}</div>}
+                                <div className="w-full flex flex-col items-center gap-4 mt-4">
+                                    <button
+                                        type="submit"
+                                        className={`w-full py-3 px-4 font-medium rounded-lg flex items-center justify-center gap-2 transition-all transform hover:scale-[1.02] shadow-lg bg-gradient-to-r from-fuchsia-600 to-fuchsia-500 hover:from-fuchsia-500 hover:to-fuchsia-400 text-black ${areaPDFLoading || !areaDirectorForm.nombre || !areaDirectorForm.puesto || !areaPDFTarget.area ? 'opacity-50 cursor-not-allowed' : ''
+                                            }`}
+                                        disabled={areaPDFLoading || !areaDirectorForm.nombre || !areaDirectorForm.puesto || !areaPDFTarget.area}
+                                    >
+                                        {areaPDFLoading ? (
+                                            <>
+                                                <RefreshCw className="h-5 w-5 animate-spin" />
+                                                Generando PDF...
+                                            </>
+                                        ) : (
+                                            <>
+                                                <FileText className="h-5 w-5" />
+                                                Descargar PDF personalizado
+                                            </>
+                                        )}
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            )}
+            <div className="flex flex-col lg:flex-row gap-6">
+                <div className="w-full">
+                    <div className="bg-black rounded-lg border border-gray-800 overflow-x-auto overflow-y-auto flex flex-col flex-grow max-h-[70vh]">
+                        <table className="min-w-full divide-y divide-gray-800">
+                            <thead className="bg-black sticky top-0 z-10">
+                                <tr>
+                                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Origen</th>
+                                    <th
+                                        onClick={() => {
+                                            setSortField('id_inv');
+                                            setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
+                                        }}
+                                        className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider cursor-pointer hover:bg-gray-700"
+                                    >
+                                        <div className="flex items-center gap-1">ID Inventario<ArrowUpDown className="h-3 w-3" /></div>
+                                    </th>
+                                    <th
+                                        onClick={() => {
+                                            setSortField('descripcion');
+                                            setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
+                                        }}
+                                        className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider cursor-pointer hover:bg-gray-700"
+                                    >
+                                        <div className="flex items-center gap-1">Descripción<ArrowUpDown className="h-3 w-3" /></div>
+                                    </th>
+                                    <th
+                                        onClick={() => {
+                                            setSortField('area');
+                                            setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
+                                        }}
+                                        className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider cursor-pointer hover:bg-gray-700"
+                                    >
+                                        <div className="flex items-center gap-1">Área<ArrowUpDown className="h-3 w-3" /></div>
+                                    </th>
+                                    <th
+                                        onClick={() => {
+                                            setSortField('usufinal');
+                                            setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
+                                        }}
+                                        className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider cursor-pointer hover:bg-gray-700"
+                                    >
+                                        <div className="flex items-center gap-1">Director/Jefe<ArrowUpDown className="h-3 w-3" /></div>
+                                    </th>
+                                    <th
+                                        onClick={() => {
+                                            setSortField('estatus');
+                                            setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
+                                        }}
+                                        className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider cursor-pointer hover:bg-gray-700"
+                                    >
+                                        <div className="flex items-center gap-1">Estatus<ArrowUpDown className="h-3 w-3" /></div>
+                                    </th>
+                                </tr>
+                            </thead>
+                            <tbody className="bg-black divide-y divide-gray-800">
+                                {error ? (
+                                    <tr className="h-96">
+                                        <td colSpan={6} className="px-6 py-24 text-center text-red-400">
+                                            <AlertCircle className="h-12 w-12" />
+                                            <p className="text-lg font-medium">{error}</p>
+                                        </td>
+                                    </tr>
+                                ) : muebles.length === 0 ? (
+                                    <tr className="h-96">
+                                        <td colSpan={6} className="px-6 py-24 text-center text-gray-400">
+                                            <Search className="h-12 w-12 text-gray-500" />
+                                            <p className="text-lg font-medium">No se encontraron resultados</p>
+                                        </td>
+                                    </tr>
+                                ) : (
+                                    muebles.map((item) => (
+                                        <tr
+                                            key={`${item.origen}-${item.id}`}
+                                            className={
+                                                `transition-colors`
+                                            }
+                                        >
+                                            <td className="px-4 py-3 text-xs">
+                                                <span className={`inline-flex items-center px-2.5 py-1 rounded-full font-bold ${ORIGEN_COLORS[item.origen]}`}>
+                                                    {item.origen}
+                                                </span>
+                                            </td>
+                                            <td className="px-4 py-3 whitespace-nowrap text-sm font-medium text-white">
+                                                {item.id_inv}
+                                            </td>
+                                            <td className="px-4 py-3 text-sm text-gray-300">
+                                                {truncateText(item.descripcion, 40)}
+                                            </td>
+                                            <td className="px-4 py-3 text-sm text-gray-300">
+                                                {truncateText(item.area, 20)}
+                                            </td>
+                                            <td className="px-4 py-3 text-sm text-gray-300">
+                                                {truncateText(item.usufinal, 20)}
+                                            </td>
+                                            <td className="px-4 py-3 text-sm">
+                                                <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium ${item.estatus === 'ACTIVO' ? ESTATUS_COLORS.ACTIVO :
+                                                    item.estatus === 'INACTIVO' ? ESTATUS_COLORS.INACTIVO :
+                                                        item.estatus === 'NO LOCALIZADO' ? ESTATUS_COLORS['NO LOCALIZADO'] :
+                                                            ESTATUS_COLORS.DEFAULT
+                                                    }`}>
+                                                    {item.estatus}
+                                                </span>
+                                            </td>
+                                        </tr>
+                                    ))
+                                )}
+                            </tbody>
+                        </table>
+                    </div>
+                    <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mt-4">
+                        <div className="text-sm text-gray-400 font-medium">
+                            Mostrando <span className="text-white">{(currentPage - 1) * rowsPerPage + 1}-{Math.min(currentPage * rowsPerPage, filteredCount)}</span> de <span className="text-white">{filteredCount}</span> registros
+                        </div>
+                        <div className="flex items-center gap-4">
+                            <div className="flex items-center space-x-1 bg-gray-850 rounded-lg p-1">
+                                <button
+                                    onClick={() => changePage(1)}
+                                    disabled={currentPage === 1}
+                                    className={`p-1.5 rounded-md flex items-center justify-center ${currentPage === 1 ? 'text-gray-600 cursor-not-allowed' : 'text-gray-400 hover:bg-gray-800 hover:text-white'}`}
+                                    title="Primera página"
+                                >
+                                    <div className="flex">
+                                        <ChevronLeft className="h-4 w-4" />
+                                        <ChevronLeft className="h-4 w-4 -ml-2" />
+                                    </div>
+                                </button>
+                                <button
+                                    onClick={() => changePage(currentPage - 1)}
+                                    disabled={currentPage === 1}
+                                    className={`p-1.5 rounded-md ${currentPage === 1 ? 'text-gray-600 cursor-not-allowed' : 'text-gray-400 hover:bg-gray-800 hover:text-white'}`}
+                                    title="Página anterior"
+                                >
+                                    <ChevronLeft className="h-4 w-4" />
+                                </button>
+                                <div className="flex items-center">
+                                    {Array.from({ length: totalPages }, (_, i) => i + 1)
+                                        .filter(page =>
+                                            page === 1 ||
+                                            page === totalPages ||
+                                            (page >= currentPage - 1 && page <= currentPage + 1)
+                                        )
+                                        .map((page, i, arr) => (
+                                            <React.Fragment key={page}>
+                                                {i > 0 && arr[i] - arr[i - 1] > 1 && (
+                                                    <span className="px-2 text-gray-400">...</span>
+                                                )}
+                                                <button
+                                                    onClick={() => changePage(page)}
+                                                    className={`min-w-[32px] h-8 px-2 rounded-md text-sm font-medium flex items-center justify-center ${currentPage === page ? 'bg-black text-white' : 'text-gray-400 hover:bg-gray-800 hover:text-white'
+                                                        }`}
+                                                    title={`Ir a la página ${page}`}
+                                                >
+                                                    {page}
+                                                </button>
+                                            </React.Fragment>
+                                        ))}
+                                </div>
+                                <button
+                                    onClick={() => changePage(currentPage + 1)}
+                                    disabled={currentPage === totalPages || filteredCount === 0}
+                                    className={`p-1.5 rounded-md ${currentPage === totalPages || filteredCount === 0 ? 'text-gray-600 cursor-not-allowed' : 'text-gray-400 hover:bg-gray-800 hover:text-white'}`}
+                                    title="Página siguiente"
+                                >
+                                    <ChevronRight className="h-4 w-4" />
+                                </button>
+                                <button
+                                    onClick={() => changePage(totalPages)}
+                                    disabled={currentPage === totalPages || filteredCount === 0}
+                                    className={`p-1.5 rounded-md flex items-center justify-center ${currentPage === totalPages || filteredCount === 0 ? 'text-gray-600 cursor-not-allowed' : 'text-gray-400 hover:bg-gray-800 hover:text-white'}`}
+                                    title="Última página"
+                                >
+                                    <div className="flex">
+                                        <ChevronRight className="h-4 w-4" />
+                                        <ChevronRight className="h-4 w-4 -ml-2" />
+                                    </div>
+                                </button>
+                            </div>
+                            <div className="flex items-center bg-gray-850 rounded-lg px-3 py-1.5">
+                                <label htmlFor="rowsPerPage" className="text-sm text-gray-400 mr-2">Filas:</label>
+                                <select
+                                    id="rowsPerPage"
+                                    value={rowsPerPage}
+                                    onChange={e => {
+                                        setRowsPerPage(Number(e.target.value));
+                                        setCurrentPage(1);
+                                    }}
+                                    className="bg-gray-800 border border-gray-700 rounded-md px-2 py-1 text-sm text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                    title="Filas por página"
+                                >
+                                    <option value={10}>10</option>
+                                    <option value={25}>25</option>
+                                    <option value={50}>50</option>
+                                    <option value={100}>100</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+        </div>
+        <style jsx>{`
+            .flip-card {
+                perspective: 600px;
+                position: relative;
                     overflow: visible;
                 }
                 .flip-card-inner {
@@ -1264,6 +1588,7 @@ export default function LevantamientoUnificado() {
                 .flip-card-back {
                     z-index: 1;
                     transform: rotateY(180deg);
+                }
                 }
             `}</style>
         </div>

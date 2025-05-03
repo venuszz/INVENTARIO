@@ -173,6 +173,11 @@ export default function ConsultasIteaBajas() {
         formadq: [],
         directores: []
     });
+    const [uniqueFilterOptions, setUniqueFilterOptions] = useState<{ estados: string[]; areas: string[]; rubros: string[] }>({
+        estados: [],
+        areas: [],
+        rubros: []
+    });
     const [showFilters, setShowFilters] = useState(false);
     const [selectedItem, setSelectedItem] = useState<MuebleITEA | null>(null);
     const [isEditing, setIsEditing] = useState(false);
@@ -578,6 +583,26 @@ export default function ConsultasIteaBajas() {
         }
     }, []);
 
+    const fetchUniqueFilterOptions = useCallback(async () => {
+        try {
+            const { data, error } = await supabase
+                .from('mueblesitea')
+                .select('estado, area, rubro')
+                .eq('estatus', 'BAJA');
+            if (error) throw error;
+            const estados = Array.from(new Set(data?.map(item => item.estado?.trim()).filter(Boolean)));
+            const areas = Array.from(new Set(data?.map(item => item.area?.trim()).filter(Boolean)));
+            const rubros = Array.from(new Set(data?.map(item => item.rubro?.trim()).filter(Boolean)));
+            setUniqueFilterOptions({
+                estados,
+                areas,
+                rubros
+            });
+        } catch (error) {
+            console.error('Error al cargar opciones únicas de filtro:', error);
+        }
+    }, []);
+
     const uploadImage = async (muebleId: number) => {
         if (!imageFile) return null;
 
@@ -631,8 +656,9 @@ export default function ConsultasIteaBajas() {
     useEffect(() => {
         fetchDirectorio();
         fetchFilterOptions();
+        fetchUniqueFilterOptions();
         fetchMuebles();
-    }, [fetchDirectorio, fetchFilterOptions, fetchMuebles]);
+    }, [fetchDirectorio, fetchFilterOptions, fetchUniqueFilterOptions, fetchMuebles]);
 
     useEffect(() => {
         setCurrentPage(1);
@@ -1009,7 +1035,7 @@ export default function ConsultasIteaBajas() {
                                                         className="w-full bg-gray-700 border border-gray-600 rounded-lg px-3 py-2.5 text-white focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500 appearance-none transition-all duration-200"
                                                     >
                                                         <option value="">Todos los estados</option>
-                                                        {filterOptions.estados.map((estado) => (
+                                                        {uniqueFilterOptions.estados.map((estado) => (
                                                             <option key={estado} value={estado}>{estado}</option>
                                                         ))}
                                                     </select>
@@ -1028,13 +1054,13 @@ export default function ConsultasIteaBajas() {
                                                 <div className="relative">
                                                     <select
                                                         id="area-select"
-                                                        title='Seleccione un área'
+                                                        title='Área'
                                                         value={filters.area}
                                                         onChange={(e) => setFilters({ ...filters, area: e.target.value })}
                                                         className="w-full bg-gray-700 border border-gray-600 rounded-lg px-3 py-2.5 text-white focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500 appearance-none transition-all duration-200"
                                                     >
                                                         <option value="">Todas las áreas</option>
-                                                        {filterOptions.areas.map((area) => (
+                                                        {uniqueFilterOptions.areas.map((area) => (
                                                             <option key={area} value={area}>{area}</option>
                                                         ))}
                                                     </select>
@@ -1059,7 +1085,7 @@ export default function ConsultasIteaBajas() {
                                                         className="w-full bg-gray-700 border border-gray-600 rounded-lg px-3 py-2.5 text-white focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500 appearance-none transition-all duration-200"
                                                     >
                                                         <option value="">Todos los rubros</option>
-                                                        {filterOptions.rubros.map((rubro) => (
+                                                        {uniqueFilterOptions.rubros.map((rubro) => (
                                                             <option key={rubro} value={rubro}>{rubro}</option>
                                                         ))}
                                                     </select>

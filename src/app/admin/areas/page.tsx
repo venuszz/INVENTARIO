@@ -1,4 +1,4 @@
-import Areas from "@/components/maintainance"
+import Areas from "@/components/admin/areas"
 
 export default function Add() {
     return (

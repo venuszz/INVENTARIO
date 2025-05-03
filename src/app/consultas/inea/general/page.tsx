@@ -1,4 +1,4 @@
-import General from "@/components/maintainance"
+import General from "@/components/consultas/inea/general"
 import { Metadata } from "next";
 
 export const metadata: Metadata = {

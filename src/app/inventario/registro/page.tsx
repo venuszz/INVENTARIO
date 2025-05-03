@@ -1,4 +1,4 @@
-import Registro from "@/components/maintainance"
+import Registro from "@/components/inventario/registro"
 import { Metadata } from "next";
 
 export const metadata: Metadata = {

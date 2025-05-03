@@ -172,6 +172,15 @@ export default function ConsultasIneaBajas() {
         formadq: [],
         directores: []
     });
+    const [uniqueFilterOptions, setUniqueFilterOptions] = useState<{
+        estados: string[];
+        areas: string[];
+        rubros: string[];
+    }>({
+        estados: [],
+        areas: [],
+        rubros: []
+    });
     const [showFilters, setShowFilters] = useState(false);
     const [selectedItem, setSelectedItem] = useState<Mueble | null>(null);
     const [isEditing, setIsEditing] = useState(false);
@@ -579,6 +588,26 @@ export default function ConsultasIneaBajas() {
         }
     }, []);
 
+    const fetchUniqueFilterOptions = useCallback(async () => {
+        try {
+            const { data, error } = await supabase
+                .from('muebles')
+                .select('estado, area, rubro')
+                .eq('estatus', 'BAJA');
+            if (error) throw error;
+            const estados = Array.from(new Set(data?.map(item => item.estado).filter(Boolean)));
+            const areas = Array.from(new Set(data?.map(item => item.area).filter(Boolean)));
+            const rubros = Array.from(new Set(data?.map(item => item.rubro).filter(Boolean)));
+            setUniqueFilterOptions({
+                estados,
+                areas,
+                rubros
+            });
+        } catch (error) {
+            console.error('Error al cargar opciones únicas de filtro:', error);
+        }
+    }, []);
+
     const uploadImage = async (muebleId: number) => {
         if (!imageFile) return null;
 
@@ -632,8 +661,9 @@ export default function ConsultasIneaBajas() {
     useEffect(() => {
         fetchDirectorio();
         fetchFilterOptions();
+        fetchUniqueFilterOptions();
         fetchMuebles();
-    }, [fetchDirectorio, fetchFilterOptions, fetchMuebles]);
+    }, [fetchDirectorio, fetchFilterOptions, fetchUniqueFilterOptions, fetchMuebles]);
 
     useEffect(() => {
         setCurrentPage(1);
@@ -1019,8 +1049,8 @@ export default function ConsultasIneaBajas() {
                                                         className="w-full bg-gray-700 border border-gray-600 rounded-lg px-3 py-2.5 text-white focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500 appearance-none transition-all duration-200"
                                                     >
                                                         <option value="">Todos los estados</option>
-                                                        {filterOptions.estados.map((estado) => (
-                                                            <option key={estado} value={estado}>{estado}</option>
+                                                        {uniqueFilterOptions.estados.map((estado) => (
+                                                            <option key={estado} value={estado as string}>{estado}</option>
                                                         ))}
                                                     </select>
                                                     <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
@@ -1044,8 +1074,8 @@ export default function ConsultasIneaBajas() {
                                                         className="w-full bg-gray-700 border border-gray-600 rounded-lg px-3 py-2.5 text-white focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500 appearance-none transition-all duration-200"
                                                     >
                                                         <option value="">Todas las áreas</option>
-                                                        {filterOptions.areas.map((area) => (
-                                                            <option key={area} value={area}>{area}</option>
+                                                        {uniqueFilterOptions.areas.map((area) => (
+                                                            <option key={area} value={area as string}>{area}</option>
                                                         ))}
                                                     </select>
                                                     <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
@@ -1069,8 +1099,8 @@ export default function ConsultasIneaBajas() {
                                                         className="w-full bg-gray-700 border border-gray-600 rounded-lg px-3 py-2.5 text-white focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500 appearance-none transition-all duration-200"
                                                     >
                                                         <option value="">Todos los rubros</option>
-                                                        {filterOptions.rubros.map((rubro) => (
-                                                            <option key={rubro} value={rubro}>{rubro}</option>
+                                                        {uniqueFilterOptions.rubros.map((rubro) => (
+                                                            <option key={rubro} value={rubro as string}>{rubro}</option>
                                                         ))}
                                                     </select>
                                                     <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
@@ -1683,32 +1713,6 @@ export default function ConsultasIneaBajas() {
                                             </div>
                                             <div className="detail-card bg-gray-800/50 rounded-lg p-4 hover:bg-gray-800/80 transition-all">
                                                 <h3 className="text-xs font-medium uppercase tracking-wider text-gray-400">Rubro</h3>
-                                                <p className="mt-2 text-white font-medium">{selectedItem.rubro || 'No especificado'}</p>
-                                            </div>
-                                            <div className="detail-card bg-gray-800/50 rounded-lg p-4 hover:bg-gray-800/80 transition-all col-span-2">
-                                                <h3 className="text-xs font-medium uppercase tracking-wider text-gray-400">Descripción</h3>
-                                                <p className="mt-2 text-white">{selectedItem.descripcion || 'No especificado'}</p>
-                                            </div>
-                                            <div className="detail-card bg-gray-800/50 rounded-lg p-4 hover:bg-gray-800/80 transition-all">
-                                                <h3 className="text-xs font-medium uppercase tracking-wider text-gray-400">Valor</h3>
-                                                <p className="mt-2 text-white font-medium">
-                                                    {selectedItem.valor ?
-                                                        `$${selectedItem.valor.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` :
-                                                        '$0.00'}
-                                                </p>
-                                            </div>
-                                            <div className="detail-card bg-gray-800/50 rounded-lg p-4 hover:bg-gray-800/80 transition-all">
-                                                <h3 className="text-xs font-medium uppercase tracking-wider text-gray-400">Fecha de Adquisición</h3>
-                                                <p className="mt-2 text-white flex items-center gap-2">
-                                                    <Calendar className="h-4 w-4 text-red-400" />
-                                                    {formatDate(selectedItem.f_adq) || 'No especificado'}
-                                                </p>
-                                            </div>
-                                            <div className="detail-card bg-gray-800/50 rounded-lg p-4 hover:bg-gray-800/80 transition-all">
-                                                <h3 className="text-xs font-medium uppercase tracking-wider text-gray-400">Forma de Adquisición</h3>
-                                                <p className="mt-2 text-white">{selectedItem.formadq || 'No especificado'}</p>
-                                            </div>
-                                            <div className="detail-card bg-gray-800/50 rounded-lg p-4 hover:bg-gray-800/80 transition-all">
                                                 <h3 className="text-xs font-medium uppercase tracking-wider text-gray-400">Proveedor</h3>
                                                 <p className="mt-2 text-white flex items-center gap-2">
                                                     <Store className="h-4 w-4 text-red-400" />

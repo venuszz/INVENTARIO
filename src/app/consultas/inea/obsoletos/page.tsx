@@ -1,4 +1,4 @@
-import Obsoletos from "@/components/maintainance"
+import Obsoletos from "@/components/consultas/inea/obsoletos";
 import { Metadata } from "next";
 
 export const metadata: Metadata = {

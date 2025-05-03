@@ -38,8 +38,8 @@ interface FilterOptions {
     estados: string[];
     estatus: string[];
     areas: string[];
-    rubros: string[];
-    formadq: string[];
+    rubros: string[] | null;
+    formadq: string[] | null;
     directores: { nombre: string; area: string }[];
 }
 
@@ -172,6 +172,17 @@ export default function ConsultasIneaGeneral() {
         formadq: [],
         directores: []
     });
+    const [uniqueFilterOptions, setUniqueFilterOptions] = useState<{
+        estados: string[];
+        estatus: string[];
+        areas: string[];
+        rubros: string[];
+    }>({
+        estados: [],
+        estatus: [],
+        areas: [],
+        rubros: []
+    });
     const [showFilters, setShowFilters] = useState(false);
     const [selectedItem, setSelectedItem] = useState<Mueble | null>(null);
     const [isEditing, setIsEditing] = useState(false);
@@ -222,6 +233,29 @@ export default function ConsultasIneaGeneral() {
                 type: 'error',
                 text: 'Error al cargar la lista de directores'
             });
+        }
+    }, []);
+
+    // Nueva función para obtener valores únicos de filtros desde la tabla muebles
+    const fetchUniqueFilterOptions = useCallback(async () => {
+        try {
+            // Traer todos los valores únicos de estado, estatus, área y rubro de la tabla muebles
+            const { data, error } = await supabase
+                .from('muebles')
+                .select('estado, estatus, area, rubro');
+            if (error) throw error;
+            const estados = Array.from(new Set(data?.map(item => item.estado).filter(Boolean)));
+            const estatus = Array.from(new Set(data?.map(item => item.estatus).filter(Boolean)));
+            const areas = Array.from(new Set(data?.map(item => item.area).filter(Boolean)));
+            const rubros = Array.from(new Set(data?.map(item => item.rubro).filter(Boolean)));
+            setUniqueFilterOptions({
+                estados,
+                estatus,
+                areas,
+                rubros
+            });
+        } catch (error) {
+            console.error('Error al cargar opciones únicas de filtro:', error);
         }
     }, []);
 
@@ -623,9 +657,10 @@ export default function ConsultasIneaGeneral() {
 
     useEffect(() => {
         fetchDirectorio();
-        fetchFilterOptions();
+        fetchFilterOptions(); // para selects de edición
+        fetchUniqueFilterOptions(); // para filtros de la tabla
         fetchMuebles();
-    }, [fetchDirectorio, fetchFilterOptions, fetchMuebles]);
+    }, [fetchDirectorio, fetchFilterOptions, fetchUniqueFilterOptions, fetchMuebles]);
 
     useEffect(() => {
         setCurrentPage(1);
@@ -1033,8 +1068,8 @@ export default function ConsultasIneaGeneral() {
                                                         className="w-full bg-gray-700 border border-gray-600 rounded-lg px-3 py-2.5 text-white focus:outline-none focus:ring-2 focus:ring-gray-500 focus:border-gray-500 appearance-none transition-all duration-200"
                                                     >
                                                         <option value="">Todos los estados</option>
-                                                        {filterOptions.estados.map((estado) => (
-                                                            <option key={estado} value={estado}>{estado}</option>
+                                                        {uniqueFilterOptions.estados.map((estado) => (
+                                                            <option key={estado} value={estado as string}>{estado}</option>
                                                         ))}
                                                     </select>
                                                     <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
@@ -1057,8 +1092,8 @@ export default function ConsultasIneaGeneral() {
                                                         className="w-full bg-gray-700 border border-gray-600 rounded-lg px-3 py-2.5 text-white focus:outline-none focus:ring-2 focus:ring-gray-500 focus:border-gray-500 appearance-none transition-all duration-200"
                                                     >
                                                         <option value="">Todos los estatus</option>
-                                                        {filterOptions.estatus.map((status) => (
-                                                            <option key={status} value={status}>{status}</option>
+                                                        {uniqueFilterOptions.estatus.map((estatus) => (
+                                                            <option key={estatus} value={estatus as string}>{estatus}</option>
                                                         ))}
                                                     </select>
                                                     <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
@@ -1081,8 +1116,8 @@ export default function ConsultasIneaGeneral() {
                                                         className="w-full bg-gray-700 border border-gray-600 rounded-lg px-3 py-2.5 text-white focus:outline-none focus:ring-2 focus:ring-gray-500 focus:border-gray-500 appearance-none transition-all duration-200"
                                                     >
                                                         <option value="">Todas las áreas</option>
-                                                        {filterOptions.areas.map((area) => (
-                                                            <option key={area} value={area}>{area}</option>
+                                                        {uniqueFilterOptions.areas.map((area) => (
+                                                            <option key={area} value={area as string}>{area}</option>
                                                         ))}
                                                     </select>
                                                     <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
@@ -1105,8 +1140,8 @@ export default function ConsultasIneaGeneral() {
                                                         className="w-full bg-gray-700 border border-gray-600 rounded-lg px-3 py-2.5 text-white focus:outline-none focus:ring-2 focus:ring-gray-500 focus:border-gray-500 appearance-none transition-all duration-200"
                                                     >
                                                         <option value="">Todos los rubros</option>
-                                                        {filterOptions.rubros.map((rubro) => (
-                                                            <option key={rubro} value={rubro}>{rubro}</option>
+                                                        {uniqueFilterOptions.rubros.map((rubro) => (
+                                                            <option key={rubro} value={rubro as string}>{rubro}</option>
                                                         ))}
                                                     </select>
                                                     <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
@@ -1480,7 +1515,7 @@ export default function ConsultasIneaGeneral() {
                                                         onChange={(e) => handleEditFormChange(e, 'rubro')}
                                                         className="appearance-none w-full bg-gray-800 border border-gray-700 rounded-lg pl-4 pr-10 py-2.5 text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
                                                     >
-                                                        {filterOptions.rubros.map((rubro) => (
+                                                        {(filterOptions.rubros ?? []).map((rubro) => (
                                                             <option key={rubro} value={rubro}>{rubro}</option>
                                                         ))}
                                                     </select>
@@ -1538,7 +1573,7 @@ export default function ConsultasIneaGeneral() {
                                                         title="Ingrese la forma de adquisición"
                                                     >
                                                         <option value="">Seleccionar forma de adquisición</option>
-                                                        {filterOptions.formadq.map((forma) => (
+                                                        {(filterOptions.formadq ?? []).map((forma) => (
                                                             <option key={forma} value={forma}>{forma}</option>
                                                         ))}
                                                     </select>

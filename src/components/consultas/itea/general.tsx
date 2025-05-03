@@ -179,7 +179,18 @@ export default function ConsultasIteaGeneral() {
         formasAdq: [],
         directores: []
     });
-    const [areas, setAreas] = useState<Area[]>([]);
+    const [uniqueFilterOptions, setUniqueFilterOptions] = useState<{
+        estados: string[];
+        estatus: string[];
+        areas: string[];
+        rubros: string[];
+    }>({
+        estados: [],
+        estatus: [],
+        areas: [],
+        rubros: []
+    });
+    const [, setAreas] = useState<Area[]>([]);
     const [directores, setDirectores] = useState<Directorio[]>([]);
     const [showFilters, setShowFilters] = useState(false);
     const [selectedItem, setSelectedItem] = useState<Mueble | null>(null);
@@ -280,6 +291,27 @@ export default function ConsultasIteaGeneral() {
             }));
         } catch (error) {
             console.error('Error al cargar opciones de filtro:', error);
+        }
+    }, []);
+
+    const fetchUniqueFilterOptions = useCallback(async () => {
+        try {
+            const { data, error } = await supabase
+                .from('mueblesitea')
+                .select('estado, estatus, area, rubro');
+            if (error) throw error;
+            const estados = Array.from(new Set(data?.map(item => item.estado?.trim()).filter(Boolean)));
+            const estatus = Array.from(new Set(data?.map(item => item.estatus?.trim()).filter(Boolean)));
+            const areas = Array.from(new Set(data?.map(item => item.area?.trim()).filter(Boolean)));
+            const rubros = Array.from(new Set(data?.map(item => item.rubro?.trim()).filter(Boolean)));
+            setUniqueFilterOptions({
+                estados,
+                estatus,
+                areas,
+                rubros
+            });
+        } catch (error) {
+            console.error('Error al cargar opciones únicas de filtro:', error);
         }
     }, []);
 
@@ -542,8 +574,9 @@ export default function ConsultasIteaGeneral() {
         fetchAreas();
         fetchDirectores();
         fetchFilterOptions();
+        fetchUniqueFilterOptions();
         fetchMuebles();
-    }, [fetchAreas, fetchDirectores, fetchFilterOptions, fetchMuebles]);
+    }, [fetchAreas, fetchDirectores, fetchFilterOptions, fetchUniqueFilterOptions, fetchMuebles]);
 
     useEffect(() => {
         setCurrentPage(1);
@@ -1032,7 +1065,7 @@ export default function ConsultasIteaGeneral() {
                                                         className="w-full bg-gray-700 border border-gray-600 rounded-lg px-3 py-2.5 text-white focus:outline-none focus:ring-2 focus:ring-gray-500 focus:border-gray-500 appearance-none transition-all duration-200"
                                                     >
                                                         <option value="">Todos los estados</option>
-                                                        {filterOptions.estados.map((estado) => (
+                                                        {uniqueFilterOptions.estados.map((estado) => (
                                                             <option key={estado} value={estado}>{estado}</option>
                                                         ))}
                                                     </select>
@@ -1056,7 +1089,7 @@ export default function ConsultasIteaGeneral() {
                                                         className="w-full bg-gray-700 border border-gray-600 rounded-lg px-3 py-2.5 text-white focus:outline-none focus:ring-2 focus:ring-gray-500 focus:border-gray-500 appearance-none transition-all duration-200"
                                                     >
                                                         <option value="">Todos los estatus</option>
-                                                        {filterOptions.estatus.map((status) => (
+                                                        {uniqueFilterOptions.estatus.map((status) => (
                                                             <option key={status} value={status}>{status}</option>
                                                         ))}
                                                     </select>
@@ -1080,8 +1113,8 @@ export default function ConsultasIteaGeneral() {
                                                         className="w-full bg-gray-700 border border-gray-600 rounded-lg px-3 py-2.5 text-white focus:outline-none focus:ring-2 focus:ring-gray-500 focus:border-gray-500 appearance-none transition-all duration-200"
                                                     >
                                                         <option value="">Todas las áreas</option>
-                                                        {areas.map((area) => (
-                                                            <option key={area.id_area} value={area.itea || ''}>{area.itea}</option>
+                                                        {uniqueFilterOptions.areas.map((area) => (
+                                                            <option key={area} value={area}>{area}</option>
                                                         ))}
                                                     </select>
                                                     <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
@@ -1104,7 +1137,7 @@ export default function ConsultasIteaGeneral() {
                                                         className="w-full bg-gray-700 border border-gray-600 rounded-lg px-3 py-2.5 text-white focus:outline-none focus:ring-2 focus:ring-gray-500 focus:border-gray-500 appearance-none transition-all duration-200"
                                                     >
                                                         <option value="">Todos los rubros</option>
-                                                        {[...new Set(filterOptions.rubros)].map((rubro) => (
+                                                        {uniqueFilterOptions.rubros.map((rubro) => (
                                                             <option key={rubro} value={rubro}>{rubro}</option>
                                                         ))}
                                                     </select>
