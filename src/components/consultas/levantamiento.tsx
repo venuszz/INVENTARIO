@@ -42,7 +42,7 @@ interface FilterOptions {
     areas: string[];
     rubros: string[];
     formadq: string[];
-    usufinales?: string[];
+    resguardantes?: string[]; // Changed from usufinales
 }
 
 interface Message {
@@ -82,7 +82,7 @@ export default function LevantamientoUnificado() {
         area: string[];
         rubro: string[];
         formadq: string[];
-        usufinal: string[];
+        resguardante: string[]; // Changed from usufinal
         origen: string[];  // Agregamos origen a los filtros
     }>({
         estado: [],
@@ -90,7 +90,7 @@ export default function LevantamientoUnificado() {
         area: [],
         rubro: [],
         formadq: [],
-        usufinal: [],
+        resguardante: [], // Changed from usufinal
         origen: []     // Inicializamos origen
     });
     const [filterOptions, setFilterOptions] = useState<FilterOptions>({
@@ -126,7 +126,7 @@ export default function LevantamientoUnificado() {
     );
 
     // Detectar si hay filtro por área o usuario final
-    const isAreaOrUserFiltered = !!filters.area.length || !!filters.usufinal.length;
+    const isAreaOrUserFiltered = !!filters.area.length || !!filters.resguardante.length;
 
     // Estado para mostrar/ocultar filtros avanzados
     const [showFilters, setShowFilters] = useState(false);
@@ -171,7 +171,7 @@ export default function LevantamientoUnificado() {
 
     // Manejar click en botón PDF por área/usuario
     const handleAreaPDFClick = () => {
-        setAreaPDFTarget({ area: filters.area[0], usufinal: filters.usufinal[0] });
+        setAreaPDFTarget({ area: filters.area[0], usufinal: filters.resguardante[0] });
         fetchDirectorFromDirectorio(filters.area[0]);
         setShowAreaPDFModal(true);
     };
@@ -301,17 +301,17 @@ export default function LevantamientoUnificado() {
                 ...(formadqItea.data?.map(i => i.formadq?.trim()) || [])
             ].filter(Boolean))) as string[];
 
-            // Obtener usuarios finales únicos de ambas tablas
-            const [usufinalInea, usufinalItea] = await Promise.all([
-                supabase.from('muebles').select('usufinal').not('usufinal', 'is', null),
-                supabase.from('mueblesitea').select('usufinal').not('usufinal', 'is', null),
+            // Obtener resguardantes únicos de ambas tablas
+            const [resguardanteInea, resguardanteItea] = await Promise.all([
+                supabase.from('muebles').select('resguardante').not('resguardante', 'is', null),
+                supabase.from('mueblesitea').select('resguardante').not('resguardante', 'is', null),
             ]);
-            const usufinales = Array.from(new Set([
-                ...(usufinalInea.data?.map(i => i.usufinal?.trim()) || []),
-                ...(usufinalItea.data?.map(i => i.usufinal?.trim()) || [])
+            const resguardantes = Array.from(new Set([
+                ...(resguardanteInea.data?.map(i => i.resguardante?.trim()) || []),
+                ...(resguardanteItea.data?.map(i => i.resguardante?.trim()) || [])
             ].filter(Boolean))) as string[];
 
-            setFilterOptions({ estados, estatus, areas, rubros, formadq, usufinales });
+            setFilterOptions({ estados, estatus, areas, rubros, formadq, resguardantes });
         } catch (error) {
             console.error('Error al cargar opciones de filtro:', error);
             setError('Error al cargar opciones de filtro');
@@ -332,7 +332,7 @@ export default function LevantamientoUnificado() {
                 // Aplicar filtros de búsqueda
                 if (searchTerm) {
                     const search = `%${searchTerm}%`;
-                    const searchPattern = `id_inv.ilike.${search},descripcion.ilike.${search},resguardante.ilike.${search}`;
+                    const searchPattern = `id_inv.ilike.${search},descripcion.ilike.${search},resguardante.ilike.${search},usufinal.ilike.${search}`;
                     query = query.or(searchPattern);
                 }
                 // Aplicar otros filtros
@@ -479,7 +479,7 @@ export default function LevantamientoUnificado() {
                 // Aplicar filtros excepto el de origen
                 if (searchTerm) {
                     const search = `%${searchTerm}%`;
-                    const searchPattern = `id_inv.ilike.${search},descripcion.ilike.${search},resguardante.ilike.${search}`;
+                    const searchPattern = `id_inv.ilike.${search},descripcion.ilike.${search},resguardante.ilike.${search},usufinal.ilike.${search}`;
                     countInea = countInea.or(searchPattern);
                     dataInea = dataInea.or(searchPattern);
                 }
@@ -502,7 +502,7 @@ export default function LevantamientoUnificado() {
                 // Aplicar filtros excepto el de origen
                 if (searchTerm) {
                     const search = `%${searchTerm}%`;
-                    const searchPattern = `id_inv.ilike.${search},descripcion.ilike.${search},resguardante.ilike.${search}`;
+                    const searchPattern = `id_inv.ilike.${search},descripcion.ilike.${search},resguardante.ilike.${search},usufinal.ilike.${search}`;
                     countItea = countItea.or(searchPattern);
                     dataItea = dataItea.or(searchPattern);
                 }
@@ -591,12 +591,12 @@ export default function LevantamientoUnificado() {
 
     // useEffect para autocompletar directorio al cambiar el filtro de usuario final
     useEffect(() => {
-        if (filters.usufinal.length) {
+        if (filters.resguardante.length) {
             fetchDirectorFromDirectorio(filters.area[0]);
         }
         // Solo autocompletar si hay filtro de usuario
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [filters.usufinal]);
+    }, [filters.resguardante]);
 
     const handleFilterChange = (filterName: keyof typeof filters, value: string) => {
         setFilters(prev => {
@@ -623,7 +623,7 @@ export default function LevantamientoUnificado() {
             area: [],
             rubro: [],
             formadq: [],
-            usufinal: [],
+            resguardante: [], // Changed from usufinal
             origen: []
         });
         setSearchTerm('');
@@ -1260,26 +1260,26 @@ export default function LevantamientoUnificado() {
                                     )}
                                 </div>
 
-                                {/* Filter: Usuario Final */}
+                                {/* Filter: Resguardante */}
                                 <div className="filter-group">
                                     <label className="block text-sm font-medium text-gray-300 mb-2 flex items-center">
                                         <span className="h-2 w-2 rounded-full bg-cyan-500 mr-2"></span>
-                                        Usuario Final
+                                        Resguardante
                                     </label>
                                     <div className="relative">
                                         <select
-                                            value={filters.usufinal.length ? filters.usufinal[0] : ''}
-                                            onChange={e => handleFilterChange('usufinal', e.target.value)}
+                                            value={filters.resguardante.length ? filters.resguardante[0] : ''}
+                                            onChange={e => handleFilterChange('resguardante', e.target.value)}
                                             className="w-full bg-gray-800 border border-gray-700 rounded-lg pl-3 pr-10 py-2.5 text-white focus:ring-2 focus:ring-fuchsia-500 focus:border-transparent transition-all appearance-none"
-                                            title="Filtrar por usuario final"
+                                            title="Filtrar por resguardante"
                                         >
-                                            <option value="">Todos ({filterOptions.usufinales?.length})</option>
-                                            {filterOptions.usufinales?.map(u => (
+                                            <option value="">Todos ({filterOptions.resguardantes?.length})</option>
+                                            {filterOptions.resguardantes?.map(r => (
                                                 <option
-                                                    key={u}
-                                                    value={u}
+                                                    key={r}
+                                                    value={r}
                                                 >
-                                                    {u}
+                                                    {r}
                                                 </option>
                                             ))}
                                         </select>
@@ -1290,16 +1290,16 @@ export default function LevantamientoUnificado() {
                                         </div>
                                     </div>
 
-                                    {filters.usufinal.length > 0 && (
+                                    {filters.resguardante.length > 0 && (
                                         <div className="mt-3 flex flex-wrap gap-2">
-                                            {filters.usufinal.map(e => (
+                                            {filters.resguardante.map(e => (
                                                 <span
                                                     key={e}
                                                     className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-gradient-to-r from-cyan-600/40 to-cyan-500/40 text-cyan-100 border border-cyan-500/50 shadow-sm shadow-cyan-900/20"
                                                 >
                                                     {e}
                                                     <button
-                                                        onClick={() => handleFilterChange('usufinal', e)}
+                                                        onClick={() => handleFilterChange('resguardante', e)}
                                                         className="ml-1.5 text-cyan-200 hover:text-white rounded-full bg-cyan-600/30 hover:bg-cyan-600/50 transition-colors w-4 h-4 inline-flex items-center justify-center"
                                                         aria-label="Eliminar filtro"
                                                     >
@@ -1604,7 +1604,7 @@ export default function LevantamientoUnificado() {
                                         }}
                                         className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider cursor-pointer hover:bg-gray-700"
                                     >
-                                        <div className="flex items-center gap-1">Director/Jefe<ArrowUpDown className="h-3 w-3" /></div>
+                                        <div className="flex items-center gap-1">Jefe/Director de Área<ArrowUpDown className="h-3 w-3" /></div>
                                     </th>
                                     <th
                                         onClick={() => {
@@ -1655,7 +1655,16 @@ export default function LevantamientoUnificado() {
                                                 {truncateText(item.area, 20)}
                                             </td>
                                             <td className="px-4 py-3 text-sm text-gray-300">
-                                                {truncateText(item.usufinal, 20)}
+                                                <div className="flex flex-col gap-1">
+                                                    <span className="font-medium text-white">
+                                                        {truncateText(item.usufinal, 20) || <span className="text-gray-500">Sin director</span>}
+                                                    </span>
+                                                    {item.resguardante && (
+                                                        <span className="inline-block px-2 py-0.5 text-xs font-medium bg-gradient-to-r from-cyan-900/50 to-blue-900/50 text-cyan-200 rounded-full border border-cyan-500/30 shadow-sm">
+                                                            {truncateText(item.resguardante, 20)}
+                                                        </span>
+                                                    )}
+                                                </div>
                                             </td>
                                             <td className="px-4 py-3 text-sm">
                                                 <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium ${item.estatus === 'ACTIVO' ? ESTATUS_COLORS.ACTIVO :
