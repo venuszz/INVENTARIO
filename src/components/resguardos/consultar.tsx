@@ -12,6 +12,7 @@ import { generateResguardoPDF } from './ResguardoPDFReport';
 import { useUserRole } from "@/hooks/useUserRole";
 import RoleGuard from "@/components/roleGuard";
 import { useNotifications } from '@/hooks/useNotifications';
+import { useSearchParams } from 'next/navigation';
 
 interface Resguardo {
     id: number;
@@ -132,7 +133,7 @@ const limpiarDatosArticulo = async (
     }
 };
 
-export default function ConsultarResguardos() {
+export default function ConsultarResguardos({ folioParam }: { folioParam?: string | null }) {
     const [resguardos, setResguardos] = useState<Resguardo[]>([]);
     const [selectedResguardo, setSelectedResguardo] = useState<ResguardoDetalle | null>(null);
     const [loading, setLoading] = useState(false);
@@ -170,6 +171,8 @@ export default function ConsultarResguardos() {
     const [savingResguardantes, setSavingResguardantes] = useState(false);
 
     const { createNotification } = useNotifications();
+    const searchParams = useSearchParams();
+    const [folioParamLoading, setFolioParamLoading] = useState(false);
 
     // Sincronizar los resguardantes editables cuando cambia el resguardo seleccionado
     useEffect(() => {
@@ -773,6 +776,30 @@ export default function ConsultarResguardos() {
         fetchResguardos();
     }, [fetchResguardos]);
 
+    // Mostrar resguardo automáticamente si hay ?folio=XXX
+    useEffect(() => {
+        const folioParam = searchParams?.get('folio');
+        if (folioParam) {
+            fetchResguardoDetails(folioParam);
+        }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [searchParams]);
+
+    // Buscar y mostrar el detalle del folio si viene por prop
+    useEffect(() => {
+        if (folioParam) {
+            setFolioParamLoading(true);
+            fetchResguardoDetails(folioParam)
+                .then(() => {
+                    // Scroll al detalle después de cargar
+                    if (detailRef.current) {
+                        detailRef.current.scrollIntoView({ behavior: 'smooth' });
+                    }
+                })
+                .finally(() => setFolioParamLoading(false));
+        }
+    }, [folioParam]);
+
     // Calculate total pages
     const totalPages = Math.ceil(totalCount / rowsPerPage);
 
@@ -790,6 +817,15 @@ export default function ConsultarResguardos() {
 
     return (
         <div className="bg-black text-white min-h-screen p-2 sm:p-4 md:p-6 lg:p-8">
+            {/* Si está cargando el folio por param, mostrar loader sobre el panel derecho */}
+            {folioParamLoading && (
+                <div className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center">
+                    <div className="flex flex-col items-center gap-2">
+                        <span className="text-blue-300 animate-pulse text-lg font-bold">Cargando folio...</span>
+                        <div className="h-10 w-10 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+                    </div>
+                </div>
+            )}
             <div className="w-full mx-auto bg-black rounded-lg sm:rounded-xl shadow-2xl overflow-hidden transition-all duration-500 transform border border-gray-800">
                 {/* Header */}
                 <div className="bg-gradient-to-r from-purple-900/30 to-blue-900/30 p-4 sm:p-6 flex flex-col sm:flex-row justify-between items-start sm:items-center border-b border-gray-800 gap-2 sm:gap-0">

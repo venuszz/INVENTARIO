@@ -10,6 +10,8 @@ import {
 } from 'lucide-react';
 import supabase from '@/app/lib/supabase/client';
 import { useUserRole } from "@/hooks/useUserRole";
+import { useRouter } from 'next/navigation';
+import { BadgeCheck } from 'lucide-react';
 
 // Tipo unificado para INEA/ITEA
 interface LevMueble {
@@ -646,6 +648,38 @@ export default function LevantamientoUnificado() {
     function handleClearAllFilters(): void {
         throw new Error('Function not implemented.');
     }
+
+    const router = useRouter();
+    // Estado para folios de resguardo por id_inv
+    const [foliosResguardo, setFoliosResguardo] = useState<{ [id_inv: string]: string | null }>({});
+
+    // Buscar folio de resguardo para los artículos mostrados
+    useEffect(() => {
+        async function fetchFolios() {
+            if (!muebles.length) return;
+            const ids = muebles.map(m => m.id_inv);
+            // Buscar todos los folios de resguardo para los id_inv actuales
+            const { data, error } = await supabase
+                .from('resguardos')
+                .select('num_inventario, folio')
+                .in('num_inventario', ids);
+            if (!error && data) {
+                const map: { [id_inv: string]: string } = {};
+                data.forEach(r => {
+                    map[r.num_inventario] = r.folio;
+                });
+                setFoliosResguardo(map);
+            } else {
+                setFoliosResguardo({});
+            }
+        }
+        fetchFolios();
+    }, [muebles]);
+
+    // Función para manejar el clic en el folio
+    const handleFolioClick = (folio: string) => {
+        router.push(`/resguardos/consultar?folio=${folio}`);
+    };
 
     return (
         <div className="bg-black text-white min-h-screen p-2 sm:p-4 md:p-6 lg:p-8">
@@ -1327,7 +1361,7 @@ export default function LevantamientoUnificado() {
                                         className="text-sm text-fuchsia-300 hover:text-fuchsia-100 hover:underline flex items-center transition-colors"
                                     >
                                         <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" viewBox="0 0 20 20" fill="currentColor">
-                                            <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+                                            <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
                                         </svg>
                                         Limpiar todos los filtros
                                     </button>
@@ -1570,6 +1604,7 @@ export default function LevantamientoUnificado() {
                             <thead className="bg-black sticky top-0 z-10">
                                 <tr>
                                     <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Origen</th>
+                                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Resguardo</th>
                                     <th
                                         onClick={() => {
                                             setSortField('id_inv');
@@ -1644,6 +1679,20 @@ export default function LevantamientoUnificado() {
                                                 <span className={`inline-flex items-center px-2.5 py-1 rounded-full font-bold ${ORIGEN_COLORS[item.origen]}`}>
                                                     {item.origen}
                                                 </span>
+                                            </td>
+                                            <td className="px-4 py-3 text-xs">
+                                                {foliosResguardo[item.id_inv] ? (
+                                                    <button
+                                                        className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full font-bold bg-gradient-to-r from-blue-900/60 to-blue-700/60 text-blue-200 border border-blue-700 hover:from-blue-800 hover:to-blue-600 hover:text-white shadow-sm hover:scale-105 transition-all duration-200"
+                                                        title={`Ver resguardo ${foliosResguardo[item.id_inv]}`}
+                                                        onClick={() => handleFolioClick(foliosResguardo[item.id_inv]!)}
+                                                    >
+                                                        <BadgeCheck className="h-4 w-4 mr-1 text-blue-300" />
+                                                        {foliosResguardo[item.id_inv]}
+                                                    </button>
+                                                ) : (
+                                                    <span className="text-gray-600 italic">—</span>
+                                                )}
                                             </td>
                                             <td className="px-4 py-3 whitespace-nowrap text-sm font-medium text-white">
                                                 {item.id_inv}
