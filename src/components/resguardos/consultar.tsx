@@ -1338,7 +1338,11 @@ export default function ConsultarResguardos({ folioParam }: { folioParam?: strin
                                                         onClick={() => {
                                                             setPdfData({
                                                                 folio: selectedResguardo.folio,
-                                                                fecha: new Date(selectedResguardo.f_resguardo).toLocaleDateString(),
+                                                                // Corregir fecha para evitar desfase por zona horaria
+                                                                fecha: (() => {
+                                                                    const [year, month, day] = selectedResguardo.f_resguardo.slice(0, 10).split('-').map(Number);
+                                                                    return new Date(year, month - 1, day).toLocaleDateString();
+                                                                })(),
                                                                 director: selectedResguardo.dir_area,
                                                                 area: selectedResguardo.area_resguardo || '',
                                                                 puesto: selectedResguardo.puesto,
