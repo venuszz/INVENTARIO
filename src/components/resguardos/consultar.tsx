@@ -522,9 +522,11 @@ export default function ConsultarResguardos({ folioParam }: { folioParam?: strin
                 const firmas = await getFirmas();
 
                 // Preparar datos para el PDF
+                const [year, month, day] = detalles.f_resguardo.slice(0, 10).split('-').map(Number);
+                const fechaLocal = new Date(year, month - 1, day);
                 setPdfData({
                     folio: detalles.folio,
-                    fecha: new Date(detalles.f_resguardo).toLocaleDateString(),
+                    fecha: fechaLocal.toLocaleDateString(),
                     director: detalles.dir_area,
                     area: detalles.area_resguardo || '',
                     puesto: detalles.puesto,
