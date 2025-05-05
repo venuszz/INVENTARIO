@@ -392,6 +392,15 @@ export default function LevantamientoUnificado() {
         }
     }, []);
 
+    // Modificar la función getFilteredOptions para mantener el orden alfabético
+    const getFilteredOptions = (options: string[], searchTerm: string) => {
+        return options
+            .filter(option => 
+                option.toLowerCase().includes(searchTerm.toLowerCase())
+            )
+            .sort((a, b) => a.localeCompare(b)); // Asegurar que las opciones filtradas también estén ordenadas
+    };
+
     // Función para obtener datos filtrados para exportación
     const getFilteredData = async () => {
         try {
@@ -1143,7 +1152,7 @@ export default function LevantamientoUnificado() {
                                             title="Filtrar por estado"
                                         >
                                             <option value="">Todos ({filterOptions.estados.length})</option>
-                                            {filterOptions.estados.map(e => (
+                                            {getFilteredOptions(filterOptions.estados, '').map(e => (
                                                 <option
                                                     key={e}
                                                     value={e}
@@ -1196,7 +1205,7 @@ export default function LevantamientoUnificado() {
                                             title="Filtrar por estatus"
                                         >
                                             <option value="">Todos ({filterOptions.estatus.length})</option>
-                                            {filterOptions.estatus.map(e => (
+                                            {getFilteredOptions(filterOptions.estatus, '').map(e => (
                                                 <option
                                                     key={e}
                                                     value={e}
@@ -1249,7 +1258,7 @@ export default function LevantamientoUnificado() {
                                             title="Filtrar por área"
                                         >
                                             <option value="">Todas ({filterOptions.areas.length})</option>
-                                            {filterOptions.areas.map(e => (
+                                            {getFilteredOptions(filterOptions.areas, '').map(e => (
                                                 <option
                                                     key={e}
                                                     value={e}
@@ -1302,7 +1311,7 @@ export default function LevantamientoUnificado() {
                                             title="Filtrar por rubro"
                                         >
                                             <option value="">Todos ({filterOptions.rubros.length})</option>
-                                            {filterOptions.rubros.map(e => (
+                                            {getFilteredOptions(filterOptions.rubros, '').map(e => (
                                                 <option
                                                     key={e}
                                                     value={e}
@@ -1355,7 +1364,7 @@ export default function LevantamientoUnificado() {
                                             title="Filtrar por forma de adquisición"
                                         >
                                             <option value="">Todas ({filterOptions.formadq.length})</option>
-                                            {filterOptions.formadq.map(e => (
+                                            {getFilteredOptions(filterOptions.formadq, '').map(e => (
                                                 <option
                                                     key={e}
                                                     value={e}
@@ -1408,7 +1417,7 @@ export default function LevantamientoUnificado() {
                                             title="Filtrar por resguardante"
                                         >
                                             <option value="">Todos ({filterOptions.resguardantes?.length})</option>
-                                            {filterOptions.resguardantes?.map(r => (
+                                            {getFilteredOptions(filterOptions.resguardantes || [], '').map(r => (
                                                 <option
                                                     key={r}
                                                     value={r}
