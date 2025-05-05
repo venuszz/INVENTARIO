@@ -4,9 +4,10 @@ import {
     FileText,
     FileDigit, X, AlertCircle,
     CheckCircle,
-    ClipboardList, Layers, Layers3, AlertTriangle, Archive
+    ClipboardList, Layers, Layers3, AlertTriangle, Archive, Download
 } from 'lucide-react';
 import supabase from '@/app/lib/supabase/client';
+import { generateDashboardPDF } from './dashboardPDF';
 
 export default function ReportesIneaDashboard() {
     // Estados principales
@@ -34,6 +35,19 @@ export default function ReportesIneaDashboard() {
     const handleCloseModal = () => {
         setModalVisible(false);
         setTimeout(() => setModalReporte(null), 300);
+    };
+
+    // Nueva función para exportar PDF general
+    const handleExportPDF = () => {
+        if (!dashboardType || !resumenGeneral.length) return;
+        generateDashboardPDF({
+            title: `Total ${dashboardType}`,
+            totalBienes: resumenGeneral.reduce((sum, r) => sum + r.count, 0),
+            sumaValores: resumenGeneral.reduce((sum, r) => sum + r.sum, 0),
+            rubros: resumenGeneral,
+            fileName: `dashboard_${dashboardType.toLowerCase()}`,
+            warehouse: dashboardType,
+        });
     };
 
     // Efectos para cargar datos
@@ -259,28 +273,23 @@ export default function ReportesIneaDashboard() {
                 id: 1,
                 title: 'General',
                 icon: <ClipboardList className="h-5 w-5" />,
-                color: 'bg-purple-900/20',
-                borderColor: 'border-purple-800',
-                hoverColor: 'hover:border-purple-500',
-                iconColor: 'text-purple-400',
+                color: 'bg-violet-900/20',
+                borderColor: 'border-violet-800',
+                hoverColor: 'hover:border-violet-500',
+                iconColor: 'text-violet-400',
                 description: 'Información completa de todos los registros del sistema ITEA'
             },
             ...estatusData.map((estatusItem, index) => {
-                // Asigna colores diferentes basados en el índice
+                // Paleta de colores igual a reportes/itea.tsx
                 const colors = [
-                    { bg: 'bg-blue-900/20', border: 'border-blue-800', hover: 'hover:border-blue-500', icon: 'text-blue-400' },
-                    { bg: 'bg-green-900/20', border: 'border-green-800', hover: 'hover:border-green-500', icon: 'text-green-400' },
-                    { bg: 'bg-amber-900/20', border: 'border-amber-800', hover: 'hover:border-amber-500', icon: 'text-amber-400' },
-                    { bg: 'bg-red-900/20', border: 'border-red-800', hover: 'hover:border-red-500', icon: 'text-red-400' },
-                    { bg: 'bg-indigo-900/20', border: 'border-indigo-800', hover: 'hover:border-indigo-500', icon: 'text-indigo-400' },
                     { bg: 'bg-teal-900/20', border: 'border-teal-800', hover: 'hover:border-teal-500', icon: 'text-teal-400' },
+                    { bg: 'bg-pink-900/20', border: 'border-pink-800', hover: 'hover:border-pink-500', icon: 'text-pink-400' },
                     { bg: 'bg-cyan-900/20', border: 'border-cyan-800', hover: 'hover:border-cyan-500', icon: 'text-cyan-400' },
-                    { bg: 'bg-emerald-900/20', border: 'border-emerald-800', hover: 'hover:border-emerald-500', icon: 'text-emerald-400' }
+                    { bg: 'bg-rose-900/20', border: 'border-rose-800', hover: 'hover:border-rose-500', icon: 'text-rose-400' },
+                    { bg: 'bg-violet-900/20', border: 'border-violet-800', hover: 'hover:border-violet-500', icon: 'text-violet-400' }
                 ];
-
                 const colorIndex = index % colors.length;
                 const selectedColor = colors[colorIndex];
-
                 return {
                     id: 100 + index,
                     title: estatusItem.estatus,
@@ -315,20 +324,20 @@ export default function ReportesIneaDashboard() {
                 id: 1,
                 title: 'General',
                 icon: <ClipboardList className="h-5 w-5" />,
-                color: 'bg-purple-900/20',
-                borderColor: 'border-purple-800',
-                hoverColor: 'hover:border-purple-500',
-                iconColor: 'text-purple-400',
+                color: 'bg-violet-900/20',
+                borderColor: 'border-violet-800',
+                hoverColor: 'hover:border-violet-500',
+                iconColor: 'text-violet-400',
                 description: 'Información completa de todos los registros del sistema INEA'
             },
             {
                 id: 2,
                 title: 'EN USO',
                 icon: <CheckCircle className="h-5 w-5" />,
-                color: 'bg-green-900/20',
-                borderColor: 'border-green-800',
-                hoverColor: 'hover:border-green-500',
-                iconColor: 'text-green-400',
+                color: 'bg-teal-900/20',
+                borderColor: 'border-teal-800',
+                hoverColor: 'hover:border-teal-500',
+                iconColor: 'text-teal-400',
                 description: 'Registros INEA actualmente en uso',
                 estatusValue: 'EN USO'
             },
@@ -336,10 +345,10 @@ export default function ReportesIneaDashboard() {
                 id: 3,
                 title: 'EN USO*',
                 icon: <CheckCircle className="h-5 w-5" />,
-                color: 'bg-teal-900/20',
-                borderColor: 'border-teal-800',
-                hoverColor: 'hover:border-teal-500',
-                iconColor: 'text-teal-400',
+                color: 'bg-pink-900/20',
+                borderColor: 'border-pink-800',
+                hoverColor: 'hover:border-pink-500',
+                iconColor: 'text-pink-400',
                 description: 'Registros INEA en uso con observaciones',
                 estatusValue: 'EN USO*'
             },
@@ -347,10 +356,10 @@ export default function ReportesIneaDashboard() {
                 id: 4,
                 title: 'SIN USO Y NO INTEGRADO AL PADFBM INEA (REALIZAR BAJA)',
                 icon: <AlertTriangle className="h-5 w-5" />,
-                color: 'bg-amber-900/20',
-                borderColor: 'border-amber-800',
-                hoverColor: 'hover:border-amber-500',
-                iconColor: 'text-amber-400',
+                color: 'bg-cyan-900/20',
+                borderColor: 'border-cyan-800',
+                hoverColor: 'hover:border-cyan-500',
+                iconColor: 'text-cyan-400',
                 description: 'Bienes INEA sin uso y no integrados al PADFBM (para baja)',
                 estatusValue: 'SIN USO Y NO INTEGRADO AL PADFBM INEA (REALIZAR BAJA)'
             },
@@ -358,14 +367,13 @@ export default function ReportesIneaDashboard() {
                 id: 5,
                 title: 'SIN USO E INTEGRADO AL PADFBM INEA',
                 icon: <Archive className="h-5 w-5" />,
-                color: 'bg-indigo-900/20',
-                borderColor: 'border-indigo-800',
-                hoverColor: 'hover:border-indigo-500',
-                iconColor: 'text-indigo-400',
+                color: 'bg-rose-900/20',
+                borderColor: 'border-rose-800',
+                hoverColor: 'hover:border-rose-500',
+                iconColor: 'text-rose-400',
                 description: 'Bienes INEA sin uso pero integrados al PADFBM',
                 estatusValue: 'SIN USO E INTEGRADO AL PADFBM INEA'
             },
-            // Tarjeta para registros sin estatus
             {
                 id: 999,
                 title: 'SIN ESTATUS',
@@ -418,13 +426,27 @@ export default function ReportesIneaDashboard() {
                 <div className="w-full mx-auto bg-black rounded-lg sm:rounded-xl shadow-2xl overflow-hidden border border-gray-800 transition-all duration-500 transform">
                     {/* Header */}
                     <div className="bg-black p-4 sm:p-6 flex flex-col sm:flex-row justify-between items-start sm:items-center border-b border-gray-800 gap-2 sm:gap-0">
-                        <h1 className="text-xl sm:text-2xl md:text-3xl font-bold flex items-center">
-                            <span className="mr-2 sm:mr-3 bg-gray-900 text-white p-1 sm:p-2 rounded-lg border border-gray-700 text-sm sm:text-base">
-                                <FileText className="h-4 w-4 inline mr-1" />
-                                DAS
-                            </span>
-                            {dashboardType === 'ITEA' ? 'Dashboard ITEA' : 'Dashboard INEA'}
-                        </h1>
+                        <div className="flex items-center gap-2">
+                            <h1 className="text-xl sm:text-2xl md:text-3xl font-bold flex items-center">
+                                <span className="mr-2 sm:mr-3 bg-gray-900 text-white p-1 sm:p-2 rounded-lg border border-gray-700 text-sm sm:text-base">
+                                    <FileText className="h-4 w-4 inline mr-1" />
+                                    DAS
+                                </span>
+                                {dashboardType === 'ITEA' ? 'Dashboard ITEA' : 'Dashboard INEA'}
+                            </h1>
+                            {/* Botón de exportar PDF */}
+                            {dashboardType === 'INEA' && (
+                                <button
+                                    onClick={handleExportPDF}
+                                    className="ml-3 flex items-center gap-2 px-4 py-2 rounded-xl border transition-all duration-300 shadow-lg focus:outline-none focus:ring-2 focus:ring-violet-500/30 bg-gradient-to-br from-purple-900/80 via-purple-800/80 to-purple-900/80 border-purple-500/30 text-purple-200 hover:bg-purple-800/90"
+                                    title={`Exportar PDF Totales ${dashboardType}`}
+                                    disabled={!resumenGeneral.length}
+                                >
+                                    <Download size={18} className="text-purple-300" />
+                                    <span className="font-medium">Exportar PDF</span>
+                                </button>
+                            )}
+                        </div>
                     </div>
 
                     {/* Tarjetas de reportes */}

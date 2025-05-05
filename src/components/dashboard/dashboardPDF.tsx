@@ -1,5 +1,6 @@
 import { PDFDocument, StandardFonts, rgb } from 'pdf-lib';
 import { saveAs } from 'file-saver';
+import supabase from '@/app/lib/supabase/client';
 
 export interface DashboardRubrosRow {
     rubro: string;
@@ -12,211 +13,283 @@ export interface DashboardPDFOptions {
     totalBienes: number;
     sumaValores: number;
     rubros: DashboardRubrosRow[];
-    firma: {
-        concepto: string;
-        nombre: string;
-        puesto: string;
-    };
     fileName?: string;
     warehouse?: 'INEA' | 'ITEA';
 }
 
 export async function generateDashboardPDF({
-    title,
-    totalBienes,
-    sumaValores,
     rubros,
-    firma,
     fileName = 'reporte_dashboard',
     warehouse = 'INEA',
 }: DashboardPDFOptions) {
+    // Obtener la firma desde Supabase (concepto contiene 'Resguarda')
+    const { data: firmas, error } = await supabase
+        .from('firmas')
+        .select('*')
+        .ilike('concepto', '%resguarda%')
+        .order('id', { ascending: true });
+    if (error || !firmas || firmas.length === 0) {
+        alert('No se encontró la firma de resguardo.');
+        return;
+    }
+    const firma = firmas[firmas.length - 1];
+
     const pdfDoc = await PDFDocument.create();
     const ineaImageBytes = await fetch('/images/INEA NACIONAL.png').then(res => res.arrayBuffer());
     const iteaImageBytes = await fetch('/images/LOGO-ITEA.png').then(res => res.arrayBuffer());
     const ineaImage = await pdfDoc.embedPng(ineaImageBytes);
     const iteaImage = await pdfDoc.embedPng(iteaImageBytes);
-    const font = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
+    const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
     const regularFont = await pdfDoc.embedFont(StandardFonts.Helvetica);
     const margin = 40;
     const pageWidth = 595;
     const pageHeight = 842;
-    const headerFontSize = 11;
-    const fontSize = 9;
     const minCellPadding = 2;
-
-    // Paleta morada
-    const mainColor = rgb(0.36, 0.22, 0.53); // morado
-    const tableHeaderBg = rgb(0.36, 0.22, 0.53);
-    const tableHeaderText = rgb(1, 1, 1);
-    const tableRowBg = rgb(0.97, 0.95, 1);
-    const tableRowText = rgb(0.2, 0.15, 0.3);
+    const fontSize = 7;
+    const headerFontSize = 8;
 
     const normalizeText = (text: string) => text.normalize('NFKD').replace(/[\u0300-\u036f]/g, '');
 
-    // Columnas de la tabla
+    // Columnas más angostas y proporcionales, tabla centrada
+    const totalTableWidth = pageWidth - 2 * margin - 60; // deja más margen a los lados
+    const colProps = [0.45, 0.18, 0.22];
     const columns = [
-        { header: 'Rubro', key: 'rubro', width: 220 },
-        { header: 'Total bienes', key: 'count', width: 90 },
-        { header: 'Suma valores', key: 'sum', width: 120 },
+        { header: 'RUBRO', key: 'rubro', width: totalTableWidth * colProps[0] },
+        { header: 'TOTAL', key: 'count', width: totalTableWidth * colProps[1] },
+        { header: 'VALOR', key: 'sum', width: totalTableWidth * colProps[2] },
     ];
-    const totalTableWidth = columns.reduce((acc, c) => acc + c.width, 0);
-    const tableStartX = (pageWidth - totalTableWidth) / 2;
+    const totalTableWidthCalculated = columns.reduce((acc, c) => acc + c.width, 0);
+    const tableStartX = (pageWidth - totalTableWidthCalculated) / 2;
 
+    // Helpers para wrap y centrado
+    const wrapText = (text: string, maxWidth: number, font: import('pdf-lib').PDFFont, fontSize: number) => {
+        const words = text.toString().split(' ');
+        const lines: string[] = [];
+        let currentLine = '';
+        for (const word of words) {
+            if (font.widthOfTextAtSize(word, fontSize) > maxWidth) {
+                if (currentLine !== '') {
+                    lines.push(currentLine);
+                    currentLine = '';
+                }
+                let remainingWord = word;
+                while (remainingWord !== '') {
+                    let i = 1;
+                    while (i <= remainingWord.length && font.widthOfTextAtSize(remainingWord.slice(0, i), fontSize) <= maxWidth) {
+                        i++;
+                    }
+                    i--;
+                    if (i === 0) i = 1;
+                    lines.push(remainingWord.slice(0, i));
+                    remainingWord = remainingWord.slice(i);
+                }
+                continue;
+            }
+            const testLine = currentLine === '' ? word : `${currentLine} ${word}`;
+            if (font.widthOfTextAtSize(testLine, fontSize) <= maxWidth) {
+                currentLine = testLine;
+            } else {
+                lines.push(currentLine);
+                currentLine = word;
+            }
+        }
+        if (currentLine !== '') lines.push(currentLine);
+        return lines;
+    };
+
+    // --- Página única ---
     const page = pdfDoc.addPage([pageWidth, pageHeight]);
     let y = pageHeight - margin;
 
     // Logos
     const ineaAspectRatio = ineaImage.width / ineaImage.height;
     const iteaAspectRatio = iteaImage.width / iteaImage.height;
-    const maxImageHeight = 32;
+    const maxImageHeight = 24;
     const ineaHeight = maxImageHeight;
     const iteaHeight = maxImageHeight;
     const ineaWidth = ineaHeight * ineaAspectRatio;
     const iteaWidth = iteaHeight * iteaAspectRatio;
     page.drawImage(ineaImage, {
         x: margin,
-        y: y - ineaHeight,
+        y: y - maxImageHeight,
         width: ineaWidth,
         height: ineaHeight,
     });
     page.drawImage(iteaImage, {
         x: pageWidth - margin - iteaWidth,
-        y: y - iteaHeight,
+        y: y - maxImageHeight,
         width: iteaWidth,
         height: iteaHeight,
     });
 
-    // Títulos
-    y -= 10;
-    const dashboardTitle = warehouse === 'INEA'
-        ? 'DASHBOARD DE INVENTARIO INEA'
-        : 'DASHBOARD DE INVENTARIO ITEA';
+    // Títulos pequeños
     const titles = [
         'INSTITUTO TLAXCALTECA PARA LA EDUCACIÓN DE LOS ADULTOS',
-        dashboardTitle,
-        title.toUpperCase(),
+        warehouse === 'INEA' ? 'DIRECCIÓN DE ADMINISTRACIÓN Y FINANZAS' : 'DIRECCIÓN DE ADMINISTRACIÓN Y FINANZAS',
+        warehouse === 'INEA' ? 'OFICINA DE RECURSOS MATERIALES' : 'OFICINA DE RECURSOS MATERIALES',
+        'REPORTE CLASIFICACIÓN DEL GASTO'
     ];
+    y -= 5;
     titles.forEach((text, idx) => {
-        const size = idx === 0 ? headerFontSize : headerFontSize + 1;
+        const size = headerFontSize;
         const textWidth = font.widthOfTextAtSize(text, size);
         page.drawText(normalizeText(text), {
             x: (pageWidth - textWidth) / 2,
-            y: y - (idx * 18),
+            y: y - (idx * 11),
             size,
             font,
-            color: mainColor,
+            color: rgb(0, 0, 0),
         });
     });
-    y -= 18 * titles.length + 10;
-
-    // Resumen totales
-    const resumenLines = [
-        `Total de bienes: ${totalBienes}`,
-        `Suma total de valores: $${sumaValores.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
-    ];
-    resumenLines.forEach((line, idx) => {
-        page.drawText(line, {
-            x: tableStartX,
-            y: y - (idx * 14),
-            size: fontSize,
-            font: regularFont,
-            color: mainColor,
-        });
-    });
-    y -= resumenLines.length * 14 + 18;
+    y -= titles.length * 11 + 8;
 
     // Tabla de rubros
-    // Header
     let x = tableStartX;
+    // Header (mayúsculas, negritas, más pequeño, wrap, alineado a la derecha, centrado vertical)
+    const headerFontSizeBig = 9;
+    const headerCellHeight = 22;
     columns.forEach((col) => {
         page.drawRectangle({
             x,
-            y: y - 24,
+            y: y - headerCellHeight,
             width: col.width,
-            height: 24,
-            color: tableHeaderBg,
+            height: headerCellHeight,
+            color: rgb(0.9, 0.9, 0.9),
         });
-        page.drawText(col.header, {
-            x: x + minCellPadding,
-            y: y - 10,
-            size: fontSize,
-            font,
-            color: tableHeaderText,
+        const headerLines = wrapText(col.header.toUpperCase(), col.width - 2 * minCellPadding, font, headerFontSizeBig);
+        const totalHeaderHeight = headerLines.length * (headerFontSizeBig + 2);
+        const verticalOffset = (headerCellHeight - totalHeaderHeight) / 2;
+        headerLines.forEach((line, idx) => {
+            const textWidth = font.widthOfTextAtSize(line, headerFontSizeBig);
+            page.drawText(line, {
+                x: x + col.width - textWidth - minCellPadding,
+                y: y - verticalOffset - (idx * (headerFontSizeBig + 2)) - headerFontSizeBig,
+                size: headerFontSizeBig,
+                font: font,
+                color: rgb(0, 0, 0),
+            });
         });
         x += col.width;
     });
-    y -= 24;
-
-    // Filas
+    y -= headerCellHeight;
+    // Filas (wrap, más pequeño, alineado a la derecha, más espacio entre filas)
+    const rowFontSize = 7;
+    let totalBienes = 0;
+    let totalValores = 0;
     rubros.forEach((row) => {
         let x = tableStartX;
+        let maxLines = 1;
+        columns.forEach((col) => {
+            let value = row[col.key as keyof DashboardRubrosRow];
+            if (col.key === 'sum') {
+                value = `$${Number(value).toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+            }
+            const lines = wrapText(String(value).toUpperCase(), col.width - 2 * minCellPadding, regularFont, rowFontSize);
+            maxLines = Math.max(maxLines, lines.length);
+        });
+        const rowCellHeight = 15 * maxLines;
         columns.forEach((col) => {
             page.drawRectangle({
                 x,
-                y: y - 20,
+                y: y - rowCellHeight,
                 width: col.width,
-                height: 20,
-                color: tableRowBg,
+                height: rowCellHeight,
+                color: rgb(1, 1, 1),
                 opacity: 1,
             });
             let value = row[col.key as keyof DashboardRubrosRow];
             if (col.key === 'sum') {
                 value = `$${Number(value).toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
             }
-            page.drawText(String(value), {
-                x: x + minCellPadding,
-                y: y - 8,
-                size: fontSize,
-                font: regularFont,
-                color: tableRowText,
+            const lines = wrapText(String(value).toUpperCase(), col.width - 2 * minCellPadding, regularFont, rowFontSize);
+            const totalRowHeight = lines.length * (rowFontSize + 2);
+            const verticalOffset = (rowCellHeight - totalRowHeight) / 2;
+            lines.forEach((line, idx) => {
+                const textWidth = regularFont.widthOfTextAtSize(line, rowFontSize);
+                page.drawText(line, {
+                    x: x + col.width - textWidth - minCellPadding,
+                    y: y - verticalOffset - (idx * (rowFontSize + 2)) - rowFontSize,
+                    size: rowFontSize,
+                    font: regularFont,
+                    color: rgb(0, 0, 0),
+                });
             });
             x += col.width;
         });
-        y -= 20;
+        y -= rowCellHeight;
+        totalBienes += Number(row.count);
+        totalValores += Number(row.sum);
     });
+    // Fila de totales (alineado a la derecha)
+    let xTot = tableStartX;
+    const totalCellHeight = 18;
+    columns.forEach((col) => {
+        page.drawRectangle({
+            x: xTot,
+            y: y - totalCellHeight,
+            width: col.width,
+            height: totalCellHeight,
+            color: rgb(0.92, 0.92, 0.92),
+        });
+        let value = '';
+        if (col.key === 'rubro') value = 'TOTAL';
+        if (col.key === 'count') value = totalBienes.toLocaleString('es-MX');
+        if (col.key === 'sum') value = `$${totalValores.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+        const fontSizeTotal = rowFontSize + 1;
+        const textWidth = font.widthOfTextAtSize(String(value).toUpperCase(), fontSizeTotal);
+        const verticalOffset = (totalCellHeight - fontSizeTotal) / 2;
+        page.drawText(String(value).toUpperCase(), {
+            x: xTot + col.width - textWidth - minCellPadding,
+            y: y - verticalOffset - fontSizeTotal,
+            size: fontSizeTotal,
+            font: font,
+            color: rgb(0, 0, 0),
+        });
+        xTot += col.width;
+    });
+    y -= totalCellHeight;
 
-    // Firma (solo una, como PDFLevantamiento)
-    y -= 40;
-    const signatureBoxWidth = 260;
-    const xFirma = (pageWidth - signatureBoxWidth) / 2;
-    const lineY = y;
+    // Firma SIEMPRE al pie de la página
+    const signatureBoxWidth = pageWidth - 2 * margin;
+    const xFirma = margin;
+    const lineY = margin + 70;
     page.drawText(normalizeText(firma.concepto.toUpperCase()), {
         x: xFirma + (signatureBoxWidth / 2) - (regularFont.widthOfTextAtSize(firma.concepto.toUpperCase(), fontSize) / 2),
-        y: lineY + 30,
+        y: lineY + 40,
         size: fontSize,
         font: regularFont,
-        color: mainColor,
+        color: rgb(0, 0, 0),
     });
     page.drawLine({
-        start: { x: xFirma + 20, y: lineY },
-        end: { x: xFirma + signatureBoxWidth - 20, y: lineY },
-        thickness: 1,
-        color: mainColor,
+        start: { x: xFirma + 120, y: lineY + 10 },
+        end: { x: xFirma + signatureBoxWidth - 120, y: lineY + 10 },
+        thickness: 1.2,
+        color: rgb(0, 0, 0),
     });
     page.drawText(normalizeText(firma.nombre.toUpperCase()), {
         x: xFirma + (signatureBoxWidth / 2) - (regularFont.widthOfTextAtSize(firma.nombre.toUpperCase(), fontSize) / 2),
-        y: lineY - 15,
+        y: lineY - 10,
         size: fontSize,
         font: regularFont,
-        color: mainColor,
+        color: rgb(0, 0, 0),
     });
     page.drawText(normalizeText(firma.puesto.toUpperCase()), {
         x: xFirma + (signatureBoxWidth / 2) - (regularFont.widthOfTextAtSize(firma.puesto.toUpperCase(), fontSize) / 2),
-        y: lineY - 30,
+        y: lineY - 28,
         size: fontSize,
         font: regularFont,
-        color: mainColor,
+        color: rgb(0, 0, 0),
     });
 
-    // Pie de página
-    const pageText = 'REPORTE DE TOTALES POR RUBRO';
+    // Pie de página igual que PDFLevantamiento
+    const pageText = 'PÁGINA 1 DE 1';
     const pageTextWidth = regularFont.widthOfTextAtSize(pageText, 10);
     page.drawText(pageText, {
-        x: (pageWidth - pageTextWidth) / 2,
+        x: pageWidth - margin - pageTextWidth,
         y: margin - 20,
         size: 10,
         font: regularFont,
-        color: mainColor,
+        color: rgb(0.6, 0.6, 0.6)
     });
 
     const pdfBytes = await pdfDoc.save();

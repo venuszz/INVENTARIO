@@ -445,7 +445,7 @@ export default function NavigationBar() {
                                     <User className="h-5 w-5" />
                                 </Link>
                             </RoleGuard>
-                            <RoleGuard roles={["superadmin"]} userRole={userData.rol}>
+                            <RoleGuard roles={["superadmin", "admin"]} userRole={userData.rol}>
                                 <Link
                                     href="/dashboard"
                                     className={`p-2 text-gray-300 hover:text-white hover:bg-gray-800 rounded-full ${pathname === '/dashboard' ? 'text-blue-400 bg-blue-950' : ''}`}

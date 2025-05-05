@@ -206,22 +206,20 @@ const LoadingSpinner = () => (
         exit={{ opacity: 0 }}
     >
         <motion.div
-            className="relative w-16 h-16"
+            className="relative w-12 h-12"
             animate={{
                 rotate: 360
             }}
             transition={{
-                duration: 2,
+                duration: 1.5,
                 repeat: Infinity,
                 ease: "linear"
             }}
         >
-            <div className="absolute inset-0 border-t-2 border-cyan-400/30 rounded-full"></div>
-            <div className="absolute inset-0 border-t-2 border-cyan-400 rounded-full"></div>
-            <div className="absolute inset-0 border-t-2 border-cyan-300 rounded-full" style={{ transform: 'rotate(120deg)' }}></div>
-            <div className="absolute inset-0 border-t-2 border-cyan-200 rounded-full" style={{ transform: 'rotate(240deg)' }}></div>
+            <div className="absolute inset-0 border-2 border-white/10 rounded-full"></div>
+            <div className="absolute inset-0 border-t-2 border-white rounded-full"></div>
         </motion.div>
-        <span className="absolute mt-24 text-cyan-300 text-sm">Cargando datos del inventario...</span>
+        <span className="absolute mt-20 text-white/70 text-sm">Cargando...</span>
     </motion.div>
 );
 
@@ -292,11 +290,6 @@ export default function InventoryDashboard() {
     });
 
     // Firma de ejemplo (ajusta según tu base de datos o lógica real)
-    const dashboardSignature = {
-        concepto: 'DIRECTORA DE ADMINISTRACIÓN Y FINANZAS',
-        nombre: 'María del Carmen Pérez',
-        puesto: 'Directora',
-    };
 
     // Función para exportar PDF de totales
     const handleExportPDF = () => {
@@ -314,7 +307,6 @@ export default function InventoryDashboard() {
             totalBienes: totalCard.count,
             sumaValores: Number((totalCard.value || '').replace(/[^\d.-]+/g, '')),
             rubros,
-            firma: dashboardSignature,
             fileName: `dashboard_${activeWarehouse.toLowerCase()}`,
             warehouse: activeWarehouse as 'INEA' | 'ITEA',
         });
@@ -695,7 +687,7 @@ export default function InventoryDashboard() {
                         >
                             DSH
                         </motion.span>
-                        Dashboard de Inventario
+                        Clasificación del Gasto
                     </motion.h1>
                     <div className="flex gap-2 items-center">
                         <motion.button
