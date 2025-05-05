@@ -16,7 +16,9 @@ import {
     Repeat,
     ShieldCheck,
     Info,
+    Download,
 } from 'lucide-react';
+import { generateDashboardPDF } from './dashboardPDF';
 
 // Paletas de colores para cada bodega (mejoradas)
 type Warehouse = 'INEA' | 'ITEA';
@@ -288,6 +290,35 @@ export default function InventoryDashboard() {
             cards: []
         }
     });
+
+    // Firma de ejemplo (ajusta según tu base de datos o lógica real)
+    const dashboardSignature = {
+        concepto: 'DIRECTORA DE ADMINISTRACIÓN Y FINANZAS',
+        nombre: 'María del Carmen Pérez',
+        puesto: 'Directora',
+    };
+
+    // Función para exportar PDF de totales
+    const handleExportPDF = () => {
+        // Buscar la tarjeta de totales para el almacén activo
+        const totalCard = currentData.cards.find(card => card.id === `${activeWarehouse.toLowerCase()}-total`);
+        if (!totalCard) return;
+        // Mapear rubros
+        const rubros = (totalCard.categories || []).map(r => ({
+            rubro: r.name,
+            count: r.count,
+            sum: r.valueNum || 0,
+        }));
+        generateDashboardPDF({
+            title: totalCard.title,
+            totalBienes: totalCard.count,
+            sumaValores: Number((totalCard.value || '').replace(/[^\d.-]+/g, '')),
+            rubros,
+            firma: dashboardSignature,
+            fileName: `dashboard_${activeWarehouse.toLowerCase()}`,
+            warehouse: activeWarehouse as 'INEA' | 'ITEA',
+        });
+    };
 
     // Función para formatear valores monetarios
     const formatCurrency = (value: number) => {
@@ -666,23 +697,36 @@ export default function InventoryDashboard() {
                         </motion.span>
                         Dashboard de Inventario
                     </motion.h1>
-                    
-                    <motion.button
-                        onClick={toggleWarehouse}
-                        whileHover={{ scale: 1.08 }}
-                        whileTap={{ scale: 0.97 }}
-                        className="flex items-center space-x-2 px-5 py-2 bg-black rounded-xl border border-white/10 shadow-lg group focus:outline-none focus:ring-2 focus:ring-white/20 transition-all"
-                    >
-                        <motion.div
-                            animate={{ rotate: direction ? 360 : 0 }}
-                            transition={{ duration: 0.5 }}
+                    <div className="flex gap-2 items-center">
+                        <motion.button
+                            onClick={toggleWarehouse}
+                            whileHover={{ scale: 1.08 }}
+                            whileTap={{ scale: 0.97 }}
+                            className="flex items-center space-x-2 px-5 py-2 bg-black rounded-xl border border-white/10 shadow-lg group focus:outline-none focus:ring-2 focus:ring-white/20 transition-all"
                         >
-                            <Repeat size={20} className="text-white" />
-                        </motion.div>
-                        <span className="text-white font-medium tracking-wide">
-                            {activeWarehouse === 'INEA' ? 'Ver ITEA' : 'Ver INEA'}
-                        </span>
-                    </motion.button>
+                            <motion.div
+                                animate={{ rotate: direction ? 360 : 0 }}
+                                transition={{ duration: 0.5 }}
+                            >
+                                <Repeat size={20} className="text-white" />
+                            </motion.div>
+                            <span className="text-white font-medium tracking-wide">
+                                {activeWarehouse === 'INEA' ? 'Ver ITEA' : 'Ver INEA'}
+                            </span>
+                        </motion.button>
+                        <button
+                            onClick={handleExportPDF}
+                            className={`flex items-center gap-2 px-4 py-2 rounded-xl border transition-all duration-300 shadow-lg focus:outline-none focus:ring-2 focus:ring-violet-500/30
+                                ${activeWarehouse === 'INEA' ? 'bg-gradient-to-br from-purple-900/80 via-purple-800/80 to-purple-900/80 border-purple-500/30 text-purple-200 hover:bg-purple-800/90' :
+                                'bg-gradient-to-br from-purple-900/80 via-purple-800/80 to-purple-900/80 border-purple-500/30 text-purple-200 hover:bg-purple-800/90'}`}
+                            title={`Exportar PDF Totales ${activeWarehouse}`}
+                        >
+                            <Download size={18} className="text-purple-300" />
+                            <span className="font-medium">
+                                Exportar PDF {activeWarehouse}
+                            </span>
+                        </button>
+                    </div>
                 </div>
 
                 {/* Main Content */}

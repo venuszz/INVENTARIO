@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect } from 'react';
+import { useState, useEffect, JSX } from 'react';
 import {
     FileText,
     FileDigit, X, AlertCircle,
@@ -241,7 +241,19 @@ export default function ReportesIneaDashboard() {
     }, [tableName, dashboardType]);
 
     // Configuración de las tarjetas de reporte
-    const reportesBase = dashboardType === 'ITEA'
+    type Reporte = {
+        id: number;
+        title: string;
+        icon: JSX.Element;
+        color: string;
+        borderColor: string;
+        hoverColor: string;
+        iconColor: string;
+        description: string;
+        estatusValue?: string;
+    };
+
+    const reportesBase: Reporte[] = dashboardType === 'ITEA'
         ? [
             {
                 id: 1,
