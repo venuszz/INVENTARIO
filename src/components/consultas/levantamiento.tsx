@@ -133,10 +133,82 @@ export default function LevantamientoUnificado() {
     // Estado para mostrar/ocultar filtros avanzados
     const [showFilters, setShowFilters] = useState(false);
 
+    // Estado para coincidencia de búsqueda
+    const [searchMatchType, setSearchMatchType] = useState<null | 'id' | 'descripcion' | 'usufinal'>(null);
+    const [, setSearchMatchValue] = useState<string>('');
+
     // Utilidad para limpiar texto
     function cleanText(str: string) {
         return (str || '').normalize('NFKD').replace(/[\u0300-\u036f]/g, '').replace(/[^\w\s]/gi, '').toLowerCase().trim();
     }
+
+    // Modificar analyzeMatch para que sea más preciso
+    useEffect(() => {
+        const analyzeMatch = () => {
+            if (!searchTerm || !muebles.length) {
+                setSearchMatchType(null);
+                setSearchMatchValue('');
+                return;
+            }
+
+            const clean = (str: string) => (str || '').normalize('NFKD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim();
+            const term = clean(searchTerm);
+
+            let bestMatch = {
+                type: null as null | 'id' | 'descripcion' | 'usufinal',
+                value: '',
+                score: 0
+            };
+
+            for (const item of muebles) {
+                // Priorizar coincidencia por Director/Jefe
+                if ((item.usufinal && clean(item.usufinal).includes(term)) || 
+                    (item.resguardante && clean(item.resguardante).includes(term))) {
+                    const exactMatch = clean(item.usufinal || '') === term || clean(item.resguardante || '') === term;
+                    const score = exactMatch ? 5 : 4;
+                    if (score > bestMatch.score) {
+                        bestMatch = { 
+                            type: 'usufinal', 
+                            value: item.usufinal || item.resguardante || '', 
+                            score 
+                        };
+                        
+                        // Si encontramos coincidencia por director, activar solo el filtro de área
+                        if (!isAreaOrUserFiltered) {
+                            setFilters(prev => ({
+                                ...prev,
+                                area: [item.area || '']
+                            }));
+                        }
+                    }
+                }
+
+                // Verificar coincidencia por ID
+                if (item.id_inv && clean(item.id_inv).includes(term)) {
+                    const exactMatch = clean(item.id_inv) === term;
+                    const score = exactMatch ? 3 : 2;
+                    if (score > bestMatch.score) {
+                        bestMatch = { type: 'id', value: item.id_inv, score };
+                    }
+                }
+
+                // Verificar coincidencia por descripción
+                if (item.descripcion && clean(item.descripcion).includes(term)) {
+                    const exactMatch = clean(item.descripcion) === term;
+                    const score = exactMatch ? 2 : 1;
+                    if (score > bestMatch.score) {
+                        bestMatch = { type: 'descripcion', value: item.descripcion, score };
+                    }
+                }
+            }
+
+            setSearchMatchType(bestMatch.type);
+            setSearchMatchValue(bestMatch.value);
+        };
+
+        const debounceTimeout = setTimeout(analyzeMatch, 300);
+        return () => clearTimeout(debounceTimeout);
+    }, [searchTerm, muebles, isAreaOrUserFiltered, setFilters]);
 
     // Buscar directorio por área o usuario
     const fetchDirectorFromDirectorio = async (area: string) => {
@@ -330,20 +402,18 @@ export default function LevantamientoUnificado() {
                 const pageSize = 1000;
                 let keepGoing = true;
                 let query = supabase.from(table).select('*');
-
                 // Aplicar filtros de búsqueda
                 if (searchTerm) {
                     const search = `%${searchTerm}%`;
                     const searchPattern = `id_inv.ilike.${search},descripcion.ilike.${search},resguardante.ilike.${search},usufinal.ilike.${search}`;
                     query = query.or(searchPattern);
                 }
-                // Aplicar otros filtros
+                // Aplicar otros filtros, excepto origen
                 Object.entries(filters).forEach(([key, values]) => {
-                    if (values.length > 0) {
+                    if (key !== 'origen' && values.length > 0) {
                         query = query.in(key, values);
                     }
                 });
-
                 while (keepGoing) {
                     const { data, error } = await query.range(from, from + pageSize - 1);
                     if (error) throw error;
@@ -360,19 +430,20 @@ export default function LevantamientoUnificado() {
                 }
                 return allRows;
             };
-
             // Traer todos los datos de ambas tablas
             const [ineaRows, iteaRows] = await Promise.all([
                 fetchAllRows('muebles'),
                 fetchAllRows('mueblesitea')
             ]);
-
             // Combinar y procesar los resultados
-            const allData = [
+            let allData = [
                 ...ineaRows.map(item => ({ ...item, origen: 'INEA' as const })),
                 ...iteaRows.map(item => ({ ...item, origen: 'ITEA' as const }))
             ];
-
+            // Si hay filtro de origen, filtrar aquí
+            if (filters.origen.length > 0) {
+                allData = allData.filter(item => filters.origen.includes(item.origen));
+            }
             // Ordenar los datos según la configuración actual
             return allData.sort((a, b) => {
                 const aVal = a[sortField] || '';
@@ -461,27 +532,35 @@ export default function LevantamientoUnificado() {
         }
     };
 
-    // Función para obtener muebles paginados
+    // Modificar fetchMuebles para manejar mejor la búsqueda
     const fetchMuebles = useCallback(async () => {
         setLoading(true);
         setError(null);
         try {
-            // Determinar qué tablas consultar según el filtro de origen
             const shouldQueryInea = !filters.origen.length || filters.origen.includes('INEA');
             const shouldQueryItea = !filters.origen.length || filters.origen.includes('ITEA');
 
-            // Preparar consultas solo para las tablas necesarias
             const queries = [];
             const countQueries = [];
+
+            // Función auxiliar para construir los patrones de búsqueda
+            const buildSearchPattern = (term: string) => {
+                const search = `%${term}%`;
+                return [
+                    `id_inv.ilike.${search}`,
+                    `descripcion.ilike.${search}`,
+                    `resguardante.ilike.${search}`,
+                    `usufinal.ilike.${search}`,
+                    `area.ilike.${search}`
+                ].join(',');
+            };
 
             if (shouldQueryInea) {
                 let countInea = supabase.from('muebles').select('*', { count: 'exact', head: true });
                 let dataInea = supabase.from('muebles').select('*');
 
-                // Aplicar filtros excepto el de origen
                 if (searchTerm) {
-                    const search = `%${searchTerm}%`;
-                    const searchPattern = `id_inv.ilike.${search},descripcion.ilike.${search},resguardante.ilike.${search},usufinal.ilike.${search}`;
+                    const searchPattern = buildSearchPattern(searchTerm);
                     countInea = countInea.or(searchPattern);
                     dataInea = dataInea.or(searchPattern);
                 }
@@ -501,10 +580,8 @@ export default function LevantamientoUnificado() {
                 let countItea = supabase.from('mueblesitea').select('*', { count: 'exact', head: true });
                 let dataItea = supabase.from('mueblesitea').select('*');
 
-                // Aplicar filtros excepto el de origen
                 if (searchTerm) {
-                    const search = `%${searchTerm}%`;
-                    const searchPattern = `id_inv.ilike.${search},descripcion.ilike.${search},resguardante.ilike.${search},usufinal.ilike.${search}`;
+                    const searchPattern = buildSearchPattern(searchTerm);
                     countItea = countItea.or(searchPattern);
                     dataItea = dataItea.or(searchPattern);
                 }
@@ -529,7 +606,7 @@ export default function LevantamientoUnificado() {
             const fromGlobal = (currentPage - 1) * rowsPerPage;
             const toGlobal = fromGlobal + rowsPerPage - 1;
 
-            // Obtener datos paginados de las tablas seleccionadas
+            // Obtener datos paginados
             const results = await Promise.all(
                 queries.map(({ query, type }) => 
                     query
@@ -542,10 +619,10 @@ export default function LevantamientoUnificado() {
                 )
             );
 
-            // Combinar y ordenar resultados
+            // Combinar resultados
             let pageMuebles = results.flatMap(result => result.data);
 
-            // Ordenar los resultados combinados
+            // Ordenar resultados combinados
             if (pageMuebles.length > 0) {
                 pageMuebles = pageMuebles.sort((a, b) => {
                     const aVal = a[sortField] || '';
@@ -555,11 +632,11 @@ export default function LevantamientoUnificado() {
                 });
             }
 
-            // Asegurar que no excedemos el límite de elementos por página
+            // Limitar a rowsPerPage
             pageMuebles = pageMuebles.slice(0, rowsPerPage);
-
             setMuebles(pageMuebles);
 
+            // Actualizar selectedItem si es necesario
             if (selectedItem && !pageMuebles.some(item =>
                 item.id === selectedItem.id && item.origen === selectedItem.origen
             )) {
@@ -631,6 +708,11 @@ export default function LevantamientoUnificado() {
         setSearchTerm('');
         setCurrentPage(1);
     };
+
+    function handleClearAllFilters(): void {
+        clearFilters();
+    }
+
     const changePage = (page: number) => {
         const totalPages = Math.ceil(filteredCount / rowsPerPage);
         if (page < 1 || page > totalPages) return;
@@ -644,10 +726,6 @@ export default function LevantamientoUnificado() {
 
     const role = useUserRole();
     const isUsuario = role === "usuario";
-
-    function handleClearAllFilters(): void {
-        throw new Error('Function not implemented.');
-    }
 
     const router = useRouter();
     // Estado para folios de resguardo por id_inv
@@ -705,9 +783,31 @@ export default function LevantamientoUnificado() {
                                     value={searchTerm}
                                     onChange={e => { setSearchTerm(e.target.value); setCurrentPage(1); }}
                                     placeholder="Buscar por ID o descripción..."
-                                    className="pl-10 pr-4 py-2 w-full bg-black border border-gray-700 rounded-md text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:border-gray-500"
+                                    className={`
+                                        pl-10 pr-20 py-2 w-full bg-black text-white placeholder-gray-500 
+                                        focus:outline-none focus:ring-2 focus:ring-gray-500 transition-all duration-300
+                                        rounded-md border-2
+                                        ${searchMatchType === 'id' ? 'border-blue-500/30 focus:border-blue-400 shadow-[0_0_15px_-3px_rgba(59,130,246,0.3)]' : ''}
+                                        ${searchMatchType === 'descripcion' ? 'border-fuchsia-500/30 focus:border-fuchsia-400 shadow-[0_0_15px_-3px_rgba(192,38,211,0.3)]' : ''}
+                                        ${searchMatchType === 'usufinal' ? 'border-amber-500/30 focus:border-amber-400 shadow-[0_0_15px_-3px_rgba(245,158,11,0.3)]' : ''}
+                                        ${!searchMatchType ? 'border-gray-700 focus:border-gray-600' : ''}
+                                    `}
                                     title="Buscar"
                                 />
+                                {searchMatchType && searchTerm && muebles.length > 0 && (
+                                    <div className={`
+                                        absolute top-0 right-4 h-full flex items-center gap-2 pointer-events-none
+                                        ${searchMatchType === 'id' ? 'text-blue-400' : ''}
+                                        ${searchMatchType === 'descripcion' ? 'text-fuchsia-400' : ''}
+                                        ${searchMatchType === 'usufinal' ? 'text-amber-400' : ''}
+                                    `}>
+                                        <span className="text-xs font-medium bg-black/90 px-2 py-0.5 rounded-full border border-current animate-fadeIn">
+                                            {searchMatchType === 'id' && 'ID'}
+                                            {searchMatchType === 'descripcion' && 'DESC'}
+                                            {searchMatchType === 'usufinal' && 'DIR'}
+                                        </span>
+                                    </div>
+                                )}
                             </div>
                             {/* Botones de filtro por origen */}
                             <div className="flex gap-2">
@@ -1361,7 +1461,7 @@ export default function LevantamientoUnificado() {
                                         className="text-sm text-fuchsia-300 hover:text-fuchsia-100 hover:underline flex items-center transition-colors"
                                     >
                                         <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" viewBox="0 0 20 20" fill="currentColor">
-                                            <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+                                            <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293-1.293a1 0 001.414-1.414L11.414 10l1.293-1.293a1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
                                         </svg>
                                         Limpiar todos los filtros
                                     </button>
