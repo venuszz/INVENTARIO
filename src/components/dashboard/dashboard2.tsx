@@ -718,28 +718,28 @@ export default function InventoryDashboard() {
                                         animate="visible"
                                         whileHover="hover"
                                         onClick={() => openModal(card)}
-                                        className={`group flex flex-col p-7 rounded-2xl bg-gradient-to-br ${colorScheme.gradient} border-2 ${colorScheme.border} ${colorScheme.hover} cursor-pointer transition-all duration-300 hover:shadow-[0_8px_32px_0_rgba(34,211,238,0.15)] backdrop-blur-lg transform-gpu glassmorphism-card`}
+                                        className={`group relative flex flex-col p-7 rounded-2xl bg-gradient-to-br ${colorScheme.gradient} border-2 ${colorScheme.border} ${colorScheme.hover} cursor-pointer transition-all duration-300 hover:shadow-[0_8px_32px_0_rgba(34,211,238,0.15)] backdrop-blur-lg transform-gpu glassmorphism-card overflow-hidden`}
                                         style={{
                                             boxShadow: "0 4px 32px 0 rgba(34,211,238,0.08), 0 1.5px 8px 0 rgba(0,0,0,0.18)"
                                         }}
                                     >
-                                        <div className="flex justify-between items-start flex-grow">
-                                            <div>
-                                                <h3 className={`${colorScheme.text} text-xs font-semibold uppercase tracking-widest mb-2 group-hover:text-cyan-100 transition-colors`}>
+                                        <div className="flex justify-between items-start flex-grow w-full">
+                                            <div className="flex-1 min-w-0">
+                                                <h3 className={`${colorScheme.text} text-xs font-semibold uppercase tracking-widest mb-2 group-hover:text-cyan-100 transition-colors truncate`}>
                                                     {card.title}
                                                 </h3>
-                                                <p className="text-4xl font-light bg-clip-text text-transparent bg-gradient-to-r from-cyan-100 to-white drop-shadow-[0_2px_8px_rgba(34,211,238,0.10)]">
+                                                <p className="text-4xl font-light bg-clip-text text-transparent bg-gradient-to-r from-cyan-100 to-white drop-shadow-[0_2px_8px_rgba(34,211,238,0.10)] truncate">
                                                     {card.value}
                                                 </p>
                                             </div>
                                             <motion.div 
-                                                className={`p-3 rounded-xl ${card.bgColor} group-hover:scale-110 transition-transform duration-300 shadow-md`}
+                                                className={`flex-shrink-0 ml-4 p-2.5 rounded-xl ${card.bgColor} group-hover:scale-110 transition-transform duration-300 shadow-md`}
                                                 whileHover={{ rotate: 8 }}
                                             >
-                                                <card.icon className={`${card.color} drop-shadow-[0_1px_4px_rgba(34,211,238,0.3)]`} size={26} />
+                                                <card.icon className={`${card.color} drop-shadow-[0_1px_4px_rgba(34,211,238,0.3)] w-5 h-5`} />
                                             </motion.div>
                                         </div>
-                                        <div className="mt-auto pt-5 text-base text-cyan-400/80 border-t border-cyan-400/20 group-hover:text-cyan-200 transition-colors font-medium tracking-wide">
+                                        <div className="mt-auto pt-5 text-base text-cyan-400/80 border-t border-cyan-400/20 group-hover:text-cyan-200 transition-colors font-medium tracking-wide truncate">
                                             {card.count} artículos
                                         </div>
                                     </motion.div>
@@ -750,7 +750,7 @@ export default function InventoryDashboard() {
                 </AnimatePresence>
             </div>
 
-            {/* Modal estilo minimalista y consistente */}
+            {/* Modal con cierre al hacer click fuera */}
             <AnimatePresence>
                 {selectedCard && typeof selectedCard !== 'string' && (
                     <motion.div 
@@ -758,6 +758,11 @@ export default function InventoryDashboard() {
                         animate={{ opacity: 1 }}
                         exit={{ opacity: 0 }}
                         className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/95"
+                        onClick={(e) => {
+                            if (e.target === e.currentTarget) {
+                                closeModal();
+                            }
+                        }}
                     >
                         <motion.div
                             variants={modalVariants}
