@@ -415,9 +415,17 @@ export default function RegistroBienesForm() {
 
         // Si es el campo de director/jefe de área, llamar a handleSelectDirector
         if (name === 'usufinal') {
-            handleSelectDirector(value);
+            handleSelectDirector(value.toUpperCase());
         } else {
-            setFormData(prev => ({ ...prev, [name]: value }));
+            // Forzar mayúsculas para inputs de texto y textarea
+            let newValue = value;
+            if (
+                e.target.tagName === 'INPUT' ||
+                e.target.tagName === 'TEXTAREA'
+            ) {
+                newValue = value.toUpperCase();
+            }
+            setFormData(prev => ({ ...prev, [name]: newValue }));
             setTouched(prev => ({ ...prev, [name]: true }));
         }
     };
@@ -432,6 +440,11 @@ export default function RegistroBienesForm() {
             reader.onload = () => setImagePreview(reader.result as string);
             reader.readAsDataURL(file);
         }
+    };
+
+    const handleCurrencyChange = (e: ChangeEvent<HTMLInputElement>) => {
+        const raw = e.target.value.replace(/[^\d.-]/g, '');
+        setFormData(prev => ({ ...prev, valor: raw }));
     };
 
     const resetForm = () => {
@@ -462,6 +475,11 @@ export default function RegistroBienesForm() {
         setTouched({});
     };
 
+    const handleBlur = (e: React.FocusEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
+        const { name } = e.target;
+        setTouched(prev => ({ ...prev, [name]: true }));
+    };
+
     // Funciones auxiliares...
     const nextStep = () => setCurrentStep(prev => Math.min(prev + 1, 3));
     const prevStep = () => setCurrentStep(prev => Math.max(prev - 1, 1));
@@ -486,15 +504,12 @@ export default function RegistroBienesForm() {
         }).format(num);
     };
 
-    const handleCurrencyChange = (e: ChangeEvent<HTMLInputElement>) => {
-        const raw = e.target.value.replace(/[^\d.-]/g, '');
-        setFormData(prev => ({ ...prev, valor: raw }));
-    };
-
-    const handleBlur = (e: React.FocusEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
-        const { name } = e.target;
-        setTouched(prev => ({ ...prev, [name]: true }));
-    };
+    useEffect(() => {
+        const formSections = document.querySelectorAll('.form-section');
+        formSections.forEach((section, index) => {
+            section.classList.toggle('active', index + 1 === currentStep);
+        });
+    }, [currentStep]);
 
     const isFieldValid = (fieldName: string): boolean => {
         if (!touched[fieldName]) return true;
@@ -504,13 +519,6 @@ export default function RegistroBienesForm() {
             ? formData[fieldName as keyof FormData]?.trim() !== ''
             : true;
     };
-
-    useEffect(() => {
-        const formSections = document.querySelectorAll('.form-section');
-        formSections.forEach((section, index) => {
-            section.classList.toggle('active', index + 1 === currentStep);
-        });
-    }, [currentStep]);
 
     return (
         <div className="bg-black text-white min-h-screen p-2 sm:p-4 md:p-6 lg:p-8">

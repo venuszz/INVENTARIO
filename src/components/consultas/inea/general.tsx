@@ -815,15 +815,24 @@ export default function ConsultasIneaGeneral() {
 
         const newData = { ...editFormData };
 
+        // Forzar mayúsculas para inputs de texto y textarea
+        let value = e.target.value;
+        if (
+            e.target.tagName === 'INPUT' ||
+            e.target.tagName === 'TEXTAREA'
+        ) {
+            value = value.toUpperCase();
+        }
+
         switch (field) {
             case 'id':
-                newData.id = parseInt(e.target.value) || newData.id;
+                newData.id = parseInt(value) || newData.id;
                 break;
             case 'id_inv':
-                newData.id_inv = e.target.value;
+                newData.id_inv = value;
                 break;
             case 'valor':
-                newData.valor = e.target.value ? parseFloat(e.target.value) : null;
+                newData.valor = value ? parseFloat(value) : null;
                 break;
             case 'rubro':
             case 'descripcion':
@@ -842,7 +851,7 @@ export default function ConsultasIneaGeneral() {
             case 'causadebaja':
             case 'resguardante':
             case 'image_path':
-                newData[field] = e.target.value || null;
+                newData[field] = value || null;
                 break;
         }
 

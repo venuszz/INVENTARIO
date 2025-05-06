@@ -762,9 +762,18 @@ export default function ConsultasIteaBajas() {
 
         const newData = { ...editFormData };
 
+        // Forzar mayúsculas para inputs de texto y textarea
+        let value = e.target.value;
+        if (
+            e.target.tagName === 'INPUT' ||
+            e.target.tagName === 'TEXTAREA'
+        ) {
+            value = value.toUpperCase();
+        }
+
         switch (field) {
             case 'id':
-                newData.id = parseInt(e.target.value) || newData.id;
+                newData.id = parseInt(value) || newData.id;
                 break;
             case 'id_inv':
             case 'rubro':
@@ -784,10 +793,10 @@ export default function ConsultasIteaBajas() {
             case 'causadebaja':
             case 'resguardante':
             case 'image_path':
-                newData[field] = e.target.value || '';
+                newData[field] = value || '';
                 break;
             case 'f_adq':
-                newData.f_adq = e.target.value || null;
+                newData.f_adq = value || null;
                 break;
         }
 

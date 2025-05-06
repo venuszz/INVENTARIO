@@ -802,15 +802,24 @@ export default function ConsultasIteaGeneral() {
 
         const newData = { ...editFormData };
 
+        // Forzar mayúsculas para inputs de texto y textarea
+        let value = e.target.value;
+        if (
+            e.target.tagName === 'INPUT' ||
+            e.target.tagName === 'TEXTAREA'
+        ) {
+            value = value.toUpperCase();
+        }
+
         switch (field) {
             case 'id':
-                newData.id = parseInt(e.target.value) || newData.id;
+                newData.id = parseInt(value) || newData.id;
                 break;
             case 'id_inv':
-                newData.id_inv = e.target.value;
+                newData.id_inv = value;
                 break;
             case 'valor':
-                newData.valor = e.target.value;
+                newData.valor = value;
                 break;
             case 'rubro':
             case 'descripcion':
@@ -829,7 +838,7 @@ export default function ConsultasIteaGeneral() {
             case 'causadebaja':
             case 'resguardante':
             case 'image_path':
-                newData[field] = e.target.value || '';
+                newData[field] = value || '';
                 break;
         }
 
@@ -1636,21 +1645,6 @@ export default function ConsultasIteaGeneral() {
                                                         className="w-full bg-gray-800 border border-gray-700 rounded-lg pl-10 pr-4 py-2.5 text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
                                                         title="Ingrese el nombre del proveedor"
                                                         placeholder="Nombre del proveedor"
-                                                    />
-                                                </div>
-                                            </div>
-
-                                            <div className="form-group">
-                                                <label className="block text-sm font-medium text-gray-400 mb-2">Factura</label>
-                                                <div className="relative">
-                                                    <Receipt className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500 pointer-events-none" />
-                                                    <input
-                                                        type="text"
-                                                        value={editFormData?.factura || ''}
-                                                        onChange={(e) => handleEditFormChange(e, 'factura')}
-                                                        className="w-full bg-gray-800 border border-gray-700 rounded-lg pl-10 pr-4 py-2.5 text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
-                                                        title="Ingrese el número de factura"
-                                                        placeholder="Número de factura"
                                                     />
                                                 </div>
                                             </div>
