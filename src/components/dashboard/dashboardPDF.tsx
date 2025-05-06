@@ -8,6 +8,12 @@ export interface DashboardRubrosRow {
     sum: number;
 }
 
+export interface Firma {
+    concepto: string;
+    nombre: string;
+    puesto: string;
+}
+
 export interface DashboardPDFOptions {
     title: string;
     totalBienes: number;
@@ -22,17 +28,15 @@ export async function generateDashboardPDF({
     fileName = 'reporte_dashboard',
     warehouse = 'INEA',
 }: DashboardPDFOptions) {
-    // Obtener la firma desde Supabase (concepto contiene 'Resguarda')
+    // Obtener las tres firmas desde Supabase (sin filtro de concepto, igual que PDFLevantamiento)
     const { data: firmas, error } = await supabase
         .from('firmas')
         .select('*')
-        .ilike('concepto', '%resguarda%')
         .order('id', { ascending: true });
-    if (error || !firmas || firmas.length === 0) {
-        alert('No se encontró la firma de resguardo.');
+    if (error || !firmas || firmas.length < 3) {
+        alert('No se encontraron las tres firmas.');
         return;
     }
-    const firma = firmas[firmas.length - 1];
 
     const pdfDoc = await PDFDocument.create();
     const ineaImageBytes = await fetch('/images/INEA NACIONAL.png').then(res => res.arrayBuffer());
@@ -45,7 +49,6 @@ export async function generateDashboardPDF({
     const pageWidth = 595;
     const pageHeight = 842;
     const minCellPadding = 2;
-    const fontSize = 7;
     const headerFontSize = 8;
 
     const normalizeText = (text: string) => text.normalize('NFKD').replace(/[\u0300-\u036f]/g, '');
@@ -249,36 +252,40 @@ export async function generateDashboardPDF({
     });
     y -= totalCellHeight;
 
-    // Firma SIEMPRE al pie de la página
-    const signatureBoxWidth = pageWidth - 2 * margin;
-    const xFirma = margin;
-    const lineY = margin + 70;
-    page.drawText(normalizeText(firma.concepto.toUpperCase()), {
-        x: xFirma + (signatureBoxWidth / 2) - (regularFont.widthOfTextAtSize(firma.concepto.toUpperCase(), fontSize) / 2),
-        y: lineY + 40,
-        size: fontSize,
-        font: regularFont,
-        color: rgb(0, 0, 0),
-    });
-    page.drawLine({
-        start: { x: xFirma + 120, y: lineY + 10 },
-        end: { x: xFirma + signatureBoxWidth - 120, y: lineY + 10 },
-        thickness: 1.2,
-        color: rgb(0, 0, 0),
-    });
-    page.drawText(normalizeText(firma.nombre.toUpperCase()), {
-        x: xFirma + (signatureBoxWidth / 2) - (regularFont.widthOfTextAtSize(firma.nombre.toUpperCase(), fontSize) / 2),
-        y: lineY - 10,
-        size: fontSize,
-        font: regularFont,
-        color: rgb(0, 0, 0),
-    });
-    page.drawText(normalizeText(firma.puesto.toUpperCase()), {
-        x: xFirma + (signatureBoxWidth / 2) - (regularFont.widthOfTextAtSize(firma.puesto.toUpperCase(), fontSize) / 2),
-        y: lineY - 28,
-        size: fontSize,
-        font: regularFont,
-        color: rgb(0, 0, 0),
+    // Firmas SIEMPRE al pie de la última página (pegadas al margen inferior)
+    const signatureBoxWidth = (pageWidth - 2 * margin) / 3;
+    const signatureSectionY = margin + 30; // margen inferior fijo
+    const lineY = signatureSectionY + 40;
+    const signatureFontSize = 7;
+    firmas.slice(0, 3).forEach((firma, index) => {
+        const xPos = margin + (index * signatureBoxWidth);
+        page.drawText(normalizeText(firma.concepto.toUpperCase()), {
+            x: xPos + (signatureBoxWidth / 2) - (regularFont.widthOfTextAtSize(firma.concepto.toUpperCase(), signatureFontSize) / 2),
+            y: lineY + 30,
+            size: signatureFontSize,
+            font: regularFont,
+            color: rgb(0, 0, 0),
+        });
+        page.drawLine({
+            start: { x: xPos + 20, y: lineY },
+            end: { x: xPos + signatureBoxWidth - 20, y: lineY },
+            thickness: 1.2,
+            color: rgb(0, 0, 0),
+        });
+        page.drawText(normalizeText(firma.nombre.toUpperCase()), {
+            x: xPos + (signatureBoxWidth / 2) - (regularFont.widthOfTextAtSize(firma.nombre.toUpperCase(), signatureFontSize) / 2),
+            y: lineY - 15,
+            size: signatureFontSize,
+            font: regularFont,
+            color: rgb(0, 0, 0),
+        });
+        page.drawText(normalizeText(firma.puesto.toUpperCase()), {
+            x: xPos + (signatureBoxWidth / 2) - (regularFont.widthOfTextAtSize(firma.puesto.toUpperCase(), signatureFontSize) / 2),
+            y: lineY - 30,
+            size: signatureFontSize,
+            font: regularFont,
+            color: rgb(0, 0, 0),
+        });
     });
 
     // Pie de página igual que PDFLevantamiento
