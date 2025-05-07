@@ -12,6 +12,7 @@ export default function Inicio() {
   useEffect(() => {
     setIsLoaded(true);
 
+    // Muestra la hora y fecha actual
     const updateDateTime = () => {
       const now = new Date();
       
@@ -30,7 +31,7 @@ export default function Inicio() {
         month: 'long',
         year: 'numeric'
       };
-      setCurrentDate(now.toLocaleDateString('es-MX', options));
+      setCurrentDate(now.toLocaleDateString('es-MX', options)); 
     };
 
     // Update immediately and then every second
@@ -170,7 +171,7 @@ export default function Inicio() {
             className="h-80 w-auto object-contain animate-float"
             onLoad={() => setIsLoaded(true)}
           />
-          <p className='text-center text-gray-800 pt-2'>Powered by A|X</p>
+          <p className='text-center text-gray-800 pt-2'>Powered by InovaSoft</p>
         </div>
 
         {/* Círculos orbitando alrededor del logo */}
@@ -195,7 +196,7 @@ export default function Inicio() {
         
         .bg-grid {
           background-image: linear-gradient(rgba(255, 255, 255, 0.05) 1px, transparent 1px),
-                           linear-gradient(90deg, rgba(255, 255, 255, 0.05) 1px, transparent 1px);
+          linear-gradient(90deg, rgba(255, 255, 255, 0.05) 1px, transparent 1px);
           background-size: 20px 20px;
           width: 100%;
           height: 100%;
