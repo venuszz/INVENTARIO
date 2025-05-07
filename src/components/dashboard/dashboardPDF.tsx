@@ -3,6 +3,7 @@ import { saveAs } from 'file-saver';
 import supabase from '@/app/lib/supabase/client';
 
 export interface DashboardRubrosRow {
+    numeroPartida: string;
     rubro: string;
     count: number;
     sum: number;
@@ -21,12 +22,14 @@ export interface DashboardPDFOptions {
     rubros: DashboardRubrosRow[];
     fileName?: string;
     warehouse?: 'INEA' | 'ITEA';
+    date?: string;
 }
 
 export async function generateDashboardPDF({
     rubros,
     fileName = 'reporte_dashboard',
     warehouse = 'INEA',
+    date,
 }: DashboardPDFOptions) {
     // Obtener las tres firmas desde Supabase (sin filtro de concepto, igual que PDFLevantamiento)
     const { data: firmas, error } = await supabase
@@ -55,11 +58,11 @@ export async function generateDashboardPDF({
 
     // Columnas más angostas y proporcionales, tabla centrada
     const totalTableWidth = pageWidth - 2 * margin - 60; // deja más margen a los lados
-    const colProps = [0.45, 0.18, 0.22];
+    const colProps = [0.15, 0.35, 0.18, 0.22]; // Nueva distribución con columna No. Partida
     const columns = [
-        { header: 'RUBRO', key: 'rubro', width: totalTableWidth * colProps[0] },
-        { header: 'TOTAL', key: 'count', width: totalTableWidth * colProps[1] },
-        { header: 'VALOR', key: 'sum', width: totalTableWidth * colProps[2] },
+        { header: 'RUBRO', key: 'combined', width: totalTableWidth * (colProps[0] + colProps[1]) }, // Combinar No. Partida y Rubro
+        { header: 'TOTAL', key: 'count', width: totalTableWidth * colProps[2] },
+        { header: 'VALOR', key: 'sum', width: totalTableWidth * colProps[3] },
     ];
     const totalTableWidthCalculated = columns.reduce((acc, c) => acc + c.width, 0);
     const tableStartX = (pageWidth - totalTableWidthCalculated) / 2;
@@ -144,85 +147,196 @@ export async function generateDashboardPDF({
             color: rgb(0, 0, 0),
         });
     });
+
+    // Después de los títulos
     y -= titles.length * 11 + 8;
 
-    // Tabla de rubros
-    let x = tableStartX;
-    // Header (mayúsculas, negritas, más pequeño, wrap, alineado a la derecha, centrado vertical)
+    // Agregar fecha después de los títulos
+    if (date) {
+        const dateText = `Fecha: ${date}`;
+        const textWidth = font.widthOfTextAtSize(dateText, headerFontSize);
+        page.drawText(normalizeText(dateText), {
+            x: (pageWidth - textWidth) / 2,
+            y: y,
+            size: headerFontSize,
+            font,
+            color: rgb(0, 0, 0),
+        });
+        y -= 20; // Más espacio para la fecha
+    }
+
+    // Tabla de rubros con nueva columna y encabezado compartido
     const headerFontSizeBig = 9;
     const headerCellHeight = 22;
-    columns.forEach((col) => {
-        page.drawRectangle({
-            x,
-            y: y - headerCellHeight,
-            width: col.width,
-            height: headerCellHeight,
-            color: rgb(0.9, 0.9, 0.9),
-        });
-        const headerLines = wrapText(col.header.toUpperCase(), col.width - 2 * minCellPadding, font, headerFontSizeBig);
-        const totalHeaderHeight = headerLines.length * (headerFontSizeBig + 2);
-        const verticalOffset = (headerCellHeight - totalHeaderHeight) / 2;
-        headerLines.forEach((line, idx) => {
-            const textWidth = font.widthOfTextAtSize(line, headerFontSizeBig);
-            page.drawText(line, {
-                x: x + col.width - textWidth - minCellPadding,
-                y: y - verticalOffset - (idx * (headerFontSizeBig + 2)) - headerFontSizeBig,
-                size: headerFontSizeBig,
-                font: font,
-                color: rgb(0, 0, 0),
-            });
-        });
-        x += col.width;
+    
+    // Primero dibujamos todos los rectángulos de fondo de los encabezados
+    const rubroHeaderWidth = totalTableWidth * (colProps[0] + colProps[1]);
+    
+    // Dibujamos los fondos de todas las columnas
+    page.drawRectangle({
+        x: tableStartX,
+        y: y - headerCellHeight,
+        width: rubroHeaderWidth,
+        height: headerCellHeight,
+        color: rgb(0.9, 0.9, 0.9),
     });
+
+    // Columnas de Total y Valor
+    page.drawRectangle({
+        x: tableStartX + rubroHeaderWidth,
+        y: y - headerCellHeight,
+        width: totalTableWidth * colProps[2],
+        height: headerCellHeight,
+        color: rgb(0.9, 0.9, 0.9),
+    });
+
+    page.drawRectangle({
+        x: tableStartX + rubroHeaderWidth + totalTableWidth * colProps[2],
+        y: y - headerCellHeight,
+        width: totalTableWidth * colProps[3],
+        height: headerCellHeight,
+        color: rgb(0.9, 0.9, 0.9),
+    });
+
+    // Ahora dibujamos los textos de los encabezados
+    const rubroHeaderText = "RUBRO";
+    const rubroHeaderTextWidth = font.widthOfTextAtSize(rubroHeaderText, headerFontSizeBig);
+    page.drawText(rubroHeaderText, {
+        x: tableStartX + (rubroHeaderWidth - rubroHeaderTextWidth) / 2,
+        y: y - headerCellHeight/2 - headerFontSizeBig/2,
+        size: headerFontSizeBig,
+        font: font,
+        color: rgb(0, 0, 0),
+    });
+
+    // Dibujamos los encabezados de Total y Valor
+    const totalHeaderText = "TOTAL";
+    const totalHeaderTextWidth = font.widthOfTextAtSize(totalHeaderText, headerFontSizeBig);
+    page.drawText(totalHeaderText, {
+        x: tableStartX + rubroHeaderWidth + (totalTableWidth * colProps[2] - totalHeaderTextWidth) / 2,
+        y: y - headerCellHeight/2 - headerFontSizeBig/2,
+        size: headerFontSizeBig,
+        font: font,
+        color: rgb(0, 0, 0),
+    });
+
+    const valorHeaderText = "VALOR";
+    const valorHeaderTextWidth = font.widthOfTextAtSize(valorHeaderText, headerFontSizeBig);
+    page.drawText(valorHeaderText, {
+        x: tableStartX + rubroHeaderWidth + totalTableWidth * colProps[2] + (totalTableWidth * colProps[3] - valorHeaderTextWidth) / 2,
+        y: y - headerCellHeight/2 - headerFontSizeBig/2,
+        size: headerFontSizeBig,
+        font: font,
+        color: rgb(0, 0, 0),
+    });
+
+    // Dibujamos las líneas divisorias verticales entre las columnas bajo RUBRO
+    page.drawLine({
+        start: { x: tableStartX + totalTableWidth * colProps[0], y: y - headerCellHeight },
+        end: { x: tableStartX + totalTableWidth * colProps[0], y: y },
+        thickness: 0.5,
+        color: rgb(0.7, 0.7, 0.7),
+    });
+
     y -= headerCellHeight;
-    // Filas (wrap, más pequeño, alineado a la derecha, más espacio entre filas)
+
+    // Filas (modificadas para mantener las columnas separadas)
     const rowFontSize = 7;
     let totalBienes = 0;
     let totalValores = 0;
+
     rubros.forEach((row) => {
-        let x = tableStartX;
-        let maxLines = 1;
-        columns.forEach((col) => {
-            let value = row[col.key as keyof DashboardRubrosRow];
-            if (col.key === 'sum') {
-                value = `$${Number(value).toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-            }
-            const lines = wrapText(String(value).toUpperCase(), col.width - 2 * minCellPadding, regularFont, rowFontSize);
-            maxLines = Math.max(maxLines, lines.length);
+        const x = tableStartX;
+
+        // Primero dibujamos la columna de No. Partida
+        page.drawRectangle({
+            x,
+            y: y - 15,
+            width: totalTableWidth * colProps[0],
+            height: 15,
+            color: rgb(1, 1, 1),
+            opacity: 1,
         });
-        const rowCellHeight = 15 * maxLines;
-        columns.forEach((col) => {
-            page.drawRectangle({
-                x,
-                y: y - rowCellHeight,
-                width: col.width,
-                height: rowCellHeight,
-                color: rgb(1, 1, 1),
-                opacity: 1,
+
+        const partidaValue = row.numeroPartida || '';
+        const partidaLines = wrapText(partidaValue.toUpperCase(), totalTableWidth * colProps[0] - 2 * minCellPadding, regularFont, rowFontSize);
+        partidaLines.forEach((line, idx) => {
+            page.drawText(line, {
+                x: x + minCellPadding,
+                y: y - 4 - (idx * (rowFontSize + 2)) - rowFontSize,
+                size: rowFontSize,
+                font: regularFont,
+                color: rgb(0, 0, 0),
             });
-            let value = row[col.key as keyof DashboardRubrosRow];
-            if (col.key === 'sum') {
-                value = `$${Number(value).toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-            }
-            const lines = wrapText(String(value).toUpperCase(), col.width - 2 * minCellPadding, regularFont, rowFontSize);
-            const totalRowHeight = lines.length * (rowFontSize + 2);
-            const verticalOffset = (rowCellHeight - totalRowHeight) / 2;
-            lines.forEach((line, idx) => {
-                const textWidth = regularFont.widthOfTextAtSize(line, rowFontSize);
-                page.drawText(line, {
-                    x: x + col.width - textWidth - minCellPadding,
-                    y: y - verticalOffset - (idx * (rowFontSize + 2)) - rowFontSize,
-                    size: rowFontSize,
-                    font: regularFont,
-                    color: rgb(0, 0, 0),
-                });
-            });
-            x += col.width;
         });
-        y -= rowCellHeight;
+
+        // Luego dibujamos la columna del rubro
+        page.drawRectangle({
+            x: x + totalTableWidth * colProps[0],
+            y: y - 15,
+            width: totalTableWidth * colProps[1],
+            height: 15,
+            color: rgb(1, 1, 1),
+            opacity: 1,
+        });
+
+        const rubroValue = row.rubro || '';
+        const rubroLines = wrapText(rubroValue.toUpperCase(), totalTableWidth * colProps[1] - 2 * minCellPadding, regularFont, rowFontSize);
+        rubroLines.forEach((line, idx) => {
+            page.drawText(line, {
+                x: x + totalTableWidth * colProps[0] + minCellPadding,
+                y: y - 4 - (idx * (rowFontSize + 2)) - rowFontSize,
+                size: rowFontSize,
+                font: regularFont,
+                color: rgb(0, 0, 0),
+            });
+        });
+
+        // Dibujamos la columna de Total
+        page.drawRectangle({
+            x: x + totalTableWidth * (colProps[0] + colProps[1]),
+            y: y - 15,
+            width: totalTableWidth * colProps[2],
+            height: 15,
+            color: rgb(1, 1, 1),
+            opacity: 1,
+        });
+
+        const countValue = row.count.toString();
+        const countWidth = regularFont.widthOfTextAtSize(countValue, rowFontSize);
+        page.drawText(countValue, {
+            x: x + totalTableWidth * (colProps[0] + colProps[1]) + totalTableWidth * colProps[2] - countWidth - minCellPadding,
+            y: y - 4 - rowFontSize,
+            size: rowFontSize,
+            font: regularFont,
+            color: rgb(0, 0, 0),
+        });
+
+        // Dibujamos la columna de Valor
+        page.drawRectangle({
+            x: x + totalTableWidth * (colProps[0] + colProps[1] + colProps[2]),
+            y: y - 15,
+            width: totalTableWidth * colProps[3],
+            height: 15,
+            color: rgb(1, 1, 1),
+            opacity: 1,
+        });
+
+        const sumValue = `$${row.sum.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+        const sumWidth = regularFont.widthOfTextAtSize(sumValue, rowFontSize);
+        page.drawText(sumValue, {
+            x: x + totalTableWidth * (colProps[0] + colProps[1] + colProps[2]) + totalTableWidth * colProps[3] - sumWidth - minCellPadding,
+            y: y - 4 - rowFontSize,
+            size: rowFontSize,
+            font: regularFont,
+            color: rgb(0, 0, 0),
+        });
+
+        y -= 15;
         totalBienes += Number(row.count);
         totalValores += Number(row.sum);
     });
+
     // Fila de totales (alineado a la derecha)
     let xTot = tableStartX;
     const totalCellHeight = 18;
@@ -235,7 +349,7 @@ export async function generateDashboardPDF({
             color: rgb(0.92, 0.92, 0.92),
         });
         let value = '';
-        if (col.key === 'rubro') value = 'TOTAL';
+        if (col.key === 'combined') value = 'TOTAL';
         if (col.key === 'count') value = totalBienes.toLocaleString('es-MX');
         if (col.key === 'sum') value = `$${totalValores.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
         const fontSizeTotal = rowFontSize + 1;
