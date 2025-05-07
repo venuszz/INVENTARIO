@@ -2,16 +2,30 @@
 import { useState, useEffect, JSX } from 'react';
 import {
     FileText,
-    FileDigit, X, AlertCircle,
+    X, AlertCircle,
     CheckCircle,
     ClipboardList, Layers, Layers3, AlertTriangle, Archive, Download
 } from 'lucide-react';
+import { motion } from 'framer-motion';
 import supabase from '@/app/lib/supabase/client';
 import { generateDashboardPDF } from './dashboardPDF';
 
+export interface Rubro {
+    id: number | string;
+    numeroPartida: string;
+    rubro: string;
+    count: number;
+    sum: number;
+    isPreFilled: boolean;
+    [key: string]: string | number | boolean | undefined;
+}
+
 export default function ReportesIneaDashboard() {
     // Estados principales
-    const [exportModalOpen, setExportModalOpen] = useState(false);
+    const [] = useState(false);
+    const [showExportModal, setShowExportModal] = useState(false);
+    const [exportDate, setExportDate] = useState('');
+    const [editableRubros, setEditableRubros] = useState<Rubro[]>([]);
     const [error, setError] = useState<string | null>(null);
     const [totalMuebles, setTotalMuebles] = useState<number | null>(null);
     const [totalValorMuebles, setTotalValorMuebles] = useState<number | null>(null);
@@ -22,6 +36,7 @@ export default function ReportesIneaDashboard() {
     const [modalReporte, setModalReporte] = useState<null | string>(null);
     const [modalVisible, setModalVisible] = useState(false);
     const [dashboardType, setDashboardType] = useState<'INEA' | 'ITEA' | null>(null);
+    const [activeWarehouse] = useState<'INEA' | 'ITEA'>('INEA');
     const [estatusData, setEstatusData] = useState<Array<{ estatus: string; count: number; sum: number }>>([]);
     const [sinEstatusData, setSinEstatusData] = useState<{ count: number; sum: number }>({ count: 0, sum: 0 });
     const tableName = dashboardType === 'ITEA' ? 'mueblesitea' : 'muebles';
@@ -37,17 +52,69 @@ export default function ReportesIneaDashboard() {
         setTimeout(() => setModalReporte(null), 300);
     };
 
-    // Nueva función para exportar PDF general
-    const handleExportPDF = () => {
-        if (!dashboardType || !resumenGeneral.length) return;
+    const addNewRubro = () => {
+        const uniqueId = `${Date.now()}_${Math.random().toString(36).substr(2, 9)}_${editableRubros.length}`;
+        setEditableRubros([
+            ...editableRubros,
+            { id: uniqueId, numeroPartida: '', rubro: '', count: 0, sum: 0, isPreFilled: false },
+        ]);
+    };
+
+    const updateRubro = (index: number, field: string, value: string | number | boolean) => {
+        const updatedRubros = [...editableRubros];
+        updatedRubros[index][field] = value;
+        setEditableRubros(updatedRubros);
+    };
+
+    const removeRubro = (index: number) => {
+        const updatedRubros = [...editableRubros];
+        updatedRubros.splice(index, 1);
+        setEditableRubros(updatedRubros);
+    };
+
+    const reorderRubros = (fromIndex: number, toIndex: number) => {
+        const updatedRubros = [...editableRubros];
+        const [movedRubro] = updatedRubros.splice(fromIndex, 1);
+        updatedRubros.splice(toIndex, 0, movedRubro);
+        setEditableRubros(updatedRubros);
+    };
+
+    const handleExportPDFWithData = () => {
+        const formatDate = (dateString: string) => {
+            const date = new Date(dateString + 'T00:00:00');
+            return date.toLocaleDateString('es-ES', {
+                day: 'numeric',
+                month: 'long',
+                year: 'numeric',
+                timeZone: 'UTC'
+            }).toLowerCase();
+        };
+
         generateDashboardPDF({
-            title: `Total ${dashboardType}`,
-            totalBienes: resumenGeneral.reduce((sum, r) => sum + r.count, 0),
-            sumaValores: resumenGeneral.reduce((sum, r) => sum + r.sum, 0),
-            rubros: resumenGeneral,
-            fileName: `dashboard_${dashboardType.toLowerCase()}`,
-            warehouse: dashboardType,
+            title: dashboardType === 'ITEA' ? 'Dashboard ITEA' : 'Dashboard INEA',
+            totalBienes: editableRubros.reduce((acc, rubro) => acc + rubro.count, 0),
+            sumaValores: editableRubros.reduce((acc, rubro) => acc + rubro.sum, 0),
+            rubros: editableRubros,
+            fileName: `dashboard_${activeWarehouse.toLowerCase()}`,
+            warehouse: activeWarehouse as 'INEA' | 'ITEA',
+            date: formatDate(exportDate)
         });
+        setShowExportModal(false);
+    };
+
+    // Nueva función para exportar PDF general
+    const handleExportClick = () => {
+        const initialRubros = resumenGeneral.map((r, index) => ({
+            id: `${Date.now() + index}_${Math.random().toString(36).substr(2, 9)}`,
+            numeroPartida: '',
+            rubro: r.rubro,
+            count: r.count,
+            sum: r.sum,
+            isPreFilled: true
+        }));
+        
+        setEditableRubros(initialRubros);
+        setShowExportModal(true);
     };
 
     // Efectos para cargar datos
@@ -437,7 +504,7 @@ export default function ReportesIneaDashboard() {
                             {/* Botón de exportar PDF */}
                             {dashboardType === 'INEA' && (
                                 <button
-                                    onClick={handleExportPDF}
+                                    onClick={handleExportClick}
                                     className="ml-3 flex items-center gap-2 px-4 py-2 rounded-xl border transition-all duration-300 shadow-lg focus:outline-none focus:ring-2 focus:ring-violet-500/30 bg-gradient-to-br from-purple-900/80 via-purple-800/80 to-purple-900/80 border-purple-500/30 text-purple-200 hover:bg-purple-800/90"
                                     title={`Exportar PDF Totales ${dashboardType}`}
                                     disabled={!resumenGeneral.length}
@@ -754,36 +821,224 @@ export default function ReportesIneaDashboard() {
             )}
 
             {/* Modal de exportación */}
-            {exportModalOpen && (
-                <div className="fixed inset-0 bg-black/90 flex items-center justify-center z-50 px-4 animate-fadeIn">
-                    <div className="bg-black rounded-2xl shadow-2xl border border-yellow-600/30 w-full max-w-md overflow-hidden transition-all duration-300 transform flex flex-col items-center">
-                        <div className="relative p-6 bg-gradient-to-b from-black to-gray-900 flex flex-col items-center w-full">
-                            <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-yellow-500/60 via-yellow-400 to-yellow-500/60"></div>
+            {showExportModal && (
+                <motion.div
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/95"
+                    onClick={(e) => {
+                        if (e.target === e.currentTarget) {
+                            setShowExportModal(false);
+                        }
+                    }}
+                >
+                    <motion.div
+                        variants={{
+                            hidden: { opacity: 0, scale: 0.95 },
+                            visible: { opacity: 1, scale: 1 },
+                            exit: { opacity: 0, scale: 0.95 },
+                        }}
+                        initial="hidden"
+                        animate="visible"
+                        exit="exit"
+                        className="w-full max-w-4xl bg-black border border-gray-800 rounded-2xl overflow-hidden max-h-[90vh] flex flex-col shadow-xl"
+                        style={{ boxShadow: "0 2px 24px 0 rgba(0,0,0,0.18)" }}
+                    >
+                        <div className="flex justify-between items-center px-6 py-4 border-b border-white/10 bg-black">
+                            <h3 className="text-lg font-semibold text-white">Editar datos para exportación</h3>
                             <button
-                                onClick={() => setExportModalOpen(false)}
-                                className="absolute top-3 right-3 p-2 rounded-full bg-black/60 hover:bg-gray-900 text-yellow-400 hover:text-yellow-500 border border-yellow-500/30 transition-colors"
-                                title="Cerrar"
+                                title='Cerrar'
+                                onClick={() => setShowExportModal(false)}
+                                className="p-2 rounded hover:bg-white/10 transition-colors text-white"
                             >
-                                <X className="h-4 w-4" />
+                                <X size={18} />
                             </button>
-                            <div className="flex flex-col items-center text-center mb-4 w-full">
-                                <div className="p-3 bg-yellow-500/10 rounded-full border border-yellow-500/30 mb-3 mx-auto">
-                                    <FileDigit className="h-8 w-8 text-yellow-500" />
-                                </div>
-                                <h3 className="text-2xl font-bold text-white">Exportar Reporte</h3>
-                                <p className="text-gray-400 mt-2">
-                                    Selecciona el formato para exportar el reporte <span className="text-yellow-300 font-bold">{modalReporte}</span>
-                                </p>
-                                {modalReporte === 'General' && (
-                                    <div className="mt-4 w-full flex flex-col items-center gap-1">
-                                        <span className="text-sm text-blue-300">Total de bienes: <b>{totalMuebles !== null ? totalMuebles : '...'}</b></span>
-                                        <span className="text-sm text-blue-300">Suma total de valores: <b>${totalValorMuebles !== null ? totalValorMuebles.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '...'}</b></span>
-                                    </div>
-                                )}
+                        </div>
+
+                        <div className="flex items-center gap-4 px-6 py-4 border-b border-white/10">
+                            <div className="flex flex-col">
+                                <label className="text-sm text-gray-400">Fecha</label>
+                                <input
+                                    title='Fecha de exportación'
+                                    type="date"
+                                    value={exportDate}
+                                    onChange={(e) => setExportDate(e.target.value)}
+                                    className="mt-1 px-3 py-2 bg-black border border-gray-700 rounded-lg text-white focus:outline-none focus:border-purple-500"
+                                />
                             </div>
                         </div>
-                    </div>
-                </div>
+
+                        <div className="overflow-y-auto px-6 py-4">
+                            <table className="w-full text-left border-separate border-spacing-0">
+                                <thead>
+                                    <tr className="bg-black">
+                                        <th className="px-3 py-2 text-gray-400 font-semibold">No. Partida</th>
+                                        <th className="px-3 py-2 text-gray-400 font-semibold">Rubro</th>
+                                        <th className="px-3 py-2 text-gray-400 font-semibold text-center">Total</th>
+                                        <th className="px-3 py-2 text-gray-400 font-semibold text-right">Valor</th>
+                                        <th className="px-3 py-2 text-gray-400 font-semibold w-16"></th>
+                                    </tr>
+                                </thead>
+                                <tbody className="relative">
+                                    {editableRubros.map((rubro, index) => (
+                                        <tr 
+                                            key={rubro.id}
+                                            className="border-t border-gray-800 cursor-move group"
+                                            draggable={true}
+                                            onDragStart={(e) => {
+                                                e.dataTransfer.setData('text/plain', index.toString());
+                                            }}
+                                            onDragOver={(e) => {
+                                                e.preventDefault();
+                                                const tr = e.currentTarget as HTMLTableRowElement;
+                                                const rect = tr.getBoundingClientRect();
+                                                const midPoint = (rect.bottom + rect.top) / 2;
+                                                if (e.clientY < midPoint) {
+                                                    tr.style.borderTop = '2px solid purple';
+                                                    tr.style.borderBottom = '';
+                                                } else {
+                                                    tr.style.borderBottom = '2px solid purple';
+                                                    tr.style.borderTop = '';
+                                                }
+                                            }}
+                                            onDragLeave={(e) => {
+                                                const tr = e.currentTarget as HTMLTableRowElement;
+                                                tr.style.borderTop = '';
+                                                tr.style.borderBottom = '';
+                                            }}
+                                            onDrop={(e) => {
+                                                e.preventDefault();
+                                                const draggedIndex = parseInt(e.dataTransfer.getData('text/plain'));
+                                                if (draggedIndex === index) return;
+                                                
+                                                const tr = e.currentTarget as HTMLTableRowElement;
+                                                tr.style.borderTop = '';
+                                                tr.style.borderBottom = '';
+                                                
+                                                const rect = tr.getBoundingClientRect();
+                                                const midPoint = (rect.bottom + rect.top) / 2;
+                                                const newIndex = e.clientY < midPoint ? index : index + 1;
+                                                
+                                                reorderRubros(draggedIndex, newIndex);
+                                            }}
+                                        >
+                                            <td className="px-3 py-2">
+                                                <input
+                                                    title='No. Partida'
+                                                    type="text"
+                                                    value={rubro.numeroPartida}
+                                                    onChange={(e) => updateRubro(index, 'numeroPartida', e.target.value)}
+                                                    className="w-full bg-black border border-gray-700 rounded px-2 py-1 text-white focus:outline-none focus:border-purple-500"
+                                                />
+                                            </td>
+                                            <td className="px-3 py-2">
+                                                {rubro.isPreFilled ? (
+                                                    <div className="w-full px-2 py-1 text-white bg-gray-800/50 rounded">
+                                                        {rubro.rubro}
+                                                    </div>
+                                                ) : (
+                                                    <input
+                                                        title='Rubro'
+                                                        type="text"
+                                                        value={rubro.rubro}
+                                                        onChange={(e) => updateRubro(index, 'rubro', e.target.value)}
+                                                        className="w-full bg-black border border-gray-700 rounded px-2 py-1 text-white focus:outline-none focus:border-purple-500"
+                                                    />
+                                                )}
+                                            </td>
+                                            <td className="px-3 py-2">
+                                                {rubro.isPreFilled ? (
+                                                    <div className="w-full px-2 py-1 text-white bg-gray-800/50 rounded text-center">
+                                                        {rubro.count}
+                                                    </div>
+                                                ) : (
+                                                    <input
+                                                        title='Total'
+                                                        type="number"
+                                                        value={rubro.count}
+                                                        onChange={(e) => updateRubro(index, 'count', parseInt(e.target.value) || 0)}
+                                                        className="w-full bg-black border border-gray-700 rounded px-2 py-1 text-white focus:outline-none focus:border-purple-500 text-center"
+                                                    />
+                                                )}
+                                            </td>
+                                            <td className="px-3 py-2">
+                                                {rubro.isPreFilled ? (
+                                                    <div className="w-full px-2 py-1 text-white bg-gray-800/50 rounded text-right">
+                                                        ${rubro.sum.toLocaleString('es-MX', { minimumFractionDigits: 2 })}
+                                                    </div>
+                                                ) : (
+                                                    <input
+                                                        title='Valor'
+                                                        type="number"
+                                                        value={rubro.sum}
+                                                        onChange={(e) => updateRubro(index, 'sum', parseFloat(e.target.value) || 0)}
+                                                        className="w-full bg-black border border-gray-700 rounded px-2 py-1 text-white focus:outline-none focus:border-purple-500 text-right"
+                                                    />
+                                                )}
+                                            </td>
+                                            <td className="px-3 py-2">
+                                                {!rubro.isPreFilled && (
+                                                    <button
+                                                        title='Eliminar rubro'
+                                                        onClick={() => removeRubro(index)}
+                                                        className="p-1 hover:bg-red-500/20 rounded text-red-400"
+                                                    >
+                                                        <X size={16} />
+                                                    </button>
+                                                )}
+                                                <div className="opacity-0 group-hover:opacity-100 transition-opacity absolute right-full top-1/2 -translate-y-1/2 pr-2">
+                                                    <div className="bg-gray-800 rounded p-1">
+                                                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-gray-400">
+                                                            <line x1="4" y1="12" x2="20" y2="12"></line>
+                                                            <line x1="4" y1="6" x2="20" y2="6"></line>
+                                                            <line x1="4" y1="18" x2="20" y2="18"></line>
+                                                        </svg>
+                                                    </div>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                                <tfoot className="border-t border-gray-800">
+                                    <tr>
+                                        <td colSpan={2} className="px-3 py-3 text-right text-gray-400">Total:</td>
+                                        <td className="px-3 py-3 text-center text-white">
+                                            {editableRubros.reduce((acc, rubro) => acc + rubro.count, 0)}
+                                        </td>
+                                        <td className="px-3 py-3 text-right text-white">
+                                            ${editableRubros.reduce((acc, rubro) => acc + rubro.sum, 0).toLocaleString('es-MX', { minimumFractionDigits: 2 })}
+                                        </td>
+                                        <td></td>
+                                    </tr>
+                                </tfoot>
+                            </table>
+                        </div>
+
+                        <div className="px-6 py-4 border-t border-white/10 flex justify-between items-center">
+                            <button
+                                onClick={addNewRubro}
+                                className="px-4 py-2 bg-purple-500/20 text-purple-300 rounded-lg hover:bg-purple-500/30 transition-colors"
+                            >
+                                Agregar rubro
+                            </button>
+                            <div className="flex gap-3">
+                                <button
+                                    onClick={() => setShowExportModal(false)}
+                                    className="px-4 py-2 border border-gray-600 text-gray-300 rounded-lg hover:bg-white/5"
+                                >
+                                    Cancelar
+                                </button>
+                                <button
+                                    onClick={handleExportPDFWithData}
+                                    className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700"
+                                >
+                                    Exportar PDF
+                                </button>
+                            </div>
+                        </div>
+                    </motion.div>
+                </motion.div>
             )}
 
             {/* Manejo de errores */}
