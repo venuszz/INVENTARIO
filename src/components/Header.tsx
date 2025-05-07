@@ -343,6 +343,16 @@ export default function NavigationBar() {
                                                                             </div>
                                                                         )}
                                                                     </div>
+                                                                ) : subItem.title === 'Crear resguardo' ? (
+                                                                    <RoleGuard roles={["admin", "superadmin"]} userRole={userData.rol}>
+                                                                        <Link
+                                                                            href={subItem.path}
+                                                                            onClick={closeAll}
+                                                                            className={`block px-4 py-2 text-sm ${pathname === subItem.path ? 'text-blue-400 bg-black' : 'text-gray-300 hover:bg-gray-800 hover:text-white'}`}
+                                                                        >
+                                                                            {subItem.title}
+                                                                        </Link>
+                                                                    </RoleGuard>
                                                                 ) : (
                                                                     <Link
                                                                         href={subItem.path}
@@ -546,6 +556,16 @@ export default function NavigationBar() {
                                                             </div>
                                                         )}
                                                     </div>
+                                                ) : subItem.title === 'Crear resguardo' ? (
+                                                    <RoleGuard roles={["admin", "superadmin"]} userRole={userData.rol}>
+                                                        <Link
+                                                            href={subItem.path}
+                                                            onClick={closeAll}
+                                                            className={`block px-3 py-2 rounded-md text-sm ${pathname === subItem.path ? 'text-blue-400 bg-gray-700' : 'text-gray-400 hover:text-white hover:bg-gray-800'}`}
+                                                        >
+                                                            {subItem.title}
+                                                        </Link>
+                                                    </RoleGuard>
                                                 ) : (
                                                     <Link
                                                         href={subItem.path}
