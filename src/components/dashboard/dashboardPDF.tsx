@@ -243,7 +243,7 @@ export async function generateDashboardPDF({
 
     y -= headerCellHeight;
 
-    // Filas (modificadas para mantener las columnas separadas)
+    // Filas (modificadas para mantener las columnas separadas y altura dinámica)
     const rowFontSize = 7;
     let totalBienes = 0;
     let totalValores = 0;
@@ -251,56 +251,70 @@ export async function generateDashboardPDF({
     rubros.forEach((row) => {
         const x = tableStartX;
 
-        // Primero dibujamos la columna de No. Partida
-        page.drawRectangle({
-            x,
-            y: y - 15,
-            width: totalTableWidth * colProps[0],
-            height: 15,
-            color: rgb(1, 1, 1),
-            opacity: 1,
-        });
-
+        // Calcular líneas y altura dinámica para cada celda
         const partidaValue = row.numeroPartida || '';
         const partidaLines = wrapText(partidaValue.toUpperCase(), totalTableWidth * colProps[0] - 2 * minCellPadding, regularFont, rowFontSize);
-        partidaLines.forEach((line, idx) => {
-            page.drawText(line, {
-                x: x + minCellPadding,
-                y: y - 4 - (idx * (rowFontSize + 2)) - rowFontSize,
-                size: rowFontSize,
-                font: regularFont,
-                color: rgb(0, 0, 0),
-            });
-        });
-
-        // Luego dibujamos la columna del rubro
-        page.drawRectangle({
-            x: x + totalTableWidth * colProps[0],
-            y: y - 15,
-            width: totalTableWidth * colProps[1],
-            height: 15,
-            color: rgb(1, 1, 1),
-            opacity: 1,
-        });
 
         const rubroValue = row.rubro || '';
         const rubroLines = wrapText(rubroValue.toUpperCase(), totalTableWidth * colProps[1] - 2 * minCellPadding, regularFont, rowFontSize);
-        rubroLines.forEach((line, idx) => {
+
+        // Calcular la altura máxima de la fila según el mayor número de líneas
+        const linesCount = Math.max(partidaLines.length, rubroLines.length, 1);
+        const rowHeight = linesCount * (rowFontSize + 2) + 4; // 4 de padding vertical
+
+        // Columna No. Partida (centrado)
+        page.drawRectangle({
+            x,
+            y: y - rowHeight,
+            width: totalTableWidth * colProps[0],
+            height: rowHeight,
+            color: rgb(1, 1, 1),
+            opacity: 1,
+        });
+
+        // Centrar vertical y horizontalmente cada línea
+        partidaLines.forEach((line, idx) => {
+            const textWidth = regularFont.widthOfTextAtSize(line, rowFontSize);
+            const cellWidth = totalTableWidth * colProps[0];
+            const totalTextHeight = partidaLines.length * (rowFontSize + 2);
+            const yOffset = (rowHeight - totalTextHeight) / 2;
             page.drawText(line, {
-                x: x + totalTableWidth * colProps[0] + minCellPadding,
-                y: y - 4 - (idx * (rowFontSize + 2)) - rowFontSize,
+                x: x + (cellWidth - textWidth) / 2,
+                y: y - yOffset - (idx * (rowFontSize + 2)) - rowFontSize,
                 size: rowFontSize,
                 font: regularFont,
                 color: rgb(0, 0, 0),
             });
         });
 
-        // Dibujamos la columna de Total
+        // Columna Rubro (alineado a la izquierda)
+        page.drawRectangle({
+            x: x + totalTableWidth * colProps[0],
+            y: y - rowHeight,
+            width: totalTableWidth * colProps[1],
+            height: rowHeight,
+            color: rgb(1, 1, 1),
+            opacity: 1,
+        });
+
+        rubroLines.forEach((line, idx) => {
+            const totalTextHeight = rubroLines.length * (rowFontSize + 2);
+            const yOffset = (rowHeight - totalTextHeight) / 2;
+            page.drawText(line, {
+                x: x + totalTableWidth * colProps[0] + minCellPadding,
+                y: y - yOffset - (idx * (rowFontSize + 2)) - rowFontSize,
+                size: rowFontSize,
+                font: regularFont,
+                color: rgb(0, 0, 0),
+            });
+        });
+
+        // Columna Total (igual que antes)
         page.drawRectangle({
             x: x + totalTableWidth * (colProps[0] + colProps[1]),
-            y: y - 15,
+            y: y - rowHeight,
             width: totalTableWidth * colProps[2],
-            height: 15,
+            height: rowHeight,
             color: rgb(1, 1, 1),
             opacity: 1,
         });
@@ -315,12 +329,12 @@ export async function generateDashboardPDF({
             color: rgb(0, 0, 0),
         });
 
-        // Dibujamos la columna de Valor
+        // Columna Valor (igual que antes)
         page.drawRectangle({
             x: x + totalTableWidth * (colProps[0] + colProps[1] + colProps[2]),
-            y: y - 15,
+            y: y - rowHeight,
             width: totalTableWidth * colProps[3],
-            height: 15,
+            height: rowHeight,
             color: rgb(1, 1, 1),
             opacity: 1,
         });
@@ -335,7 +349,7 @@ export async function generateDashboardPDF({
             color: rgb(0, 0, 0),
         });
 
-        y -= 15;
+        y -= rowHeight;
         totalBienes += Number(row.count);
         totalValores += Number(row.sum);
     });
