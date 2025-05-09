@@ -1579,6 +1579,25 @@ export default function ConsultasIneaGeneral() {
                                             </div>
 
                                             <div className="form-group">
+                                                <label className="block text-sm font-medium text-gray-400 mb-2">Estado</label>
+                                                <div className="relative">
+                                                    <select
+                                                        id="estado-select"
+                                                        title="Seleccione el estado"
+                                                        value={editFormData?.estado || ''}
+                                                        onChange={(e) => handleEditFormChange(e, 'estado')}
+                                                        className="appearance-none w-full bg-gray-800 border border-gray-700 rounded-lg pl-4 pr-10 py-2.5 text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                                                    >
+                                                        <option value="">Seleccione un estado</option>
+                                                        {filterOptions.estados.map((estado) => (
+                                                            <option key={estado} value={estado}>{estado}</option>
+                                                        ))}
+                                                    </select>
+                                                    <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />
+                                                </div>
+                                            </div>
+
+                                            <div className="form-group">
                                                 <label className="flex items-center gap-2 text-sm font-medium text-gray-300 mb-2">
                                                     <DollarSign className="h-4 w-4 text-green-400" />
                                                     Valor
@@ -1847,6 +1866,10 @@ export default function ConsultasIneaGeneral() {
                                                     <Receipt className="h-4 w-4 text-blue-400" />
                                                     {selectedItem.factura || 'No especificado'}
                                                 </p>
+                                            </div>
+                                            <div className="detail-card bg-gray-800/50 rounded-lg p-4 hover:bg-gray-800/80 transition-all">
+                                                <h3 className="text-xs font-medium uppercase tracking-wider text-gray-400">Estado</h3>
+                                                <p className="mt-2 text-white">{selectedItem.estado || 'No especificado'}</p>
                                             </div>
                                             <div className="detail-card bg-gray-800/50 rounded-lg p-4 hover:bg-gray-800/80 transition-all">
                                                 <h4 className="text-sm font-medium text-gray-400 mb-2 flex items-center gap-2">
