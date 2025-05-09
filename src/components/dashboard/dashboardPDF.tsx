@@ -43,9 +43,9 @@ export async function generateDashboardPDF({
 
     const pdfDoc = await PDFDocument.create();
     const ineaImageBytes = await fetch('/images/INEA NACIONAL.png').then(res => res.arrayBuffer());
-    const iteaImageBytes = await fetch('/images/LOGO-ITEA.png').then(res => res.arrayBuffer());
+    //const iteaImageBytes = await fetch('/images/LOGO-ITEA.png').then(res => res.arrayBuffer());
     const ineaImage = await pdfDoc.embedPng(ineaImageBytes);
-    const iteaImage = await pdfDoc.embedPng(iteaImageBytes);
+    //const iteaImage = await pdfDoc.embedPng(iteaImageBytes);
     const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
     const regularFont = await pdfDoc.embedFont(StandardFonts.Helvetica);
     const margin = 40;
@@ -109,24 +109,19 @@ export async function generateDashboardPDF({
 
     // Logos
     const ineaAspectRatio = ineaImage.width / ineaImage.height;
-    const iteaAspectRatio = iteaImage.width / iteaImage.height;
-    const maxImageHeight = 24;
+    //const iteaAspectRatio = iteaImage.width / iteaImage.height;
+    const maxImageHeight = 32;
     const ineaHeight = maxImageHeight;
-    const iteaHeight = maxImageHeight;
+    //const iteaHeight = maxImageHeight;
     const ineaWidth = ineaHeight * ineaAspectRatio;
-    const iteaWidth = iteaHeight * iteaAspectRatio;
+    //const iteaWidth = iteaHeight * iteaAspectRatio;
     page.drawImage(ineaImage, {
         x: margin,
         y: y - maxImageHeight,
         width: ineaWidth,
         height: ineaHeight,
     });
-    page.drawImage(iteaImage, {
-        x: pageWidth - margin - iteaWidth,
-        y: y - maxImageHeight,
-        width: iteaWidth,
-        height: iteaHeight,
-    });
+    
 
     // Títulos pequeños
     const titles = [
@@ -137,6 +132,7 @@ export async function generateDashboardPDF({
         'CONCENTRADO GENERAL DE BIENES MUEBLES',
         '',
         'INSTITUTO TLAXCALTECA PARA LA EDUCACIÓN DE LOS ADULTOS',
+        '','',
     ];
     y -= 5;
     titles.forEach((text, idx) => {
@@ -159,7 +155,7 @@ export async function generateDashboardPDF({
         const dateText = `Fecha: ${date}`;
         const textWidth = font.widthOfTextAtSize(dateText, headerFontSize);
         page.drawText(normalizeText(dateText), {
-            x: (pageWidth - textWidth) / 2,
+            x: (pageWidth - textWidth) / 1.23,
             y: y,
             size: headerFontSize,
             font,
@@ -169,8 +165,8 @@ export async function generateDashboardPDF({
     }
 
     // Tabla de rubros con nueva columna y encabezado compartido
-    const headerFontSizeBig = 9;
-    const headerCellHeight = 22;
+    const headerFontSizeBig = 7.6;
+    const headerCellHeight = 24;
     
     // Primero dibujamos todos los rectángulos de fondo de los encabezados
     const rubroHeaderWidth = totalTableWidth * (colProps[0] + colProps[1]);
@@ -202,7 +198,7 @@ export async function generateDashboardPDF({
     });
 
     // Ahora dibujamos los textos de los encabezados
-    const rubroHeaderText = "RUBRO";
+    const rubroHeaderText = "CONCEPTO CLACIFICADOR POR OBJETO DEL GASTO";
     const rubroHeaderTextWidth = font.widthOfTextAtSize(rubroHeaderText, headerFontSizeBig);
     page.drawText(rubroHeaderText, {
         x: tableStartX + (rubroHeaderWidth - rubroHeaderTextWidth) / 2,
@@ -213,7 +209,7 @@ export async function generateDashboardPDF({
     });
 
     // Dibujamos los encabezados de Total y Valor
-    const totalHeaderText = "TOTAL";
+    const totalHeaderText = "TOTAL DE BIENES";
     const totalHeaderTextWidth = font.widthOfTextAtSize(totalHeaderText, headerFontSizeBig);
     page.drawText(totalHeaderText, {
         x: tableStartX + rubroHeaderWidth + (totalTableWidth * colProps[2] - totalHeaderTextWidth) / 2,
@@ -223,7 +219,7 @@ export async function generateDashboardPDF({
         color: rgb(0, 0, 0),
     });
 
-    const valorHeaderText = "VALOR";
+    const valorHeaderText = "VALOR DE ADQUISICION";
     const valorHeaderTextWidth = font.widthOfTextAtSize(valorHeaderText, headerFontSizeBig);
     page.drawText(valorHeaderText, {
         x: tableStartX + rubroHeaderWidth + totalTableWidth * colProps[2] + (totalTableWidth * colProps[3] - valorHeaderTextWidth) / 2,
@@ -234,12 +230,12 @@ export async function generateDashboardPDF({
     });
 
     // Dibujamos las líneas divisorias verticales entre las columnas bajo RUBRO
-    page.drawLine({
+    /*page.drawLine({
         start: { x: tableStartX + totalTableWidth * colProps[0], y: y - headerCellHeight },
         end: { x: tableStartX + totalTableWidth * colProps[0], y: y },
         thickness: 0.5,
         color: rgb(0.7, 0.7, 0.7),
-    });
+    });*/
 
     y -= headerCellHeight;
 
@@ -417,17 +413,6 @@ export async function generateDashboardPDF({
             font: regularFont,
             color: rgb(0, 0, 0),
         });
-    });
-
-    // Pie de página igual que PDFLevantamiento
-    const pageText = 'PÁGINA 1 DE 1';
-    const pageTextWidth = regularFont.widthOfTextAtSize(pageText, 10);
-    page.drawText(pageText, {
-        x: pageWidth - margin - pageTextWidth,
-        y: margin - 20,
-        size: 10,
-        font: regularFont,
-        color: rgb(0.6, 0.6, 0.6)
     });
 
     const pdfBytes = await pdfDoc.save();
