@@ -541,7 +541,7 @@ export default function LevantamientoUnificado() {
         }
     };
 
-    // Modificar fetchMuebles para manejar mejor la búsqueda
+    // Modificar fetchMuebles para manejar mejor la búsqueda y la paginación global
     const fetchMuebles = useCallback(async () => {
         setLoading(true);
         setError(null);
@@ -549,7 +549,6 @@ export default function LevantamientoUnificado() {
             const shouldQueryInea = !filters.origen.length || filters.origen.includes('INEA');
             const shouldQueryItea = !filters.origen.length || filters.origen.includes('ITEA');
 
-            const queries = [];
             const countQueries = [];
 
             // Función auxiliar para construir los patrones de búsqueda
@@ -564,85 +563,94 @@ export default function LevantamientoUnificado() {
                 ].join(',');
             };
 
+            // --- 1. Obtener totales para paginación ---
             if (shouldQueryInea) {
                 let countInea = supabase.from('muebles').select('*', { count: 'exact', head: true });
-                let dataInea = supabase.from('muebles').select('*');
-
                 if (searchTerm) {
                     const searchPattern = buildSearchPattern(searchTerm);
                     countInea = countInea.or(searchPattern);
-                    dataInea = dataInea.or(searchPattern);
                 }
-
                 Object.entries(filters).forEach(([key, values]) => {
                     if (values.length > 0 && key !== 'origen') {
                         countInea = countInea.in(key, values);
-                        dataInea = dataInea.in(key, values);
                     }
                 });
-
                 countQueries.push(countInea);
-                queries.push({ query: dataInea, type: 'INEA' });
             }
-
             if (shouldQueryItea) {
                 let countItea = supabase.from('mueblesitea').select('*', { count: 'exact', head: true });
-                let dataItea = supabase.from('mueblesitea').select('*');
-
                 if (searchTerm) {
                     const searchPattern = buildSearchPattern(searchTerm);
                     countItea = countItea.or(searchPattern);
-                    dataItea = dataItea.or(searchPattern);
                 }
-
                 Object.entries(filters).forEach(([key, values]) => {
                     if (values.length > 0 && key !== 'origen') {
                         countItea = countItea.in(key, values);
-                        dataItea = dataItea.in(key, values);
                     }
                 });
-
                 countQueries.push(countItea);
-                queries.push({ query: dataItea, type: 'ITEA' });
             }
-
             // Obtener totales
             const countResults = await Promise.all(countQueries);
             const total = countResults.reduce((sum, result) => sum + (result.count || 0), 0);
             setFilteredCount(total);
 
-            // Calcular rangos de paginación global
-            const fromGlobal = (currentPage - 1) * rowsPerPage;
-            const toGlobal = fromGlobal + rowsPerPage - 1;
+            // --- 2. Obtener todos los datos filtrados de ambas tablas (sin paginación) ---
+            // (Solo para la página actual, pero necesitamos todos para paginar globalmente)
+            const fetchAllRows = async (table: 'muebles' | 'mueblesitea', origen: 'INEA' | 'ITEA') => {
+                let allRows: LevMueble[] = [];
+                let from = 0;
+                const pageSize = 1000;
+                let keepGoing = true;
+                let query = supabase.from(table).select('*');
+                if (searchTerm) {
+                    const searchPattern = buildSearchPattern(searchTerm);
+                    query = query.or(searchPattern);
+                }
+                Object.entries(filters).forEach(([key, values]) => {
+                    if (key !== 'origen' && values.length > 0) {
+                        query = query.in(key, values);
+                    }
+                });
+                while (keepGoing) {
+                    const { data, error } = await query.range(from, from + pageSize - 1);
+                    if (error) throw error;
+                    if (data && data.length > 0) {
+                        allRows = allRows.concat(data.map(item => ({ ...item, origen })));
+                        if (data.length < pageSize) {
+                            keepGoing = false;
+                        } else {
+                            from += pageSize;
+                        }
+                    } else {
+                        keepGoing = false;
+                    }
+                }
+                return allRows;
+            };
 
-            // Obtener datos paginados
-            const results = await Promise.all(
-                queries.map(({ query, type }) => 
-                    query
-                        .order(sortField, { ascending: sortDirection === 'asc' })
-                        .range(fromGlobal, toGlobal)
-                        .then(res => ({
-                            data: res.data?.map(item => ({ ...item, origen: type })) || [],
-                            type
-                        }))
-                )
-            );
+            let allMuebles: LevMueble[] = [];
+            if (shouldQueryInea) {
+                const ineaRows = await fetchAllRows('muebles', 'INEA');
+                allMuebles = allMuebles.concat(ineaRows);
+            }
+            if (shouldQueryItea) {
+                const iteaRows = await fetchAllRows('mueblesitea', 'ITEA');
+                allMuebles = allMuebles.concat(iteaRows);
+            }
 
-            // Combinar resultados
-            let pageMuebles = results.flatMap(result => result.data);
-
-            // Ordenar resultados combinados
-            if (pageMuebles.length > 0) {
-                pageMuebles = pageMuebles.sort((a, b) => {
+            // --- 3. Ordenar y paginar globalmente ---
+            if (allMuebles.length > 0) {
+                allMuebles = allMuebles.sort((a, b) => {
                     const aVal = a[sortField] || '';
                     const bVal = b[sortField] || '';
                     const comparison = String(aVal).localeCompare(String(bVal));
                     return sortDirection === 'asc' ? comparison : -comparison;
                 });
             }
-
-            // Limitar a rowsPerPage
-            pageMuebles = pageMuebles.slice(0, rowsPerPage);
+            const fromGlobal = (currentPage - 1) * rowsPerPage;
+            const toGlobal = fromGlobal + rowsPerPage;
+            const pageMuebles = allMuebles.slice(fromGlobal, toGlobal);
             setMuebles(pageMuebles);
 
             // Actualizar selectedItem si es necesario
@@ -651,7 +659,6 @@ export default function LevantamientoUnificado() {
             )) {
                 setSelectedItem(null);
             }
-
         } catch (error) {
             console.error('Error al cargar muebles:', error);
             setError('Error al cargar los datos. Por favor, intente nuevamente.');
@@ -934,7 +941,8 @@ export default function LevantamientoUnificado() {
                                     }
                                 }}
                                 className={`
-                                    group relative px-4 py-2 rounded-md font-medium flex items-center gap-2 transition-all duration-300 shadow-lg border
+                                    group relative px-4 py-2.5 rounded-lg font-medium 
+                                    flex items-center gap-2.5 transition-all duration-300
                                     ${isAreaOrUserFiltered 
                                         ? 'bg-gradient-to-br from-fuchsia-600 to-purple-600 hover:from-purple-600 hover:to-fuchsia-600 text-white hover:shadow-fuchsia-500/30 border-fuchsia-700/50 hover:border-fuchsia-500' 
                                         : 'bg-gradient-to-br from-red-600 to-rose-600 hover:from-rose-600 hover:to-red-600 text-white hover:shadow-red-500/30 border-red-700/50 hover:border-red-500'
@@ -1140,7 +1148,7 @@ export default function LevantamientoUnificado() {
                             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-5 p-6">
                                 {/* Filter: Estado */}
                                 <div className="filter-group">
-                                    <label className="block text-sm font-medium text-gray-300 mb-2 flex items-center">
+                                    <label className="flex text-sm font-medium text-gray-300 mb-2 items-center">
                                         <span className="h-2 w-2 rounded-full bg-blue-500 mr-2"></span>
                                         Estado
                                     </label>
@@ -1193,7 +1201,7 @@ export default function LevantamientoUnificado() {
 
                                 {/* Filter: Estatus */}
                                 <div className="filter-group">
-                                    <label className="block text-sm font-medium text-gray-300 mb-2 flex items-center">
+                                    <label className="flex text-sm font-medium text-gray-300 mb-2 items-center">
                                         <span className="h-2 w-2 rounded-full bg-green-500 mr-2"></span>
                                         Estatus
                                     </label>
@@ -1246,7 +1254,7 @@ export default function LevantamientoUnificado() {
 
                                 {/* Filter: Área */}
                                 <div className="filter-group">
-                                    <label className="block text-sm font-medium text-gray-300 mb-2 flex items-center">
+                                    <label className="flex text-sm font-medium text-gray-300 mb-2 items-center">
                                         <span className="h-2 w-2 rounded-full bg-purple-500 mr-2"></span>
                                         Área
                                     </label>
@@ -1299,7 +1307,7 @@ export default function LevantamientoUnificado() {
 
                                 {/* Filter: Rubro */}
                                 <div className="filter-group">
-                                    <label className="block text-sm font-medium text-gray-300 mb-2 flex items-center">
+                                    <label className="flex text-sm font-medium text-gray-300 mb-2 items-center">
                                         <span className="h-2 w-2 rounded-full bg-amber-500 mr-2"></span>
                                         Rubro
                                     </label>
@@ -1352,7 +1360,7 @@ export default function LevantamientoUnificado() {
 
                                 {/* Filter: Forma Adq. */}
                                 <div className="filter-group">
-                                    <label className="block text-sm font-medium text-gray-300 mb-2 flex items-center">
+                                    <label className="flex text-sm font-medium text-gray-300 mb-2 items-center">
                                         <span className="h-2 w-2 rounded-full bg-pink-500 mr-2"></span>
                                         Forma Adq.
                                     </label>
@@ -1405,7 +1413,7 @@ export default function LevantamientoUnificado() {
 
                                 {/* Filter: Resguardante */}
                                 <div className="filter-group">
-                                    <label className="block text-sm font-medium text-gray-300 mb-2 flex items-center">
+                                    <label className="flex text-sm font-medium text-gray-300 mb-2 items-center">
                                         <span className="h-2 w-2 rounded-full bg-cyan-500 mr-2"></span>
                                         Resguardante
                                     </label>
@@ -1708,137 +1716,148 @@ export default function LevantamientoUnificado() {
             )}
             <div className="flex flex-col lg:flex-row gap-6">
                 <div className="w-full">
-                    <div className="bg-black rounded-lg border border-gray-800 overflow-x-auto overflow-y-auto flex flex-col flex-grow max-h-[70vh]">
-                        <table className="min-w-full divide-y divide-gray-800">
-                            <thead className="bg-black sticky top-0 z-10">
-                                <tr>
-                                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Origen</th>
-                                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Resguardo</th>
-                                    <th
-                                        onClick={() => {
-                                            setSortField('id_inv');
-                                            setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
-                                        }}
-                                        className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider cursor-pointer hover:bg-gray-700"
-                                    >
-                                        <div className="flex items-center gap-1">ID Inventario<ArrowUpDown className="h-3 w-3" /></div>
-                                    </th>
-                                    <th
-                                        onClick={() => {
-                                            setSortField('descripcion');
-                                            setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
-                                        }}
-                                        className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider cursor-pointer hover:bg-gray-700"
-                                    >
-                                        <div className="flex items-center gap-1">Descripción<ArrowUpDown className="h-3 w-3" /></div>
-                                    </th>
-                                    <th
-                                        onClick={() => {
-                                            setSortField('area');
-                                            setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
-                                        }}
-                                        className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider cursor-pointer hover:bg-gray-700"
-                                    >
-                                        <div className="flex items-center gap-1">Área<ArrowUpDown className="h-3 w-3" /></div>
-                                    </th>
-                                    <th
-                                        onClick={() => {
-                                            setSortField('usufinal');
-                                            setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
-                                        }}
-                                        className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider cursor-pointer hover:bg-gray-700"
-                                    >
-                                        <div className="flex items-center gap-1">Jefe/Director de Área<ArrowUpDown className="h-3 w-3" /></div>
-                                    </th>
-                                    <th
-                                        onClick={() => {
-                                            setSortField('estatus');
-                                            setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
-                                        }}
-                                        className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider cursor-pointer hover:bg-gray-700"
-                                    >
-                                        <div className="flex items-center gap-1">Estatus<ArrowUpDown className="h-3 w-3" /></div>
-                                    </th>
-                                </tr>
-                            </thead>
-                            <tbody className="bg-black divide-y divide-gray-800">
-                                {error ? (
-                                    <tr className="h-96">
-                                        <td colSpan={6} className="px-6 py-24 text-center text-red-400">
-                                            <AlertCircle className="h-12 w-12" />
-                                            <p className="text-lg font-medium">{error}</p>
-                                        </td>
-                                    </tr>
-                                ) : muebles.length === 0 ? (
-                                    <tr className="h-96">
-                                        <td colSpan={6} className="px-6 py-24 text-center text-gray-400">
-                                            <Search className="h-12 w-12 text-gray-500" />
-                                            <p className="text-lg font-medium">No se encontraron resultados</p>
-                                        </td>
-                                    </tr>
-                                ) : (
-                                    muebles.map((item) => (
-                                        <tr
-                                            key={`${item.origen}-${item.id}`}
-                                            className={
-                                                `transition-colors`
-                                            }
+                    {/* Spinner de carga */}
+                    {loading ? (
+                        <div className="flex flex-col items-center justify-center min-h-[300px] w-full">
+                            <svg className="animate-spin h-14 w-14 text-blue-400 mb-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"></path>
+                            </svg>
+                            <p className="text-lg text-blue-300 font-medium">Cargando datos...</p>
+                        </div>
+                    ) : (
+                        <div className="bg-black rounded-lg border border-gray-800 overflow-x-auto overflow-y-auto flex flex-col flex-grow max-h-[70vh]">
+                            <table className="min-w-full divide-y divide-gray-800">
+                                <thead className="bg-black sticky top-0 z-10">
+                                    <tr>
+                                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Origen</th>
+                                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Resguardo</th>
+                                        <th
+                                            onClick={() => {
+                                                setSortField('id_inv');
+                                                setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
+                                            }}
+                                            className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider cursor-pointer hover:bg-gray-700"
                                         >
-                                            <td className="px-4 py-3 text-xs">
-                                                <span className={`inline-flex items-center px-2.5 py-1 rounded-full font-bold ${ORIGEN_COLORS[item.origen]}`}>
-                                                    {item.origen}
-                                                </span>
-                                            </td>
-                                            <td className="px-4 py-3 text-xs">
-                                                {foliosResguardo[item.id_inv] ? (
-                                                    <button
-                                                        className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full font-bold bg-gradient-to-r from-blue-900/60 to-blue-700/60 text-blue-200 border border-blue-700 hover:from-blue-800 hover:to-blue-600 hover:text-white shadow-sm hover:scale-105 transition-all duration-200"
-                                                        title={`Ver resguardo ${foliosResguardo[item.id_inv]}`}
-                                                        onClick={() => handleFolioClick(foliosResguardo[item.id_inv]!)}
-                                                    >
-                                                        <BadgeCheck className="h-4 w-4 mr-1 text-blue-300" />
-                                                        {foliosResguardo[item.id_inv]}
-                                                    </button>
-                                                ) : (
-                                                    <span className="text-gray-600 italic">—</span>
-                                                )}
-                                            </td>
-                                            <td className="px-4 py-3 whitespace-nowrap text-sm font-medium text-white">
-                                                {item.id_inv}
-                                            </td>
-                                            <td className="px-4 py-3 text-sm text-gray-300">
-                                                {truncateText(item.descripcion, 40)}
-                                            </td>
-                                            <td className="px-4 py-3 text-sm text-gray-300">
-                                                {truncateText(item.area, 20)}
-                                            </td>
-                                            <td className="px-4 py-3 text-sm text-gray-300">
-                                                <div className="flex flex-col gap-1">
-                                                    <span className="font-medium text-white">
-                                                        {truncateText(item.usufinal, 20) || <span className="text-gray-500">Sin director</span>}
-                                                    </span>
-                                                    {item.resguardante && (
-                                                        <span className="inline-block px-2 py-0.5 text-xs font-medium bg-gradient-to-r from-cyan-900/50 to-blue-900/50 text-cyan-200 rounded-full border border-cyan-500/30 shadow-sm">
-                                                            {truncateText(item.resguardante, 20)}
-                                                        </span>
-                                                    )}
-                                                </div>
-                                            </td>
-                                            <td className="px-4 py-3 text-sm">
-                                                <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium ${item.estatus === 'ACTIVO' ? ESTATUS_COLORS.ACTIVO :
-                                                    item.estatus === 'INACTIVO' ? ESTATUS_COLORS.INACTIVO :
-                                                        item.estatus === 'NO LOCALIZADO' ? ESTATUS_COLORS['NO LOCALIZADO'] :
-                                                            ESTATUS_COLORS.DEFAULT
-                                                    }`}>
-                                                    {item.estatus}
-                                                </span>
+                                            <div className="flex items-center gap-1">ID Inventario<ArrowUpDown className="h-3 w-3" /></div>
+                                        </th>
+                                        <th
+                                            onClick={() => {
+                                                setSortField('descripcion');
+                                                setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
+                                            }}
+                                            className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider cursor-pointer hover:bg-gray-700"
+                                        >
+                                            <div className="flex items-center gap-1">Descripción<ArrowUpDown className="h-3 w-3" /></div>
+                                        </th>
+                                        <th
+                                            onClick={() => {
+                                                setSortField('area');
+                                                setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
+                                            }}
+                                            className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider cursor-pointer hover:bg-gray-700"
+                                        >
+                                            <div className="flex items-center gap-1">Área<ArrowUpDown className="h-3 w-3" /></div>
+                                        </th>
+                                        <th
+                                            onClick={() => {
+                                                setSortField('usufinal');
+                                                setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
+                                            }}
+                                            className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider cursor-pointer hover:bg-gray-700"
+                                        >
+                                            <div className="flex items-center gap-1">Jefe/Director de Área<ArrowUpDown className="h-3 w-3" /></div>
+                                        </th>
+                                        <th
+                                            onClick={() => {
+                                                setSortField('estatus');
+                                                setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
+                                            }}
+                                            className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider cursor-pointer hover:bg-gray-700"
+                                        >
+                                            <div className="flex items-center gap-1">Estatus<ArrowUpDown className="h-3 w-3" /></div>
+                                        </th>
+                                    </tr>
+                                </thead>
+                                <tbody className="bg-black divide-y divide-gray-800">
+                                    {error ? (
+                                        <tr className="h-96">
+                                            <td colSpan={6} className="px-6 py-24 text-center text-red-400">
+                                                <AlertCircle className="h-12 w-12" />
+                                                <p className="text-lg font-medium">{error}</p>
                                             </td>
                                         </tr>
-                                    ))
-                                )}
-                            </tbody>
-                        </table>
-                    </div>
+                                    ) : muebles.length === 0 ? (
+                                        <tr className="h-96">
+                                            <td colSpan={6} className="px-6 py-24 text-center text-gray-400">
+                                                <Search className="h-12 w-12 text-gray-500" />
+                                                <p className="text-lg font-medium">No se encontraron resultados</p>
+                                            </td>
+                                        </tr>
+                                    ) : (
+                                        muebles.map((item) => (
+                                            <tr
+                                                key={`${item.origen}-${item.id}`}
+                                                className={
+                                                    `transition-colors`
+                                                }
+                                            >
+                                                <td className="px-4 py-3 text-xs">
+                                                    <span className={`inline-flex items-center px-2.5 py-1 rounded-full font-bold ${ORIGEN_COLORS[item.origen]}`}>
+                                                        {item.origen}
+                                                    </span>
+                                                </td>
+                                                <td className="px-4 py-3 text-xs">
+                                                    {foliosResguardo[item.id_inv] ? (
+                                                        <button
+                                                            className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full font-bold bg-gradient-to-r from-blue-900/60 to-blue-700/60 text-blue-200 border border-blue-700 hover:from-blue-800 hover:to-blue-600 hover:text-white shadow-sm hover:scale-105 transition-all duration-200"
+                                                            title={`Ver resguardo ${foliosResguardo[item.id_inv]}`}
+                                                            onClick={() => handleFolioClick(foliosResguardo[item.id_inv]!)}
+                                                        >
+                                                            <BadgeCheck className="h-4 w-4 mr-1 text-blue-300" />
+                                                            {foliosResguardo[item.id_inv]}
+                                                        </button>
+                                                    ) : (
+                                                        <span className="text-gray-600 italic">—</span>
+                                                    )}
+                                                </td>
+                                                <td className="px-4 py-3 whitespace-nowrap text-sm font-medium text-white">
+                                                    {item.id_inv}
+                                                </td>
+                                                <td className="px-4 py-3 text-sm text-gray-300">
+                                                    {truncateText(item.descripcion, 40)}
+                                                </td>
+                                                <td className="px-4 py-3 text-sm text-gray-300">
+                                                    {truncateText(item.area, 20)}
+                                                </td>
+                                                <td className="px-4 py-3 text-sm text-gray-300">
+                                                    <div className="flex flex-col gap-1">
+                                                        <span className="font-medium text-white">
+                                                            {truncateText(item.usufinal, 20) || <span className="text-gray-500">Sin director</span>}
+                                                        </span>
+                                                        {item.resguardante && (
+                                                            <span className="inline-block px-2 py-0.5 text-xs font-medium bg-gradient-to-r from-cyan-900/50 to-blue-900/50 text-cyan-200 rounded-full border border-cyan-500/30 shadow-sm">
+                                                                {truncateText(item.resguardante, 20)}
+                                                            </span>
+                                                        )}
+                                                    </div>
+                                                </td>
+                                                <td className="px-4 py-3 text-sm">
+                                                    <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium ${item.estatus === 'ACTIVO' ? ESTATUS_COLORS.ACTIVO :
+                                                        item.estatus === 'INACTIVO' ? ESTATUS_COLORS.INACTIVO :
+                                                            item.estatus === 'NO LOCALIZADO' ? ESTATUS_COLORS['NO LOCALIZADO'] :
+                                                                ESTATUS_COLORS.DEFAULT
+                                                        }`}>
+                                                        {item.estatus}
+                                                    </span>
+                                                </td>
+                                            </tr>
+                                        ))
+                                    )}
+                                </tbody>
+                            </table>
+                        </div>
+                    )}
                     <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mt-4">
                         <div className="text-sm text-gray-400 font-medium">
                             Mostrando <span className="text-white">{(currentPage - 1) * rowsPerPage + 1}-{Math.min(currentPage * rowsPerPage, filteredCount)}</span> de <span className="text-white">{filteredCount}</span> registros

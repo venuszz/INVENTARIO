@@ -584,7 +584,7 @@ export async function generateResguardoPDF(data: PdfData) {
     }
 
     const pdfBytes = await pdfDoc.save();
-    const blob = new Blob([pdfBytes], { type: 'application/pdf' });
+    const blob = new Blob([new Uint8Array(pdfBytes)], { type: 'application/pdf' });
     saveAs(blob, `resguardo_${data.folio}.pdf`);
 }
 
