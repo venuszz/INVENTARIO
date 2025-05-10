@@ -171,7 +171,7 @@ export default function Inicio() {
             className="h-80 w-auto object-contain animate-float"
             onLoad={() => setIsLoaded(true)}
           />
-          <p className='text-center text-gray-800 pt-2'>Powered by InovaSoft</p>
+          <p className='text-center text-gray-800 pt-2'>Derechos Reservados ©2025</p>
         </div>
 
         {/* Círculos orbitando alrededor del logo */}
