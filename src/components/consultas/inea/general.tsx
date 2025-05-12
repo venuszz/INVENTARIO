@@ -207,6 +207,31 @@ export default function ConsultasIneaGeneral() {
 
     const { createNotification } = useNotifications();
 
+    // Estados para áreas y relaciones N:M
+    const [areas, setAreas] = useState<{ id_area: number; nombre: string }[]>([]);
+    const [directorAreasMap, setDirectorAreasMap] = useState<{ [id_directorio: number]: number[] }>({});
+    const [showAreaSelectModal, setShowAreaSelectModal] = useState(false);
+    const [areaOptionsForDirector, setAreaOptionsForDirector] = useState<{ id_area: number; nombre: string }[]>([]);
+    const [, setSelectedAreaForDirector] = useState<{ id_area: number; nombre: string } | null>(null);
+
+    // Cargar áreas y relaciones N:M al montar
+    useEffect(() => {
+        async function fetchAreasAndRelations() {
+            const { data: areasData } = await supabase.from('area').select('*').order('nombre');
+            setAreas(areasData || []);
+            const { data: rels } = await supabase.from('directorio_areas').select('*');
+            if (rels) {
+                const map: { [id_directorio: number]: number[] } = {};
+                rels.forEach((rel: { id_directorio: number, id_area: number }) => {
+                    if (!map[rel.id_directorio]) map[rel.id_directorio] = [];
+                    map[rel.id_directorio].push(rel.id_area);
+                });
+                setDirectorAreasMap(map);
+            }
+        }
+        fetchAreasAndRelations();
+    }, []);
+
     // Función para obtener el directorio
     const fetchDirectorio = useCallback(async () => {
         try {
@@ -262,29 +287,39 @@ export default function ConsultasIneaGeneral() {
     // Función para manejar la selección del director/jefe de área
     const handleSelectDirector = (nombre: string) => {
         const selected = directorio.find(d => d.nombre === nombre);
-
         if (!selected) return;
 
-        // Si el director no tiene área asignada, mostramos el modal
-        if (!selected.area) {
+        // Obtener áreas N:M del director
+        const areaIds = directorAreasMap[selected.id_directorio] || [];
+        const areasForDirector = areas.filter(a => areaIds.includes(a.id_area));
+
+        // Si no tiene áreas, mostrar modal de info faltante
+        if (areasForDirector.length === 0) {
             setIncompleteDirector(selected);
             setDirectorFormData({ area: '' });
             setShowDirectorModal(true);
             return;
         }
-
-        // Si tiene área, actualizamos el formulario
+        // Si tiene más de una área, mostrar modal de selección
+        if (areasForDirector.length > 1) {
+            setAreaOptionsForDirector(areasForDirector);
+            setSelectedAreaForDirector(null);
+            setIncompleteDirector(selected); // por si se requiere
+            setShowAreaSelectModal(true);
+            return;
+        }
+        // Si solo tiene una área, asignar directo
         if (editFormData) {
             setEditFormData(prev => ({
                 ...prev!,
                 usufinal: nombre,
-                area: selected.area || ''
+                area: areasForDirector[0].nombre
             }));
         } else if (selectedItem) {
             setSelectedItem(prev => ({
                 ...prev!,
                 usufinal: nombre,
-                area: selected.area || ''
+                area: areasForDirector[0].nombre
             }));
         }
     };
@@ -2039,6 +2074,70 @@ export default function ConsultasIneaGeneral() {
                             </div>
                         </div>
                     </div>
+                )}                {/* Modal de selección de área para director (minimalista, dark) */}
+                {showAreaSelectModal && (
+                    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm">                    <div className="bg-black border border-gray-800 rounded-2xl shadow-2xl min-w-[360px] max-w-md w-full relative animate-fadeIn overflow-hidden">
+                            <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-blue-500/60 via-blue-400 to-blue-500/60"></div>
+                            <div className="p-6 relative">
+                                <button
+                                    className="absolute top-3 right-3 p-1 rounded-lg text-gray-500 hover:text-gray-300 hover:bg-gray-800 transition-all duration-200"
+                                    onClick={() => setShowAreaSelectModal(false)}
+                                    aria-label="Cerrar"
+                                >
+                                    ×
+                                </button>
+                                
+                                <div className="flex flex-col items-center text-center mb-6">
+                                    <div className="p-3 bg-blue-500/10 rounded-full border border-blue-500/30 mb-3">
+                                        <LayoutGrid className="h-8 w-8 text-blue-400" />
+                                    </div>
+                                    <h2 className="text-2xl font-bold text-white">Selecciona un área</h2>
+                                    <p className="text-gray-400 mt-2">
+                                        Elige el área correspondiente para este artículo
+                                    </p>
+                                </div>
+
+                                <div className="rounded-lg border border-gray-800 bg-gray-900/50 p-4 mb-6">
+                                    <label className="text-xs uppercase tracking-wider text-gray-400 mb-2 block">Director asignado</label>
+                                    <div className="flex items-center gap-3">
+                                        <div className="p-2 bg-gray-800 rounded-lg">
+                                            <User className="h-4 w-4 text-blue-400" />
+                                        </div>
+                                        <div className="flex flex-col">
+                                            <span className="text-white font-medium">{incompleteDirector?.nombre}</span>
+                                            <span className="text-sm text-gray-500">{incompleteDirector?.puesto || 'Sin puesto asignado'}</span>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div className="space-y-2">
+                                    <label className="text-xs uppercase tracking-wider text-gray-400 block mb-3">Áreas disponibles</label>
+                                    {areaOptionsForDirector.map((area) => (
+                                        <button
+                                            key={area.id_area}
+                                            className="w-full px-4 py-2.5 rounded-lg bg-gray-900/70 border border-gray-800 text-gray-200 hover:border-blue-500 hover:bg-gray-900 hover:text-blue-300 focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 text-sm font-medium"
+                                            onClick={() => {
+                                                if (editFormData) {
+                                                    setEditFormData(prev => ({
+                                                        ...prev!,
+                                                        area: area.nombre
+                                                    }));
+                                                } else if (selectedItem) {
+                                                    setSelectedItem(prev => ({
+                                                        ...prev!,
+                                                        area: area.nombre
+                                                    }));
+                                                }
+                                                setShowAreaSelectModal(false);
+                                            }}
+                                        >
+                                            {area.nombre}
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+                    </div>
+                </div>
                 )}
 
                 {/* Modal de confirmación de baja */}

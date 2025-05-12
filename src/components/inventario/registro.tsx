@@ -85,6 +85,12 @@ export default function RegistroBienesForm() {
     const [savingDirector, setSavingDirector] = useState(false);
     const [directorio, setDirectorio] = useState<Directorio[]>([]);
 
+    // Estados para áreas y relaciones N:M
+    const [areas, setAreas] = useState<{ id_area: number; nombre: string }[]>([]);
+    const [directorAreasMap, setDirectorAreasMap] = useState<{ [id_directorio: number]: number[] }>({});
+    const [showAreaSelectModal, setShowAreaSelectModal] = useState(false);
+    const [areaOptionsForDirector, setAreaOptionsForDirector] = useState<{ id_area: number; nombre: string }[]>([]);
+
     // Resto de estados
     const [currentStep, setCurrentStep] = useState<number>(1);
     const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
@@ -128,26 +134,51 @@ export default function RegistroBienesForm() {
     }, []);
 
     useEffect(() => {
+        // Cargar directorio
         fetchDirectorio();
+        // Cargar áreas y relaciones N:M
+        async function fetchAreasAndRelations() {
+            const { data: areasData } = await supabase.from('area').select('*').order('nombre');
+            setAreas(areasData || []);
+            const { data: rels } = await supabase.from('directorio_areas').select('*');
+            if (rels) {
+                const map: { [id_directorio: number]: number[] } = {};
+                rels.forEach((rel: { id_directorio: number; id_area: number }) => {
+                    if (!map[rel.id_directorio]) map[rel.id_directorio] = [];
+                    map[rel.id_directorio].push(rel.id_area);
+                });
+                setDirectorAreasMap(map);
+            }
+        }
+        fetchAreasAndRelations();
     }, [fetchDirectorio]);
 
     // Función para manejar la selección del director/jefe de área
     const handleSelectDirector = (nombre: string) => {
         const selected = directorio.find(d => d.nombre === nombre);
-
-        if (selected && !selected.area) {
+        if (!selected) return;
+        // Obtener áreas N:M del director
+        const areaIds = directorAreasMap[selected.id_directorio] || [];
+        const areasForDirector = areas.filter(a => areaIds.includes(a.id_area));
+        // Si no tiene áreas, mostrar modal de info faltante
+        if (areasForDirector.length === 0) {
             setIncompleteDirector(selected);
-            setDirectorFormData({
-                area: selected.area || ''
-            });
+            setDirectorFormData({ area: '' });
             setShowDirectorModal(true);
             return;
         }
-
+        // Si tiene más de una área, mostrar modal de selección
+        if (areasForDirector.length > 1) {
+            setAreaOptionsForDirector(areasForDirector);
+            setIncompleteDirector(selected);
+            setShowAreaSelectModal(true);
+            return;
+        }
+        // Si solo tiene una área, asignar directo
         setFormData(prev => ({
             ...prev,
             usufinal: nombre,
-            area: selected?.area || ''
+            area: areasForDirector[0].nombre
         }));
     };
 
@@ -1127,6 +1158,49 @@ export default function RegistroBienesForm() {
                                 )}
                                 {savingDirector ? 'Guardando...' : 'Guardar y Continuar'}
                             </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Modal de selección de área para directores con varias áreas */}
+            {showAreaSelectModal && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm">
+                    <div className="bg-black border border-gray-800 rounded-2xl shadow-2xl min-w-[360px] max-w-md w-full relative animate-fadeIn overflow-hidden">
+                        <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-blue-500/60 via-blue-400 to-blue-500/60"></div>
+                        <div className="p-6 relative">
+                            <button
+                                title='Cerrar'
+                                onClick={() => setShowAreaSelectModal(false)}
+                                className="absolute top-3 right-3 p-1 bg-gray-900 rounded-full hover:bg-gray-800 text-gray-400 hover:text-white transition-colors"
+                            >
+                                <X size={18} />
+                            </button>
+                            <div className="flex flex-col items-center text-center mb-4">
+                                <div className="p-3 bg-blue-500/10 rounded-full border border-blue-500/30 mb-3">
+                                    <User className="h-8 w-8 text-blue-400" />
+                                </div>
+                                <h3 className="text-2xl font-bold text-white">Seleccione el área correspondiente</h3>
+                                <p className="text-gray-400 mt-2">El director/jefe seleccionado tiene varias áreas asignadas. Elija una para continuar.</p>
+                            </div>
+                            <div className="flex flex-col gap-3 mt-4">
+                                {areaOptionsForDirector.map((area) => (
+                                    <button
+                                        key={area.id_area}
+                                        className="w-full px-4 py-2.5 rounded-lg bg-gray-900/70 border border-gray-800 text-gray-200 hover:border-blue-500 hover:bg-gray-900 hover:text-blue-300 focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 text-sm font-medium"
+                                        onClick={() => {
+                                            setFormData(prev => ({
+                                                ...prev,
+                                                usufinal: incompleteDirector?.nombre || '',
+                                                area: area.nombre
+                                            }));
+                                            setShowAreaSelectModal(false);
+                                        }}
+                                    >
+                                        {area.nombre}
+                                    </button>
+                                ))}
+                            </div>
                         </div>
                     </div>
                 </div>

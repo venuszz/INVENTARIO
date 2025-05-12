@@ -41,14 +41,13 @@ interface FilterOptions {
     areas: string[];
     rubros: string[];
     formadq: string[];
-    directores: { nombre: string; area: string }[];
+    directores: { nombre: string; areas: string[] }[];
 }
 
 interface Directorio {
     id_directorio: number;
     nombre: string;
-    area: string | null;
-    puesto: string | null;
+    areas: string[];
 }
 
 interface Message {
@@ -202,6 +201,10 @@ export default function ConsultasIteaBajas() {
 
     const { createNotification } = useNotifications();
 
+    // Estados para modales de área (N:M directores-areas)
+    const [showAreaSelectModal, setShowAreaSelectModal] = useState(false);
+    const [areaOptionsForDirector, setAreaOptionsForDirector] = useState<string[]>([]);
+
     useEffect(() => {
         if (!selectedItem || isEditing) {
             setBajaInfo(null);
@@ -296,26 +299,54 @@ export default function ConsultasIteaBajas() {
         return total;
     }
 
-    // Función para obtener el directorio
+    // Reemplazar fetchDirectorio para N:M
     const fetchDirectorio = useCallback(async () => {
         try {
-            const { data: directorioData, error } = await supabase.from('directorio').select('*');
-            if (error) throw error;
+            // 1. Traer todos los directores
+            const { data: directoresData, error: directoresError } = await supabase
+                .from('directorio')
+                .select('id_directorio, nombre');
+            if (directoresError) throw directoresError;
 
-            setDirectorio(directorioData || []);
+            // 2. Traer todas las áreas
+            const { data: areasData, error: areasError } = await supabase
+                .from('area')
+                .select('id_area, nombre');
+            if (areasError) throw areasError;
 
-            // Actualizar la lista de directores en filterOptions
-            if (directorioData) {
-                const directores = directorioData.map(item => ({
-                    nombre: item.nombre?.trim().toUpperCase() || '',
-                    area: item.area?.trim().toUpperCase() || ''
-                }));
+            // 3. Traer todas las relaciones N:M
+            const { data: relacionesData, error: relacionesError } = await supabase
+                .from('directorio_areas')
+                .select('id_directorio, id_area');
+            if (relacionesError) throw relacionesError;
 
-                setFilterOptions(prev => ({
-                    ...prev,
-                    directores: directores
-                }));
-            }
+            // 4. Mapear áreas por director
+            const directorioFormateado = (directoresData || []).map(director => {
+                const areaIds = (relacionesData || [])
+                    .filter(rel => rel.id_directorio === director.id_directorio)
+                    .map(rel => rel.id_area);
+                // Nombres de áreas asociadas
+                const areas = (areasData || [])
+                    .filter(a => areaIds.includes(a.id_area))
+                    .map(a => a.nombre);
+                return {
+                    id_directorio: director.id_directorio,
+                    nombre: director.nombre,
+                    areas
+                };
+            });
+
+            setDirectorio(directorioFormateado);
+
+            // Actualizar filterOptions.directores
+            const directores = directorioFormateado.map(item => ({
+                nombre: item.nombre,
+                areas: item.areas
+            }));
+            setFilterOptions(prev => ({
+                ...prev,
+                directores
+            }));
         } catch (err) {
             console.error('Error al cargar directorio:', err);
             setMessage({
@@ -325,64 +356,70 @@ export default function ConsultasIteaBajas() {
         }
     }, []);
 
-    // Función para manejar la selección del director/jefe de área
+    // Modificar handleSelectDirector para lógica N:M y modales unificados
     const handleSelectDirector = (nombre: string) => {
-        const selected = directorio.find(d => d.nombre === nombre);
+        const director = directorio.find(d => d.nombre === nombre);
+        if (!director) return;
 
-        if (!selected) return;
-
-        // Si el director no tiene área asignada, mostramos el modal
-        if (!selected.area) {
-            setIncompleteDirector(selected);
+        // Si el director no tiene áreas, mostrar modal de alta de área
+        if (!director.areas || director.areas.length === 0) {
+            setIncompleteDirector(director);
             setDirectorFormData({ area: '' });
             setShowDirectorModal(true);
             return;
         }
-
-        // Si tiene área, actualizamos el formulario
+        // Si tiene más de una área, mostrar modal de selección
+        if (director.areas.length > 1) {
+            setAreaOptionsForDirector(director.areas);
+            setIncompleteDirector(director);
+            setShowAreaSelectModal(true);
+            return;
+        }
+        // Si solo tiene una área, asignar directo
+        const area = director.areas[0] || '';
         if (editFormData) {
             setEditFormData(prev => ({
                 ...prev!,
                 usufinal: nombre,
-                area: selected.area || ''
+                area
             }));
         } else if (selectedItem) {
             setSelectedItem(prev => ({
                 ...prev!,
                 usufinal: nombre,
-                area: selected.area || ''
+                area
             }));
         }
     };
 
-    // Función para guardar la información del director
+    // Guardar la información del director con área seleccionada (N:M)
     const saveDirectorInfo = async () => {
         if (!incompleteDirector || !directorFormData.area) return;
 
         setSavingDirector(true);
         try {
             const { error: updateError } = await supabase
-                .from('directorio')
-                .update({
+                .from('directorio_areas')
+                .insert({
+                    id_directorio: incompleteDirector.id_directorio,
                     area: directorFormData.area
-                })
-                .eq('id_directorio', incompleteDirector.id_directorio);
+                });
 
             if (updateError) throw updateError;
 
-            // Actualizar estado local
+            // Update local state
             const updatedDirectorio = directorio.map(d =>
                 d.id_directorio === incompleteDirector.id_directorio
-                    ? { ...d, area: directorFormData.area }
+                    ? { ...d, areas: [...d.areas, directorFormData.area] }
                     : d
             );
 
             setDirectorio(updatedDirectorio);
 
-            // Actualizar filterOptions.directores
+            // Update filterOptions.directores
             const updatedDirectores = updatedDirectorio.map(item => ({
-                nombre: item.nombre?.trim().toUpperCase() || '',
-                area: item.area?.trim().toUpperCase() || ''
+                nombre: item.nombre,
+                areas: item.areas
             }));
 
             setFilterOptions(prev => ({
@@ -390,7 +427,7 @@ export default function ConsultasIteaBajas() {
                 directores: updatedDirectores
             }));
 
-            // Actualizar el formulario o el item seleccionado
+            // Update the form or selected item
             if (editFormData) {
                 setEditFormData(prev => ({
                     ...prev!,
@@ -1980,6 +2017,57 @@ export default function ConsultasIteaBajas() {
                                         )}
                                         {savingDirector ? 'Guardando...' : 'Guardar y Continuar'}
                                     </button>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Modal de selección de área para directores con varias áreas */}
+                    {showAreaSelectModal && (
+                        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm">
+                            <div className="bg-black border border-blue-600/30 rounded-2xl shadow-2xl min-w-[360px] max-w-md w-full relative animate-fadeIn overflow-hidden">
+                                <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-blue-500/60 via-blue-400 to-blue-500/60"></div>
+                                <div className="p-6 relative">
+                                    <button
+                                        onClick={() => setShowAreaSelectModal(false)}
+                                        className="absolute top-2 right-2 text-gray-400 hover:text-white p-2 rounded-full focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                        title="Cerrar selección de área"
+                                    >
+                                        <X className="h-5 w-5" />
+                                    </button>
+                                    <div className="flex flex-col items-center text-center mb-4">
+                                        <div className="p-3 bg-blue-500/10 rounded-full border border-blue-500/30 mb-3">
+                                            <LayoutGrid className="h-8 w-8 text-blue-400" />
+                                        </div>
+                                        <h3 className="text-2xl font-bold text-white">Seleccione el área correspondiente</h3>
+                                        <p className="text-gray-400 mt-2">El director/jefe seleccionado tiene varias áreas asignadas. Elija una para continuar.</p>
+                                    </div>
+                                    <div className="flex flex-col gap-3 mt-4">
+                                        {areaOptionsForDirector.map((area, idx) => (
+                                            <button
+                                                key={idx}
+                                                className="w-full px-4 py-2.5 rounded-lg bg-gray-900/70 border border-gray-800 text-gray-200 hover:border-blue-500 hover:bg-gray-900 hover:text-blue-300 focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 text-sm font-medium"
+                                                onClick={() => {
+                                                    if (editFormData) {
+                                                        setEditFormData(prev => ({
+                                                            ...prev!,
+                                                            usufinal: incompleteDirector?.nombre || '',
+                                                            area
+                                                        }));
+                                                    } else if (selectedItem) {
+                                                        setSelectedItem(prev => ({
+                                                            ...prev!,
+                                                            usufinal: incompleteDirector?.nombre || '',
+                                                            area
+                                                        }));
+                                                    }
+                                                    setShowAreaSelectModal(false);
+                                                }}
+                                            >
+                                                {area}
+                                            </button>
+                                        ))}
+                                    </div>
                                 </div>
                             </div>
                         </div>
