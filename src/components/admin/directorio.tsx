@@ -30,6 +30,16 @@ export default function DirectorioManagementComponent() {
     const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
     const [error, setError] = useState<string>('');
 
+    // NUEVO: Estado para áreas y relaciones
+    const [areas, setAreas] = useState<{ id_area: number; nombre: string }[]>([]);
+    const [selectedAreas, setSelectedAreas] = useState<number[]>([]);
+    const [editSelectedAreas, setEditSelectedAreas] = useState<number[]>([]);
+    const [directorAreasMap, setDirectorAreasMap] = useState<{ [id_directorio: number]: number[] }>({});
+
+    // Estado para el valor del input de área (alta y edición)
+    const [addAreaInput, setAddAreaInput] = useState('');
+    const [editAreaInput, setEditAreaInput] = useState('');
+
     const addInputRef = useRef<HTMLInputElement>(null);
     const editInputRef = useRef<HTMLInputElement>(null);
     const { createNotification } = useNotifications();
@@ -53,10 +63,59 @@ export default function DirectorioManagementComponent() {
         }
     }, []);
 
+    // NUEVO: Cargar áreas y relaciones
+    const fetchAreas = useCallback(async () => {
+        const { data, error } = await supabase.from('area').select('*').order('nombre');
+        if (!error) setAreas(data || []);
+    }, []);
+
+    const fetchDirectorAreas = useCallback(async (id_directorio: number) => {
+        const { data, error } = await supabase
+            .from('directorio_areas')
+            .select('id_area')
+            .eq('id_directorio', id_directorio);
+        if (!error) return (data || []).map((d: { id_area: number }) => d.id_area);
+        return [];
+    }, []);
+
+    const fetchAllDirectorAreas = useCallback(async () => {
+        const { data, error } = await supabase.from('directorio_areas').select('*');
+        if (!error && data) {
+            const map: { [id_directorio: number]: number[] } = {};
+            data.forEach((rel: { id_directorio: number, id_area: number }) => {
+                if (!map[rel.id_directorio]) map[rel.id_directorio] = [];
+                map[rel.id_directorio].push(rel.id_area);
+            });
+            setDirectorAreasMap(map);
+        }
+    }, []);
+
     // Cargar datos al montar el componente
     useEffect(() => {
         fetchDirectorio();
-    }, [fetchDirectorio]);
+        fetchAreas();
+        fetchAllDirectorAreas();
+    }, [fetchDirectorio, fetchAreas, fetchAllDirectorAreas]);
+
+    // NUEVO: Al editar, cargar áreas seleccionadas
+    useEffect(() => {
+        if (editingId) {
+            fetchDirectorAreas(editingId).then(setEditSelectedAreas);
+        }
+    }, [editingId, fetchDirectorAreas]);
+
+    // NUEVO: Al agregar, limpiar selección
+    useEffect(() => {
+        if (isAddingNew) setSelectedAreas([]);
+    }, [isAddingNew]);
+
+    // Limpiar el input cuando se abre alta o edición
+    useEffect(() => {
+        if (isAddingNew) setAddAreaInput('');
+    }, [isAddingNew]);
+    useEffect(() => {
+        if (editingId) setEditAreaInput('');
+    }, [editingId]);
 
     // Función para obtener el próximo ID disponible
     const getNextAvailableId = useCallback(() => {
@@ -77,6 +136,7 @@ export default function DirectorioManagementComponent() {
     const handleAddNew = () => {
         setIsAddingNew(true);
         setNewEmployee({ id_directorio: getNextAvailableId(), nombre: '', area: '', puesto: '' });
+        setSelectedAreas([]);
         setTimeout(() => addInputRef.current?.focus(), 100);
     };
 
@@ -89,12 +149,14 @@ export default function DirectorioManagementComponent() {
     const handleEdit = (employee: Directorio) => {
         setEditingId(employee.id_directorio);
         setEditEmployee({ ...employee });
+        fetchDirectorAreas(employee.id_directorio).then(setEditSelectedAreas);
         setTimeout(() => editInputRef.current?.focus(), 100);
     };
 
     const handleCancelEdit = () => {
         setEditingId(null);
         setEditEmployee({ id_directorio: 0, nombre: '', area: '', puesto: '' });
+        setEditSelectedAreas([]);
         setError('');
     };
 
@@ -116,16 +178,16 @@ export default function DirectorioManagementComponent() {
             if (!newEmployee.nombre || newEmployee.nombre.trim() === '') {
                 throw new Error('El nombre del empleado es obligatorio');
             }
+            if (selectedAreas.length === 0) {
+                throw new Error('Debes asignar al menos un área');
+            }
 
-            // Ya no necesitamos convertir aquí porque se convierte en tiempo real
             const nombreEmployee = newEmployee.nombre;
-            const areaEmployee = newEmployee.area || '';
             const puestoEmployee = newEmployee.puesto || '';
 
             // Verificar si el empleado ya existe
             const existingEmployee = directorio.find((item: Directorio) =>
                 item.nombre?.toUpperCase() === nombreEmployee &&
-                item.area?.toUpperCase() === areaEmployee &&
                 item.puesto?.toUpperCase() === puestoEmployee
             );
 
@@ -134,27 +196,37 @@ export default function DirectorioManagementComponent() {
             }
 
             // Agregar nuevo empleado
-            const { error } = await supabase
+            const { data, error } = await supabase
                 .from('directorio')
-                .insert([{ nombre: nombreEmployee, area: areaEmployee, puesto: puestoEmployee }])
+                .insert([{ nombre: nombreEmployee, puesto: puestoEmployee }])
                 .select();
 
             if (error) throw error;
 
+            const newId = data?.[0]?.id_directorio;
+
+            // Guardar áreas en directorio_areas
+            for (const id_area of selectedAreas) {
+                await supabase.from('directorio_areas').insert({ id_directorio: newId, id_area });
+            }
+
             setMessage({ type: 'success', text: 'Empleado agregado correctamente' });
             setIsAddingNew(false);
             setNewEmployee({ id_directorio: 0, nombre: '', area: '', puesto: '' });
+            setSelectedAreas([]);
             fetchDirectorio();
+            fetchAreas();
+            fetchAllDirectorAreas();
 
             // Notificación de alta
             await createNotification({
                 title: 'Nuevo empleado agregado',
-                description: `Se agregó a ${nombreEmployee} (Área: ${areaEmployee}, Puesto: ${puestoEmployee}) al directorio.`,
+                description: `Se agregó a ${nombreEmployee} con áreas asignadas al directorio.`,
                 type: 'success',
                 category: 'directorio',
                 device: 'web',
                 importance: 'medium',
-                data: { changes: [`Alta: ${nombreEmployee}, Área: ${areaEmployee}, Puesto: ${puestoEmployee}`], affectedTables: ['directorio'] }
+                data: { changes: [`Alta: ${nombreEmployee}`], affectedTables: ['directorio', 'directorio_areas'] }
             });
         } catch (error: unknown) {
             console.error('Error:', error);
@@ -187,16 +259,16 @@ export default function DirectorioManagementComponent() {
             if (!editEmployee.nombre || editEmployee.nombre.trim() === '') {
                 throw new Error('El nombre del empleado es obligatorio');
             }
+            if (editSelectedAreas.length === 0) {
+                throw new Error('Debes asignar al menos un área');
+            }
 
-            // Ya no necesitamos convertir aquí porque se convierte en tiempo real
             const nombreEmployee = editEmployee.nombre;
-            const areaEmployee = editEmployee.area || '';
             const puestoEmployee = editEmployee.puesto || '';
 
             // Verificar si el nuevo nombre ya existe (excluyendo el empleado actual)
             const existingEmployee = directorio.find((item: Directorio) =>
                 item.nombre?.toUpperCase() === nombreEmployee &&
-                item.area?.toUpperCase() === areaEmployee &&
                 item.puesto?.toUpperCase() === puestoEmployee &&
                 item.id_directorio !== editEmployee.id_directorio
             );
@@ -208,25 +280,34 @@ export default function DirectorioManagementComponent() {
             // Editar empleado existente
             const { error } = await supabase
                 .from('directorio')
-                .update({ nombre: nombreEmployee, area: areaEmployee, puesto: puestoEmployee })
+                .update({ nombre: nombreEmployee, puesto: puestoEmployee })
                 .eq('id_directorio', editEmployee.id_directorio);
 
             if (error) throw error;
 
+            // Actualizar áreas: eliminar todas y volver a insertar
+            await supabase.from('directorio_areas').delete().eq('id_directorio', editEmployee.id_directorio);
+            for (const id_area of editSelectedAreas) {
+                await supabase.from('directorio_areas').insert({ id_directorio: editEmployee.id_directorio, id_area });
+            }
+
             setMessage({ type: 'success', text: 'Empleado actualizado correctamente' });
             setEditingId(null);
             setEditEmployee({ id_directorio: 0, nombre: '', area: '', puesto: '' });
+            setEditSelectedAreas([]);
             fetchDirectorio();
+            fetchAreas();
+            fetchAllDirectorAreas();
 
             // Notificación de edición
             await createNotification({
                 title: 'Empleado actualizado',
-                description: `Se actualizó a ${nombreEmployee} (Área: ${areaEmployee}, Puesto: ${puestoEmployee}) en el directorio.`,
+                description: `Se actualizó a ${nombreEmployee} con nuevas áreas asignadas.`,
                 type: 'info',
                 category: 'directorio',
                 device: 'web',
                 importance: 'medium',
-                data: { changes: [`Edición: ${nombreEmployee}, Área: ${areaEmployee}, Puesto: ${puestoEmployee}`], affectedTables: ['directorio'] }
+                data: { changes: [`Edición: ${nombreEmployee}`], affectedTables: ['directorio', 'directorio_areas'] }
             });
         } catch (error: unknown) {
             console.error('Error:', error);
@@ -263,6 +344,7 @@ export default function DirectorioManagementComponent() {
             setMessage({ type: 'success', text: 'Empleado eliminado correctamente' });
             setDeletingId(null);
             fetchDirectorio();
+            fetchAllDirectorAreas();
 
             // Notificación de baja
             await createNotification({
@@ -386,7 +468,7 @@ export default function DirectorioManagementComponent() {
                                 {/* Fila para agregar nuevo empleado */}
                                 {isAddingNew && (
                                     <tr className="bg-gray-900 bg-opacity-50 animate-fadeIn">
-                                        {/* Eliminamos la celda del ID */}
+                                        {/* Nombre */}
                                         <td className="px-4 py-2 text-sm">
                                             <input
                                                 ref={addInputRef}
@@ -397,15 +479,53 @@ export default function DirectorioManagementComponent() {
                                                 className="w-full bg-black border border-gray-700 rounded p-1.5 focus:border-white focus:ring focus:ring-gray-700 focus:ring-opacity-50 transition-all text-sm"
                                             />
                                         </td>
+                                        {/* Áreas: chips + input para agregar manualmente */}
                                         <td className="px-4 py-2 text-sm">
-                                            <input
-                                                type="text"
-                                                value={newEmployee.area || ''}
-                                                onChange={(e) => setNewEmployee({ ...newEmployee, area: e.target.value.toUpperCase() })}
-                                                placeholder="Área de adscripción"
-                                                className="w-full bg-black border border-gray-700 rounded p-1.5 focus:border-white focus:ring focus:ring-gray-700 focus:ring-opacity-50 transition-all text-sm"
-                                            />
+                                            <div className="flex flex-wrap gap-1 items-center">
+                                                {selectedAreas.map(id_area => {
+                                                    const areaObj = areas.find(a => a.id_area === id_area);
+                                                    return areaObj ? (
+                                                        <span key={id_area} className="inline-block bg-emerald-900/40 text-emerald-200 border border-emerald-700 rounded-full px-2 py-0.5 text-xs font-semibold flex items-center gap-1">
+                                                            {areaObj.nombre}
+                                                            <button
+                                                                type="button"
+                                                                className="ml-1 text-emerald-300 hover:text-red-400 focus:outline-none"
+                                                                onClick={() => setSelectedAreas(selectedAreas.filter(a => a !== id_area))}
+                                                                title="Quitar área"
+                                                            >
+                                                                <X size={12} />
+                                                            </button>
+                                                        </span>
+                                                    ) : null;
+                                                })}
+                                                <input
+                                                    type="text"
+                                                    placeholder="Agregar área..."
+                                                    className="bg-black border border-gray-700 rounded p-1.5 text-xs text-white focus:border-emerald-400 focus:ring focus:ring-emerald-700 focus:ring-opacity-50 transition-all w-32"
+                                                    value={addAreaInput}
+                                                    onChange={e => setAddAreaInput(e.target.value)}
+                                                    onKeyDown={async (e) => {
+                                                        if (e.key === 'Enter') {
+                                                            const value = addAreaInput.trim().toUpperCase();
+                                                            if (value && !areas.some(a => a.nombre === value)) {
+                                                                const { data, error } = await supabase.from('area').insert([{ nombre: value }]).select();
+                                                                if (!error && data && data[0]) {
+                                                                    setAreas([...areas, data[0]]);
+                                                                    setSelectedAreas([...selectedAreas, data[0].id_area]);
+                                                                }
+                                                            } else if (value) {
+                                                                const areaObj = areas.find(a => a.nombre === value);
+                                                                if (areaObj && !selectedAreas.includes(areaObj.id_area)) {
+                                                                    setSelectedAreas([...selectedAreas, areaObj.id_area]);
+                                                                }
+                                                            }
+                                                            setAddAreaInput('');
+                                                        }
+                                                    }}
+                                                />
+                                            </div>
                                         </td>
+                                        {/* Puesto */}
                                         <td className="px-4 py-2 text-sm">
                                             <input
                                                 type="text"
@@ -415,6 +535,7 @@ export default function DirectorioManagementComponent() {
                                                 className="w-full bg-black border border-gray-700 rounded p-1.5 focus:border-white focus:ring focus:ring-gray-700 focus:ring-opacity-50 transition-all text-sm"
                                             />
                                         </td>
+                                        {/* Acciones */}
                                         <td className="px-4 py-2 text-sm text-right">
                                             <div className="flex justify-end space-x-1">
                                                 <button
@@ -462,6 +583,7 @@ export default function DirectorioManagementComponent() {
                                             {/* Eliminamos la celda del ID */}
                                             {editingId === employee.id_directorio ? (
                                                 <>
+                                                    {/* Nombre */}
                                                     <td className="px-4 py-2 text-sm">
                                                         <input
                                                             title='Nombre'
@@ -472,15 +594,53 @@ export default function DirectorioManagementComponent() {
                                                             className="w-full bg-black border border-gray-700 rounded p-1.5 focus:border-white focus:ring focus:ring-gray-700 focus:ring-opacity-50 transition-all text-sm"
                                                         />
                                                     </td>
+                                                    {/* Áreas: chips + input para agregar manualmente */}
                                                     <td className="px-4 py-2 text-sm">
-                                                        <input
-                                                            title='Área'
-                                                            type="text"
-                                                            value={editEmployee.area || ''}
-                                                            onChange={(e) => setEditEmployee({ ...editEmployee, area: e.target.value.toUpperCase() })}
-                                                            className="w-full bg-black border border-gray-700 rounded p-1.5 focus:border-white focus:ring focus:ring-gray-700 focus:ring-opacity-50 transition-all text-sm"
-                                                        />
+                                                        <div className="flex flex-wrap gap-1 items-center">
+                                                            {editSelectedAreas.map(id_area => {
+                                                                const areaObj = areas.find(a => a.id_area === id_area);
+                                                                return areaObj ? (
+                                                                    <span key={id_area} className="inline-block bg-emerald-900/40 text-emerald-200 border border-emerald-700 rounded-full px-2 py-0.5 text-xs font-semibold flex items-center gap-1">
+                                                                        {areaObj.nombre}
+                                                                        <button
+                                                                            type="button"
+                                                                            className="ml-1 text-emerald-300 hover:text-red-400 focus:outline-none"
+                                                                            onClick={() => setEditSelectedAreas(editSelectedAreas.filter(a => a !== id_area))}
+                                                                            title="Quitar área"
+                                                                        >
+                                                                            <X size={12} />
+                                                                        </button>
+                                                                    </span>
+                                                                ) : null;
+                                                            })}
+                                                            <input
+                                                                type="text"
+                                                                placeholder="Agregar área..."
+                                                                className="bg-black border border-gray-700 rounded p-1.5 text-xs text-white focus:border-emerald-400 focus:ring focus:ring-emerald-700 focus:ring-opacity-50 transition-all w-32"
+                                                                value={editAreaInput}
+                                                                onChange={e => setEditAreaInput(e.target.value)}
+                                                                onKeyDown={async (e) => {
+                                                                    if (e.key === 'Enter') {
+                                                                        const value = editAreaInput.trim().toUpperCase();
+                                                                        if (value && !areas.some(a => a.nombre === value)) {
+                                                                            const { data, error } = await supabase.from('area').insert([{ nombre: value }]).select();
+                                                                            if (!error && data && data[0]) {
+                                                                                setAreas([...areas, data[0]]);
+                                                                                setEditSelectedAreas([...editSelectedAreas, data[0].id_area]);
+                                                                            }
+                                                                        } else if (value) {
+                                                                            const areaObj = areas.find(a => a.nombre === value);
+                                                                            if (areaObj && !editSelectedAreas.includes(areaObj.id_area)) {
+                                                                                setEditSelectedAreas([...editSelectedAreas, areaObj.id_area]);
+                                                                            }
+                                                                        }
+                                                                        setEditAreaInput('');
+                                                                    }
+                                                                }}
+                                                            />
+                                                        </div>
                                                     </td>
+                                                    {/* Puesto */}
                                                     <td className="px-4 py-2 text-sm">
                                                         <input
                                                             title='Puesto'
@@ -490,6 +650,7 @@ export default function DirectorioManagementComponent() {
                                                             className="w-full bg-black border border-gray-700 rounded p-1.5 focus:border-white focus:ring focus:ring-gray-700 focus:ring-opacity-50 transition-all text-sm"
                                                         />
                                                     </td>
+                                                    {/* Acciones */}
                                                     <td className="px-4 py-2 text-sm text-right">
                                                         <div className="flex justify-end space-x-1">
                                                             <button
@@ -556,13 +717,13 @@ export default function DirectorioManagementComponent() {
                                                             </span>
                                                         )}
                                                     </td>
-                                                    <td className={`px-4 py-3 text-sm ${!employee.area || employee.area.trim() === '' ? 'bg-amber-900 bg-opacity-50 border-l-2 border-amber-500' : ''}`}>
-                                                        {employee.area || (
-                                                            <span className="text-amber-400 flex items-center gap-1">
-                                                                <AlertTriangle size={14} />
-                                                                <span>Sin área</span>
-                                                            </span>
-                                                        )}
+                                                    <td className={`px-4 py-3 text-sm`}>
+                                                        <div className="flex flex-wrap gap-1">
+                                                            {/* Mostrar chips de áreas */}
+                                                            {areas.length > 0 && (
+                                                                <AreaChips areaIds={directorAreasMap[employee.id_directorio] || []} areas={areas} />
+                                                            )}
+                                                        </div>
                                                     </td>
                                                     <td className={`px-4 py-3 text-sm ${!employee.puesto || employee.puesto.trim() === '' ? 'bg-amber-900 bg-opacity-50 border-l-2 border-amber-500' : ''}`}>
                                                         {employee.puesto || (
@@ -653,5 +814,18 @@ export default function DirectorioManagementComponent() {
                 }
             `}</style>
         </div>
+    );
+}
+
+// NUEVO: Componente para mostrar chips de áreas (solo visualización, recibe ids de áreas)
+function AreaChips({ areaIds, areas }: { areaIds: number[], areas: { id_area: number, nombre: string }[] }) {
+    return (
+        <>
+            {areas.filter(a => areaIds.includes(a.id_area)).map(area => (
+                <span key={area.id_area} className="flex bg-emerald-900/40 text-emerald-200 border border-emerald-700 rounded-full px-2 py-0.5 text-xs font-semibold items-center gap-1">
+                    {area.nombre}
+                </span>
+            ))}
+        </>
     );
 }

@@ -99,7 +99,7 @@ function truncateText(text: string | null | undefined, length: number = 40) {
 }
 
 export default function CrearResguardos() {
-    const [filteredMuebles, setFilteredMuebles] = useState<Mueble[]>([]);
+    const [allMuebles, setAllMuebles] = useState<Mueble[]>([]);
     const [directorio, setDirectorio] = useState<Directorio[]>([]);
     const [selectedMuebles, setSelectedMuebles] = useState<Mueble[]>([]);
     const [showPDFButton, setShowPDFButton] = useState(false);
@@ -114,6 +114,7 @@ export default function CrearResguardos() {
     const [incompleteDirector, setIncompleteDirector] = useState<Directorio | null>(null);
     const [directorFormData, setDirectorFormData] = useState({ area: '', puesto: '' });
     const [searchTerm, setSearchTerm] = useState('');
+    const [searchMatchType, setSearchMatchType] = useState<null | 'id' | 'descripcion' | 'rubro' | 'estado' | 'estatus' | 'area' | 'usufinal' | 'resguardante'>(null);
     const [currentPage, setCurrentPage] = useState(1);
     const [rowsPerPage, setRowsPerPage] = useState(10);
     const [sortField, setSortField] = useState<keyof Mueble>('id_inv');
@@ -126,19 +127,26 @@ export default function CrearResguardos() {
     const detailRef = useRef<HTMLDivElement>(null);
     const [showUsufinalModal, setShowUsufinalModal] = useState(false);
     const [conflictUsufinal, setConflictUsufinal] = useState<string | null>(null);
-    const [areaFilter, setAreaFilter] = useState<string>('');
-    const [responsableFilter, setResponsableFilter] = useState<string>('');
-    const [uniqueAreas, setUniqueAreas] = useState<string[]>([]);
-    const [uniqueResponsables, setUniqueResponsables] = useState<string[]>([]);
     const [showWarningModal, setShowWarningModal] = useState(false);
     const [directorInputDisabled, setDirectorInputDisabled] = useState(false);
-    const [directorSearchTerm, setDirectorSearchTerm] = useState('');
-    const [totalCount, setTotalCount] = useState(0);
     const [generatingPDF, setGeneratingPDF] = useState(false);
     const [pdfData, setPdfData] = useState<PdfData | null>(null);
     const role = useUserRole();
     const isUsuario = role === "usuario";
     const { createNotification } = useNotifications();
+
+    // NUEVO: Estado para áreas y relaciones N:M
+    const [areas, setAreas] = useState<{ id_area: number; nombre: string }[]>([]);
+    const [directorAreasMap, setDirectorAreasMap] = useState<{ [id_directorio: number]: number[] }>({});
+
+    // Estado para autocompletado de director (solo exacto)
+    const [directorSearchTerm, setDirectorSearchTerm] = useState('');
+
+    const [conflictArea, setConflictArea] = useState<string | null>(null);
+    const [showAreaConflictModal, setShowAreaConflictModal] = useState(false);
+
+    // Estado para mostrar mensaje de error por datos faltantes del director
+    const [showMissingDirectorDataError, setShowMissingDirectorDataError] = useState(false);
 
     const isFormValid =
         selectedMuebles.length > 0 &&
@@ -161,12 +169,6 @@ export default function CrearResguardos() {
                 if (allMueblesInea.error) throw allMueblesInea.error;
                 if (allMueblesItea.error) throw allMueblesItea.error;
 
-                const allItems = [...(allMueblesInea.data || []), ...(allMueblesItea.data || [])];
-                const areas = Array.from(new Set(allItems.map(m => m.area).filter(Boolean)));
-                const responsables = Array.from(new Set(allItems.map(m => m.usufinal).filter(Boolean)));
-
-                setUniqueAreas(areas);
-                setUniqueResponsables(responsables);
                 setDirectorio(directorioResult.data || []);
 
                 return firmasResult.data;
@@ -177,6 +179,24 @@ export default function CrearResguardos() {
             }
         };
         fetchData();
+    }, []);
+
+    // Cargar áreas y relaciones N:M al montar
+    useEffect(() => {
+        async function fetchAreasAndRelations() {
+            const { data: areasData } = await supabase.from('area').select('*').order('nombre');
+            setAreas(areasData || []);
+            const { data: rels } = await supabase.from('directorio_areas').select('*');
+            if (rels) {
+                const map: { [id_directorio: number]: number[] } = {};
+                rels.forEach((rel: { id_directorio: number, id_area: number }) => {
+                    if (!map[rel.id_directorio]) map[rel.id_directorio] = [];
+                    map[rel.id_directorio].push(rel.id_area);
+                });
+                setDirectorAreasMap(map);
+            }
+        }
+        fetchAreasAndRelations();
     }, []);
 
     async function fetchAllRows<T = unknown>(table: string, filter: object = {}, batchSize = 1000): Promise<T[]> {
@@ -203,13 +223,8 @@ export default function CrearResguardos() {
     }
 
     const fetchData = useCallback(async (
-        page = 1,
-        rowsPerPage = 10,
-        searchQuery = '',
         sortField = 'id_inv',
-        sortDir = 'asc',
-        areaFilter = '',
-        responsableFilter = ''
+        sortDir = 'asc'
     ) => {
         setLoading(true);
         try {
@@ -235,29 +250,13 @@ export default function CrearResguardos() {
                 return !resguardadosSet.has(itemKey);
             });
 
-            if (searchQuery) {
-                const searchPattern = searchQuery.toLowerCase();
-                combinedData = combinedData.filter(item =>
-                    (item.id_inv && item.id_inv.toLowerCase().includes(searchPattern)) ||
-                    (item.descripcion && item.descripcion.toLowerCase().includes(searchPattern))
-                );
-            }
-            if (areaFilter) {
-                combinedData = combinedData.filter(item => item.area === areaFilter);
-            }
-            if (responsableFilter) {
-                combinedData = combinedData.filter(item => item.usufinal === responsableFilter);
-            }
-
             combinedData.sort((a, b) => {
                 const aValue = String(a[sortField as keyof typeof a] ?? '').toLowerCase();
                 const bValue = String(b[sortField as keyof typeof b] ?? '').toLowerCase();
                 return sortDir === 'asc' ? aValue.localeCompare(bValue) : bValue.localeCompare(aValue);
             });
 
-            setTotalCount(combinedData.length);
-            const paginated = combinedData.slice((page - 1) * rowsPerPage, page * rowsPerPage);
-            setFilteredMuebles(paginated);
+            setAllMuebles(combinedData);
             setError(null);
         } catch (err) {
             setError('Error al cargar los datos');
@@ -268,8 +267,87 @@ export default function CrearResguardos() {
     }, []);
 
     useEffect(() => {
-        fetchData(currentPage, rowsPerPage, searchTerm, sortField, sortDirection, areaFilter, responsableFilter);
-    }, [fetchData, currentPage, rowsPerPage, searchTerm, sortField, sortDirection, areaFilter, responsableFilter]);
+        fetchData(sortField, sortDirection);
+    }, [fetchData, sortField, sortDirection]);
+
+    // Efecto para analizar coincidencia más cercana
+    useEffect(() => {
+        const analyzeMatch = () => {
+            if (!searchTerm || !allMuebles.length) {
+                setSearchMatchType(null);
+                return;
+            }
+            const clean = (str: string) => (str || '').normalize('NFKD').replace(/\p{Diacritic}/gu, '').toLowerCase().trim();
+            const term = clean(searchTerm);
+            let bestMatch = { type: null, value: '', score: 0 } as { type: typeof searchMatchType, value: string, score: number };
+            for (const item of allMuebles) {
+                // Coincidencia por responsable
+                if ((item.usufinal && clean(item.usufinal).includes(term)) || (item.resguardante && clean(item.resguardante).includes(term))) {
+                    const exact = clean(item.usufinal || '') === term || clean(item.resguardante || '') === term;
+                    const score = exact ? 6 : 5;
+                    if (score > bestMatch.score) bestMatch = { type: 'usufinal', value: item.usufinal || item.resguardante || '', score };
+                }
+                // Coincidencia por área
+                if (item.area && clean(item.area).includes(term)) {
+                    const exact = clean(item.area) === term;
+                    const score = exact ? 5 : 4;
+                    if (score > bestMatch.score) bestMatch = { type: 'area', value: item.area, score };
+                }
+                // Coincidencia por ID
+                if (item.id_inv && clean(item.id_inv).includes(term)) {
+                    const exact = clean(item.id_inv) === term;
+                    const score = exact ? 4 : 3;
+                    if (score > bestMatch.score) bestMatch = { type: 'id', value: item.id_inv, score };
+                }
+                // Coincidencia por descripción
+                if (item.descripcion && clean(item.descripcion).includes(term)) {
+                    const exact = clean(item.descripcion) === term;
+                    const score = exact ? 3 : 2;
+                    if (score > bestMatch.score) bestMatch = { type: 'descripcion', value: item.descripcion, score };
+                }
+                // Coincidencia por rubro
+                if (item.rubro && clean(item.rubro).includes(term)) {
+                    const exact = clean(item.rubro) === term;
+                    const score = exact ? 2 : 1;
+                    if (score > bestMatch.score) bestMatch = { type: 'rubro', value: item.rubro, score };
+                }
+                // Coincidencia por estado
+                if (item.estado && clean(item.estado).includes(term)) {
+                    const score = 1;
+                    if (score > bestMatch.score) bestMatch = { type: 'estado', value: item.estado, score };
+                }
+                // Coincidencia por estatus
+                if (item.estatus && clean(item.estatus).includes(term)) {
+                    const score = 1;
+                    if (score > bestMatch.score) bestMatch = { type: 'estatus', value: item.estatus, score };
+                }
+            }
+            setSearchMatchType(bestMatch.type);
+        };
+        const debounce = setTimeout(analyzeMatch, 200);
+        return () => clearTimeout(debounce);
+    }, [searchTerm, allMuebles]);
+
+    // Filtrado maestro (omnibox) y paginación
+    const filteredMueblesOmni = allMuebles.filter(item => {
+        if (!searchTerm) return true;
+        const clean = (str: string) => (str || '').normalize('NFKD').replace(/\p{Diacritic}/gu, '').toLowerCase();
+        const term = clean(searchTerm);
+        return (
+            clean(item.id_inv || '').includes(term) ||
+            clean(item.descripcion || '').includes(term) ||
+            clean(item.rubro || '').includes(term) ||
+            clean(item.estado || '').includes(term) ||
+            clean(item.estatus || '').includes(term) ||
+            clean(item.area || '').includes(term) ||
+            clean(item.usufinal || '').includes(term) ||
+            clean(item.resguardante || '').includes(term)
+        );
+    });
+
+    const totalCount = filteredMueblesOmni.length;
+    const totalPages = Math.ceil(totalCount / rowsPerPage);
+    const paginatedMuebles = filteredMueblesOmni.slice((currentPage - 1) * rowsPerPage, currentPage * rowsPerPage);
 
     const generateFolio = useCallback(async () => {
         try {
@@ -318,9 +396,17 @@ export default function CrearResguardos() {
         } else {
             const currentUsufinal = selectedMuebles[0]?.usufinal?.trim().toUpperCase();
             const newUsufinal = mueble.usufinal?.trim().toUpperCase();
+            const currentArea = selectedMuebles[0]?.area?.trim().toUpperCase();
+            const newArea = mueble.area?.trim().toUpperCase();
             if (selectedMuebles.length > 0 && currentUsufinal && newUsufinal && currentUsufinal !== newUsufinal) {
                 setConflictUsufinal(newUsufinal || '');
                 setShowUsufinalModal(true);
+                return;
+            }
+            // Validación de área
+            if (selectedMuebles.length > 0 && currentArea && newArea && currentArea !== newArea) {
+                setConflictArea(newArea || '');
+                setShowAreaConflictModal(true);
                 return;
             }
             newSelectedMuebles = [...selectedMuebles, mueble];
@@ -334,6 +420,16 @@ export default function CrearResguardos() {
         } else if (!isAlreadySelected && newSelectedMuebles.length === 1) {
             const matchingDirector = directorio.find(dir => dir.nombre.toLowerCase() === mueble.usufinal?.toLowerCase());
             if (matchingDirector) {
+                const areasForDirector = getAreasForDirector(matchingDirector.id_directorio.toString());
+                if (!matchingDirector.puesto || !areasForDirector.length) {
+                    setIncompleteDirector(matchingDirector);
+                    setDirectorFormData({ area: matchingDirector.area || '', puesto: matchingDirector.puesto || '' });
+                    setShowDirectorModal(true);
+                    setShowMissingDirectorDataError(false);
+                    setFormData(prev => ({ ...prev, directorId: matchingDirector.id_directorio.toString(), area: '', puesto: '' }));
+                    setDirectorInputDisabled(true);
+                    return;
+                }
                 setFormData(prev => ({
                     ...prev,
                     directorId: matchingDirector.id_directorio.toString(),
@@ -341,24 +437,11 @@ export default function CrearResguardos() {
                     puesto: matchingDirector.puesto || ''
                 }));
                 setDirectorInputDisabled(true);
+                setShowMissingDirectorDataError(false);
             } else {
                 setFormData(prev => ({ ...prev, directorId: '', area: '', puesto: '' }));
                 setDirectorInputDisabled(false);
-            }
-        } else if (!isAlreadySelected && newSelectedMuebles.length > 1) {
-            const first = newSelectedMuebles[0];
-            const matchingDirector = directorio.find(dir => dir.nombre.toLowerCase() === first.usufinal?.toLowerCase());
-            if (matchingDirector) {
-                setFormData(prev => ({
-                    ...prev,
-                    directorId: matchingDirector.id_directorio.toString(),
-                    area: matchingDirector.area || '',
-                    puesto: matchingDirector.puesto || ''
-                }));
-                setDirectorInputDisabled(true);
-            } else {
-                setFormData(prev => ({ ...prev, directorId: '', area: '', puesto: '' }));
-                setDirectorInputDisabled(false);
+                setShowMissingDirectorDataError(false);
             }
         }
 
@@ -371,32 +454,62 @@ export default function CrearResguardos() {
 
     const saveDirectorInfo = async () => {
         if (!incompleteDirector) return;
-
         setSavingDirector(true);
         try {
+            // 1. Buscar o crear el área
+            const areaNombre = directorFormData.area.trim();
+            let id_area: number | null = null;
+            // Buscar área por nombre
+            const { data: areaData, error: areaError } = await supabase
+                .from('area')
+                .select('id_area')
+                .eq('nombre', areaNombre)
+                .maybeSingle();
+            if (areaError) throw areaError;
+            if (!areaData) {
+                // Si no existe, crearla
+                const { data: newArea, error: insertAreaError } = await supabase
+                    .from('area')
+                    .insert({ nombre: areaNombre })
+                    .select('id_area')
+                    .single();
+                if (insertAreaError) throw insertAreaError;
+                id_area = newArea.id_area;
+            } else {
+                id_area = areaData.id_area;
+            }
+
+            // 2. Actualizar solo el puesto
             const { error: updateError } = await supabase
                 .from('directorio')
-                .update({
-                    area: directorFormData.area,
-                    puesto: directorFormData.puesto
-                })
+                .update({ puesto: directorFormData.puesto })
                 .eq('id_directorio', incompleteDirector.id_directorio);
-
             if (updateError) throw updateError;
 
+            // 3. Eliminar relaciones viejas
+            await supabase
+                .from('directorio_areas')
+                .delete()
+                .eq('id_directorio', incompleteDirector.id_directorio);
+
+            // 4. Insertar nueva relación
+            const { error: relError } = await supabase
+                .from('directorio_areas')
+                .insert({ id_directorio: incompleteDirector.id_directorio, id_area });
+            if (relError) throw relError;
+
+            // 5. Actualizar estado local
             setDirectorio(prev => prev.map(d =>
                 d.id_directorio === incompleteDirector.id_directorio
-                    ? { ...d, area: directorFormData.area, puesto: directorFormData.puesto }
+                    ? { ...d, puesto: directorFormData.puesto }
                     : d
             ));
-
             setFormData(prev => ({
                 ...prev,
                 directorId: incompleteDirector.id_directorio.toString(),
-                area: directorFormData.area,
+                area: areaNombre,
                 puesto: directorFormData.puesto
             }));
-
             setShowDirectorModal(false);
             setSuccessMessage('Información del director actualizada correctamente');
             setTimeout(() => setSuccessMessage(null), 3000);
@@ -529,7 +642,7 @@ export default function CrearResguardos() {
             setTimeout(() => setSuccessMessage(null), 3000);
 
             await generateFolio();
-            fetchData(currentPage, rowsPerPage, searchTerm, sortField, sortDirection, areaFilter, responsableFilter);
+            fetchData(sortField, sortDirection);
 
         } catch (err) {
             setError('Error al guardar el resguardo');
@@ -557,7 +670,6 @@ export default function CrearResguardos() {
         generateFolio();
     };
 
-    const totalPages = Math.ceil(totalCount / rowsPerPage);
     const inputsDisabled = selectedMuebles.length === 0;
 
     const handleGeneratePDF = async () => {
@@ -574,6 +686,63 @@ export default function CrearResguardos() {
             setGeneratingPDF(false);
             setShowPDFButton(false);
         }
+    };
+
+    // Función para obtener áreas válidas para un director
+    const getAreasForDirector = (directorId: string) => {
+        if (!directorId) return [];
+        const areaIds = directorAreasMap[parseInt(directorId)] || [];
+        return areas.filter(a => areaIds.includes(a.id_area));
+    };
+
+    // Autocompletar área al seleccionar director
+    useEffect(() => {
+        if (formData.directorId) {
+            const validAreas = getAreasForDirector(formData.directorId);
+            if (validAreas.length > 0) {
+                setFormData(prev => ({ ...prev, area: validAreas[0].nombre }));
+            } else {
+                setFormData(prev => ({ ...prev, area: '' }));
+            }
+        } else {
+            setFormData(prev => ({ ...prev, area: '' }));
+        }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [formData.directorId, areas, directorAreasMap]);
+
+    // Autocompletado exacto director
+    const handleDirectorInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const value = e.target.value;
+        setDirectorSearchTerm(value);
+        const match = directorio.find(d => d.nombre.trim().toLowerCase() === value.trim().toLowerCase());
+        if (match) {
+            const areasForDirector = getAreasForDirector(match.id_directorio.toString());
+            if (!match.puesto || !areasForDirector.length) {
+                setIncompleteDirector(match);
+                setDirectorFormData({ area: match.area || '', puesto: match.puesto || '' });
+                setShowDirectorModal(true);
+                setShowMissingDirectorDataError(false);
+                setFormData(prev => ({ ...prev, directorId: match.id_directorio.toString(), area: '', puesto: '' }));
+                return;
+            }
+            setFormData(prev => ({
+                ...prev,
+                directorId: match.id_directorio.toString(),
+                area: match.area || '',
+                puesto: match.puesto || ''
+            }));
+            setShowMissingDirectorDataError(false);
+        } else {
+            setFormData(prev => ({ ...prev, directorId: '', area: '', puesto: '' }));
+            setShowMissingDirectorDataError(false);
+        }
+    };
+
+    const handleCloseDirectorModal = () => {
+        if (!directorFormData.area.trim() || !directorFormData.puesto.trim()) {
+            setShowMissingDirectorDataError(true);
+        }
+        setShowDirectorModal(false);
     };
 
     return (
@@ -655,85 +824,56 @@ export default function CrearResguardos() {
 
                         {/* Search and filters */}
                         <div className="mb-6 bg-gradient-to-br from-gray-900/20 to-gray-900/40 p-4 rounded-xl border border-gray-800 shadow-inner hover:shadow-lg transition-shadow">
-                            <div className="flex flex-col gap-4">
-                                {/* Búsqueda */}
-                                <div className="relative flex-grow">
-                                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                                        <Search className="h-5 w-5 text-blue-400/80 animate-pulse" />
+                            <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-4 mb-4">
+                                <div className="relative flex-grow group">
+                                    <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                                        <Search className="h-5 w-5 text-gray-500 group-hover:text-blue-400 transition-colors duration-300" />
                                     </div>
                                     <input
                                         type="text"
                                         value={searchTerm}
-                                        onChange={(e) => setSearchTerm(e.target.value)}
-                                        placeholder="Buscar por ID o descripción..."
-                                        className="pl-10 pr-4 py-3 w-full bg-black border border-gray-800 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent hover:border-blue-500 transition-colors"
+                                        onChange={e => setSearchTerm(e.target.value)}
+                                        placeholder="Buscar por ID, descripción, área, responsable, etc..."
+                                        className={`pl-12 pr-20 py-3 w-full bg-gradient-to-r from-gray-900 to-gray-800 border rounded-xl text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-300 hover:border-gray-600
+                                            ${searchMatchType === 'id' ? 'border-blue-500/30 focus:border-blue-400' : ''}
+                                            ${searchMatchType === 'descripcion' ? 'border-fuchsia-500/30 focus:border-fuchsia-400' : ''}
+                                            ${searchMatchType === 'usufinal' ? 'border-amber-500/30 focus:border-amber-400' : ''}
+                                            ${searchMatchType === 'area' ? 'border-green-500/30 focus:border-green-400' : ''}
+                                        `}
                                     />
+                                    {searchMatchType && searchTerm && filteredMueblesOmni.length > 0 && (
+                                        <div className={`absolute top-0 right-4 h-full flex items-center gap-2 pointer-events-none
+                                            ${searchMatchType === 'id' ? 'text-blue-400' : ''}
+                                            ${searchMatchType === 'descripcion' ? 'text-fuchsia-400' : ''}
+                                            ${searchMatchType === 'usufinal' ? 'text-amber-400' : ''}
+                                            ${searchMatchType === 'area' ? 'text-green-400' : ''}
+                                        `}>
+                                            <span className="text-xs font-medium bg-black/90 px-2 py-0.5 rounded-full border border-current animate-fadeIn">
+                                                {searchMatchType === 'id' && 'ID'}
+                                                {searchMatchType === 'descripcion' && 'DESC'}
+                                                {searchMatchType === 'usufinal' && 'RESP'}
+                                                {searchMatchType === 'area' && 'ÁREA'}
+                                                {searchMatchType === 'rubro' && 'RUBRO'}
+                                                {searchMatchType === 'estado' && 'ESTADO'}
+                                                {searchMatchType === 'estatus' && 'ESTATUS'}
+                                            </span>
+                                        </div>
+                                    )}
                                 </div>
-
-                                {/* Filtros */}
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                    {/* Filtro por Área */}
-                                    <div className="relative">
-                                        <label className="block text-xs font-medium text-gray-400 mb-1">Filtrar por Área</label>
-                                        <select
-                                            title='Filtro para Áreas'
-                                            value={areaFilter}
-                                            onChange={(e) => setAreaFilter(e.target.value)}
-                                            className="w-full bg-black border border-gray-800 rounded-xl text-white py-2.5 px-3 focus:outline-none focus:ring-2 focus:ring-blue-500 hover:border-blue-500 transition-colors"
-                                        >
-                                            <option value="">Todas las áreas</option>
-                                            {uniqueAreas.map((area) => (
-                                                <option key={area} value={area}>{area}</option>
-                                            ))}
-                                        </select>
-                                    </div>
-                                    {/* Filtro por Responsable */}
-                                    <div className="relative">
-                                        <label className="block text-xs font-medium text-gray-400 mb-1">Filtrar por Responsable</label>
-                                        <select
-                                            title='Filtro de los Responsables'
-                                            value={responsableFilter}
-                                            onChange={(e) => setResponsableFilter(e.target.value)}
-                                            className="w-full bg-black border border-gray-800 rounded-xl text-white py-2.5 px-3 focus:outline-none focus:ring-2 focus:ring-blue-500 hover:border-blue-500 transition-colors"
-                                        >
-                                            <option value="">Todos los responsables</option>
-                                            {uniqueResponsables.map((resp) => (
-                                                <option key={resp} value={resp}>{resp}</option>
-                                            ))}
-                                        </select>
-                                    </div>
-                                </div>
-
-                                {/* Botones y conteo */}
-                                <div className="flex flex-col sm:flex-row justify-between items-center gap-2">
-                                    <div className="flex items-center gap-2">
-                                        <button
-                                            onClick={() => {
-                                                setSearchTerm('');
-                                                setAreaFilter('');
-                                                setResponsableFilter('');
-                                            }}
-                                            className="px-4 py-2 bg-black border border-gray-800 text-gray-400 rounded-lg hover:bg-gray-900 transition-colors flex items-center gap-2 text-sm hover:border-blue-500 hover:text-blue-300"
-                                        >
-                                            <X className="h-4 w-4" />
-                                            Limpiar filtros
-                                        </button>
-                                        <button
-                                            onClick={() => fetchData(1, rowsPerPage, searchTerm, sortField, sortDirection, areaFilter, responsableFilter)}
-                                            className="px-4 py-2 bg-blue-600/20 border border-blue-800 text-blue-400 rounded-lg hover:bg-blue-600/30 transition-colors flex items-center gap-2 text-sm hover:border-blue-500 hover:text-blue-300"
-                                        >
-                                            <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
-                                            Actualizar
-                                        </button>
-                                    </div>
-                                    <div className="flex items-center gap-2 text-sm text-gray-400">
-                                        <RefreshCw
-                                            className={`h-4 w-4 text-blue-400 cursor-pointer hover:text-blue-300 ${loading ? 'animate-spin' : ''}`}
-                                            onClick={() => fetchData(currentPage, rowsPerPage, searchTerm, sortField, sortDirection, areaFilter, responsableFilter)}
-                                        />
-                                        <span>Total: <span className="text-blue-300">{totalCount}</span> registros</span>
-                                    </div>
-                                </div>
+                                <button
+                                    onClick={() => fetchData(sortField, sortDirection)}
+                                    className="px-4 py-2 bg-blue-600/20 border border-blue-800 text-blue-400 rounded-lg hover:bg-blue-600/30 transition-colors flex items-center gap-2 text-sm hover:border-blue-500 hover:text-blue-300"
+                                >
+                                    <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
+                                    Actualizar
+                                </button>
+                            </div>
+                            <div className="flex items-center gap-2 text-sm text-gray-400">
+                                <RefreshCw
+                                    className={`h-4 w-4 text-blue-400 cursor-pointer hover:text-blue-300 ${loading ? 'animate-spin' : ''}`}
+                                    onClick={() => fetchData(sortField, sortDirection)}
+                                />
+                                <span>Total: <span className="text-blue-300">{totalCount}</span> registros</span>
                             </div>
                         </div>
 
@@ -813,7 +953,7 @@ export default function CrearResguardos() {
                                                         <p className="text-lg font-medium">Error al cargar datos</p>
                                                         <p className="text-sm text-gray-400">{error}</p>
                                                         <button
-                                                            onClick={() => fetchData(currentPage, rowsPerPage, searchTerm, sortField, sortDirection, areaFilter, responsableFilter)}
+                                                            onClick={() => fetchData(sortField, sortDirection)}
                                                             className="px-4 py-2 bg-black text-blue-300 rounded-lg text-sm hover:bg-gray-900 transition-colors border border-gray-800 hover:border-blue-500"
                                                         >
                                                             Intentar nuevamente
@@ -821,7 +961,7 @@ export default function CrearResguardos() {
                                                     </div>
                                                 </td>
                                             </tr>
-                                        ) : filteredMuebles.length === 0 ? (
+                                        ) : paginatedMuebles.length === 0 ? (
                                             <tr className="h-96">
                                                 <td colSpan={6} className="px-6 py-24 text-center text-gray-400">
                                                     <div className="flex flex-col items-center justify-center space-y-4">
@@ -840,7 +980,7 @@ export default function CrearResguardos() {
                                                 </td>
                                             </tr>
                                         ) : (
-                                            filteredMuebles.map((mueble) => {
+                                            paginatedMuebles.map((mueble) => {
                                                 const isSelected = selectedMuebles.some(m => m.id === mueble.id);
                                                 return (
                                                     <tr
@@ -914,7 +1054,7 @@ export default function CrearResguardos() {
                         </div>
 
                         {/* Pagination */}
-                        {filteredMuebles.length > 0 && (
+                        {paginatedMuebles.length > 0 && (
                             <div className="flex items-center justify-between bg-gradient-to-br from-gray-900/20 to-gray-900/40 p-4 rounded-xl border border-gray-800 shadow-inner mb-4 hover:shadow-lg transition-shadow">
                                 <div className="flex items-center space-x-4">
                                     <span className="text-sm text-gray-400">
@@ -969,71 +1109,57 @@ export default function CrearResguardos() {
 
                             {/* Director selection */}
                             <div className="mb-4">
-                                <label className="block text-sm font-medium text-gray-400 mb-1">Director de Área</label>
+                                <label className="text-sm font-medium text-gray-400 mb-1">Director de Área</label>
                                 <div className="relative">
                                     <input
                                         type="text"
                                         value={formData.directorId ? directorio.find(d => d.id_directorio.toString() === formData.directorId)?.nombre || directorSearchTerm : directorSearchTerm}
-                                        onChange={e => {
-                                            setDirectorSearchTerm(e.target.value);
-                                            const found = directorio.find(d => d.nombre.trim().toLowerCase() === e.target.value.trim().toLowerCase());
-                                            if (found) {
-                                                setFormData(prev => ({
-                                                    ...prev,
-                                                    directorId: found.id_directorio.toString(),
-                                                    area: found.area || '',
-                                                    puesto: found.puesto || ''
-                                                }));
-                                                if (!found.area || !found.puesto) {
-                                                    setIncompleteDirector(found);
-                                                    setDirectorFormData({ area: found.area || '', puesto: found.puesto || '' });
-                                                    setShowDirectorModal(true);
-                                                }
-                                            } else {
-                                                setFormData(prev => ({ ...prev, directorId: '', area: '', puesto: '' }));
-                                            }
-                                        }}
+                                        onChange={handleDirectorInputChange}
                                         placeholder="Buscar director por nombre..."
-                                        className="block w-full bg-black border border-gray-800 rounded-lg py-2.5 px-4 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-gray-300 appearance-none hover:border-blue-500 transition-colors"
+                                        className="w-full bg-black border border-gray-800 rounded-lg py-2.5 px-4 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-gray-300 appearance-none hover:border-blue-500 transition-colors"
                                         list="directores-list"
                                         disabled={inputsDisabled || directorInputDisabled}
                                         autoComplete="off"
                                     />
                                     <datalist id="directores-list">
-                                        {directorio.filter(d => d.nombre.toLowerCase().includes(directorSearchTerm.toLowerCase())).map(d => (
+                                        {directorio.map(d => (
                                             <option key={d.id_directorio} value={d.nombre} />
                                         ))}
                                     </datalist>
                                 </div>
-                                {selectedMuebles.length > 0 && formData.directorId && (
-                                    <>
-                                        {(!formData.area || !formData.puesto) && (
-                                            <div className="mt-2 text-yellow-400 text-xs flex items-center gap-2">
-                                                <AlertCircle className="h-4 w-4 animate-pulse" />
-                                                Falta información de área o puesto del director.
-                                                <button
-                                                    type="button"
-                                                    className="ml-2 underline text-yellow-300 hover:text-yellow-200 transition-colors"
-                                                    onClick={() => {
-                                                        const dir = directorio.find(d => d.id_directorio.toString() === formData.directorId);
-                                                        if (dir) {
-                                                            setIncompleteDirector(dir);
-                                                            setDirectorFormData({ area: dir.area || '', puesto: dir.puesto || '' });
-                                                            setShowDirectorModal(true);
-                                                        }
-                                                    }}
-                                                >
-                                                    Completar datos
-                                                </button>
-                                            </div>
-                                        )}
-                                    </>
-                                )}
+                            </div>
+                            <div className="mb-4 flex gap-4">
+                                <div className="flex-1">
+                                    <label className="text-sm font-medium text-gray-400 mb-1">Puesto</label>
+                                    <input
+                                        type="text"
+                                        value={formData.puesto}
+                                        onChange={e => setFormData(prev => ({ ...prev, puesto: e.target.value }))}
+                                        placeholder="Puesto del director"
+                                        className="w-full bg-black border border-gray-800 rounded-lg py-2.5 px-4 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 hover:border-blue-500 transition-colors"
+                                        disabled={inputsDisabled}
+                                    />
+                                </div>
+                                <div className="flex-1">
+                                    <label className="text-sm font-medium text-gray-400 mb-1">Área</label>
+                                    <select
+                                        title="Selecciona un área"
+                                        value={formData.area}
+                                        onChange={e => setFormData(prev => ({ ...prev, area: e.target.value }))}
+                                        disabled={!formData.directorId}
+                                        className="w-full bg-black border border-gray-800 rounded-lg py-2.5 px-4 text-white focus:outline-none focus:ring-2 focus:ring-blue-500 hover:border-blue-500 transition-colors"
+                                    >
+                                        <option value="">Selecciona un área</option>
+                                        {getAreasForDirector(formData.directorId).map(a => (
+                                            <option key={a.id_area} value={a.nombre}>{a.nombre}</option>
+                                        ))}
+                                    </select>
+                                </div>
                             </div>
 
                             {/* Resguardante */}
                             <div className="mb-4">
-                                <label className="block text-sm font-medium text-gray-400 mb-1">Resguardante</label>
+                                <label className="text-sm font-medium text-gray-400 mb-1">Resguardante</label>
                                 <input
                                     type="text"
                                     value={formData.resguardante}
@@ -1042,32 +1168,6 @@ export default function CrearResguardos() {
                                     className="block w-full bg-black border border-gray-800 rounded-lg py-2.5 px-4 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 hover:border-blue-500 transition-colors"
                                     disabled={inputsDisabled}
                                 />
-                            </div>
-
-                            {/* Area and Puesto */}
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <div>
-                                    <label className="block text-sm font-medium text-gray-400 mb-1">Área</label>
-                                    <input
-                                        type="text"
-                                        value={formData.area}
-                                        readOnly
-                                        placeholder="Área"
-                                        className="block w-full bg-black border border-gray-800 rounded-lg py-2.5 px-4 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-gray-300 hover:border-blue-500 transition-colors"
-                                        disabled={inputsDisabled}
-                                    />
-                                </div>
-                                <div>
-                                    <label className="block text-sm font-medium text-gray-400 mb-1">Puesto</label>
-                                    <input
-                                        type="text"
-                                        value={formData.puesto}
-                                        readOnly
-                                        placeholder="Puesto"
-                                        className="block w-full bg-black border border-gray-800 rounded-lg py-2.5 px-4 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-gray-300 hover:border-blue-500 transition-colors"
-                                        disabled={inputsDisabled}
-                                    />
-                                </div>
                             </div>
                         </div>
 
@@ -1211,6 +1311,20 @@ export default function CrearResguardos() {
                 </div>
             )}
 
+            {/* Missing Director Data Error Alert */}
+            {showMissingDirectorDataError && (
+                <div className="fixed top-20 left-1/2 transform -translate-x-1/2 z-50 bg-yellow-900/90 text-yellow-100 px-6 py-4 rounded-lg shadow-lg border border-yellow-700 flex items-center gap-4 animate-fade-in">
+                    <AlertTriangle className="h-5 w-5 text-yellow-400 animate-pulse" />
+                    <span className="font-medium">Faltan datos del director. Debes completar el área y el puesto para continuar.</span>
+                    <button
+                        onClick={() => setShowDirectorModal(true)}
+                        className="ml-4 px-3 py-1 rounded bg-yellow-600 text-black font-semibold hover:bg-yellow-500 transition-colors"
+                    >
+                        Completar datos
+                    </button>
+                </div>
+            )}
+
             {/* Director Modal */}
             {showDirectorModal && (
                 <div className="fixed inset-0 bg-black/90 flex items-center justify-center z-50 px-4 animate-fadeIn">
@@ -1240,25 +1354,21 @@ export default function CrearResguardos() {
                                 </div>
 
                                 <div>
-                                    <label className="block text-sm font-medium text-gray-300 mb-2 flex items-center gap-2">
+                                    <label className="text-sm font-medium text-gray-300 mb-2 flex items-center gap-2">
                                         <Briefcase className="h-4 w-4 text-gray-400" />
                                         Área
                                     </label>
                                     <input
                                         type="text"
                                         value={directorFormData.area}
-                                        onChange={(e) => setDirectorFormData({ ...directorFormData, area: e.target.value })}
-                                        placeholder="Ej: Desarrollo, Marketing, Ventas..."
+                                        onChange={e => setDirectorFormData(prev => ({ ...prev, area: e.target.value }))}
+                                        placeholder="Escribe el área asignada al director"
                                         className="block w-full bg-gray-900 border border-gray-700 rounded-lg py-3 px-4 text-white placeholder-gray-500 focus:outline-none focus:border-yellow-500 focus:ring-1 focus:ring-yellow-500 transition-colors"
-                                        disabled={isUsuario}
                                     />
-                                    {isUsuario && (
-                                        <div className="text-xs text-yellow-400 mt-1">Solo un administrador puede editar estos campos</div>
-                                    )}
                                 </div>
 
                                 <div>
-                                    <label className="block text-sm font-medium text-gray-300 mb-2 flex items-center gap-2">
+                                    <label className="text-sm font-medium text-gray-300 mb-2 flex items-center gap-2">
                                         <Users className="h-4 w-4 text-gray-400" />
                                         Puesto
                                     </label>
@@ -1285,7 +1395,7 @@ export default function CrearResguardos() {
 
                         <div className="p-5 bg-black border-t border-gray-800 flex justify-end gap-3">
                             <button
-                                onClick={() => setShowDirectorModal(false)}
+                                onClick={handleCloseDirectorModal}
                                 className="px-5 py-2.5 bg-gray-900 text-white rounded-lg text-sm hover:bg-gray-800 border border-gray-800 transition-colors flex items-center gap-2 hover:border-yellow-500"
                             >
                                 <X className="h-4 w-4" />
@@ -1338,6 +1448,27 @@ export default function CrearResguardos() {
                             >
                                 <X className="h-4 w-4" />
                                 Cerrar
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Modal de conflicto de área */}
+            {showAreaConflictModal && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm">
+                    <div className="bg-gradient-to-br from-blue-900/90 to-blue-700/90 rounded-2xl p-8 w-full max-w-md border-2 border-blue-500 shadow-2xl animate-fade-in">
+                        <div className="flex items-center gap-3 mb-4">
+                            <svg className="h-8 w-8 text-blue-300 animate-pulse" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M12 20a8 8 0 100-16 8 8 0 000 16z" /></svg>
+                            <h3 className="text-xl font-bold text-blue-100">No puedes agregar artículos de diferentes áreas</h3>
+                        </div>
+                        <p className="text-blue-100 mb-6 text-base">Todos los artículos seleccionados deben pertenecer a la misma área.<br />Área en conflicto: <span className="font-semibold text-blue-200">{conflictArea}</span></p>
+                        <div className="flex justify-end gap-2">
+                            <button
+                                className="px-5 py-2 rounded-lg bg-blue-700 text-white font-semibold hover:bg-blue-800 border border-blue-400 shadow-md transition-all"
+                                onClick={() => setShowAreaConflictModal(false)}
+                            >
+                                Entendido
                             </button>
                         </div>
                     </div>
