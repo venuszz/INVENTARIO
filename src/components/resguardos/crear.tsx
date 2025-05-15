@@ -6,7 +6,8 @@ import {
     LayoutGrid, TagIcon, Building2,
     User, AlertTriangle, Calendar, Info,
     CheckCircle, RefreshCw, UserCheck, Briefcase,
-    Trash2, ListChecks, FileDigit, Users, FileText, Download
+    Trash2, ListChecks, FileDigit, Users, FileText, Download,
+    Plus
 } from 'lucide-react';
 import supabase from '@/app/lib/supabase/client';
 import Cookies from 'js-cookie';
@@ -69,6 +70,11 @@ interface PdfData {
     firmas?: PdfFirma[];
 }
 
+interface ActiveFilter {
+    term: string;
+    type: 'id' | 'descripcion' | 'rubro' | 'estado' | 'estatus' | 'area' | 'usufinal' | 'resguardante' | null;
+}
+
 const colorPalette = [
     'bg-blue-900/30 text-blue-200 border-blue-700 hover:bg-blue-900/40 transition-colors',
     'bg-green-900/30 text-green-200 border-green-700 hover:bg-green-900/40 transition-colors',
@@ -115,6 +121,23 @@ export default function CrearResguardos() {
     const [directorFormData, setDirectorFormData] = useState({ area: '', puesto: '' });
     const [searchTerm, setSearchTerm] = useState('');
     const [searchMatchType, setSearchMatchType] = useState<null | 'id' | 'descripcion' | 'rubro' | 'estado' | 'estatus' | 'area' | 'usufinal' | 'resguardante'>(null);
+
+    const [activeFilters, setActiveFilters] = useState<ActiveFilter[]>([]);
+
+    // Función para guardar el filtro actual
+    const saveCurrentFilter = () => {
+        if (searchTerm && searchMatchType) {
+            setActiveFilters(prev => [...prev, { term: searchTerm, type: searchMatchType }]);
+            setSearchTerm('');
+            setSearchMatchType(null);
+        }
+    };
+
+    // Función para eliminar un filtro
+    const removeFilter = (index: number) => {
+        setActiveFilters(prev => prev.filter((_, i) => i !== index));
+    };
+
     const [currentPage, setCurrentPage] = useState(1);
     const [rowsPerPage, setRowsPerPage] = useState(10);
     const [sortField, setSortField] = useState<keyof Mueble>('id_inv');
@@ -330,19 +353,50 @@ export default function CrearResguardos() {
 
     // Filtrado maestro (omnibox) y paginación
     const filteredMueblesOmni = allMuebles.filter(item => {
-        if (!searchTerm) return true;
+        if (activeFilters.length === 0 && !searchTerm) return true;
+        
         const clean = (str: string) => (str || '').normalize('NFKD').replace(/\p{Diacritic}/gu, '').toLowerCase();
-        const term = clean(searchTerm);
-        return (
-            clean(item.id_inv || '').includes(term) ||
-            clean(item.descripcion || '').includes(term) ||
-            clean(item.rubro || '').includes(term) ||
-            clean(item.estado || '').includes(term) ||
-            clean(item.estatus || '').includes(term) ||
-            clean(item.area || '').includes(term) ||
-            clean(item.usufinal || '').includes(term) ||
-            clean(item.resguardante || '').includes(term)
-        );
+        const currentTerm = clean(searchTerm);
+        
+        // Aplicar filtros activos
+        const passesActiveFilters = activeFilters.every(filter => {
+            const filterTerm = clean(filter.term);
+            if (!filterTerm) return true;
+            
+            switch (filter.type) {
+                case 'id':
+                    return clean(item.id_inv || '').includes(filterTerm);
+                case 'descripcion':
+                    return clean(item.descripcion || '').includes(filterTerm);
+                case 'rubro':
+                    return clean(item.rubro || '').includes(filterTerm);
+                case 'estado':
+                    return clean(item.estado || '').includes(filterTerm);
+                case 'estatus':
+                    return clean(item.estatus || '').includes(filterTerm);
+                case 'area':
+                    return clean(item.area || '').includes(filterTerm);
+                case 'usufinal':
+                case 'resguardante':
+                    return clean(item.usufinal || '').includes(filterTerm) || 
+                           clean(item.resguardante || '').includes(filterTerm);
+                default:
+                    return true;
+            }
+        });
+
+        // Si hay término de búsqueda actual, aplicarlo también
+        const passesCurrentSearch = !currentTerm || 
+            clean(item.id_inv || '').includes(currentTerm) ||
+            clean(item.descripcion || '').includes(currentTerm) ||
+            clean(item.rubro || '').includes(currentTerm) ||
+            clean(item.estado || '').includes(currentTerm) ||
+            clean(item.estatus || '').includes(currentTerm) ||
+            clean(item.area || '').includes(currentTerm) ||
+            clean(item.usufinal || '').includes(currentTerm) ||
+            clean(item.resguardante || '').includes(currentTerm);
+
+        return passesActiveFilters && passesCurrentSearch;
     });
 
     const totalCount = filteredMueblesOmni.length;
@@ -823,50 +877,104 @@ export default function CrearResguardos() {
                         </div>
 
                         {/* Search and filters */}
-                        <div className="mb-6 bg-gradient-to-br from-gray-900/20 to-gray-900/40 p-4 rounded-xl border border-gray-800 shadow-inner hover:shadow-lg transition-shadow">
-                            <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-4 mb-4">
-                                <div className="relative flex-grow group">
-                                    <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                                        <Search className="h-5 w-5 text-gray-500 group-hover:text-blue-400 transition-colors duration-300" />
-                                    </div>
-                                    <input
-                                        type="text"
-                                        value={searchTerm}
-                                        onChange={e => setSearchTerm(e.target.value)}
-                                        placeholder="Buscar por ID, descripción, área, responsable, etc..."
-                                        className={`pl-12 pr-20 py-3 w-full bg-gradient-to-r from-gray-900 to-gray-800 border rounded-xl text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-300 hover:border-gray-600
-                                            ${searchMatchType === 'id' ? 'border-blue-500/30 focus:border-blue-400' : ''}
-                                            ${searchMatchType === 'descripcion' ? 'border-fuchsia-500/30 focus:border-fuchsia-400' : ''}
-                                            ${searchMatchType === 'usufinal' ? 'border-amber-500/30 focus:border-amber-400' : ''}
-                                            ${searchMatchType === 'area' ? 'border-green-500/30 focus:border-green-400' : ''}
-                                        `}
-                                    />
-                                    {searchMatchType && searchTerm && filteredMueblesOmni.length > 0 && (
-                                        <div className={`absolute top-0 right-4 h-full flex items-center gap-2 pointer-events-none
-                                            ${searchMatchType === 'id' ? 'text-blue-400' : ''}
-                                            ${searchMatchType === 'descripcion' ? 'text-fuchsia-400' : ''}
-                                            ${searchMatchType === 'usufinal' ? 'text-amber-400' : ''}
-                                            ${searchMatchType === 'area' ? 'text-green-400' : ''}
-                                        `}>
-                                            <span className="text-xs font-medium bg-black/90 px-2 py-0.5 rounded-full border border-current animate-fadeIn">
-                                                {searchMatchType === 'id' && 'ID'}
-                                                {searchMatchType === 'descripcion' && 'DESC'}
-                                                {searchMatchType === 'usufinal' && 'RESP'}
-                                                {searchMatchType === 'area' && 'ÁREA'}
-                                                {searchMatchType === 'rubro' && 'RUBRO'}
-                                                {searchMatchType === 'estado' && 'ESTADO'}
-                                                {searchMatchType === 'estatus' && 'ESTATUS'}
-                                            </span>
+                        <div className="mb-6 bg-gradient-to-br from-gray-900/20 to-gray-900/40 p-4 rounded-xl border border-gray-800 shadow-inner hover:shadow-lg transition-shadow">                            <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-4 mb-4">
+                                <div className="flex-1 relative">
+                                    <div className="flex gap-2">
+                                        <div className="relative flex-1">
+                                            <input
+                                                type="text"
+                                                value={searchTerm}
+                                                onChange={(e) => setSearchTerm(e.target.value)}
+                                                placeholder="Buscar por cualquier campo..."
+                                                className="w-full px-4 py-2 bg-black/50 border border-gray-800 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-white placeholder-gray-500"
+                                            />
+                                            {searchMatchType && (                                                <span className={`absolute right-2 top-1/2 -translate-y-1/2 px-2 py-1 ${
+                                                        searchMatchType === 'id' ? 'bg-blue-900/70 text-blue-200 border border-blue-700' :
+                                                        searchMatchType === 'descripcion' ? 'bg-purple-900/70 text-purple-200 border border-purple-700' :
+                                                        searchMatchType === 'rubro' ? 'bg-green-900/70 text-green-200 border border-green-700' :
+                                                        searchMatchType === 'estado' ? 'bg-yellow-900/70 text-yellow-200 border border-yellow-700' :
+                                                        searchMatchType === 'estatus' ? 'bg-teal-900/70 text-teal-200 border border-teal-700' :
+                                                        searchMatchType === 'area' ? 'bg-red-900/70 text-red-200 border border-red-700' :
+                                                        searchMatchType === 'usufinal' || searchMatchType === 'resguardante' ? 'bg-orange-900/70 text-orange-200 border border-orange-700' :
+                                                        'bg-gray-700 text-gray-300 border border-gray-600'
+                                                    } rounded-md text-xs font-medium flex items-center gap-2`}>
+                                                    <span>{
+                                                        searchMatchType === 'id' ? 'ID' :
+                                                        searchMatchType === 'descripcion' ? 'Descripción' :
+                                                        searchMatchType === 'rubro' ? 'Rubro' :
+                                                        searchMatchType === 'estado' ? 'Estado' :
+                                                        searchMatchType === 'estatus' ? 'Estatus' :
+                                                        searchMatchType === 'area' ? 'Área' :
+                                                        searchMatchType === 'usufinal' ? 'Usuario Final' :
+                                                        searchMatchType === 'resguardante' ? 'Resguardante' :
+                                                        searchMatchType
+                                                    }</span>
+                                                </span>
+                                            )}</div>
+                                        <button
+                                            onClick={saveCurrentFilter}
+                                            disabled={!searchTerm || !searchMatchType}
+                                            className={`px-4 py-2 rounded-lg border flex items-center gap-2 ${
+                                                searchTerm && searchMatchType
+                                                    ? 'bg-blue-600 hover:bg-blue-700 border-blue-500 text-white'
+                                                    : 'bg-gray-800/50 border-gray-700 text-gray-500 cursor-not-allowed'
+                                            } transition-all duration-200 hover:scale-105`}
+                                            title="Agregar filtro actual a la lista de filtros activos"
+                                        >
+                                            <Plus className="h-4 w-4" />
+                                            <span>Agregar Filtro</span>
+                                        </button>
+                                    </div>                                    {/* Filtros activos */}
+                                    {activeFilters.length > 0 && (
+                                        <div className="mt-3 flex flex-wrap gap-2">
+                                            {activeFilters.map((filter, index) => (                                                <div
+                                                    key={index}
+                                                    className={`flex items-center gap-2 px-3 py-1.5 rounded-md text-sm animate-fadeIn transition-colors group ${
+                                                        filter.type === 'id' ? 'bg-blue-900/70 text-blue-200 border border-blue-700' :
+                                                        filter.type === 'descripcion' ? 'bg-purple-900/70 text-purple-200 border border-purple-700' :
+                                                        filter.type === 'rubro' ? 'bg-green-900/70 text-green-200 border border-green-700' :
+                                                        filter.type === 'estado' ? 'bg-yellow-900/70 text-yellow-200 border border-yellow-700' :
+                                                        filter.type === 'estatus' ? 'bg-teal-900/70 text-teal-200 border border-teal-700' :
+                                                        filter.type === 'area' ? 'bg-red-900/70 text-red-200 border border-red-700' :
+                                                        filter.type === 'usufinal' || filter.type === 'resguardante' ? 'bg-orange-900/70 text-orange-200 border border-orange-700' :
+                                                        'bg-gray-700 text-gray-300 border border-gray-600'
+                                                    }`}
+                                                >
+                                                    <span className="font-medium">{
+                                                        filter.type === 'id' ? 'ID' :
+                                                        filter.type === 'descripcion' ? 'Descripción' :
+                                                        filter.type === 'rubro' ? 'Rubro' :
+                                                        filter.type === 'estado' ? 'Estado' :
+                                                        filter.type === 'estatus' ? 'Estatus' :
+                                                        filter.type === 'area' ? 'Área' :
+                                                        filter.type === 'usufinal' ? 'Usuario Final' :
+                                                        filter.type === 'resguardante' ? 'Resguardante' :
+                                                        filter.type
+                                                    }:</span>
+                                                    <span>{filter.term}</span>
+                                                    <button
+                                                        onClick={() => removeFilter(index)}
+                                                        className="hover:text-red-400 transition-colors p-1 rounded-full hover:bg-red-900/30"
+                                                        title="Eliminar este filtro"
+                                                    >
+                                                        <X className="h-3.5 w-3.5" />
+                                                    </button>
+                                                </div>
+                                            ))}
+                                            
+                                            {activeFilters.length > 1 && (
+                                                <button
+                                                    onClick={() => setActiveFilters([])}
+                                                    className="px-3 py-1.5 bg-red-900/30 rounded-lg border border-red-700/30 text-sm text-red-200 hover:bg-red-900/50 transition-all duration-200 flex items-center gap-2 hover:scale-105"
+                                                    title="Eliminar todos los filtros activos"
+                                                >
+                                                    <X className="h-3.5 w-3.5" />
+                                                    <span>Limpiar filtros</span>
+                                                </button>
+                                            )}
                                         </div>
                                     )}
                                 </div>
-                                <button
-                                    onClick={() => fetchData(sortField, sortDirection)}
-                                    className="px-4 py-2 bg-blue-600/20 border border-blue-800 text-blue-400 rounded-lg hover:bg-blue-600/30 transition-colors flex items-center gap-2 text-sm hover:border-blue-500 hover:text-blue-300"
-                                >
-                                    <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
-                                    Actualizar
-                                </button>
                             </div>
                             <div className="flex items-center gap-2 text-sm text-gray-400">
                                 <RefreshCw
