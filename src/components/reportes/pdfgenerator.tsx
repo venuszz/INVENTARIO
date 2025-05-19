@@ -571,6 +571,7 @@ export const generatePDF = async ({ data, columns, title, fileName, firmas = [] 
 
     // Guardar PDF
     const pdfBytes = await pdfDoc.save();
-    const blob = new Blob([pdfBytes], { type: 'application/pdf' });
+    const uint8Array = new Uint8Array(pdfBytes);
+    const blob = new Blob([uint8Array], { type: 'application/pdf' });
     saveAs(blob, `${fileName}.pdf`);
 };

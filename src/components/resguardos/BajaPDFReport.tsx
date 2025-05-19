@@ -594,7 +594,7 @@ export async function generateBajaPDF({
     }
 
     const pdfBytes = await pdfDoc.save();
-    const blob = new Blob([pdfBytes], { type: 'application/pdf' });
+    const blob = new Blob([new Uint8Array(pdfBytes)], { type: 'application/pdf' });
     saveAs(blob, `${fileName}.pdf`);
 }
 
