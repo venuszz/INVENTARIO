@@ -6,12 +6,12 @@ import React from 'react';
 import { useState, useEffect, useCallback } from 'react';
 import {
     Search, RefreshCw, ChevronLeft, ChevronRight,
-    ArrowUpDown, AlertCircle, X, FileUp, File, FileText, Filter
+    ArrowUpDown, AlertCircle, X, FileUp, File
 } from 'lucide-react';
 import supabase from '@/app/lib/supabase/client';
-import { useUserRole } from "@/hooks/useUserRole";
 import { useRouter } from 'next/navigation';
 import { BadgeCheck } from 'lucide-react';
+import ReactDOM from 'react-dom';
 
 // Tipo unificado para INEA/ITEA
 interface LevMueble {
@@ -38,15 +38,6 @@ interface LevMueble {
     origen: 'INEA' | 'ITEA';
 }
 
-interface FilterOptions {
-    estados: string[];
-    estatus: string[];
-    areas: string[];
-    rubros: string[];
-    formadq: string[];
-    resguardantes?: string[]; // Changed from usufinales
-}
-
 interface Message {
     type: 'success' | 'error' | 'info' | 'warning';
     text: string;
@@ -64,45 +55,21 @@ const ESTATUS_COLORS = {
     DEFAULT: 'bg-gray-700 text-gray-300 border border-gray-600'
 };
 
+// Utilidad para limpiar texto
+function clean(str: string) {
+    return (str || '').normalize('NFKD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim();
+}
+
 export default function LevantamientoUnificado() {
     const [muebles, setMuebles] = useState<LevMueble[]>([]);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
-    const [filteredCount, setFilteredCount] = useState(0);
     const [currentPage, setCurrentPage] = useState(1);
     const [rowsPerPage, setRowsPerPage] = useState(10);
 
-    // Add this calculation
-    const totalPages = Math.ceil(filteredCount / rowsPerPage);
-
     const [searchTerm, setSearchTerm] = useState('');
-    const [sortField, setSortField] = useState<keyof LevMueble>('id_inv');
+    const [, setSortField] = useState<keyof LevMueble>('id_inv');
     const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
-    const [filters, setFilters] = useState<{
-        estado: string[];
-        estatus: string[];
-        area: string[];
-        rubro: string[];
-        formadq: string[];
-        resguardante: string[]; // Changed from usufinal
-        origen: string[];  // Agregamos origen a los filtros
-    }>({
-        estado: [],
-        estatus: [],
-        area: [],
-        rubro: [],
-        formadq: [],
-        resguardante: [], // Changed from usufinal
-        origen: []     // Inicializamos origen
-    });
-    const [filterOptions, setFilterOptions] = useState<FilterOptions>({
-        estados: [],
-        estatus: [],
-        areas: [],
-        rubros: [],
-        formadq: []
-    });
-    const [selectedItem, setSelectedItem] = useState<LevMueble | null>(null);
     const [message, setMessage] = useState<Message | null>(null);
     const [exportType, setExportType] = useState<'excel' | 'pdf' | null>(null);
     const [showExportModal, setShowExportModal] = useState(false);
@@ -119,104 +86,313 @@ export default function LevantamientoUnificado() {
         area: string;
     }
     const [areaDirectorOptions, setAreaDirectorOptions] = useState<DirectorioOption[]>([]);
-    const [areaDirectorAmbiguous, setAreaDirectorAmbiguous] = useState(false);
     const [areaPDFTarget, setAreaPDFTarget] = useState<{ area: string, usufinal: string }>({ area: '', usufinal: '' });
 
-    // Estado para controlar si los campos fueron auto-completados
-    const [autoCompletedFields, setAutoCompletedFields] = useState<{ area: boolean, nombre: boolean, puesto: boolean }>(
-        { area: false, nombre: false, puesto: false }
-    );
-
-    // Detectar si hay filtro por área o usuario final
-    const isAreaOrUserFiltered = !!filters.area.length || !!filters.resguardante.length;
-
-    // Estado para mostrar/ocultar filtros avanzados
-    const [showFilters, setShowFilters] = useState(false);
-
     // Estado para coincidencia de búsqueda
-    const [searchMatchType, setSearchMatchType] = useState<null | 'id' | 'descripcion' | 'usufinal'>(null);
-    const [, setSearchMatchValue] = useState<string>('');
+    const [searchMatchType, setSearchMatchType] = useState<null | 'id' | 'descripcion' | 'usufinal' | 'area' | 'resguardante' | 'rubro' | 'estado' | 'estatus'>(null);
 
-    // Utilidad para limpiar texto
-    function cleanText(str: string) {
-        return (str || '').normalize('NFKD').replace(/[\u0300-\u036f]/g, '').replace(/[^\w\s]/gi, '').toLowerCase().trim();
+    // --- AUTOCOMPLETADO OMNIBOX ---
+    const [suggestions, setSuggestions] = useState<{ value: string; type: ActiveFilter['type'] }[]>([]);
+    const [highlightedIndex, setHighlightedIndex] = useState<number>(-1);
+    const [showSuggestions, setShowSuggestions] = useState(false);
+    const inputRef = React.useRef<HTMLInputElement>(null);
+    const [dropdownClass, setDropdownClass] = useState<string>('');
+
+    // Calcular posición del dropdown y crear clase CSS dinámica
+    useEffect(() => {
+        if (showSuggestions && inputRef.current) {
+            const rect = inputRef.current.getBoundingClientRect();
+            const className = `omnibox-dropdown-float`;
+            // Eliminar clase previa si existe
+            const prev = document.getElementById('omnibox-dropdown-style');
+            if (prev) prev.remove();
+            // Crear nueva clase
+            const style = document.createElement('style');
+            style.id = 'omnibox-dropdown-style';
+            style.innerHTML = `
+                .${className} {
+                    position: fixed !important;
+                    left: ${rect.left}px !important;
+                    top: ${rect.bottom + window.scrollY}px !important;
+                    width: ${rect.width}px !important;
+                    z-index: 10000 !important;
+                }
+            `;
+            document.head.appendChild(style);
+            setDropdownClass(className);
+        } else {
+            setDropdownClass('');
+            const prev = document.getElementById('omnibox-dropdown-style');
+            if (prev) prev.remove();
+        }
+    }, [showSuggestions, suggestions.length]);
+
+    // Componente para el dropdown flotante
+    function getTypeColor(type: ActiveFilter['type']) {
+        switch (type) {
+            case 'id': return 'blue';
+            case 'area': return 'purple';
+            case 'usufinal': return 'amber';
+            case 'resguardante': return 'cyan';
+            case 'descripcion': return 'fuchsia';
+            case 'rubro': return 'green';
+            case 'estado': return 'cyan';
+            case 'estatus': return 'pink';
+            default: return 'gray';
+        }
+    }
+    function getTypeLabel(type: ActiveFilter['type']) {
+        switch (type) {
+            case 'id': return 'ID';
+            case 'area': return 'ÁREA';
+            case 'usufinal': return 'DIRECTOR';
+            case 'resguardante': return 'RESGUARDANTE';
+            case 'descripcion': return 'DESCRIPCIÓN';
+            case 'rubro': return 'RUBRO';
+            case 'estado': return 'ESTADO';
+            case 'estatus': return 'ESTATUS';
+            default: return '';
+        }
+    }
+    function getTypeIcon(type: ActiveFilter['type']) {
+        switch (type) {
+            case 'id': return <Search className="h-4 w-4 text-blue-400" />;
+            case 'area': return <span title="Área" className="font-bold text-purple-400">A</span>;
+            case 'usufinal': return <span title="Director" className="font-bold text-amber-400">D</span>;
+            case 'resguardante': return <span title="Resguardante" className="font-bold text-cyan-400">R</span>;
+            case 'descripcion': return <span title="Descripción" className="font-bold text-fuchsia-400">Desc</span>;
+            case 'rubro': return <span title="Rubro" className="font-bold text-green-400">Ru</span>;
+            case 'estado': return <span title="Estado" className="font-bold text-cyan-400">Edo</span>;
+            case 'estatus': return <span title="Estatus" className="font-bold text-pink-400">Est</span>;
+            default: return null;
+        }
+    }
+    function SuggestionDropdown() {
+        if (!showSuggestions || !dropdownClass || suggestions.length === 0) return null;
+        return ReactDOM.createPortal(
+            <ul
+                id="omnibox-suggestions"
+                role="listbox"
+                title="Sugerencias de búsqueda"
+                className={`animate-fadeInUp max-h-80 overflow-y-auto rounded-2xl shadow-2xl border border-neutral-800 bg-black/95 backdrop-blur-xl ring-1 ring-inset ring-neutral-900/60 transition-all duration-200 ${dropdownClass}`}
+            >
+                {suggestions.map((s, i) => {
+                    const itemColor = getTypeColor(s.type);
+                    const isSelected = highlightedIndex === i;
+                    return (
+                        <li
+                            key={`${s.type}-${s.value}`}
+                            id={`omnibox-suggestion-${i}`}
+                            role="option"
+                            {...(isSelected && { 'aria-selected': 'true' })}
+                            tabIndex={-1}
+                            className={`group flex items-center gap-3 px-5 py-3 cursor-pointer select-none
+                                        transition-all duration-150 ease-in-out
+                                        ${isSelected
+                                    ? `bg-neutral-900/80 shadow-[0_0_0_2px] shadow-${itemColor}-500/30 text-${itemColor}-200`
+                                    : 'hover:bg-neutral-800/80 text-neutral-200'}
+                                        border-b border-neutral-800 last:border-b-0`}
+                            onMouseDown={e => {
+                                e.preventDefault();
+                                setActiveFilters(prev => [...prev, { term: s.value, type: s.type }]);
+                                setSearchTerm('');
+                                setSearchMatchType(null);
+                                setShowSuggestions(false);
+                                inputRef.current?.focus();
+                            }}
+                            onMouseEnter={() => setHighlightedIndex(i)}
+                        >
+                            {/* Icono minimalista */}
+                            <span
+                                className={`flex items-center justify-center w-8 h-8 rounded-xl
+                                    transition-colors duration-200 bg-neutral-800/60
+                                    group-hover:bg-${itemColor}-900/20 text-${itemColor}-300
+                                    group-hover:text-${itemColor}-200 font-bold text-lg`}
+                            >
+                                {getTypeIcon(s.type)}
+                            </span>
+
+                            {/* Texto principal */}
+                            <span className="flex-1 text-base font-medium truncate tracking-wide" title={s.value}>
+                                {s.value}
+                            </span>
+
+                            {/* Etiqueta de tipo */}
+                            <span className={`text-xs font-semibold px-2 py-0.5 rounded-lg bg-neutral-900/70 text-${itemColor}-300 border border-${itemColor}-800 ml-2 tracking-wider`}
+                            >
+                                {getTypeLabel(s.type)}
+                            </span>
+                        </li>
+                    );
+                })}
+            </ul>,
+            document.body
+        );
     }
 
-    // Modificar analyzeMatch para que sea más preciso
+    // Estado para filtros activos tipo omnibox
+    interface ActiveFilter {
+        term: string;
+        type: 'id' | 'descripcion' | 'area' | 'usufinal' | 'resguardante' | 'rubro' | 'estado' | 'estatus' | null;
+    }
+    const [activeFilters, setActiveFilters] = useState<ActiveFilter[]>([]);
+    // Ahora depende de los filtros activos tipo omnibox
+
+    // Función para eliminar un filtro
+    const removeFilter = (index: number) => {
+        setActiveFilters(prev => prev.filter((_, i) => i !== index));
+    };
+
+    // Determinar si el PDF personalizado debe estar habilitado
+    const isCustomPDFEnabled = (() => {
+        const areaFilter = activeFilters.find(f => f.type === 'area');
+        const directorFilter = activeFilters.find(f => f.type === 'usufinal');
+        if (!areaFilter || !directorFilter) return false;
+        const cleanVal = (v: string) => (v || '').normalize('NFKD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim();
+        // Solo strings, no nulls
+        const uniqueAreas = Array.from(new Set(muebles.map(m => m.area).filter((a): a is string => !!a))).map(cleanVal);
+        const uniqueDirectores = Array.from(new Set(muebles.map(m => m.usufinal).filter((u): u is string => !!u))).map(cleanVal);
+        const areaIsValid = uniqueAreas.includes(cleanVal(areaFilter.term));
+        const directorIsValid = uniqueDirectores.includes(cleanVal(directorFilter.term));
+        return areaIsValid && directorIsValid;
+    })();
+
+    // Mejorar analyzeMatch para todos los campos relevantes
     useEffect(() => {
         const analyzeMatch = () => {
             if (!searchTerm || !muebles.length) {
                 setSearchMatchType(null);
-                setSearchMatchValue('');
                 return;
             }
-
             const clean = (str: string) => (str || '').normalize('NFKD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim();
             const term = clean(searchTerm);
 
-            let bestMatch = {
-                type: null as null | 'id' | 'descripcion' | 'usufinal',
-                value: '',
-                score: 0
-            };
-
+            // 1. Coincidencia exacta por prioridad
             for (const item of muebles) {
-                // Priorizar coincidencia por Director/Jefe
-                if ((item.usufinal && clean(item.usufinal).includes(term)) || 
-                    (item.resguardante && clean(item.resguardante).includes(term))) {
-                    const exactMatch = clean(item.usufinal || '') === term || clean(item.resguardante || '') === term;
-                    const score = exactMatch ? 5 : 4;
-                    if (score > bestMatch.score) {
-                        bestMatch = { 
-                            type: 'usufinal', 
-                            value: item.usufinal || item.resguardante || '', 
-                            score 
-                        };
-                        
-                        // Si encontramos coincidencia por director, activar solo el filtro de área
-                        if (!isAreaOrUserFiltered) {
-                            setFilters(prev => ({
-                                ...prev,
-                                area: [item.area || '']
-                            }));
-                        }
-                    }
+                if (item.id_inv && clean(item.id_inv) === term) {
+                    setSearchMatchType('id');
+                    return;
                 }
-
-                // Verificar coincidencia por ID
-                if (item.id_inv && clean(item.id_inv).includes(term)) {
-                    const exactMatch = clean(item.id_inv) === term;
-                    const score = exactMatch ? 3 : 2;
-                    if (score > bestMatch.score) {
-                        bestMatch = { type: 'id', value: item.id_inv, score };
-                    }
+                if (item.area && clean(item.area) === term) {
+                    setSearchMatchType('area');
+                    return;
                 }
-
-                // Verificar coincidencia por descripción
-                if (item.descripcion && clean(item.descripcion).includes(term)) {
-                    const exactMatch = clean(item.descripcion) === term;
-                    const score = exactMatch ? 2 : 1;
-                    if (score > bestMatch.score) {
-                        bestMatch = { type: 'descripcion', value: item.descripcion, score };
-                    }
+                if ((item.usufinal && clean(item.usufinal) === term) || (item.resguardante && clean(item.resguardante) === term)) {
+                    setSearchMatchType('usufinal');
+                    return;
+                }
+                if (item.descripcion && clean(item.descripcion) === term) {
+                    setSearchMatchType('descripcion');
+                    return;
+                }
+                if (item.rubro && clean(item.rubro) === term) {
+                    setSearchMatchType('rubro');
+                    return;
+                }
+                if (item.estado && clean(item.estado) === term) {
+                    setSearchMatchType('estado');
+                    return;
+                }
+                if (item.estatus && clean(item.estatus) === term) {
+                    setSearchMatchType('estatus');
+                    return;
                 }
             }
-
-            setSearchMatchType(bestMatch.type);
-            setSearchMatchValue(bestMatch.value);
+            // 2. Coincidencia parcial por prioridad
+            for (const item of muebles) {
+                if (item.id_inv && clean(item.id_inv).includes(term)) {
+                    setSearchMatchType('id');
+                    return;
+                }
+                if (item.area && clean(item.area).includes(term)) {
+                    setSearchMatchType('area');
+                    return;
+                }
+                if ((item.usufinal && clean(item.usufinal).includes(term)) || (item.resguardante && clean(item.resguardante).includes(term))) {
+                    setSearchMatchType('usufinal');
+                    return;
+                }
+                if (item.descripcion && clean(item.descripcion).includes(term)) {
+                    setSearchMatchType('descripcion');
+                    return;
+                }
+                if (item.rubro && clean(item.rubro).includes(term)) {
+                    setSearchMatchType('rubro');
+                    return;
+                }
+                if (item.estado && clean(item.estado).includes(term)) {
+                    setSearchMatchType('estado');
+                    return;
+                }
+                if (item.estatus && clean(item.estatus).includes(term)) {
+                    setSearchMatchType('estatus');
+                    return;
+                }
+            }
+            setSearchMatchType(null);
         };
-
-        const debounceTimeout = setTimeout(analyzeMatch, 300);
+        const debounceTimeout = setTimeout(analyzeMatch, 200);
         return () => clearTimeout(debounceTimeout);
-    }, [searchTerm, muebles, isAreaOrUserFiltered, setFilters]);
+    }, [searchTerm, muebles]);
+
+    // Filtrado por filtros activos (aproximado, insensible a tildes/mayúsculas)
+    const filteredMuebles = muebles.filter(item => {
+        if (activeFilters.length === 0 && !searchTerm) return true;
+        const passesActiveFilters = activeFilters.every(filter => {
+            const filterTerm = clean(filter.term);
+            if (!filterTerm) return true;
+            switch (filter.type) {
+                case 'id':
+                    return clean(item.id_inv || '').includes(filterTerm);
+                case 'descripcion':
+                    return clean(item.descripcion || '').includes(filterTerm);
+                case 'area':
+                    return clean(item.area || '').includes(filterTerm);
+                case 'usufinal':
+                    return (
+                        clean(item.usufinal || '').includes(filterTerm) ||
+                        clean(item.resguardante || '').includes(filterTerm)
+                    );
+                case 'resguardante':
+                    return clean(item.resguardante || '').includes(filterTerm);
+                case 'rubro':
+                    return clean(item.rubro || '').includes(filterTerm);
+                case 'estado':
+                    return clean(item.estado || '').includes(filterTerm);
+                case 'estatus':
+                    return clean(item.estatus || '').includes(filterTerm);
+                default:
+                    return true;
+            }
+        });
+        const currentTerm = clean(searchTerm);
+        const passesCurrentSearch = !currentTerm ||
+            clean(item.id_inv || '').includes(currentTerm) ||
+            clean(item.descripcion || '').includes(currentTerm) ||
+            clean(item.area || '').includes(currentTerm) ||
+            clean(item.usufinal || '').includes(currentTerm) ||
+            clean(item.resguardante || '').includes(currentTerm) ||
+            clean(item.rubro || '').includes(currentTerm) ||
+            clean(item.estado || '').includes(currentTerm) ||
+            clean(item.estatus || '').includes(currentTerm);
+        return passesActiveFilters && passesCurrentSearch;
+    });
+    const totalFilteredCount = filteredMuebles.length;
+    const totalPages = Math.ceil(totalFilteredCount / rowsPerPage);
+
+    // Paginador sobre el array filtrado
+    const paginatedMuebles = filteredMuebles.slice((currentPage - 1) * rowsPerPage, currentPage * rowsPerPage);
+
+    // Resetear página al cambiar filtros activos o término de búsqueda
+    useEffect(() => {
+        setCurrentPage(1);
+    }, [activeFilters, searchTerm, rowsPerPage]);
 
     // Buscar directorio por área o usuario
     const fetchDirectorFromDirectorio = async (area: string) => {
         setAreaPDFLoading(true);
-        setAreaDirectorAmbiguous(false);
         setAreaDirectorForm({ nombre: '', puesto: '' });
         setAreaPDFError(null);
-        setAutoCompletedFields({ area: false, nombre: false, puesto: false });
         try {
             // Obtener todos los directores de la tabla directorio
             const { data, error } = await supabase.from('directorio').select('*');
@@ -224,17 +400,14 @@ export default function LevantamientoUnificado() {
             if (!data) throw new Error('No se pudo obtener el directorio');
             setAreaDirectorOptions(data); // Todos los directores disponibles para el select
             // Buscar coincidencia exacta por área
-            const areaClean = cleanText(area);
-            const matches = data.filter((d: DirectorioOption) => cleanText(d.area) === areaClean);
+            const areaClean = clean(area);
+            const matches = data.filter((d: DirectorioOption) => clean(d.area) === areaClean);
             if (matches.length === 1) {
                 setAreaDirectorForm({ nombre: matches[0].nombre, puesto: matches[0].puesto });
                 setAreaPDFTarget(t => ({ ...t, area: matches[0].area }));
-                setAutoCompletedFields({ area: true, nombre: true, puesto: true });
             } else {
                 setAreaPDFTarget(t => ({ ...t, area: area })); // Prellenar área aunque no exista
-                setAreaDirectorAmbiguous(true);
                 setAreaDirectorForm({ nombre: '', puesto: '' });
-                setAutoCompletedFields({ area: false, nombre: false, puesto: false });
             }
         } catch {
             setAreaPDFError('Error al buscar en directorio.');
@@ -244,233 +417,67 @@ export default function LevantamientoUnificado() {
     };
 
     // Manejar click en botón PDF por área/usuario
-    const handleAreaPDFClick = () => {
-        setAreaPDFTarget({ area: filters.area[0], usufinal: filters.resguardante[0] });
-        fetchDirectorFromDirectorio(filters.area[0]);
-        setShowAreaPDFModal(true);
+    const handleAreaPDFClick = async () => {
+        // Buscar el filtro activo de área y de director (usufinal)
+        const areaFilter = activeFilters.find(f => f.type === 'area');
+        const usufinalFilter = activeFilters.find(f => f.type === 'usufinal');
+        const areaTerm = areaFilter?.term || '';
+        const directorTerm = usufinalFilter?.term || '';
+        setAreaPDFTarget({ area: areaTerm, usufinal: directorTerm });
+
+        // Buscar en la tabla directorio el director más adecuado (aproximado)
+        setAreaPDFLoading(true);
+        setAreaDirectorForm({ nombre: directorTerm, puesto: '' });
+        setAreaPDFError(null);
+        try {
+            const { data, error } = await supabase.from('directorio').select('*');
+            if (error) throw error;
+            if (!data) throw new Error('No se pudo obtener el directorio');
+            setAreaDirectorOptions(data);
+            // Buscar coincidencia más cercana por nombre (ignorando tildes y mayúsculas)
+            const clean = (str: string) => (str || '').normalize('NFKD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim();
+            const directorClean = clean(directorTerm);
+            // Buscar primero coincidencia exacta, luego parcial
+            let bestMatch = data.find((d: DirectorioOption) => clean(d.nombre) === directorClean && clean(d.area) === clean(areaTerm));
+            if (!bestMatch) {
+                bestMatch = data.find((d: DirectorioOption) => clean(d.nombre) === directorClean);
+            }
+            if (!bestMatch) {
+                bestMatch = data.find((d: DirectorioOption) => clean(d.nombre).includes(directorClean));
+            }
+            if (bestMatch) {
+                setAreaDirectorForm({ nombre: bestMatch.nombre, puesto: bestMatch.puesto });
+            } else {
+                setAreaDirectorForm({ nombre: directorTerm, puesto: '' });
+            }
+        } catch {
+            setAreaPDFError('Error al buscar en directorio.');
+        } finally {
+            setAreaPDFLoading(false);
+            setShowAreaPDFModal(true);
+        }
     };
 
     // Generar PDF por área/usuario
-    const handleAreaPDFGenerate = async () => {
-        setAreaPDFLoading(true);
-        setAreaPDFError(null);
-        try {
-            // Guardar/actualizar directorio si los datos son válidos
-            if (areaDirectorForm.nombre && areaDirectorForm.puesto && areaPDFTarget.area) {
-                // Buscar si ya existe el director por nombre
-                const { data: existing, error: findError } = await supabase
-                    .from('directorio')
-                    .select('*')
-                    .eq('nombre', areaDirectorForm.nombre.trim());
-                if (findError) throw findError;
-                if (existing && existing.length > 0) {
-                    // UPDATE si ya existe
-                    await supabase
-                        .from('directorio')
-                        .update({
-                            puesto: areaDirectorForm.puesto.trim(),
-                            area: areaPDFTarget.area.trim()
-                        })
-                        .eq('id_directorio', existing[0].id_directorio);
-                } else {
-                    // INSERT si no existe
-                    await supabase
-                        .from('directorio')
-                        .insert({
-                            nombre: areaDirectorForm.nombre.trim(),
-                            puesto: areaDirectorForm.puesto.trim(),
-                            area: areaPDFTarget.area.trim()
-                        });
-                }
-                // Guardar área si no existe
-                const { data: areaExists } = await supabase
-                    .from('areas')
-                    .select('*')
-                    .eq('itea', areaPDFTarget.area.trim());
-                if (!areaExists || areaExists.length === 0) {
-                    await supabase
-                        .from('areas')
-                        .insert({ itea: areaPDFTarget.area.trim() });
-                }
-            }
-            const exportData = (await getFilteredData()).map((item, index) => ({ ...item, _counter: index + 1 }));
-            if (!exportData.length) throw new Error('No hay datos para exportar.');
-            const columns = [
-                { header: 'ID INVENTARIO', key: 'id_inv', width: 60 },
-                { header: 'DESCRIPCIÓN', key: 'descripcion', width: 120 },
-                { header: 'ESTADO', key: 'estado', width: 50 },
-                { header: 'ESTATUS', key: 'estatus', width: 50 },
-                { header: 'ÁREA', key: 'area', width: 60 },
-                { header: 'USUARIO FINAL', key: 'usufinal', width: 70 },
-            ];
-            const firmas = [
-                { concepto: 'Responsable', nombre: areaDirectorForm.nombre, puesto: areaDirectorForm.puesto },
-            ];
-            await generatePDFPerArea({
-                data: exportData,
-                columns,
-                title: `LEVANTAMIENTO DE INVENTARIO - ${areaPDFTarget.area}`,
-                fileName: `levantamiento_area_${areaPDFTarget.area || areaPDFTarget.usufinal}_${new Date().toISOString().slice(0, 10)}`,
-                firmas,
-            });
-            setShowAreaPDFModal(false);
-            setMessage({ type: 'success', text: 'PDF generado exitosamente.' });
-        } catch {
-            setAreaPDFError('Error al generar PDF.');
-        } finally {
-            setAreaPDFLoading(false);
-        }
-    };
 
     // Obtener opciones de filtro unificadas
     const fetchFilterOptions = useCallback(async () => {
         try {
-            // Obtener estados unificados
-            const [estadosInea, estadosItea] = await Promise.all([
-                supabase.from('muebles').select('estado').not('estado', 'is', null),
-                supabase.from('mueblesitea').select('estado').not('estado', 'is', null),
-            ]);
-            const estados = Array.from(new Set([
-                ...(estadosInea.data?.map(i => i.estado?.trim()) || []),
-                ...(estadosItea.data?.map(i => i.estado?.trim()) || [])
-            ].filter(Boolean))) as string[];
-
-            // Obtener estatus unificados
-            const [estatusInea, estatusItea] = await Promise.all([
-                supabase.from('muebles').select('estatus').not('estatus', 'is', null),
-                supabase.from('mueblesitea').select('estatus').not('estatus', 'is', null),
-            ]);
-            const estatus = Array.from(new Set([
-                ...(estatusInea.data?.map(i => i.estatus?.trim()) || []),
-                ...(estatusItea.data?.map(i => i.estatus?.trim()) || [])
-            ].filter(Boolean))) as string[];
-
-            // Obtener áreas unificadas
-            const [areasInea, areasItea] = await Promise.all([
-                supabase.from('muebles').select('area').not('area', 'is', null),
-                supabase.from('mueblesitea').select('area').not('area', 'is', null),
-            ]);
-            const areas = Array.from(new Set([
-                ...(areasInea.data?.map(i => i.area?.trim()) || []),
-                ...(areasItea.data?.map(i => i.area?.trim()) || [])
-            ].filter(Boolean))) as string[];
-
-            // Obtener rubros unificados
-            const [rubrosInea, rubrosItea] = await Promise.all([
-                supabase.from('muebles').select('rubro').not('rubro', 'is', null),
-                supabase.from('mueblesitea').select('rubro').not('rubro', 'is', null),
-            ]);
-            const rubros = Array.from(new Set([
-                ...(rubrosInea.data?.map(i => i.rubro?.trim()) || []),
-                ...(rubrosItea.data?.map(i => i.rubro?.trim()) || [])
-            ].filter(Boolean))) as string[];
-
-            // Obtener formas de adquisición unificadas
-            const [formadqInea, formadqItea] = await Promise.all([
-                supabase.from('muebles').select('formadq').not('formadq', 'is', null),
-                supabase.from('mueblesitea').select('formadq').not('formadq', 'is', null),
-            ]);
-            const formadq = Array.from(new Set([
-                ...(formadqInea.data?.map(i => i.formadq?.trim()) || []),
-                ...(formadqItea.data?.map(i => i.formadq?.trim()) || [])
-            ].filter(Boolean))) as string[];
-
-            // Obtener resguardantes únicos de ambas tablas
-            const [resguardanteInea, resguardanteItea] = await Promise.all([
-                supabase.from('muebles').select('resguardante').not('resguardante', 'is', null),
-                supabase.from('mueblesitea').select('resguardante').not('resguardante', 'is', null),
-            ]);
-            const resguardantes = Array.from(new Set([
-                ...(resguardanteInea.data?.map(i => i.resguardante?.trim()) || []),
-                ...(resguardanteItea.data?.map(i => i.resguardante?.trim()) || [])
-            ].filter(Boolean))) as string[];
-
-            setFilterOptions({ estados, estatus, areas, rubros, formadq, resguardantes });
+            // Elimino la obtención de estados, estatus, áreas, rubros, formadq, resguardantes
         } catch (error) {
             console.error('Error al cargar opciones de filtro:', error);
             setError('Error al cargar opciones de filtro');
         }
     }, []);
 
-    // Modificar la función getFilteredOptions para mantener el orden alfabético
-    const getFilteredOptions = (options: string[], searchTerm: string) => {
-        return options
-            .filter(option => 
-                option.toLowerCase().includes(searchTerm.toLowerCase())
-            )
-            .sort((a, b) => a.localeCompare(b)); // Asegurar que las opciones filtradas también estén ordenadas
-    };
-
     // Función para obtener datos filtrados para exportación
-    const getFilteredData = async () => {
-        try {
-            // --- Helper para traer todos los datos paginando manualmente ---
-            const fetchAllRows = async (table: 'muebles' | 'mueblesitea') => {
-                let allRows: LevMueble[] = [];
-                let from = 0;
-                const pageSize = 1000;
-                let keepGoing = true;
-                let query = supabase.from(table).select('*');
-                // Aplicar filtros de búsqueda
-                if (searchTerm) {
-                    const search = `%${searchTerm}%`;
-                    const searchPattern = `id_inv.ilike.${search},descripcion.ilike.${search},resguardante.ilike.${search},usufinal.ilike.${search}`;
-                    query = query.or(searchPattern);
-                }
-                // Aplicar otros filtros, excepto origen
-                Object.entries(filters).forEach(([key, values]) => {
-                    if (key !== 'origen' && values.length > 0) {
-                        query = query.in(key, values);
-                    }
-                });
-                while (keepGoing) {
-                    const { data, error } = await query.range(from, from + pageSize - 1);
-                    if (error) throw error;
-                    if (data && data.length > 0) {
-                        allRows = allRows.concat(data);
-                        if (data.length < pageSize) {
-                            keepGoing = false;
-                        } else {
-                            from += pageSize;
-                        }
-                    } else {
-                        keepGoing = false;
-                    }
-                }
-                return allRows;
-            };
-            // Traer todos los datos de ambas tablas
-            const [ineaRows, iteaRows] = await Promise.all([
-                fetchAllRows('muebles'),
-                fetchAllRows('mueblesitea')
-            ]);
-            // Combinar y procesar los resultados
-            let allData = [
-                ...ineaRows.map(item => ({ ...item, origen: 'INEA' as const })),
-                ...iteaRows.map(item => ({ ...item, origen: 'ITEA' as const }))
-            ];
-            // Si hay filtro de origen, filtrar aquí
-            if (filters.origen.length > 0) {
-                allData = allData.filter(item => filters.origen.includes(item.origen));
-            }
-            // Ordenar los datos según la configuración actual
-            return allData.sort((a, b) => {
-                const aVal = a[sortField] || '';
-                const bVal = b[sortField] || '';
-                const comparison = String(aVal).localeCompare(String(bVal));
-                return sortDirection === 'asc' ? comparison : -comparison;
-            });
-        } catch (error) {
-            console.error('Error al obtener datos filtrados:', error);
-            throw error;
-        }
-    };
 
     // Función para manejar la exportación
     const handleExport = async () => {
         try {
             setLoading(true);
-            const exportData = await getFilteredData();
+            // Usar los datos filtrados actualmente en la tabla
+            const exportData = filteredMuebles;
 
             if (!exportData || exportData.length === 0) {
                 setMessage({ type: 'error', text: 'No hay datos para exportar.' });
@@ -541,82 +548,22 @@ export default function LevantamientoUnificado() {
         }
     };
 
-    // Modificar fetchMuebles para manejar mejor la búsqueda y la paginación global
+    // Modificar fetchMuebles para traer todos los datos de ambas tablas sin paginación backend
     const fetchMuebles = useCallback(async () => {
         setLoading(true);
         setError(null);
         try {
-            const shouldQueryInea = !filters.origen.length || filters.origen.includes('INEA');
-            const shouldQueryItea = !filters.origen.length || filters.origen.includes('ITEA');
-
-            const countQueries = [];
-
-            // Función auxiliar para construir los patrones de búsqueda
-            const buildSearchPattern = (term: string) => {
-                const search = `%${term}%`;
-                return [
-                    `id_inv.ilike.${search}`,
-                    `descripcion.ilike.${search}`,
-                    `resguardante.ilike.${search}`,
-                    `usufinal.ilike.${search}`,
-                    `area.ilike.${search}`
-                ].join(',');
-            };
-
-            // --- 1. Obtener totales para paginación ---
-            if (shouldQueryInea) {
-                let countInea = supabase.from('muebles').select('*', { count: 'exact', head: true });
-                if (searchTerm) {
-                    const searchPattern = buildSearchPattern(searchTerm);
-                    countInea = countInea.or(searchPattern);
-                }
-                Object.entries(filters).forEach(([key, values]) => {
-                    if (values.length > 0 && key !== 'origen') {
-                        countInea = countInea.in(key, values);
-                    }
-                });
-                countQueries.push(countInea);
-            }
-            if (shouldQueryItea) {
-                let countItea = supabase.from('mueblesitea').select('*', { count: 'exact', head: true });
-                if (searchTerm) {
-                    const searchPattern = buildSearchPattern(searchTerm);
-                    countItea = countItea.or(searchPattern);
-                }
-                Object.entries(filters).forEach(([key, values]) => {
-                    if (values.length > 0 && key !== 'origen') {
-                        countItea = countItea.in(key, values);
-                    }
-                });
-                countQueries.push(countItea);
-            }
-            // Obtener totales
-            const countResults = await Promise.all(countQueries);
-            const total = countResults.reduce((sum, result) => sum + (result.count || 0), 0);
-            setFilteredCount(total);
-
-            // --- 2. Obtener todos los datos filtrados de ambas tablas (sin paginación) ---
-            // (Solo para la página actual, pero necesitamos todos para paginar globalmente)
-            const fetchAllRows = async (table: 'muebles' | 'mueblesitea', origen: 'INEA' | 'ITEA') => {
+            // Helper para traer todos los datos en lotes grandes
+            const fetchAllRows = async (table: 'muebles' | 'mueblesitea') => {
                 let allRows: LevMueble[] = [];
                 let from = 0;
                 const pageSize = 1000;
                 let keepGoing = true;
-                let query = supabase.from(table).select('*');
-                if (searchTerm) {
-                    const searchPattern = buildSearchPattern(searchTerm);
-                    query = query.or(searchPattern);
-                }
-                Object.entries(filters).forEach(([key, values]) => {
-                    if (key !== 'origen' && values.length > 0) {
-                        query = query.in(key, values);
-                    }
-                });
                 while (keepGoing) {
-                    const { data, error } = await query.range(from, from + pageSize - 1);
+                    const { data, error } = await supabase.from(table).select('*').range(from, from + pageSize - 1);
                     if (error) throw error;
                     if (data && data.length > 0) {
-                        allRows = allRows.concat(data.map(item => ({ ...item, origen })));
+                        allRows = allRows.concat(data);
                         if (data.length < pageSize) {
                             keepGoing = false;
                         } else {
@@ -628,37 +575,17 @@ export default function LevantamientoUnificado() {
                 }
                 return allRows;
             };
-
-            let allMuebles: LevMueble[] = [];
-            if (shouldQueryInea) {
-                const ineaRows = await fetchAllRows('muebles', 'INEA');
-                allMuebles = allMuebles.concat(ineaRows);
-            }
-            if (shouldQueryItea) {
-                const iteaRows = await fetchAllRows('mueblesitea', 'ITEA');
-                allMuebles = allMuebles.concat(iteaRows);
-            }
-
-            // --- 3. Ordenar y paginar globalmente ---
-            if (allMuebles.length > 0) {
-                allMuebles = allMuebles.sort((a, b) => {
-                    const aVal = a[sortField] || '';
-                    const bVal = b[sortField] || '';
-                    const comparison = String(aVal).localeCompare(String(bVal));
-                    return sortDirection === 'asc' ? comparison : -comparison;
-                });
-            }
-            const fromGlobal = (currentPage - 1) * rowsPerPage;
-            const toGlobal = fromGlobal + rowsPerPage;
-            const pageMuebles = allMuebles.slice(fromGlobal, toGlobal);
-            setMuebles(pageMuebles);
-
-            // Actualizar selectedItem si es necesario
-            if (selectedItem && !pageMuebles.some(item =>
-                item.id === selectedItem.id && item.origen === selectedItem.origen
-            )) {
-                setSelectedItem(null);
-            }
+            // Traer todos los datos de ambas tablas
+            const [ineaRows, iteaRows] = await Promise.all([
+                fetchAllRows('muebles'),
+                fetchAllRows('mueblesitea')
+            ]);
+            // Combinar y procesar los resultados
+            const allData = [
+                ...ineaRows.map(item => ({ ...item, origen: 'INEA' as const })),
+                ...iteaRows.map(item => ({ ...item, origen: 'ITEA' as const }))
+            ];
+            setMuebles(allData);
         } catch (error) {
             console.error('Error al cargar muebles:', error);
             setError('Error al cargar los datos. Por favor, intente nuevamente.');
@@ -666,16 +593,12 @@ export default function LevantamientoUnificado() {
         } finally {
             setLoading(false);
         }
-    }, [currentPage, rowsPerPage, searchTerm, filters, sortField, sortDirection, selectedItem]);
+    }, []);
 
     useEffect(() => {
         fetchFilterOptions();
         fetchMuebles();
     }, [fetchFilterOptions, fetchMuebles]);
-
-    useEffect(() => {
-        setCurrentPage(1);
-    }, [searchTerm, filters, sortField, sortDirection, rowsPerPage]);
 
     useEffect(() => {
         if (message) {
@@ -686,51 +609,14 @@ export default function LevantamientoUnificado() {
 
     // useEffect para autocompletar directorio al cambiar el filtro de usuario final
     useEffect(() => {
-        if (filters.resguardante.length) {
-            fetchDirectorFromDirectorio(filters.area[0]);
+        if (activeFilters.some(f => f.type === 'resguardante')) {
+            fetchDirectorFromDirectorio(activeFilters.find(f => f.type === 'area')?.term || '');
         }
         // Solo autocompletar si hay filtro de usuario
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [filters.resguardante]);
-
-    const handleFilterChange = (filterName: keyof typeof filters, value: string) => {
-        setFilters(prev => {
-            const currentValues = prev[filterName];
-            if (currentValues.includes(value)) {
-                return {
-                    ...prev,
-                    [filterName]: currentValues.filter(v => v !== value)
-                };
-            } else {
-                return {
-                    ...prev,
-                    [filterName]: [...currentValues, value]
-                };
-            }
-        });
-        setCurrentPage(1);
-    };
-
-    const clearFilters = () => {
-        setFilters({
-            estado: [],
-            estatus: [],
-            area: [],
-            rubro: [],
-            formadq: [],
-            resguardante: [], // Changed from usufinal
-            origen: []
-        });
-        setSearchTerm('');
-        setCurrentPage(1);
-    };
-
-    function handleClearAllFilters(): void {
-        clearFilters();
-    }
+    }, [activeFilters.some(f => f.type === 'resguardante')]);
 
     const changePage = (page: number) => {
-        const totalPages = Math.ceil(filteredCount / rowsPerPage);
         if (page < 1 || page > totalPages) return;
         setCurrentPage(page);
     };
@@ -739,9 +625,6 @@ export default function LevantamientoUnificado() {
         if (!text) return '';
         return text.length > length ? `${text.substring(0, length)}...` : text;
     };
-
-    const role = useUserRole();
-    const isUsuario = role === "usuario";
 
     const router = useRouter();
     // Estado para folios de resguardo por id_inv
@@ -775,6 +658,154 @@ export default function LevantamientoUnificado() {
         router.push(`/resguardos/consultar?folio=${folio}`);
     };
 
+    // Generar sugerencias al escribir
+    useEffect(() => {
+        if (!searchTerm || !muebles.length) {
+            setSuggestions([]);
+            setShowSuggestions(false);
+            setHighlightedIndex(-1);
+            return;
+        }
+        const clean = (str: string) => (str || '').normalize('NFKD').replace(/\p{Diacritic}/gu, '').toLowerCase().trim();
+        const term = clean(searchTerm);
+        // Recolectar valores únicos por campo
+        const seen = new Set<string>();
+        const fields = [
+            { type: 'id' as ActiveFilter['type'], label: 'ID', icon: <Search className="h-4 w-4 text-blue-400" /> },
+            { type: 'area' as ActiveFilter['type'], label: 'Área', icon: <span className="h-4 w-4 text-purple-400 font-bold">A</span> },
+            { type: 'usufinal' as ActiveFilter['type'], label: 'Director', icon: <span className="h-4 w-4 text-amber-400 font-bold">D</span> },
+            { type: 'resguardante' as ActiveFilter['type'], label: 'Resguardante', icon: <span className="h-4 w-4 text-cyan-400 font-bold">R</span> },
+            { type: 'descripcion' as ActiveFilter['type'], label: 'Descripción', icon: <span className="h-4 w-4 text-fuchsia-400 font-bold">Desc</span> },
+            { type: 'rubro' as ActiveFilter['type'], label: 'Rubro', icon: <span className="h-4 w-4 text-green-400 font-bold">Ru</span> },
+            { type: 'estado' as ActiveFilter['type'], label: 'Estado', icon: <span className="h-4 w-4 text-cyan-400 font-bold">Edo</span> },
+            { type: 'estatus' as ActiveFilter['type'], label: 'Estatus', icon: <span className="h-4 w-4 text-pink-400 font-bold">Est</span> },
+        ];
+        let allSuggestions: { value: string; type: ActiveFilter['type'] }[] = [];
+        for (const f of fields) {
+            let values: string[] = [];
+            switch (f.type) {
+                case 'id': values = muebles.map(m => m.id_inv).filter(Boolean) as string[]; break;
+                case 'area': values = muebles.map(m => m.area).filter(Boolean) as string[]; break;
+                case 'usufinal': values = muebles.map(m => m.usufinal).filter(Boolean) as string[]; break;
+                case 'resguardante': values = muebles.map(m => m.resguardante).filter(Boolean) as string[]; break;
+                case 'descripcion': values = muebles.map(m => m.descripcion).filter(Boolean) as string[]; break;
+                case 'rubro': values = muebles.map(m => m.rubro).filter(Boolean) as string[]; break;
+                case 'estado': values = muebles.map(m => m.estado).filter(Boolean) as string[]; break;
+                case 'estatus': values = muebles.map(m => m.estatus).filter(Boolean) as string[]; break;
+                default: values = [];
+            }
+            for (const v of values) {
+                if (!v) continue;
+                const vClean = clean(v);
+                if (vClean.includes(term) && !seen.has(f.type + ':' + vClean)) {
+                    allSuggestions.push({ value: v, type: f.type });
+                    seen.add(f.type + ':' + vClean);
+                }
+            }
+        }
+        // Prioridad: exactos primero, luego parciales, máx 7
+        allSuggestions = [
+            ...allSuggestions.filter(s => clean(s.value) === term),
+            ...allSuggestions.filter(s => clean(s.value) !== term)
+        ].slice(0, 7);
+        setSuggestions(allSuggestions);
+        setShowSuggestions(allSuggestions.length > 0);
+        setHighlightedIndex(allSuggestions.length > 0 ? 0 : -1);
+    }, [searchTerm, muebles]);
+
+    // Manejo de teclado en el input
+    const handleInputKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+        if (!showSuggestions || suggestions.length === 0) return;
+        if (e.key === 'ArrowDown') {
+            e.preventDefault();
+            setHighlightedIndex(i => (i + 1) % suggestions.length);
+        } else if (e.key === 'ArrowUp') {
+            e.preventDefault();
+            setHighlightedIndex(i => (i - 1 + suggestions.length) % suggestions.length);
+        } else if (e.key === 'Enter') {
+            e.preventDefault();
+            if (highlightedIndex >= 0 && suggestions[highlightedIndex]) {
+                const s = suggestions[highlightedIndex];
+                setActiveFilters(prev => [...prev, { term: s.value, type: s.type }]);
+                setSearchTerm('');
+                setSearchMatchType(null);
+                setShowSuggestions(false);
+            }
+        } else if (e.key === 'Escape') {
+            setShowSuggestions(false);
+        }
+    };
+    // Cerrar sugerencias al perder foco
+    const handleInputBlur = () => {
+        setTimeout(() => setShowSuggestions(false), 100); // Permite click en sugerencia
+    };
+
+    // --- Lógica para búsqueda de director en el modal ---
+    const [searchDirectorTerm, setSearchDirectorTerm] = useState('');
+    // Sugerido: el que más coincide por nombre y área
+    const directorSugerido = React.useMemo(() => {
+        const clean = (str: string) => (str || '').normalize('NFKD').replace(/\p{Diacritic}/gu, '').toLowerCase().trim();
+        if (!areaPDFTarget.usufinal) return null;
+        // Coincidencia exacta nombre+área
+        let match = areaDirectorOptions.find(opt => clean(opt.nombre) === clean(areaPDFTarget.usufinal) && clean(opt.area) === clean(areaPDFTarget.area));
+        if (!match) match = areaDirectorOptions.find(opt => clean(opt.nombre) === clean(areaPDFTarget.usufinal));
+        if (!match) match = areaDirectorOptions.find(opt => clean(opt.nombre).includes(clean(areaPDFTarget.usufinal)));
+        return match || null;
+    }, [areaPDFTarget, areaDirectorOptions]);
+    const filteredDirectorOptions: DirectorioOption[] = React.useMemo(() => {
+        const clean = (str: string) => (str || '').normalize('NFKD').replace(/\p{Diacritic}/gu, '').toLowerCase().trim();
+        let options = areaDirectorOptions;
+        if (searchDirectorTerm) {
+            options = options.filter(opt => clean(opt.nombre).includes(clean(searchDirectorTerm)));
+        }
+        // Sugerido primero
+        if (directorSugerido) {
+            options = [directorSugerido, ...options.filter(opt => opt.id_directorio !== directorSugerido.id_directorio)];
+        }
+        return options;
+    }, [searchDirectorTerm, areaDirectorOptions, directorSugerido]);
+
+    // --- FUNCIÓN AUXILIAR PARA EXPORTACIÓN PDF POR ÁREA/DIRECTOR ---
+    const getFilteredMueblesForExportPDF = () => {
+        if (showAreaPDFModal && areaPDFTarget.area && areaPDFTarget.usufinal) {
+            const forcedFilters = [
+                { term: areaPDFTarget.area, type: 'area' },
+                { term: areaPDFTarget.usufinal, type: 'usufinal' },
+                ...activeFilters.filter(f => f.type !== 'area' && f.type !== 'usufinal')
+            ];
+            return muebles.filter(item => {
+                if (!item || typeof item !== 'object') return false;
+                // Validar que los campos requeridos existan y sean string
+                if (!item.id_inv || !item.area || !item.usufinal) return false;
+                return forcedFilters.every(filter => {
+                    const filterTerm = clean(filter.term);
+                    if (!filterTerm) return true;
+                    switch (filter.type) {
+                        case 'id':
+                            return clean(item.id_inv || '').includes(filterTerm);
+                        case 'descripcion':
+                            return clean(item.descripcion || '').includes(filterTerm);
+                        case 'area':
+                            return clean(item.area || '') === filterTerm;
+                        case 'usufinal':
+                            return clean(item.usufinal || '') === filterTerm;
+                        case 'resguardante':
+                            return clean(item.resguardante || '').includes(filterTerm);
+                        case 'rubro':
+                            return clean(item.rubro || '').includes(filterTerm);
+                        case 'estado':
+                            return clean(item.estado || '').includes(filterTerm);
+                        case 'estatus':
+                            return clean(item.estatus || '').includes(filterTerm);
+                        default:
+                            return true;
+                    }
+                });
+            });
+        }
+        return filteredMuebles.filter(item => item && typeof item === 'object' && item.id_inv && item.area && item.usufinal);
+    };
+
     return (
         <div className="bg-black text-white min-h-screen p-2 sm:p-4 md:p-6 lg:p-8">
             <div className="w-full mx-auto bg-black rounded-lg sm:rounded-xl shadow-2xl overflow-hidden border border-gray-800">
@@ -788,126 +819,75 @@ export default function LevantamientoUnificado() {
                 <div className="flex flex-col gap-4 p-4">
                     <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-4">
                         <div className="flex gap-4 flex-grow">
-                            {/* Barra de búsqueda */}
-                            <div className="relative flex-grow">
-                                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                                    <Search className="h-5 w-5 text-gray-500" />
+                            {/* Barra de búsqueda y filtros activos brutalmente mejorados */}
+                            <div className="w-full flex flex-col gap-2">
+                                <div className="relative flex items-center w-full">
+                                    <div className="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none transition-transform duration-300 group-focus-within:scale-110">
+                                        <Search className="h-5 w-5 text-blue-400 group-focus-within:text-blue-500 transition-colors duration-300" />
+                                    </div>
+                                    <input
+                                        ref={inputRef}
+                                        spellCheck="false"
+                                        type="text"
+                                        value={searchTerm}
+                                        onChange={e => { setSearchTerm(e.target.value); setCurrentPage(1); setShowSuggestions(true); }}
+                                        onKeyDown={handleInputKeyDown}
+                                        onBlur={handleInputBlur}
+                                        placeholder="Buscar por ID, área, director, descripción, etc..."
+                                        className={`
+                                            pl-14 pr-32 py-3 w-full bg-black/80 text-white placeholder-neutral-500
+                                            focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500
+                                            rounded-2xl border border-neutral-800 shadow-2xl transition-all duration-300
+                                            text-lg font-semibold tracking-wide
+                                            backdrop-blur-xl
+                                            hover:shadow-blue-500/10
+                                            focus:scale-[1.03]
+                                            focus:bg-black/90
+                                            ${searchMatchType === 'id' ? 'border-blue-500/80 shadow-blue-500/20' : ''}
+                                            ${searchMatchType === 'area' ? 'border-purple-500/80 shadow-purple-500/20' : ''}
+                                            ${searchMatchType === 'usufinal' ? 'border-amber-500/80 shadow-amber-500/20' : ''}
+                                            ${searchMatchType === 'descripcion' ? 'border-fuchsia-500/80 shadow-fuchsia-500/20' : ''}
+                                            ${searchMatchType === 'rubro' ? 'border-green-500/80 shadow-green-500/20' : ''}
+                                            ${searchMatchType === 'estado' ? 'border-cyan-500/80 shadow-cyan-500/20' : ''}
+                                            ${searchMatchType === 'estatus' ? 'border-pink-500/80 shadow-pink-500/20' : ''}
+                                        `}
+                                        title="Buscar"
+                                        aria-autocomplete="list"
+                                        aria-controls="omnibox-suggestions"
+                                        aria-activedescendant={highlightedIndex >= 0 ? `omnibox-suggestion-${highlightedIndex}` : undefined}
+                                        autoComplete="off"
+                                    />
+                                    {/* Dropdown de sugerencias omnibox flotante */}
+                                    <SuggestionDropdown />
                                 </div>
-                                <input
-                                    spellCheck="false"
-                                    type="text"
-                                    value={searchTerm}
-                                    onChange={e => { setSearchTerm(e.target.value); setCurrentPage(1); }}
-                                    placeholder="Buscar por ID o descripción..."
-                                    className={`
-                                        pl-10 pr-20 py-2 w-full bg-black text-white placeholder-gray-500 
-                                        focus:outline-none focus:ring-2 focus:ring-gray-500 transition-all duration-300
-                                        rounded-md border-2
-                                        ${searchMatchType === 'id' ? 'border-blue-500/30 focus:border-blue-400 shadow-[0_0_15px_-3px_rgba(59,130,246,0.3)]' : ''}
-                                        ${searchMatchType === 'descripcion' ? 'border-fuchsia-500/30 focus:border-fuchsia-400 shadow-[0_0_15px_-3px_rgba(192,38,211,0.3)]' : ''}
-                                        ${searchMatchType === 'usufinal' ? 'border-amber-500/30 focus:border-amber-400 shadow-[0_0_15px_-3px_rgba(245,158,11,0.3)]' : ''}
-                                        ${!searchMatchType ? 'border-gray-700 focus:border-gray-600' : ''}
-                                    `}
-                                    title="Buscar"
-                                />
-                                {searchMatchType && searchTerm && muebles.length > 0 && (
-                                    <div className={`
-                                        absolute top-0 right-4 h-full flex items-center gap-2 pointer-events-none
-                                        ${searchMatchType === 'id' ? 'text-blue-400' : ''}
-                                        ${searchMatchType === 'descripcion' ? 'text-fuchsia-400' : ''}
-                                        ${searchMatchType === 'usufinal' ? 'text-amber-400' : ''}
-                                    `}>
-                                        <span className="text-xs font-medium bg-black/90 px-2 py-0.5 rounded-full border border-current animate-fadeIn">
-                                            {searchMatchType === 'id' && 'ID'}
-                                            {searchMatchType === 'descripcion' && 'DESC'}
-                                            {searchMatchType === 'usufinal' && 'DIR'}
-                                        </span>
+                                {/* Chips de filtros activos brutalmente mejorados */}
+                                {activeFilters.length > 0 && (
+                                    <div className="flex flex-wrap gap-2 mt-1 px-1">
+                                        {activeFilters.map((filter, index) => (
+                                            <span
+                                                key={index}
+                                                className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold border border-neutral-700 shadow-sm animate-fadeIn transition-all duration-200
+                                                    bg-neutral-900/80 text-neutral-200 group relative hover:scale-[1.04] hover:shadow-lg hover:shadow-black/10`}
+                                            >
+                                                <span className="mr-1">
+                                                    {getTypeIcon(filter.type)}
+                                                </span>
+                                                <span className="font-medium text-xs mr-1 truncate max-w-[90px]" title={filter.term}>{filter.term}</span>
+                                                <span className="ml-1 text-[10px] opacity-60 font-bold">{getTypeLabel(filter.type)}</span>
+                                                <button
+                                                    onClick={() => removeFilter(index)}
+                                                    className="ml-2 p-0.5 rounded-full bg-neutral-800 hover:bg-red-700/60 text-neutral-400 hover:text-white transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-red-500"
+                                                    title="Eliminar filtro"
+                                                    tabIndex={0}
+                                                >
+                                                    <svg width="12" height="12" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                                        <path d="M6 6L14 14M14 6L6 14" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+                                                    </svg>
+                                                </button>
+                                            </span>
+                                        ))}
                                     </div>
                                 )}
-                            </div>
-                            {/* Botones de filtro por origen */}
-                            <div className="flex gap-2">
-                                <button
-                                    onClick={() => handleFilterChange('origen', 'INEA')}
-                                    className={`
-                                        relative px-4 py-2 rounded-lg font-medium 
-                                        flex items-center gap-2 transition-all duration-300
-                                        ${filters.origen?.includes('INEA')
-                                            ? 'bg-gradient-to-br from-blue-900/70 to-blue-800/70 text-blue-200 border border-blue-700 shadow-lg shadow-blue-900/20'
-                                            : 'bg-gradient-to-br from-gray-800 to-gray-900 text-gray-400 border border-gray-700 hover:border-blue-700/50'
-                                        }
-                                        overflow-hidden
-                                    `}
-                                    title="Filtrar origen INEA"
-                                >
-                                    {/* Animated gradient background */}
-                                    <div className={`
-                                        absolute inset-0 bg-gradient-to-r from-blue-500/20 to-transparent
-                                        opacity-0 hover:opacity-100 transition-opacity duration-500
-                                    `}></div>
-
-                                    {/* Dot indicator with pulse animation */}
-                                    <div className="relative">
-                                        <div className={`
-                                            w-2 h-2 rounded-full transition-colors duration-300
-                                            ${filters.origen?.includes('INEA') ? 'bg-blue-400' : 'bg-gray-400'}
-                                        `}/>
-                                        {filters.origen?.includes('INEA') && (
-                                            <div className="absolute inset-0 animate-ping rounded-full bg-blue-400/50"></div>
-                                        )}
-                                    </div>
-
-                                    {/* Text with underline animation */}
-                                    <span className="relative">
-                                        INEA
-                                        <span className={`
-                                            absolute inset-x-0 -bottom-0.5 h-px bg-gradient-to-r 
-                                            from-transparent via-blue-400/50 to-transparent
-                                            opacity-0 group-hover:opacity-100 transition-opacity duration-300
-                                        `}></span>
-                                    </span>
-                                </button>
-
-                                <button
-                                    onClick={() => handleFilterChange('origen', 'ITEA')}
-                                    className={`
-                                        relative px-4 py-2 rounded-lg font-medium 
-                                        flex items-center gap-2 transition-all duration-300
-                                        ${filters.origen?.includes('ITEA')
-                                            ? 'bg-gradient-to-br from-purple-900/70 to-purple-800/70 text-purple-200 border border-purple-700 shadow-lg shadow-purple-900/20'
-                                            : 'bg-gradient-to-br from-gray-800 to-gray-900 text-gray-400 border border-gray-700 hover:border-purple-700/50'
-                                        }
-                                        overflow-hidden
-                                    `}
-                                    title="Filtrar origen ITEA"
-                                >
-                                    {/* Animated gradient background */}
-                                    <div className={`
-                                        absolute inset-0 bg-gradient-to-r from-purple-500/20 to-transparent
-                                        opacity-0 hover:opacity-100 transition-opacity duration-500
-                                    `}></div>
-
-                                    {/* Dot indicator with pulse animation */}
-                                    <div className="relative">
-                                        <div className={`
-                                            w-2 h-2 rounded-full transition-colors duration-300
-                                            ${filters.origen?.includes('ITEA') ? 'bg-purple-400' : 'bg-gray-400'}
-                                        `}/>
-                                        {filters.origen?.includes('ITEA') && (
-                                            <div className="absolute inset-0 animate-ping rounded-full bg-purple-400/50"></div>
-                                        )}
-                                    </div>
-
-                                    {/* Text with underline animation */}
-                                    <span className="relative">
-                                        ITEA
-                                        <span className={`
-                                            absolute inset-x-0 -bottom-0.5 h-px bg-gradient-to-r 
-                                            from-transparent via-purple-400/50 to-transparent
-                                            opacity-0 group-hover:opacity-100 transition-opacity duration-300
-                                        `}></span>
-                                    </span>
-                                </button>
                             </div>
                         </div>
                         <div className="flex gap-2">
@@ -920,7 +900,10 @@ export default function LevantamientoUnificado() {
                                 className="group relative px-4 py-2 bg-gradient-to-br from-green-600 to-emerald-600 text-white rounded-md font-medium flex items-center gap-2 hover:from-emerald-600 hover:to-green-600 transition-all duration-300 shadow-lg hover:shadow-emerald-500/30 border border-emerald-700/50 hover:border-emerald-500"
                                 title="Exportar a Excel"
                             >
-                                <div className="absolute inset-0 bg-gradient-to-r from-emerald-600/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 rounded-md"></div>
+                                <div className={`
+                                    absolute inset-0 bg-gradient-to-r from-emerald-600/20 to-transparent
+                                    opacity-0 group-hover:opacity-100 transition-opacity duration-300 rounded-md
+                                `}></div>
                                 <FileUp className="h-4 w-4 transition-transform group-hover:scale-110 group-hover:-translate-y-0.5 duration-300" />
                                 <span className="hidden sm:flex items-center gap-1">
                                     Excel
@@ -933,53 +916,26 @@ export default function LevantamientoUnificado() {
                             {/* PDF Export Button */}
                             <button
                                 onClick={() => {
-                                    if (isAreaOrUserFiltered) {
+                                    if (isCustomPDFEnabled) {
                                         handleAreaPDFClick();
                                     } else {
                                         setExportType('pdf');
                                         setShowExportModal(true);
                                     }
                                 }}
-                                className={`
-                                    group relative px-4 py-2.5 rounded-lg font-medium 
+                                className={
+                                    `group relative px-4 py-2.5 rounded-lg font-medium 
                                     flex items-center gap-2.5 transition-all duration-300
-                                    ${isAreaOrUserFiltered 
-                                        ? 'bg-gradient-to-br from-fuchsia-600 to-purple-600 hover:from-purple-600 hover:to-fuchsia-600 text-white hover:shadow-fuchsia-500/30 border-fuchsia-700/50 hover:border-fuchsia-500' 
+                                    ${isCustomPDFEnabled
+                                        ? 'bg-gradient-to-br from-fuchsia-600 to-purple-600 hover:from-purple-600 hover:to-fuchsia-600 text-white hover:shadow-fuchsia-500/30 border-fuchsia-700/50 hover:border-fuchsia-500'
                                         : 'bg-gradient-to-br from-red-600 to-rose-600 hover:from-rose-600 hover:to-red-600 text-white hover:shadow-red-500/30 border-red-700/50 hover:border-red-500'
                                     }`}
-                                title={isAreaOrUserFiltered ? 'Exportar PDF personalizado por área/usuario' : 'Exportar a PDF'}
-                                style={{ minWidth: isAreaOrUserFiltered ? '140px' : '120px' }}
+                                title={isCustomPDFEnabled ? 'Exportar PDF personalizado por área y director (solo si ambos filtros son exactos)' : 'Exportar a PDF'}
                             >
-                                <div className={`
-                                    absolute inset-0 bg-gradient-to-r opacity-0 group-hover:opacity-100 transition-opacity duration-300 rounded-md
-                                    ${isAreaOrUserFiltered ? 'from-fuchsia-600/20' : 'from-red-600/20'} to-transparent
-                                `}></div>
-                                <div className="relative">
-                                    {isAreaOrUserFiltered ? (
-                                        <div className="flex items-center gap-2">
-                                            <FileText className="h-4 w-4 transition-transform group-hover:scale-110 group-hover:-translate-y-0.5 duration-300" />
-                                            <span className="hidden sm:flex items-center gap-1">
-                                                PDF
-                                                <span className={`
-                                                    text-xs opacity-0 group-hover:opacity-100 transition-all duration-300 -translate-x-2 group-hover:translate-x-0
-                                                    ${isAreaOrUserFiltered ? 'text-fuchsia-300' : 'text-red-300'}
-                                                `}>
-                                                    personalizado
-                                                </span>
-                                            </span>
-                                        </div>
-                                    ) : (
-                                        <div className="flex items-center gap-2">
-                                            <File className="h-4 w-4 transition-transform group-hover:scale-110 group-hover:-translate-y-0.5 duration-300" />
-                                            <span className="hidden sm:flex items-center gap-1">
-                                                PDF
-                                                <span className="text-xs text-red-300 opacity-0 group-hover:opacity-100 transition-all duration-300 -translate-x-2 group-hover:translate-x-0">
-                                                    .pdf
-                                                </span>
-                                            </span>
-                                        </div>
-                                    )}
-                                </div>
+                                <FileUp className="h-4 w-4 transition-transform group-hover:scale-110 group-hover:-translate-y-0.5 duration-300" />
+                                <span className="hidden sm:flex items-center gap-1">
+                                    {isCustomPDFEnabled ? 'PDF Personalizado' : 'PDF'}
+                                </span>
                             </button>
                             {/* Refresh Button */}
                             <button
@@ -1022,470 +978,8 @@ export default function LevantamientoUnificado() {
                                     </span>
                                 )}
                             </button>
-
-                            {/* Filters Button */}
-                            <button
-                                onClick={() => setShowFilters(!showFilters)} 
-                                className={`
-                                    group relative px-4 py-2.5 rounded-lg font-medium 
-                                    flex items-center gap-2.5 transition-all duration-300
-                                    ${Object.values(filters).some(value => value.length > 0)
-                                        ? 'bg-gradient-to-br from-fuchsia-600/20 to-purple-600/20 text-fuchsia-300 hover:text-fuchsia-200'
-                                        : 'bg-gradient-to-br from-gray-800 to-gray-900 text-gray-400 hover:text-gray-300'
-                                    }
-                                    border
-                                    ${Object.values(filters).some(value => value.length > 0)
-                                        ? 'border-fuchsia-500/30 hover:border-fuchsia-400/50'
-                                        : 'border-gray-700 hover:border-gray-600'
-                                    }
-                                    shadow-lg
-                                    ${Object.values(filters).some(value => value.length > 0)
-                                        ? 'hover:shadow-fuchsia-500/10'
-                                        : 'hover:shadow-gray-800/30'
-                                    }
-                                    hover:scale-[1.02] active:scale-[0.98]
-                                    overflow-hidden
-                                `}
-                                title="Mostrar/ocultar filtros avanzados"
-                            >
-                                {/* Animated gradient background */}
-                                <div className={`
-                                    absolute inset-0 bg-gradient-to-r 
-                                    ${Object.values(filters).some(value => value.length > 0)
-                                        ? 'from-fuchsia-500/20 via-purple-500/20 to-transparent'
-                                        : 'from-gray-700/20 via-gray-600/20 to-transparent'
-                                    }
-                                    opacity-0 group-hover:opacity-100 transition-opacity duration-500
-                                    animate-gradient-x
-                                `}/>
-
-                                {/* Icon wrapper with animation */}
-                                <div className="relative">
-                                    <Filter className={`
-                                        h-4 w-4 transition-all duration-300
-                                        group-hover:scale-110 group-hover:rotate-[-10deg]
-                                        ${Object.values(filters).some(value => value.length > 0)
-                                            ? 'text-fuchsia-300 group-hover:text-fuchsia-200'
-                                            : 'text-gray-400 group-hover:text-gray-300'
-                                        }
-                                    `} />
-                                </div>
-
-                                {/* Text with underline animation */}
-                                <span className="relative">
-                                    Filtros
-                                    <span className={`
-                                        absolute inset-x-0 -bottom-0.5 h-px
-                                        ${Object.values(filters).some(value => value.length > 0)
-                                            ? 'bg-gradient-to-r from-transparent via-fuchsia-400/50 to-transparent'
-                                            : 'bg-gradient-to-r from-transparent via-gray-400/50 to-transparent'
-                                        }
-                                        opacity-0 group-hover:opacity-100 transition-all duration-300
-                                    `}/>
-                                </span>
-
-                                {/* Counter badge with animations */}
-                                {Object.values(filters).some(value => value.length > 0) && (
-                                    <span className={`
-                                        flex items-center justify-center
-                                        min-w-5 h-5 px-1.5
-                                        rounded-full text-xs font-bold
-                                        transition-all duration-300
-                                        ${Object.values(filters).some(value => value.length > 0)
-                                            ? 'bg-fuchsia-500/20 text-fuchsia-200 border border-fuchsia-400/30'
-                                            : 'bg-gray-800/80 text-gray-300 border border-gray-700'
-                                        }
-                                        group-hover:scale-110 group-hover:rotate-3
-                                        shadow-inner
-                                    `}>
-                                        {Object.values(filters).filter(value => value.length > 0).length}
-                                    </span>
-                                )}
-                            </button>
-
-                            {/* Clear Filters Button */}
-                            <button
-                                onClick={clearFilters}
-                                className="group relative px-4 py-2 bg-gradient-to-br from-red-950 to-rose-950 text-rose-300 rounded-lg font-medium flex items-center gap-2.5 hover:from-rose-900 hover:to-red-900 transition-all duration-300 shadow-lg hover:shadow-rose-900/30 border border-rose-800/30 hover:border-rose-700/50"
-                                title="Limpiar todos los filtros aplicados"
-                            >
-                                <div className="absolute inset-0 bg-gradient-to-r from-rose-500/10 via-red-500/10 to-transparent opacity-0 group-hover:opacity-100 transition-all duration-300 rounded-lg"></div>
-                                <svg 
-                                    xmlns="http://www.w3.org/2000/svg" 
-                                    className="h-4 w-4 transition-all duration-300 group-hover:rotate-180 group-hover:scale-110" 
-                                    viewBox="0 0 24 24" 
-                                    fill="none" 
-                                    stroke="currentColor" 
-                                    strokeWidth="2.5" 
-                                    strokeLinecap="round" 
-                                    strokeLinejoin="round"
-                                >
-                                    <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/>
-                                    <line x1="17" y1="17" x2="7" y2="17"/>
-                                    <polyline points="7 13 7 17 11 17"/>
-                                    <line x1="17" y1="8" x2="12" y2="8"/>
-                                </svg>
-                                <span className="relative">
-                                    Limpiar filtros
-                                    <span className="absolute inset-x-0 -bottom-px h-px bg-gradient-to-r from-transparent via-rose-400/50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></span>
-                                </span>
-                            </button>
                         </div>
                     </div>
-                    {showFilters && (
-                        <div className="mt-6 border border-gray-700 rounded-xl bg-black/80 shadow-xl backdrop-blur-lg transition-all duration-300 overflow-hidden">
-                            <div className="p-4 bg-gradient-to-r from-gray-900 to-black border-b border-gray-700">
-                                <h3 className="text-lg font-semibold text-white flex items-center">
-                                    <span className="mr-2">
-                                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-fuchsia-400" viewBox="0 0 20 20" fill="currentColor">
-                                            <path fillRule="evenodd" d="M3 3a1 1 0 011-1h12a1 1 0 011 1v3a1 1 0 01-.293.707L12 11.414V15a1 1 0 01-.293.707l-2 2A1 1 0 018 17v-5.586L3.293 6.707A1 1 0 013 6V3z" clipRule="evenodd" />
-                                        </svg>
-                                    </span>
-                                    Filtros Aplicados
-                                </h3>
-                            </div>
-
-                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-5 p-6">
-                                {/* Filter: Estado */}
-                                <div className="filter-group">
-                                    <label className="flex text-sm font-medium text-gray-300 mb-2 items-center">
-                                        <span className="h-2 w-2 rounded-full bg-blue-500 mr-2"></span>
-                                        Estado
-                                    </label>
-                                    <div className="relative">
-                                        <select
-                                            value={filters.estado.length ? filters.estado[0] : ''}
-                                            onChange={e => handleFilterChange('estado', e.target.value)}
-                                            className="w-full bg-gray-800 border border-gray-700 rounded-lg pl-3 pr-10 py-2.5 text-white focus:ring-2 focus:ring-fuchsia-500 focus:border-transparent transition-all appearance-none"
-                                            title="Filtrar por estado"
-                                        >
-                                            <option value="">Todos ({filterOptions.estados.length})</option>
-                                            {getFilteredOptions(filterOptions.estados, '').map(e => (
-                                                <option
-                                                    key={e}
-                                                    value={e}
-                                                >
-                                                    {e}
-                                                </option>
-                                            ))}
-                                        </select>
-                                        <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-fuchsia-400">
-                                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7"></path>
-                                            </svg>
-                                        </div>
-                                    </div>
-
-                                    {filters.estado.length > 0 && (
-                                        <div className="mt-3 flex flex-wrap gap-2">
-                                            {filters.estado.map(e => (
-                                                <span
-                                                    key={e}
-                                                    className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-gradient-to-r from-blue-600/40 to-blue-500/40 text-blue-100 border border-blue-500/50 shadow-sm shadow-blue-900/20"
-                                                >
-                                                    {e}
-                                                    <button
-                                                        onClick={() => handleFilterChange('estado', e)}
-                                                        className="ml-1.5 text-blue-200 hover:text-white rounded-full bg-blue-600/30 hover:bg-blue-600/50 transition-colors w-4 h-4 inline-flex items-center justify-center"
-                                                        aria-label="Eliminar filtro"
-                                                    >
-                                                        <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3" viewBox="0 0 20 20" fill="currentColor">
-                                                            <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
-                                                        </svg>
-                                                    </button>
-                                                </span>
-                                            ))}
-                                        </div>
-                                    )}
-                                </div>
-
-                                {/* Filter: Estatus */}
-                                <div className="filter-group">
-                                    <label className="flex text-sm font-medium text-gray-300 mb-2 items-center">
-                                        <span className="h-2 w-2 rounded-full bg-green-500 mr-2"></span>
-                                        Estatus
-                                    </label>
-                                    <div className="relative">
-                                        <select
-                                            value={filters.estatus.length ? filters.estatus[0] : ''}
-                                            onChange={e => handleFilterChange('estatus', e.target.value)}
-                                            className="w-full bg-gray-800 border border-gray-700 rounded-lg pl-3 pr-10 py-2.5 text-white focus:ring-2 focus:ring-fuchsia-500 focus:border-transparent transition-all appearance-none"
-                                            title="Filtrar por estatus"
-                                        >
-                                            <option value="">Todos ({filterOptions.estatus.length})</option>
-                                            {getFilteredOptions(filterOptions.estatus, '').map(e => (
-                                                <option
-                                                    key={e}
-                                                    value={e}
-                                                >
-                                                    {e}
-                                                </option>
-                                            ))}
-                                        </select>
-                                        <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-fuchsia-400">
-                                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7"></path>
-                                            </svg>
-                                        </div>
-                                    </div>
-
-                                    {filters.estatus.length > 0 && (
-                                        <div className="mt-3 flex flex-wrap gap-2">
-                                            {filters.estatus.map(e => (
-                                                <span
-                                                    key={e}
-                                                    className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-gradient-to-r from-green-600/40 to-green-500/40 text-green-100 border border-green-500/50 shadow-sm shadow-green-900/20"
-                                                >
-                                                    {e}
-                                                    <button
-                                                        onClick={() => handleFilterChange('estatus', e)}
-                                                        className="ml-1.5 text-green-200 hover:text-white rounded-full bg-green-600/30 hover:bg-green-600/50 transition-colors w-4 h-4 inline-flex items-center justify-center"
-                                                        aria-label="Eliminar filtro"
-                                                    >
-                                                        <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3" viewBox="0 0 20 20" fill="currentColor">
-                                                            <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
-                                                        </svg>
-                                                    </button>
-                                                </span>
-                                            ))}
-                                        </div>
-                                    )}
-                                </div>
-
-                                {/* Filter: Área */}
-                                <div className="filter-group">
-                                    <label className="flex text-sm font-medium text-gray-300 mb-2 items-center">
-                                        <span className="h-2 w-2 rounded-full bg-purple-500 mr-2"></span>
-                                        Área
-                                    </label>
-                                    <div className="relative">
-                                        <select
-                                            value={filters.area.length ? filters.area[0] : ''}
-                                            onChange={e => handleFilterChange('area', e.target.value)}
-                                            className="w-full bg-gray-800 border border-gray-700 rounded-lg pl-3 pr-10 py-2.5 text-white focus:ring-2 focus:ring-fuchsia-500 focus:border-transparent transition-all appearance-none"
-                                            title="Filtrar por área"
-                                        >
-                                            <option value="">Todas ({filterOptions.areas.length})</option>
-                                            {getFilteredOptions(filterOptions.areas, '').map(e => (
-                                                <option
-                                                    key={e}
-                                                    value={e}
-                                                >
-                                                    {e}
-                                                </option>
-                                            ))}
-                                        </select>
-                                        <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-fuchsia-400">
-                                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7"></path>
-                                            </svg>
-                                        </div>
-                                    </div>
-
-                                    {filters.area.length > 0 && (
-                                        <div className="mt-3 flex flex-wrap gap-2">
-                                            {filters.area.map(e => (
-                                                <span
-                                                    key={e}
-                                                    className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-gradient-to-r from-purple-600/40 to-purple-500/40 text-purple-100 border border-purple-500/50 shadow-sm shadow-purple-900/20"
-                                                >
-                                                    {e}
-                                                    <button
-                                                        onClick={() => handleFilterChange('area', e)}
-                                                        className="ml-1.5 text-purple-200 hover:text-white rounded-full bg-purple-600/30 hover:bg-purple-600/50 transition-colors w-4 h-4 inline-flex items-center justify-center"
-                                                        aria-label="Eliminar filtro"
-                                                    >
-                                                        <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3" viewBox="0 0 20 20" fill="currentColor">
-                                                            <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
-                                                        </svg>
-                                                    </button>
-                                                </span>
-                                            ))}
-                                        </div>
-                                    )}
-                                </div>
-
-                                {/* Filter: Rubro */}
-                                <div className="filter-group">
-                                    <label className="flex text-sm font-medium text-gray-300 mb-2 items-center">
-                                        <span className="h-2 w-2 rounded-full bg-amber-500 mr-2"></span>
-                                        Rubro
-                                    </label>
-                                    <div className="relative">
-                                        <select
-                                            value={filters.rubro.length ? filters.rubro[0] : ''}
-                                            onChange={e => handleFilterChange('rubro', e.target.value)}
-                                            className="w-full bg-gray-800 border border-gray-700 rounded-lg pl-3 pr-10 py-2.5 text-white focus:ring-2 focus:ring-fuchsia-500 focus:border-transparent transition-all appearance-none"
-                                            title="Filtrar por rubro"
-                                        >
-                                            <option value="">Todos ({filterOptions.rubros.length})</option>
-                                            {getFilteredOptions(filterOptions.rubros, '').map(e => (
-                                                <option
-                                                    key={e}
-                                                    value={e}
-                                                >
-                                                    {e}
-                                                </option>
-                                            ))}
-                                        </select>
-                                        <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-fuchsia-400">
-                                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7"></path>
-                                            </svg>
-                                        </div>
-                                    </div>
-
-                                    {filters.rubro.length > 0 && (
-                                        <div className="mt-3 flex flex-wrap gap-2">
-                                            {filters.rubro.map(e => (
-                                                <span
-                                                    key={e}
-                                                    className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-gradient-to-r from-amber-600/40 to-amber-500/40 text-amber-100 border border-amber-500/50 shadow-sm shadow-amber-900/20"
-                                                >
-                                                    {e}
-                                                    <button
-                                                        onClick={() => handleFilterChange('rubro', e)}
-                                                        className="ml-1.5 text-amber-200 hover:text-white rounded-full bg-amber-600/30 hover:bg-amber-600/50 transition-colors w-4 h-4 inline-flex items-center justify-center"
-                                                        aria-label="Eliminar filtro"
-                                                    >
-                                                        <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3" viewBox="0 0 20 20" fill="currentColor">
-                                                            <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
-                                                        </svg>
-                                                    </button>
-                                                </span>
-                                            ))}
-                                        </div>
-                                    )}
-                                </div>
-
-                                {/* Filter: Forma Adq. */}
-                                <div className="filter-group">
-                                    <label className="flex text-sm font-medium text-gray-300 mb-2 items-center">
-                                        <span className="h-2 w-2 rounded-full bg-pink-500 mr-2"></span>
-                                        Forma Adq.
-                                    </label>
-                                    <div className="relative">
-                                        <select
-                                            value={filters.formadq.length ? filters.formadq[0] : ''}
-                                            onChange={e => handleFilterChange('formadq', e.target.value)}
-                                            className="w-full bg-gray-800 border border-gray-700 rounded-lg pl-3 pr-10 py-2.5 text-white focus:ring-2 focus:ring-fuchsia-500 focus:border-transparent transition-all appearance-none"
-                                            title="Filtrar por forma de adquisición"
-                                        >
-                                            <option value="">Todas ({filterOptions.formadq.length})</option>
-                                            {getFilteredOptions(filterOptions.formadq, '').map(e => (
-                                                <option
-                                                    key={e}
-                                                    value={e}
-                                                >
-                                                    {e}
-                                                </option>
-                                            ))}
-                                        </select>
-                                        <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-fuchsia-400">
-                                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7"></path>
-                                            </svg>
-                                        </div>
-                                    </div>
-
-                                    {filters.formadq.length > 0 && (
-                                        <div className="mt-3 flex flex-wrap gap-2">
-                                            {filters.formadq.map(e => (
-                                                <span
-                                                    key={e}
-                                                    className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-gradient-to-r from-pink-600/40 to-pink-500/40 text-pink-100 border border-pink-500/50 shadow-sm shadow-pink-900/20"
-                                                >
-                                                    {e}
-                                                    <button
-                                                        onClick={() => handleFilterChange('formadq', e)}
-                                                        className="ml-1.5 text-pink-200 hover:text-white rounded-full bg-pink-600/30 hover:bg-pink-600/50 transition-colors w-4 h-4 inline-flex items-center justify-center"
-                                                        aria-label="Eliminar filtro"
-                                                    >
-                                                        <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3" viewBox="0 0 20 20" fill="currentColor">
-                                                            <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
-                                                        </svg>
-                                                    </button>
-                                                </span>
-                                            ))}
-                                        </div>
-                                    )}
-                                </div>
-
-                                {/* Filter: Resguardante */}
-                                <div className="filter-group">
-                                    <label className="flex text-sm font-medium text-gray-300 mb-2 items-center">
-                                        <span className="h-2 w-2 rounded-full bg-cyan-500 mr-2"></span>
-                                        Resguardante
-                                    </label>
-                                    <div className="relative">
-                                        <select
-                                            value={filters.resguardante.length ? filters.resguardante[0] : ''}
-                                            onChange={e => handleFilterChange('resguardante', e.target.value)}
-                                            className="w-full bg-gray-800 border border-gray-700 rounded-lg pl-3 pr-10 py-2.5 text-white focus:ring-2 focus:ring-fuchsia-500 focus:border-transparent transition-all appearance-none"
-                                            title="Filtrar por resguardante"
-                                        >
-                                            <option value="">Todos ({filterOptions.resguardantes?.length})</option>
-                                            {getFilteredOptions(filterOptions.resguardantes || [], '').map(r => (
-                                                <option
-                                                    key={r}
-                                                    value={r}
-                                                >
-                                                    {r}
-                                                </option>
-                                            ))}
-                                        </select>
-                                        <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-fuchsia-400">
-                                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7"></path>
-                                            </svg>
-                                        </div>
-                                    </div>
-
-                                    {filters.resguardante.length > 0 && (
-                                        <div className="mt-3 flex flex-wrap gap-2">
-                                            {filters.resguardante.map(e => (
-                                                <span
-                                                    key={e}
-                                                    className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-gradient-to-r from-cyan-600/40 to-cyan-500/40 text-cyan-100 border border-cyan-500/50 shadow-sm shadow-cyan-900/20"
-                                                >
-                                                    {e}
-                                                    <button
-                                                        onClick={() => handleFilterChange('resguardante', e)}
-                                                        className="ml-1.5 text-cyan-200 hover:text-white rounded-full bg-cyan-600/30 hover:bg-cyan-600/50 transition-colors w-4 h-4 inline-flex items-center justify-center"
-                                                        aria-label="Eliminar filtro"
-                                                    >
-                                                        <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3" viewBox="0 0 20 20" fill="currentColor">
-                                                            <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
-                                                        </svg>
-                                                    </button>
-                                                </span>
-                                            ))}
-                                        </div>
-                                    )}
-                                </div>
-                            </div>
-
-                            {/* Active Filters Summary */}
-                            {Object.values(filters).some(arr => arr.length > 0) && (
-                                <div className="px-6 py-4 bg-gray-800/70 border-t border-gray-700 flex flex-wrap items-center justify-between gap-4">
-                                    <div className="flex items-center">
-                                        <span className="text-sm text-gray-400">
-                                            {Object.values(filters).flat().length} {Object.values(filters).flat().length === 1 ? 'filtro activo' : 'filtros activos'}
-                                        </span>
-                                    </div>
-                                    <button
-                                        onClick={() => handleClearAllFilters()}
-                                        className="text-sm text-fuchsia-300 hover:text-fuchsia-100 hover:underline flex items-center transition-colors"
-                                    >
-                                        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" viewBox="0 0 20 20" fill="currentColor">
-                                            <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293-1.293a1 0 001.414-1.414L11.414 10l1.293-1.293a1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
-                                        </svg>
-                                        Limpiar todos los filtros
-                                    </button>
-                                </div>
-                            )}
-                        </div>
-                    )}
                 </div>
             </div>
             {message && (
@@ -1504,8 +998,8 @@ export default function LevantamientoUnificado() {
                         <div className={`relative p-6 bg-gradient-to-b from-black to-gray-900 ${exportType === 'excel' ? 'from-green-950 to-green-900' : 'from-red-950 to-red-900'
                             }`}>
                             <div className={`absolute top-0 left-0 w-full h-1 bg-gradient-to-r ${exportType === 'excel'
-                                    ? 'from-green-500/60 via-green-400 to-green-500/60'
-                                    : 'from-red-500/60 via-red-400 to-red-500/60'
+                                ? 'from-green-500/60 via-green-400 to-green-500/60'
+                                : 'from-red-500/60 via-red-400 to-red-500/60'
                                 }`}></div>
 
                             <button
@@ -1557,8 +1051,8 @@ export default function LevantamientoUnificado() {
                                         <button
                                             onClick={handleExport}
                                             className={`w-full py-3 px-4 font-medium rounded-lg flex items-center justify-center gap-2 transition-all transform hover:scale-[1.02] shadow-lg ${exportType === 'excel'
-                                                    ? 'bg-gradient-to-r from-green-600 to-green-500 hover:from-green-500 hover:to-green-400'
-                                                    : 'bg-gradient-to-r from-red-600 to-red-500 hover:from-red-500 hover:to-red-400'
+                                                ? 'bg-gradient-to-r from-green-600 to-green-500 hover:from-green-500 hover:to-green-400'
+                                                : 'bg-gradient-to-r from-red-600 to-red-500 hover:from-red-500 hover:to-red-400'
                                                 } text-black`}
                                         >
                                             {loading ? (
@@ -1586,130 +1080,151 @@ export default function LevantamientoUnificado() {
             )}
             {showAreaPDFModal && (
                 <div className="fixed inset-0 bg-black/90 flex items-center justify-center z-50 px-4 animate-fadeIn">
-                    <div className="bg-black rounded-2xl shadow-2xl border border-fuchsia-600/30 w-full max-w-md overflow-hidden transition-all duration-300 transform">
-                        <div className="relative p-6 bg-gradient-to-b from-black to-fuchsia-950">
-                            <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-fuchsia-500/60 via-fuchsia-400 to-fuchsia-500/60"></div>
-                            <button
-                                onClick={() => setShowAreaPDFModal(false)}
-                                className="absolute top-3 right-3 p-2 rounded-full bg-black/60 hover:bg-gray-900 text-fuchsia-400 hover:text-fuchsia-500 border border-fuchsia-500/30 transition-colors"
-                                title="Cerrar"
-                            >
-                                <X className="h-4 w-4" />
-                            </button>
-                            <div className="flex flex-col items-center text-center mb-4">
-                                <div className="p-3 rounded-full border border-fuchsia-500/30 bg-fuchsia-500/10 mb-3">
-                                    <FileText className="h-8 w-8 text-fuchsia-400" />
-                                </div>
-                                <h3 className="text-2xl font-bold text-fuchsia-400">Exportar PDF por Área/Usuario</h3>
-                                <p className="text-gray-400 mt-2">Genera un PDF con encabezado y firma personalizada para el área o usuario filtrado.</p>
+                    <div className="bg-black rounded-2xl shadow-2xl border w-full max-w-lg overflow-hidden border-fuchsia-700/40">
+                        <div className="p-6">
+                            <h2 className="text-xl font-bold mb-2 text-fuchsia-300 flex items-center gap-2">
+                                <FileUp className="h-5 w-5 text-fuchsia-400" /> Exportar PDF por Área y Director
+                            </h2>
+                            <div className="mb-3 flex items-center gap-2 text-xs text-gray-400">
+                                <span>Registros a exportar</span>
+                                <span className="inline-block px-2 py-0.5 rounded-full bg-gradient-to-r from-fuchsia-700 via-purple-700 to-amber-600 text-white font-bold shadow border border-fuchsia-400/60 min-w-[32px] text-center">
+                                    {getFilteredMueblesForExportPDF().length}
+                                </span>
                             </div>
-                            <form className="space-y-4 mt-2" onSubmit={e => { e.preventDefault(); handleAreaPDFGenerate(); }}>
-                                <div>
-                                    <label className="block text-xs uppercase tracking-wider text-gray-400 mb-1">Área</label>
-                                    <input
-                                        title='Área'
-                                        type="text"
-                                        value={areaPDFTarget.area}
-                                        onChange={e => {
-                                            setAreaPDFTarget(t => ({ ...t, area: e.target.value }));
-                                            setAutoCompletedFields(f => ({ ...f, area: false }));
-                                        }}
-                                        placeholder="Área"
-                                        required
-                                        disabled={areaPDFLoading || (isUsuario ? true : autoCompletedFields.area)}
-                                        className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2.5 text-white"
-                                    />
-                                    {isUsuario && (
-                                        <div className="text-xs text-gray-400 mt-1">Solo un administrador puede editar este campo</div>
-                                    )}
-                                </div>
-                                <div>
-                                    <label className="block text-xs uppercase tracking-wider text-gray-400 mb-1">Director/Jefe</label>
-                                    {areaDirectorAmbiguous && areaDirectorOptions.length > 0 ? (
-                                        <select
-                                            title='Director/Jefe'
-                                            className="w-full bg-gray-800 border border-fuchsia-700 rounded-lg px-3 py-2.5 text-white"
-                                            value={areaDirectorForm.nombre}
-                                            onChange={e => {
-                                                const selected = areaDirectorOptions.find(opt => opt.nombre === e.target.value);
-                                                setAreaDirectorForm(f => ({
-                                                    ...f,
-                                                    nombre: selected?.nombre || '',
-                                                    puesto: selected?.puesto || ''
-                                                }));
-                                                setAreaPDFTarget(t => ({ ...t, area: selected?.area || t.area }));
-                                                setAutoCompletedFields({
-                                                    area: !!selected?.area,
-                                                    nombre: !!selected?.nombre,
-                                                    puesto: !!selected?.puesto
-                                                });
-                                            }}
-                                            disabled={areaPDFLoading}
-                                        >
-                                            <option value="">Selecciona...</option>
-                                            {areaDirectorOptions.map(opt => (
-                                                <option key={opt.id_directorio} value={opt.nombre}>{opt.nombre}</option>
-                                            ))}
-                                        </select>
-                                    ) : (
+                            <div className="mb-4">
+                                <div className="flex flex-col gap-2">
+                                    <div>
+                                        <label className="block text-xs uppercase tracking-wider text-gray-400 mb-1">Área seleccionada</label>
                                         <input
                                             type="text"
                                             className="w-full bg-gray-800 border border-fuchsia-700 rounded-lg px-3 py-2.5 text-white"
-                                            value={areaDirectorForm.nombre}
-                                            onChange={e => {
-                                                setAreaDirectorForm(f => ({ ...f, nombre: e.target.value }));
-                                                setAutoCompletedFields(f => ({ ...f, nombre: false }));
-                                            }}
-                                            placeholder="Nombre del director/jefe"
-                                            required
-                                            disabled={areaPDFLoading || (isUsuario ? true : autoCompletedFields.nombre)}
+                                            value={areaPDFTarget.area}
+                                            readOnly
+                                            title="Área seleccionada para el PDF"
                                         />
-                                    )}
-                                    {isUsuario && (
-                                        <div className="text-xs text-gray-400 mt-1">Solo un administrador puede editar este campo</div>
-                                    )}
+                                    </div>
+                                    <div>
+                                        <label className="block text-xs uppercase tracking-wider text-gray-400 mb-1">Buscar director</label>
+                                        <input
+                                            type="text"
+                                            className="w-full bg-gray-800 border border-fuchsia-700 rounded-lg px-3 py-2.5 text-white mb-2"
+                                            placeholder="Buscar director por nombre..."
+                                            value={searchDirectorTerm || ''}
+                                            onChange={e => setSearchDirectorTerm(e.target.value)}
+                                            title="Buscar director por nombre"
+                                            autoFocus
+                                        />
+                                        <div className="max-h-48 overflow-y-auto rounded-lg border border-fuchsia-700/30 bg-gray-900/80 shadow-inner divide-y divide-fuchsia-800/30">
+                                            {filteredDirectorOptions.length === 0 ? (
+                                                <div className="text-gray-400 text-sm p-3">No se encontraron directores.</div>
+                                            ) : (
+                                                filteredDirectorOptions.map(opt => (
+                                                    <button
+                                                        key={opt.id_directorio}
+                                                        className={`w-full text-left px-4 py-2 flex flex-col gap-0.5 transition-all duration-150
+                                                            border-l-4
+                                                            ${directorSugerido && opt.id_directorio === directorSugerido.id_directorio ? 'border-fuchsia-400 bg-fuchsia-900/30 text-fuchsia-200 font-bold shadow-lg' :
+                                                                areaDirectorForm.nombre === opt.nombre ? 'border-fuchsia-600 bg-fuchsia-800/40 text-fuchsia-100 font-semibold' :
+                                                                    'border-transparent hover:bg-fuchsia-800/20 text-white'}
+                                                        `}
+                                                        onClick={() => {
+                                                            setAreaDirectorForm({ nombre: opt.nombre, puesto: opt.puesto });
+                                                            setSearchDirectorTerm(opt.nombre);
+                                                        }}
+                                                        type="button"
+                                                        title={`Seleccionar ${opt.nombre}`}
+                                                    >
+                                                        <span className="text-base font-semibold flex items-center gap-2">
+                                                            {opt.nombre}
+                                                            {directorSugerido && opt.id_directorio === directorSugerido.id_directorio && (
+                                                                <BadgeCheck className="inline h-4 w-4 text-fuchsia-400 ml-1" />
+                                                            )}
+                                                            {areaDirectorForm.nombre === opt.nombre && (
+                                                                <span className="ml-2 px-2 py-0.5 rounded-full bg-fuchsia-700/60 text-xs text-white">Seleccionado</span>
+                                                            )}
+                                                        </span>
+                                                        <span className="text-xs text-fuchsia-300">{opt.puesto}</span>
+                                                    </button>
+                                                ))
+                                            )}
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <label className="block text-xs uppercase tracking-wider text-gray-400 mb-1">Puesto</label>
+                                        <input
+                                            type="text"
+                                            className="w-full bg-gray-800 border border-fuchsia-700 rounded-lg px-3 py-2.5 text-white opacity-80 cursor-not-allowed"
+                                            value={areaDirectorForm.puesto}
+                                            readOnly
+                                            title="Puesto del director o jefe de área"
+                                        />
+                                    </div>
                                 </div>
-                                <div>
-                                    <label className="block text-xs uppercase tracking-wider text-gray-400 mb-1">Puesto</label>
-                                    <input
-                                        type="text"
-                                        className="w-full bg-gray-800 border border-fuchsia-700 rounded-lg px-3 py-2.5 text-white"
-                                        value={areaDirectorForm.puesto ?? ''}
-                                        onChange={e => {
-                                            setAreaDirectorForm(f => ({ ...f, puesto: e.target.value }));
-                                            setAutoCompletedFields(f => ({ ...f, puesto: false }));
-                                        }}
-                                        placeholder="Puesto del director/jefe"
-                                        required
-                                        disabled={areaPDFLoading || (isUsuario ? true : autoCompletedFields.puesto)}
-                                        autoComplete="off"
-                                    />
-                                    {isUsuario && (
-                                        <div className="text-xs text-gray-400 mt-1">Solo un administrador puede editar este campo</div>
-                                    )}
-                                </div>
-                                {areaPDFError && <div className="text-red-400 text-sm">{areaPDFError}</div>}
-                                <div className="w-full flex flex-col items-center gap-4 mt-4">
-                                    <button
-                                        type="submit"
-                                        className={`w-full py-3 px-4 font-medium rounded-lg flex items-center justify-center gap-2 transition-all transform hover:scale-[1.02] shadow-lg bg-gradient-to-r from-fuchsia-600 to-fuchsia-500 hover:from-fuchsia-500 hover:to-fuchsia-400 text-black ${areaPDFLoading || !areaDirectorForm.nombre || !areaDirectorForm.puesto || !areaPDFTarget.area ? 'opacity-50 cursor-not-allowed' : ''
-                                            }`}
-                                        disabled={areaPDFLoading || !areaDirectorForm.nombre || !areaDirectorForm.puesto || !areaPDFTarget.area}
-                                    >
-                                        {areaPDFLoading ? (
-                                            <>
-                                                <RefreshCw className="h-5 w-5 animate-spin" />
-                                                Generando PDF...
-                                            </>
-                                        ) : (
-                                            <>
-                                                <FileText className="h-5 w-5" />
-                                                Descargar PDF personalizado
-                                            </>
-                                        )}
-                                    </button>
-                                </div>
-                            </form>
+                            </div>
+                            {areaPDFError && <div className="text-red-400 mb-2 text-sm">{areaPDFError}</div>}
+                            <div className="flex justify-end gap-2 mt-4">
+                                <button
+                                    className="px-4 py-2 rounded bg-gray-800 text-gray-300 hover:bg-gray-700 border border-gray-700"
+                                    onClick={() => setShowAreaPDFModal(false)}
+                                >Cancelar</button>
+                                <button
+                                    className="px-4 py-2 rounded bg-fuchsia-700 text-white font-bold hover:bg-fuchsia-600 border border-fuchsia-800 disabled:opacity-50"
+                                    disabled={areaPDFLoading || getFilteredMueblesForExportPDF().length === 0}
+                                    onClick={async () => {
+                                        setAreaPDFLoading(true);
+                                        setAreaPDFError(null);
+                                        try {
+                                            // Construir la firma a partir del director y puesto seleccionados en el modal
+                                            const firmas = [
+                                                {
+                                                    concepto: 'DIRECTOR DE ÁREA',
+                                                    nombre: areaDirectorForm.nombre,
+                                                    puesto: areaDirectorForm.puesto
+                                                }
+                                            ];
+                                            const dataToExport = getFilteredMueblesForExportPDF();
+                                            if (!Array.isArray(dataToExport) || dataToExport.length === 0) {
+                                                setAreaPDFError('No hay datos para exportar.');
+                                                setAreaPDFLoading(false);
+                                                return;
+                                            }
+                                            // Validar que todos los elementos sean objetos planos y tengan los campos requeridos
+                                            const plainData = dataToExport.map(item => ({ ...item }));
+                                            if (!plainData.every(obj => obj && typeof obj === 'object' && obj.id_inv && obj.area && obj.usufinal)) {
+                                                setAreaPDFError('Error: Hay registros corruptos o incompletos.');
+                                                setAreaPDFLoading(false);
+                                                return;
+                                            }
+                                            try {
+                                                await generatePDFPerArea({
+                                                    data: plainData,
+                                                    firmas,
+                                                    columns: [
+                                                        { header: 'ID INVENTARIO', key: 'id_inv', width: 60 },
+                                                        { header: 'DESCRIPCIÓN', key: 'descripcion', width: 120 },
+                                                        { header: 'ESTADO', key: 'estado', width: 50 },
+                                                        { header: 'ESTATUS', key: 'estatus', width: 50 },
+                                                        { header: 'ÁREA', key: 'area', width: 60 },
+                                                        { header: 'USUARIO FINAL', key: 'usufinal', width: 70 },
+                                                    ],
+                                                    title: 'LEVANTAMIENTO DE INVENTARIO',
+                                                    fileName: `levantamiento_area_${new Date().toISOString().slice(0, 10)}`
+                                                });
+                                                setShowAreaPDFModal(false);
+                                                setMessage({ type: 'success', text: 'PDF generado exitosamente.' });
+                                            } catch (err) {
+                                                const msg = err instanceof Error ? err.message : 'Error al generar el PDF.';
+                                                setAreaPDFError(msg);
+                                            }
+                                        } catch (err: unknown) {
+                                            const msg = err instanceof Error ? err.message : 'Error al generar el PDF.';
+                                            setAreaPDFError(msg);
+                                        } finally {
+                                            setAreaPDFLoading(false);
+                                        }
+                                    }}
+                                >{areaPDFLoading ? 'Generando...' : 'Exportar PDF'}</button>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -1787,7 +1302,7 @@ export default function LevantamientoUnificado() {
                                                 <p className="text-lg font-medium">{error}</p>
                                             </td>
                                         </tr>
-                                    ) : muebles.length === 0 ? (
+                                    ) : totalFilteredCount === 0 ? (
                                         <tr className="h-96">
                                             <td colSpan={6} className="px-6 py-24 text-center text-gray-400">
                                                 <Search className="h-12 w-12 text-gray-500" />
@@ -1795,7 +1310,7 @@ export default function LevantamientoUnificado() {
                                             </td>
                                         </tr>
                                     ) : (
-                                        muebles.map((item) => (
+                                        paginatedMuebles.map((item) => (
                                             <tr
                                                 key={`${item.origen}-${item.id}`}
                                                 className={
@@ -1858,97 +1373,140 @@ export default function LevantamientoUnificado() {
                             </table>
                         </div>
                     )}
-                    <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mt-4">
-                        <div className="text-sm text-gray-400 font-medium">
-                            Mostrando <span className="text-white">{(currentPage - 1) * rowsPerPage + 1}-{Math.min(currentPage * rowsPerPage, filteredCount)}</span> de <span className="text-white">{filteredCount}</span> registros
-                        </div>
-                        <div className="flex items-center gap-4">
-                            <div className="flex items-center space-x-1 bg-gray-850 rounded-lg p-1">
-                                <button
-                                    onClick={() => changePage(1)}
-                                    disabled={currentPage === 1}
-                                    className={`p-1.5 rounded-md flex items-center justify-center ${currentPage === 1 ? 'text-gray-600 cursor-not-allowed' : 'text-gray-400 hover:bg-gray-800 hover:text-white'}`}
-                                    title="Primera página"
-                                >
-                                    <div className="flex">
-                                        <ChevronLeft className="h-4 w-4" />
-                                        <ChevronLeft className="h-4 w-4 -ml-2" />
-                                    </div>
-                                </button>
-                                <button
-                                    onClick={() => changePage(currentPage - 1)}
-                                    disabled={currentPage === 1}
-                                    className={`p-1.5 rounded-md ${currentPage === 1 ? 'text-gray-600 cursor-not-allowed' : 'text-gray-400 hover:bg-gray-800 hover:text-white'}`}
-                                    title="Página anterior"
-                                >
-                                    <ChevronLeft className="h-4 w-4" />
-                                </button>
-                                <div className="flex items-center">
-                                    {Array.from({ length: totalPages }, (_, i) => i + 1)
-                                        .filter(page =>
-                                            page === 1 ||
-                                            page === totalPages ||
-                                            (page >= currentPage - 1 && page <= currentPage + 1)
-                                        )
-                                        .map((page, i, arr) => (
-                                            <React.Fragment key={page}>
-                                                {i > 0 && arr[i] - arr[i - 1] > 1 && (
-                                                    <span className="px-2 text-gray-400">...</span>
-                                                )}
-                                                <button
-                                                    onClick={() => changePage(page)}
-                                                    className={`min-w-[32px] h-8 px-2 rounded-md text-sm font-medium flex items-center justify-center ${currentPage === page ? 'bg-black text-white' : 'text-gray-400 hover:bg-gray-800 hover:text-white'
-                                                        }`}
-                                                    title={`Ir a la página ${page}`}
-                                                >
-                                                    {page}
-                                                </button>
-                                            </React.Fragment>
+                    {/* Resumen de registros mostrados y total */}
+                    <div className="flex flex-col sm:flex-row gap-3 items-center justify-between mt-4 mb-3 px-2">
+                        {/* Contador de registros con diseño mejorado */}
+                        <div className="flex items-center gap-2 bg-neutral-900/50 px-4 py-2 rounded-xl border border-neutral-800 shadow-inner">
+                            {totalFilteredCount === 0 ? (
+                                <span className="text-neutral-400 flex items-center gap-2">
+                                    <AlertCircle className="h-4 w-4 text-neutral-500" />
+                                    No hay registros para mostrar
+                                </span>
+                            ) : (
+                                <div className="flex items-center gap-2">
+                                    <span className="text-neutral-300">Mostrando</span>
+                                    <span className="px-2 py-0.5 rounded-lg bg-blue-900/30 text-blue-300 font-mono border border-blue-800/50">
+                                        {((currentPage - 1) * rowsPerPage) + 1}–{Math.min(currentPage * rowsPerPage, totalFilteredCount)}
+                                    </span>
+                                    <span className="text-neutral-300">de</span>
+                                    <span className="px-2 py-0.5 rounded-lg bg-neutral-900 text-neutral-300 font-mono border border-neutral-800">
+                                        {totalFilteredCount}
+                                    </span>
+                                    <span className="text-neutral-400">registros</span>
+                                    {/* Selector de filas por página */}
+                                    <span className="ml-4 text-neutral-400">|</span>
+                                    <label htmlFor="rows-per-page" className="ml-2 text-xs text-neutral-400">Filas por página:</label>
+                                    <select
+                                        id="rows-per-page"
+                                        value={rowsPerPage}
+                                        onChange={e => { setRowsPerPage(Number(e.target.value)); setCurrentPage(1); }}
+                                        className="ml-1 px-2 py-1 rounded-lg bg-neutral-900 border border-neutral-700 text-blue-300 font-mono text-xs focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition"
+                                    >
+                                        {[10, 20, 30, 50, 100].map(opt => (
+                                            <option key={opt} value={opt}>{opt}</option>
                                         ))}
+                                    </select>
                                 </div>
-                                <button
-                                    onClick={() => changePage(currentPage + 1)}
-                                    disabled={currentPage === totalPages || filteredCount === 0}
-                                    className={`p-1.5 rounded-md ${currentPage === totalPages || filteredCount === 0 ? 'text-gray-600 cursor-not-allowed' : 'text-gray-400 hover:bg-gray-800 hover:text-white'}`}
-                                    title="Página siguiente"
-                                >
-                                    <ChevronRight className="h-4 w-4" />
-                                </button>
-                                <button
-                                    onClick={() => changePage(totalPages)}
-                                    disabled={currentPage === totalPages || filteredCount === 0}
-                                    className={`p-1.5 rounded-md flex items-center justify-center ${currentPage === totalPages || filteredCount === 0 ? 'text-gray-600 cursor-not-allowed' : 'text-gray-400 hover:bg-gray-800 hover:text-white'}`}
-                                    title="Última página"
-                                >
-                                    <div className="flex">
-                                        <ChevronRight className="h-4 w-4" />
-                                        <ChevronRight className="h-4 w-4 -ml-2" />
-                                    </div>
-                                </button>
-                            </div>
-                            <div className="flex items-center bg-gray-850 rounded-lg px-3 py-1.5">
-                                <label htmlFor="rowsPerPage" className="text-sm text-gray-400 mr-2">Filas:</label>
-                                <select
-                                    id="rowsPerPage"
-                                    value={rowsPerPage}
-                                    onChange={e => {
-                                        setRowsPerPage(Number(e.target.value));
-                                        setCurrentPage(1);
-                                    }}
-                                    className="bg-gray-800 border border-gray-700 rounded-md px-2 py-1 text-sm text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                                    title="Filas por página"
-                                >
-                                    <option value={10}>10</option>
-                                    <option value={25}>25</option>
-                                    <option value={50}>50</option>
-                                    <option value={100}>100</option>
-                                </select>
-                            </div>
+                            )}
                         </div>
+
+                        {/* Indicador de página actual con animación */}
+                        {totalPages > 1 && (
+                            <div className="flex items-center gap-2 bg-neutral-900/50 px-4 py-2 rounded-xl border border-neutral-800 shadow-inner">
+                                <span className="text-neutral-400">Página</span>
+                                <div className="flex items-center gap-1.5">
+                                    <span className="px-2.5 py-0.5 rounded-lg bg-blue-900/40 text-blue-300 font-mono font-bold border border-blue-700/50 min-w-[2rem] text-center transition-all duration-300 hover:scale-105 hover:bg-blue-900/60">
+                                        {currentPage}
+                                    </span>
+                                    <span className="text-neutral-500">/</span>
+                                    <span className="px-2.5 py-0.5 rounded-lg bg-neutral-900 text-neutral-400 font-mono min-w-[2rem] text-center border border-neutral-800">
+                                        {totalPages}
+                                    </span>
+                                </div>
+                            </div>
+                        )}
                     </div>
+                    {/* Barra de paginación elegante y numerada */}
+                    {totalPages > 1 && (
+                        <div className="flex items-center justify-center gap-2 mt-6 select-none">
+                            <button
+                                onClick={() => changePage(1)}
+                                disabled={currentPage === 1}
+                                className="px-2 py-1 rounded-lg border border-neutral-800 bg-neutral-900 text-neutral-400 hover:text-white hover:bg-neutral-800 transition disabled:opacity-40 disabled:cursor-not-allowed"
+                                title="Primera página"
+                            >
+                                <ChevronLeft className="inline h-4 w-4 -mr-1" />
+                                <ChevronLeft className="inline h-4 w-4 -ml-2" />
+                            </button>
+                            <button
+                                onClick={() => changePage(currentPage - 1)}
+                                disabled={currentPage === 1}
+                                className="px-2 py-1 rounded-lg border border-neutral-800 bg-neutral-900 text-neutral-400 hover:text-white hover:bg-neutral-800 transition disabled:opacity-40 disabled:cursor-not-allowed"
+                                title="Página anterior"
+                            >
+                                <ChevronLeft className="h-4 w-4" />
+                            </button>
+                            {/* Botones numerados dinámicos */}
+                            {(() => {
+                                const pageButtons = [];
+                                const maxButtons = 5; // cantidad máxima de botones numerados visibles
+                                let start = Math.max(1, currentPage - 2);
+                                let end = Math.min(totalPages, currentPage + 2);
+                                if (currentPage <= 3) {
+                                    end = Math.min(totalPages, maxButtons);
+                                } else if (currentPage >= totalPages - 2) {
+                                    start = Math.max(1, totalPages - maxButtons + 1);
+                                }
+                                if (start > 1) {
+                                    pageButtons.push(
+                                        <span key="start-ellipsis" className="px-2 text-neutral-500">...</span>
+                                    );
+                                }
+                                for (let i = start; i <= end; i++) {
+                                    pageButtons.push(
+                                        <button
+                                            key={i}
+                                            onClick={() => changePage(i)}
+                                            className={`mx-0.5 px-3 py-1.5 rounded-lg border text-sm font-semibold transition
+                                                ${i === currentPage
+                                                    ? 'bg-blue-900/80 text-blue-300 border-blue-700 shadow'
+                                                    : 'bg-neutral-900 text-neutral-300 border-neutral-700 hover:bg-blue-900/40 hover:text-blue-200 hover:border-blue-600'}
+                                            `}
+                                            aria-current={i === currentPage ? 'page' : undefined}
+                                        >
+                                            {i}
+                                        </button>
+                                    );
+                                }
+                                if (end < totalPages) {
+                                    pageButtons.push(
+                                        <span key="end-ellipsis" className="px-2 text-neutral-500">...</span>
+                                    );
+                                }
+                                return pageButtons;
+                            })()}
+                            <button
+                                onClick={() => changePage(currentPage + 1)}
+                                disabled={currentPage === totalPages}
+                                className="px-2 py-1 rounded-lg border border-neutral-800 bg-neutral-900 text-neutral-400 hover:text-white hover:bg-neutral-800 transition disabled:opacity-40 disabled:cursor-not-allowed"
+                                title="Página siguiente"
+                            >
+                                <ChevronRight className="h-4 w-4" />
+                            </button>
+                            <button
+                                onClick={() => changePage(totalPages)}
+                                disabled={currentPage === totalPages}
+                                className="px-2 py-1 rounded-lg border border-neutral-800 bg-neutral-900 text-neutral-400 hover:text-white hover:bg-neutral-800 transition disabled:opacity-40 disabled:cursor-not-allowed"
+                                title="Última página"
+                            >
+                                <ChevronRight className="inline h-4 w-4 -mr-2" />
+                                <ChevronRight className="inline h-4 w-4 -ml-1" />
+                            </button>
+                        </div>
+                    )}
                 </div>
-        </div>
-        <style jsx>{`
+            </div>
+            <style jsx>{`
             .flip-card {
                 perspective: 600px;
                 position: relative;
@@ -1981,7 +1539,7 @@ export default function LevantamientoUnificado() {
                     transform: rotateY(0deg);
                 }
                 .flip-card-back {
-                    z-index: 1;
+                    z-index:  1;
                     transform: rotateY(180deg);
                 }
                 }
