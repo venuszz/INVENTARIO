@@ -1,15 +1,26 @@
 "use client"
 import { useState, useEffect, useRef, useCallback } from 'react';
 import {
-    Search, RefreshCw, Filter, ChevronLeft, ChevronRight,
-    ArrowUpDown, AlertCircle, X, Save, Trash2, Check, CircleSlash2,
-    ActivitySquare, LayoutGrid, TagIcon, ChevronDown, Building2, FileText, User, Shield, AlertTriangle, Calendar, Info, Edit, Receipt, ClipboardList, Store, CheckCircle, XCircle, Plus, Clock, DollarSign
+    Search, RefreshCw, ChevronLeft, ChevronRight,
+    ArrowUpDown, AlertCircle, X, Save, Trash2, Check,
+    LayoutGrid, ChevronDown, Building2, FileText, User, Shield, AlertTriangle, Calendar, Info, Edit, Receipt, ClipboardList, Store, CheckCircle, XCircle, Plus, Clock, DollarSign
 } from 'lucide-react';
 import supabase from '@/app/lib/supabase/client';
 import Cookies from 'js-cookie';
 import { useUserRole } from "@/hooks/useUserRole";
 import RoleGuard from "@/components/roleGuard";
 import { useNotifications } from '@/hooks/useNotifications';
+
+// Utility function to format date strings as 'DD/MM/YYYY'
+function formatDate(dateString: string | null | undefined): string {
+    if (!dateString) return '';
+    const date = new Date(dateString);
+    if (isNaN(date.getTime())) return dateString;
+    const day = date.getDate().toString().padStart(2, '0');
+    const month = (date.getMonth() + 1).toString().padStart(2, '0');
+    const year = date.getFullYear();
+    return `${day}/${month}/${year}`;
+}
 
 interface Mueble {
     id: number;
@@ -150,27 +161,26 @@ const ImagePreview = ({ imagePath }: { imagePath: string | null }) => {
     );
 };
 
+// --- OMNIBOX FILTER STATE ---
+interface ActiveFilter {
+    term: string;
+    type: 'id' | 'descripcion' | 'rubro' | 'estado' | 'estatus' | 'area' | 'usufinal' | 'resguardante' | null;
+}
+
 export default function ConsultasIteaGeneral() {
     const [muebles, setMuebles] = useState<Mueble[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
-    const [filteredCount, setFilteredCount] = useState(0);
-    const [totalValue, setTotalValue] = useState(0); // Nuevo estado para el total
-    const [totalValueAllItems, setTotalValueAllItems] = useState(0); // Total de todos los artículos
     const [imageFile, setImageFile] = useState<File | null>(null);
     const [imagePreview, setImagePreview] = useState<string | null>(null);
     const [uploading, setUploading] = useState(false);
     const [currentPage, setCurrentPage] = useState(1);
     const [rowsPerPage, setRowsPerPage] = useState(10);
     const [searchTerm, setSearchTerm] = useState('');
+    const [searchMatchType, setSearchMatchType] = useState<ActiveFilter['type']>(null);
+    const [activeFilters, setActiveFilters] = useState<ActiveFilter[]>([]);
     const [sortField, setSortField] = useState<keyof Mueble>('id_inv');
     const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
-    const [filters, setFilters] = useState({
-        estado: '',
-        estatus: '',
-        area: '',
-        rubro: ''
-    });
     const [filterOptions, setFilterOptions] = useState<FilterOptions>({
         estados: [],
         estatus: [],
@@ -179,20 +189,8 @@ export default function ConsultasIteaGeneral() {
         formasAdq: [],
         directores: []
     });
-    const [uniqueFilterOptions, setUniqueFilterOptions] = useState<{
-        estados: string[];
-        estatus: string[];
-        areas: string[];
-        rubros: string[];
-    }>({
-        estados: [],
-        estatus: [],
-        areas: [],
-        rubros: []
-    });
     const [areas, setAreas] = useState<Area[]>([]);
     const [directores, setDirectores] = useState<Directorio[]>([]);
-    const [showFilters, setShowFilters] = useState(false);
     const [selectedItem, setSelectedItem] = useState<Mueble | null>(null);
     const [isEditing, setIsEditing] = useState(false);
     const [editFormData, setEditFormData] = useState<Mueble | null>(null);
@@ -301,27 +299,6 @@ export default function ConsultasIteaGeneral() {
         }
     }, []);
 
-    const fetchUniqueFilterOptions = useCallback(async () => {
-        try {
-            const { data, error } = await supabase
-                .from('mueblesitea')
-                .select('estado, estatus, area, rubro');
-            if (error) throw error;
-            const estados = Array.from(new Set(data?.map(item => item.estado?.trim()).filter(Boolean)));
-            const estatus = Array.from(new Set(data?.map(item => item.estatus?.trim()).filter(Boolean)));
-            const areas = Array.from(new Set(data?.map(item => item.area?.trim()).filter(Boolean)));
-            const rubros = Array.from(new Set(data?.map(item => item.rubro?.trim()).filter(Boolean)));
-            setUniqueFilterOptions({
-                estados,
-                estatus,
-                areas,
-                rubros
-            });
-        } catch (error) {
-            console.error('Error al cargar opciones únicas de filtro:', error);
-        }
-    }, []);
-
     // Modificar handleSelectDirector para lógica N:M
     const handleSelectDirector = (nombre: string) => {
         const selected = directores.find(d => d.nombre === nombre);
@@ -422,113 +399,33 @@ export default function ConsultasIteaGeneral() {
         }
     };
 
+    // Reemplaza fetchMuebles para traer todos los muebles sin paginación y sin límite de 1000
     const fetchMuebles = useCallback(async () => {
         setLoading(true);
         try {
-            let countQuery = supabase
-                .from('mueblesitea')
-                .select('*', { count: 'exact', head: false });
-
-            let dataQuery = supabase.from('mueblesitea').select('*');
-
-            if (searchTerm) {
-                const searchFilter = `id_inv.ilike.%${searchTerm}%,descripcion.ilike.%${searchTerm}%,resguardante.ilike.%${searchTerm}%,usufinal.ilike.%${searchTerm}%`;
-                countQuery = countQuery.or(searchFilter);
-                dataQuery = dataQuery.or(searchFilter);
-            }
-            if (filters.estado) {
-                countQuery = countQuery.eq('estado', filters.estado);
-                dataQuery = dataQuery.eq('estado', filters.estado);
-            }
-            if (filters.estatus) {
-                countQuery = countQuery.eq('estatus', filters.estatus);
-                dataQuery = dataQuery.eq('estatus', filters.estatus);
-            }
-            if (filters.area) {
-                countQuery = countQuery.eq('area', filters.area);
-                dataQuery = dataQuery.eq('area', filters.area);
-            }
-            if (filters.rubro) {
-                countQuery = countQuery.eq('rubro', filters.rubro);
-                dataQuery = dataQuery.eq('rubro', filters.rubro);
-            }
-            const { count } = await countQuery;
-            setFilteredCount(count || 0);
-            const { data, error } = await dataQuery
-                .order(sortField, { ascending: sortDirection === 'asc' })
-                .range((currentPage - 1) * rowsPerPage, currentPage * rowsPerPage - 1);
-            if (error) throw error;
-            const mueblesData = (data as Mueble[]) || [];
-            setMuebles(mueblesData);
-
-            // --- Calcular el total de los valores filtrados sumando en frontend con paginación automática ---
-            async function sumFilteredMueblesiteaValues(filters: { estado?: string; estatus?: string; area?: string; rubro?: string }) {
-                let total = 0;
-                let from = 0;
-                const pageSize = 1000;
-                let keepGoing = true;
-                while (keepGoing) {
-                    const { data, error } = await supabase
-                        .from('mueblesitea')
-                        .select('valor')
-                        .match({
-                            ...(filters.estado && { estado: filters.estado }),
-                            ...(filters.estatus && { estatus: filters.estatus }),
-                            ...(filters.area && { area: filters.area }),
-                            ...(filters.rubro && { rubro: filters.rubro })
-                        })
-                        .range(from, from + pageSize - 1);
-                    if (error) break;
-                    if (data && data.length > 0) {
-                        total += data.reduce((sum, item) => sum + (parseFloat(item.valor) || 0), 0);
-                        if (data.length < pageSize) {
-                            keepGoing = false;
-                        } else {
-                            from += pageSize;
-                        }
+            let allData: Mueble[] = [];
+            let from = 0;
+            const batchSize = 1000;
+            let keepFetching = true;
+            while (keepFetching) {
+                const { data, error } = await supabase
+                    .from('mueblesitea')
+                    .select('*')
+                    .range(from, from + batchSize - 1);
+                if (error) throw error;
+                if (data && data.length > 0) {
+                    allData = allData.concat(data as Mueble[]);
+                    if (data.length < batchSize) {
+                        keepFetching = false;
                     } else {
-                        keepGoing = false;
+                        from += batchSize;
                     }
+                } else {
+                    keepFetching = false;
                 }
-                return total;
             }
-            const totalFilteredItems = await sumFilteredMueblesiteaValues(filters);
-            setTotalValue(totalFilteredItems);
-
-            if (selectedItem && !mueblesData.some(item => item.id === selectedItem.id)) {
-                setSelectedItem(null);
-                setIsEditing(false);
-                setEditFormData(null);
-            }
+            setMuebles(allData);
             setError(null);
-
-            // --- Calcular el total de todos los artículos (sin filtros, incluyendo BAJA) sumando en frontend con paginación automática ---
-            async function sumAllMueblesiteaValues() {
-                let total = 0;
-                let from = 0;
-                const pageSize = 1000;
-                let keepGoing = true;
-                while (keepGoing) {
-                    const { data, error } = await supabase
-                        .from('mueblesitea')
-                        .select('valor')
-                        .range(from, from + pageSize - 1);
-                    if (error) break;
-                    if (data && data.length > 0) {
-                        total += data.reduce((sum, item) => sum + (parseFloat(item.valor) || 0), 0);
-                        if (data.length < pageSize) {
-                            keepGoing = false;
-                        } else {
-                            from += pageSize;
-                        }
-                    } else {
-                        keepGoing = false;
-                    }
-                }
-                return total;
-            }
-            const totalAllItems = await sumAllMueblesiteaValues();
-            setTotalValueAllItems(totalAllItems);
         } catch (error) {
             console.error('Error fetching data:', error);
             setError('Error al cargar los datos. Por favor, intente nuevamente.');
@@ -536,7 +433,7 @@ export default function ConsultasIteaGeneral() {
         } finally {
             setLoading(false);
         }
-    }, [currentPage, rowsPerPage, searchTerm, filters, sortField, sortDirection, selectedItem]);
+    }, []);
 
     const uploadImage = async (muebleId: number) => {
         if (!imageFile) return null;
@@ -591,13 +488,12 @@ export default function ConsultasIteaGeneral() {
     useEffect(() => {
         fetchDirectores();
         fetchFilterOptions();
-        fetchUniqueFilterOptions();
         fetchMuebles();
-    }, [fetchDirectores, fetchFilterOptions, fetchUniqueFilterOptions, fetchMuebles]);
+    }, [fetchDirectores, fetchFilterOptions, fetchMuebles]);
 
     useEffect(() => {
         setCurrentPage(1);
-    }, [searchTerm, filters, sortField, sortDirection, rowsPerPage]);
+    }, [searchTerm, sortField, sortDirection, rowsPerPage]);
 
     useEffect(() => {
         fetchMuebles();
@@ -661,7 +557,7 @@ export default function ConsultasIteaGeneral() {
             // Notificación de edición
             await createNotification({
                 title: `Artículo editado (ID: ${editFormData.id_inv})`,
-                description: `El artículo "${editFormData.descripcion}" fue editado. Cambios guardados por el usuario actual.`,
+                description: `El artículo "${editFormData.descripcion}" fue editado. Cambios guardados por el usuario current.`,
                 type: 'info',
                 category: 'inventario',
                 device: 'web',
@@ -711,7 +607,7 @@ export default function ConsultasIteaGeneral() {
             // Notificación de inactivación
             await createNotification({
                 title: `Artículo marcado como INACTIVO (ID: ${selectedItem.id_inv})`,
-                description: `El artículo "${selectedItem.descripcion}" fue marcado como INACTIVO por el usuario actual.`,
+                description: `El artículo "${selectedItem.descripcion}" fue marcado como INACTIVO por el usuario current.`,
                 type: 'warning',
                 category: 'inventario',
                 device: 'web',
@@ -767,7 +663,7 @@ export default function ConsultasIteaGeneral() {
                         createdBy = `${parsed.firstName} ${parsed.lastName}`;
                     }
                 }
-            } catch {}
+            } catch { }
 
             await supabase.from('deprecated').insert({
                 id_inv: selectedItem.id_inv || '',
@@ -870,41 +766,130 @@ export default function ConsultasIteaGeneral() {
         setImagePreview(null);
     };
 
-    const clearFilters = () => {
+    // Save current filter
+    const saveCurrentFilter = () => {
+        if (searchTerm && searchMatchType) {
+            setActiveFilters(prev => [...prev, { term: searchTerm, type: searchMatchType }]);
+            setSearchTerm('');
+            setSearchMatchType(null);
+        }
+    };
+
+    // Remove a filter
+    const removeFilter = (index: number) => {
+        setActiveFilters(prev => prev.filter((_, i) => i !== index));
+    };
+
+    // Remove all filters
+    const clearAllFilters = () => {
+        setActiveFilters([]);
         setSearchTerm('');
-        setFilters({
-            estado: '',
-            estatus: '',
-            area: '',
-            rubro: ''
+        setSearchMatchType(null);
+    };
+
+    // --- OMNIBOX MATCH TYPE DETECTION ---
+    useEffect(() => {
+        if (!searchTerm || muebles.length === 0) {
+            setSearchMatchType(null);
+            return;
+        }
+        const clean = (str: string) => (str || '').normalize('NFKD').replace(/\p{Diacritic}/gu, '').toLowerCase().trim();
+        const term = clean(searchTerm);
+        let bestMatch = { type: null, value: '', score: 0 } as { type: ActiveFilter['type'], value: string, score: number };
+        for (const item of muebles) {
+            // Usufinal/Resguardante
+            if ((item.usufinal && clean(item.usufinal).includes(term)) || (item.resguardante && clean(item.resguardante).includes(term))) {
+                const exact = clean(item.usufinal || '') === term || clean(item.resguardante || '') === term;
+                const score = exact ? 10 : 9;
+                if (score > bestMatch.score) bestMatch = { type: 'usufinal', value: item.usufinal || item.resguardante || '', score };
+            }
+            // Área
+            if (item.area && clean(item.area).includes(term)) {
+                const exact = clean(item.area) === term;
+                const score = exact ? 8 : 7;
+                if (score > bestMatch.score) bestMatch = { type: 'area', value: item.area, score };
+            }
+            // ID
+            if (item.id_inv && clean(item.id_inv).includes(term)) {
+                const exact = clean(item.id_inv) === term;
+                const score = exact ? 6 : 5;
+                if (score > bestMatch.score) bestMatch = { type: 'id', value: item.id_inv, score };
+            }
+            // Descripción
+            if (item.descripcion && clean(item.descripcion).includes(term)) {
+                const exact = clean(item.descripcion) === term;
+                const score = exact ? 4 : 3;
+                if (score > bestMatch.score) bestMatch = { type: 'descripcion', value: item.descripcion, score };
+            }
+            // Rubro
+            if (item.rubro && clean(item.rubro).includes(term)) {
+                const exact = clean(item.rubro) === term;
+                const score = exact ? 2 : 1;
+                if (score > bestMatch.score) bestMatch = { type: 'rubro', value: item.rubro, score };
+            }
+            // Estado
+            if (item.estado && clean(item.estado).includes(term)) {
+                const score = 1;
+                if (score > bestMatch.score) bestMatch = { type: 'estado', value: item.estado, score };
+            }
+            // Estatus
+            if (item.estatus && clean(item.estatus).includes(term)) {
+                const score = 1;
+                if (score > bestMatch.score) bestMatch = { type: 'estatus', value: item.estatus, score };
+            }
+            // All other fields (for completeness, but not used for filter chips)
+            const otherFields: (keyof Mueble)[] = [
+                'valor', 'f_adq', 'formadq', 'proveedor', 'factura', 'ubicacion_es', 'ubicacion_mu', 'ubicacion_no', 'fechabaja', 'causadebaja', 'image_path'
+            ];
+            for (const field of otherFields) {
+                const val = item[field];
+                if (typeof val === 'string' && clean(val).includes(term)) {
+                    // Lower score for less relevant fields
+                    if (bestMatch.score < 0.5) bestMatch = { type: null, value: val, score: 0.5 };
+                }
+            }
+        }
+        setSearchMatchType(bestMatch.type);
+    }, [searchTerm, muebles]);
+
+    // --- OMNIBOX FILTERING ---
+    const clean = (str: string) => (str || '').normalize('NFKD').replace(/\p{Diacritic}/gu, '').toLowerCase();
+    const filteredMueblesOmni = muebles.filter(item => {
+        if (activeFilters.length === 0 && !searchTerm) return true;
+        const passesActiveFilters = activeFilters.every(filter => {
+            const filterTerm = clean(filter.term);
+            if (!filterTerm) return true;
+            switch (filter.type) {
+                case 'id': return clean(item.id_inv || '').includes(filterTerm);
+                case 'descripcion': return clean(item.descripcion || '').includes(filterTerm);
+                case 'rubro': return clean(item.rubro || '').includes(filterTerm);
+                case 'estado': return clean(item.estado || '').includes(filterTerm);
+                case 'estatus': return clean(item.estatus || '').includes(filterTerm);
+                case 'area': return clean(item.area || '').includes(filterTerm);
+                case 'usufinal': return clean(item.usufinal || '').includes(filterTerm);
+                case 'resguardante': return clean(item.resguardante || '').includes(filterTerm);
+                default: return true;
+            }
         });
-        setCurrentPage(1);
-    };
+        const currentTerm = clean(searchTerm);
+        const passesCurrentSearch = !currentTerm ||
+            clean(item.id_inv || '').includes(currentTerm) ||
+            clean(item.descripcion || '').includes(currentTerm) ||
+            clean(item.rubro || '').includes(currentTerm) ||
+            clean(item.estado || '').includes(currentTerm) ||
+            clean(item.estatus || '').includes(currentTerm) ||
+            clean(item.area || '').includes(currentTerm) ||
+            clean(item.usufinal || '').includes(currentTerm) ||
+            clean(item.resguardante || '').includes(currentTerm);
+        return passesActiveFilters && passesCurrentSearch;
+    });
+    const totalCount = filteredMueblesOmni.length;
+    const totalPages = Math.ceil(totalCount / rowsPerPage);
+    const paginatedMuebles = filteredMueblesOmni.slice((currentPage - 1) * rowsPerPage, currentPage * rowsPerPage);
 
-    const handleSort = (field: keyof Mueble) => {
-        if (sortField === field) {
-            setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
-        } else {
-            setSortField(field);
-            setSortDirection('asc');
-        }
-        setCurrentPage(1);
-    };
-
-    const formatDate = (dateStr: string | null) => {
-        if (!dateStr) return '';
-        const date = new Date(dateStr);
-        return date.toLocaleDateString('es-MX');
-    };
-
-    const totalPages = Math.ceil(filteredCount / rowsPerPage);
-
-    const changePage = (page: number) => {
-        if (page === currentPage) return;
-        if (page >= 1 && page <= totalPages) {
-            setCurrentPage(page);
-        }
-    };
+    // Calcular totales directamente
+    const filteredValue = filteredMueblesOmni.reduce((acc, item) => acc + (parseFloat(item.valor || '0') || 0), 0);
+    const allValue = muebles.reduce((acc, item) => acc + (parseFloat(item.valor || '0') || 0), 0);
 
     const getPageNumbers = () => {
         const pages: (number | string)[] = [];
@@ -961,6 +946,168 @@ export default function ConsultasIteaGeneral() {
 
     const userRole = useUserRole();
 
+    // Sorting logic for omnibox
+    const handleSort = (field: keyof Mueble) => {
+        if (sortField === field) {
+            setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
+        } else {
+            setSortField(field);
+            setSortDirection('asc');
+        }
+        setCurrentPage(1);
+    };
+
+    // Pagination logic for omnibox
+    const changePage = (page: number) => {
+        if (page === currentPage) return;
+        if (page >= 1 && page <= totalPages) {
+            setCurrentPage(page);
+        }
+    };
+
+    // --- OMNIBOX AUTOCOMPLETADO Y SUGERENCIAS ---
+    const [suggestions, setSuggestions] = useState<{ value: string; type: ActiveFilter['type'] }[]>([]);
+    const [highlightedIndex, setHighlightedIndex] = useState<number>(-1);
+    const [showSuggestions, setShowSuggestions] = useState(false);
+    const inputRef = useRef<HTMLInputElement>(null);
+
+    function getTypeIcon(type: ActiveFilter['type']) {
+        switch (type) {
+            case 'id': return <span className="h-4 w-4 text-blue-400 font-bold">#</span>;
+            case 'area': return <span className="h-4 w-4 text-purple-400 font-bold">A</span>;
+            case 'usufinal': return <span className="h-4 w-4 text-amber-400 font-bold">D</span>;
+            case 'resguardante': return <span className="h-4 w-4 text-cyan-400 font-bold">R</span>;
+            case 'descripcion': return <span className="h-4 w-4 text-fuchsia-400 font-bold">Desc</span>;
+            case 'rubro': return <span className="h-4 w-4 text-green-400 font-bold">Ru</span>;
+            case 'estado': return <span className="h-4 w-4 text-cyan-400 font-bold">Edo</span>;
+            case 'estatus': return <span className="h-4 w-4 text-pink-400 font-bold">Est</span>;
+            default: return null;
+        }
+    }
+    function getTypeLabel(type: ActiveFilter['type']) {
+        switch (type) {
+            case 'id': return 'ID';
+            case 'area': return 'ÁREA';
+            case 'usufinal': return 'DIRECTOR';
+            case 'resguardante': return 'RESGUARDANTE';
+            case 'descripcion': return 'DESCRIPCIÓN';
+            case 'rubro': return 'RUBRO';
+            case 'estado': return 'ESTADO';
+            case 'estatus': return 'ESTATUS';
+            default: return '';
+        }
+    }
+    // Renderiza el dropdown como hijo del contenedor relativo
+    function SuggestionDropdown() {
+        if (!showSuggestions || suggestions.length === 0) return null;
+        return (
+            <ul
+                id="omnibox-suggestions"
+                role="listbox"
+                title="Sugerencias de búsqueda"
+                className={"absolute left-0 top-full w-full mt-1 animate-fadeInUp max-h-80 overflow-y-auto rounded-2xl shadow-2xl border border-neutral-800 bg-black/95 backdrop-blur-xl ring-1 ring-inset ring-neutral-900/60 transition-all duration-200 z-50"}
+            >
+                {suggestions.map((s, i) => {
+                    const isSelected = highlightedIndex === i;
+                    return (
+                        <li
+                            key={s.value + s.type}
+                            role="option"
+                            {...(isSelected && { 'aria-selected': 'true' })}
+                            onMouseDown={() => handleSuggestionClick(i)}
+                            className={`flex items-center gap-2 px-3 py-2 cursor-pointer select-none text-xs whitespace-normal break-words w-full ${isSelected ? 'bg-neutral-800/80 text-white' : 'text-neutral-300'} hover:bg-neutral-800/80`}
+                        >
+                            <span className="shrink-0">{getTypeIcon(s.type)}</span>
+                            <span className="font-semibold whitespace-normal break-words w-full">{s.value}</span>
+                            <span className="ml-auto text-[10px] text-neutral-400 font-mono">{getTypeLabel(s.type)}</span>
+                        </li>
+                    );
+                })}
+            </ul>
+        );
+    }
+    function handleSuggestionClick(index: number) {
+        const s = suggestions[index];
+        if (!s) return;
+        setActiveFilters(prev => [...prev, { term: s.value, type: s.type }]);
+        setSearchTerm('');
+        setSearchMatchType(null);
+        setShowSuggestions(false);
+    }
+    function handleInputKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
+        if (!showSuggestions || suggestions.length === 0) return;
+        if (e.key === 'ArrowDown') {
+            e.preventDefault();
+            setHighlightedIndex(i => (i + 1) % suggestions.length);
+        } else if (e.key === 'ArrowUp') {
+            e.preventDefault();
+            setHighlightedIndex(i => (i - 1 + suggestions.length) % suggestions.length);
+        } else if (e.key === 'Enter') {
+            e.preventDefault();
+            if (highlightedIndex >= 0 && suggestions[highlightedIndex]) {
+                handleSuggestionClick(highlightedIndex);
+            }
+        } else if (e.key === 'Escape') {
+            setShowSuggestions(false);
+        }
+    }
+    function handleInputBlur() {
+        setTimeout(() => setShowSuggestions(false), 100);
+    }
+    // Generar sugerencias al escribir
+    useEffect(() => {
+        if (!searchTerm || !muebles.length) {
+            setSuggestions([]);
+            setShowSuggestions(false);
+            setHighlightedIndex(-1);
+            return;
+        }
+        const clean = (str: string) => (str || '').normalize('NFKD').replace(/\p{Diacritic}/gu, '').toLowerCase().trim();
+        const term = clean(searchTerm);
+        const seen = new Set<string>();
+        const fields = [
+            { type: 'id' as ActiveFilter['type'], label: 'ID' },
+            { type: 'area' as ActiveFilter['type'], label: 'Área' },
+            { type: 'usufinal' as ActiveFilter['type'], label: 'Director' },
+            { type: 'resguardante' as ActiveFilter['type'], label: 'Resguardante' },
+            { type: 'descripcion' as ActiveFilter['type'], label: 'Descripción' },
+            { type: 'rubro' as ActiveFilter['type'], label: 'Rubro' },
+            { type: 'estado' as ActiveFilter['type'], label: 'Estado' },
+            { type: 'estatus' as ActiveFilter['type'], label: 'Estatus' },
+        ];
+        let allSuggestions: { value: string; type: ActiveFilter['type'] }[] = [];
+        for (const f of fields) {
+            let values: string[] = [];
+            switch (f.type) {
+                case 'id': values = muebles.map(m => m.id_inv || '').filter(Boolean) as string[]; break;
+                case 'area': values = muebles.map(m => m.area || '').filter(Boolean) as string[]; break;
+                case 'usufinal': values = muebles.map(m => m.usufinal || '').filter(Boolean) as string[]; break;
+                case 'resguardante': values = muebles.map(m => m.resguardante || '').filter(Boolean) as string[]; break;
+                case 'descripcion': values = muebles.map(m => m.descripcion || '').filter(Boolean) as string[]; break;
+                case 'rubro': values = muebles.map(m => m.rubro || '').filter(Boolean) as string[]; break;
+                case 'estado': values = muebles.map(m => m.estado || '').filter(Boolean) as string[]; break;
+                case 'estatus': values = muebles.map(m => m.estatus || '').filter(Boolean) as string[]; break;
+                default: values = [];
+            }
+            for (const v of values) {
+                if (!v) continue;
+                const vClean = clean(v);
+                if (vClean.includes(term) && !seen.has(f.type + ':' + vClean)) {
+                    allSuggestions.push({ value: v, type: f.type });
+                    seen.add(f.type + ':' + vClean);
+                }
+            }
+        }
+        // Prioridad: exactos primero, luego parciales, máx 7
+        allSuggestions = [
+            ...allSuggestions.filter(s => clean(s.value) === term),
+            ...allSuggestions.filter(s => clean(s.value) !== term)
+        ].slice(0, 7);
+        setSuggestions(allSuggestions);
+        setShowSuggestions(allSuggestions.length > 0);
+        setHighlightedIndex(allSuggestions.length > 0 ? 0 : -1);
+    }, [searchTerm, muebles]);
+
     return (
         <div className="bg-black text-white min-h-screen p-2 sm:p-4 md:p-6 lg:p-8">
             {/* Notificación de mensaje */}
@@ -993,7 +1140,7 @@ export default function ConsultasIteaGeneral() {
                     <p className="text-gray-400 text-sm sm:text-base">Vista general de todos los bienes registrados en el sistema.</p>
                 </div>
 
-                {/* Nuevo componente de valor total mejorado */}
+                {/* Panel de valor total mejorado */}
                 <div className="bg-gradient-to-b from-gray-900 via-black to-black p-8 border-b border-gray-800">
                     <div className="flex flex-col lg:flex-row justify-between items-stretch gap-6">
                         {/* Panel de valor total */}
@@ -1011,12 +1158,12 @@ export default function ConsultasIteaGeneral() {
                                         <h3 className="text-sm font-medium text-gray-400 mb-1 group-hover:text-indigo-300 transition-colors">Valor Total del Inventario</h3>
                                         <div className="relative">
                                             <p className="text-4xl font-bold bg-gradient-to-r from-indigo-200 via-purple-200 to-pink-200 bg-clip-text text-transparent group-hover:from-indigo-300 group-hover:via-purple-300 group-hover:to-pink-300 transition-all duration-500">
-                                                ${(Object.values(filters).some(value => value !== '') ? totalValue : totalValueAllItems).toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                                ${(activeFilters.length > 0 || searchTerm ? filteredValue : allValue).toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                                             </p>
                                             <div className="absolute -bottom-2 left-0 w-full h-px bg-gradient-to-r from-indigo-500/50 via-purple-500/50 to-pink-500/50"></div>
                                         </div>
                                         <p className="text-sm text-gray-500 mt-2 group-hover:text-gray-400 transition-colors">
-                                            {Object.values(filters).some(value => value !== '') ? 'Valor de artículos filtrados' : 'Valor total de todos los artículos'}
+                                            {activeFilters.length > 0 || searchTerm ? 'Valor de artículos filtrados' : 'Valor total de todos los artículos'}
                                         </p>
                                     </div>
                                 </div>
@@ -1031,7 +1178,7 @@ export default function ConsultasIteaGeneral() {
                                     <div className="relative">
                                         <div className="absolute inset-0 bg-gradient-to-r from-emerald-500/10 via-teal-500/10 to-cyan-500/10 opacity-0 group-hover:opacity-100 transition-opacity duration-500 rounded-xl"></div>
                                         <span className="relative text-3xl font-bold bg-gradient-to-r from-emerald-200 via-teal-200 to-cyan-200 bg-clip-text text-transparent group-hover:from-emerald-300 group-hover:via-teal-300 group-hover:to-cyan-300 transition-all duration-500 px-6 py-3">
-                                            {filteredCount}
+                                            {activeFilters.length > 0 || searchTerm ? filteredMueblesOmni.length : muebles.length}
                                         </span>
                                     </div>
                                 </div>
@@ -1044,174 +1191,96 @@ export default function ConsultasIteaGeneral() {
                 <div className={getMainContainerClass()}>
                     {/* Panel izquierdo: Búsqueda, filtros y tabla */}
                     <div className={`flex-1 min-w-0 flex flex-col ${selectedItem ? '' : 'w-full'}`}>
-                        {/* Panel de acciones y búsqueda mejorado */}
-                        <div className="mb-6 bg-gradient-to-br from-gray-900 via-black to-black p-6 rounded-xl border border-gray-800 shadow-lg">
-                            <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-4">
-                                <div className="relative flex-grow group">
-                                    <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                                        <Search className="h-5 w-5 text-gray-500 group-hover:text-blue-400 transition-colors duration-300" />
+                        {/* Panel de acciones y búsqueda omnibox */}
+                        <div className="mb-6 bg-gradient-to-br from-gray-900/20 to-gray-900/40 p-4 rounded-xl border border-gray-800 shadow-inner hover:shadow-lg transition-shadow">
+                            <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-4 mb-4">
+                                <div className="flex-1 relative">
+                                    <div className="flex gap-2">
+                                        <div className="relative flex-1">
+                                            <input
+                                                ref={inputRef}
+                                                type="text"
+                                                value={searchTerm}
+                                                onChange={e => setSearchTerm(e.target.value)}
+                                                onFocus={() => setShowSuggestions(suggestions.length > 0)}
+                                                onBlur={handleInputBlur}
+                                                onKeyDown={handleInputKeyDown}
+                                                placeholder="Buscar por ID, descripción, área, director, etc."
+                                                className="w-full px-4 py-2 rounded-lg bg-black border border-gray-700 text-white focus:outline-none focus:ring-2 focus:ring-blue-700"
+                                            />
+                                            <SuggestionDropdown />
+                                        </div>
+                                        <button
+                                            onClick={saveCurrentFilter}
+                                            disabled={!searchTerm || !searchMatchType}
+                                            className={`px-4 py-2 rounded-lg border flex items-center gap-2 ${searchTerm && searchMatchType
+                                                    ? 'bg-blue-600 hover:bg-blue-700 border-blue-500 text-white'
+                                                    : 'bg-gray-800/50 border-gray-700 text-gray-500 cursor-not-allowed'
+                                                } transition-all duration-200 hover:scale-105`}
+                                            title="Agregar filtro actual a la lista de filtros activos"
+                                        >
+                                            <Plus className="h-4 w-4" />
+                                        </button>
                                     </div>
-                                    <input
-                                        type="text"
-                                        value={searchTerm}
-                                        onChange={(e) => setSearchTerm(e.target.value)}
-                                        placeholder="Buscar por ID, descripción o usuario..."
-                                        className="pl-12 pr-4 py-3 w-full bg-gradient-to-r from-gray-900 to-gray-800 border border-gray-700 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-300 hover:border-gray-600"
-                                    />
+                                    {/* Filtros guardados debajo de la barra de búsqueda */}
+                                    {activeFilters.length > 0 && (
+                                        <div className="mt-3 flex flex-wrap gap-2 w-full">
+                                            {activeFilters.map((filter, index) => {
+                                                // Colores por tipo de filtro
+                                                let colorClass = '';
+                                                switch (filter.type) {
+                                                    case 'id': colorClass = 'from-blue-900/80 via-blue-800/80 to-blue-700/80 border-blue-700/60 text-blue-200'; break;
+                                                    case 'area': colorClass = 'from-purple-900/80 via-purple-800/80 to-purple-700/80 border-purple-700/60 text-purple-200'; break;
+                                                    case 'usufinal': colorClass = 'from-amber-900/80 via-amber-800/80 to-amber-700/80 border-amber-700/60 text-amber-200'; break;
+                                                    case 'resguardante': colorClass = 'from-cyan-900/80 via-cyan-800/80 to-cyan-700/80 border-cyan-700/60 text-cyan-200'; break;
+                                                    case 'descripcion': colorClass = 'from-fuchsia-900/80 via-fuchsia-800/80 to-fuchsia-700/80 border-fuchsia-700/60 text-fuchsia-200'; break;
+                                                    case 'rubro': colorClass = 'from-green-900/80 via-green-800/80 to-green-700/80 border-green-700/60 text-green-200'; break;
+                                                    case 'estado': colorClass = 'from-cyan-900/80 via-cyan-800/80 to-cyan-700/80 border-cyan-700/60 text-cyan-200'; break;
+                                                    case 'estatus': colorClass = 'from-pink-900/80 via-pink-800/80 to-pink-700/80 border-pink-700/60 text-pink-200'; break;
+                                                    default: colorClass = 'from-gray-800 via-gray-700 to-gray-900 border-gray-600 text-gray-300';
+                                                }
+                                                return (
+                                                    <span
+                                                        key={filter.term + filter.type + index}
+                                                        className={`inline-flex items-center px-3 py-1 rounded-full bg-gradient-to-r ${colorClass} text-xs font-semibold shadow-md hover:shadow-lg transition-all duration-200 group`}
+                                                    >
+                                                        <span className="mr-2 font-bold uppercase tracking-wide text-[10px] opacity-80">{getTypeLabel(filter.type)}</span>
+                                                        <span className="truncate max-w-[160px] md:max-w-[220px] lg:max-w-[320px] group-hover:max-w-none">{filter.term}</span>
+                                                        <button
+                                                            onClick={() => removeFilter(index)}
+                                                            className="ml-2 opacity-80 hover:opacity-100 focus:outline-none"
+                                                            title="Eliminar filtro"
+                                                            tabIndex={-1}
+                                                        >
+                                                            <X className="h-3 w-3" />
+                                                        </button>
+                                                    </span>
+                                                );
+                                            })}
+                                            {activeFilters.length > 1 && (
+                                                <button
+                                                    onClick={clearAllFilters}
+                                                    className="inline-flex items-center px-2 py-1 rounded-full bg-gradient-to-r from-gray-800 via-gray-700 to-gray-900 border border-gray-600 text-gray-300 text-xs font-semibold ml-2 hover:bg-gray-700/80 transition-all duration-200"
+                                                    title="Limpiar todos los filtros"
+                                                >
+                                                    <X className="h-3 w-3 mr-1" /> Limpiar
+                                                </button>
+                                            )}
+                                        </div>
+                                    )}
                                 </div>
-
-                                <div className="flex gap-3">
-                                    <button
-                                        onClick={() => setShowFilters(!showFilters)}
-                                        className={`group relative px-5 py-3 rounded-xl font-medium flex items-center gap-2 transition-all duration-300 overflow-hidden ${
-                                            Object.values(filters).some(value => value !== '')
-                                                ? 'bg-gradient-to-r from-blue-600/20 to-blue-900/20 text-blue-300 border border-blue-500/50 hover:border-blue-400'
-                                                : 'bg-gradient-to-r from-gray-800 to-gray-900 text-gray-300 border border-gray-700 hover:border-gray-600'
-                                        }`}
-                                    >
-                                        <div className="absolute inset-0 bg-gradient-to-r from-blue-500/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-                                        <Filter className={`h-5 w-5 transition-transform duration-300 group-hover:scale-110 ${
-                                            Object.values(filters).some(value => value !== '') ? 'text-blue-400' : 'text-gray-400'
-                                        }`} />
-                                        <span>Filtros</span>
-                                        {Object.values(filters).some(value => value !== '') && (
-                                            <span className="ml-1.5 bg-blue-500/20 text-blue-300 rounded-lg px-2 py-0.5 text-sm border border-blue-500/30">
-                                                {Object.values(filters).filter(value => value !== '').length}
-                                            </span>
-                                        )}
-                                    </button>
-
+                                {/* Aquí puedes dejar el botón de actualizar y otros controles a la derecha si los tienes */}
+                                <div className="flex items-center gap-2 mt-4 md:mt-0">
                                     <button
                                         onClick={fetchMuebles}
-                                        className="group relative px-5 py-3 bg-gradient-to-r from-gray-800 to-gray-900 text-gray-300 rounded-xl font-medium flex items-center gap-2 hover:text-white transition-all duration-300 border border-gray-700 hover:border-gray-600"
+                                        className="px-4 py-2 rounded-lg border border-blue-700 bg-blue-900/80 text-blue-200 hover:bg-blue-800 hover:text-white transition-all duration-200 flex items-center gap-2 shadow-md"
+                                        title="Actualizar datos"
                                     >
-                                        <div className="absolute inset-0 bg-gradient-to-r from-gray-500/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-                                        <RefreshCw className="h-5 w-5 text-gray-400 group-hover:text-gray-300 transition-transform duration-300 group-hover:rotate-180" />
-                                        <span className="hidden sm:inline">Actualizar</span>
+                                        <RefreshCw className="h-4 w-4 animate-spin-slow" />
+                                        Actualizar
                                     </button>
                                 </div>
                             </div>
-
-                            {/* Panel de filtros mejorado */}
-                            {showFilters && (
-                                <div className="mt-6 border border-gray-700/50 rounded-xl bg-gradient-to-r from-gray-900/95 to-black/95 shadow-xl backdrop-blur-sm transition-all duration-300 overflow-hidden">
-                                    <div className="flex justify-between items-center px-6 py-4 border-b border-gray-700/50">
-                                        <div className="flex items-center gap-3">
-                                            <div className="p-2 bg-blue-500/10 rounded-lg border border-blue-500/20">
-                                                <Filter className="h-5 w-5 text-blue-400" />
-                                            </div>
-                                            <h3 className="font-semibold text-gray-200 text-lg">Filtros avanzados</h3>
-                                        </div>
-                                        <button
-                                            onClick={clearFilters}
-                                            className="text-sm text-gray-400 hover:text-white flex items-center gap-2 transition-all duration-200 px-4 py-2 rounded-lg hover:bg-red-500/10 border border-transparent hover:border-red-500/20"
-                                        >
-                                            <span>Limpiar filtros</span>
-                                            <X className="h-4 w-4" />
-                                        </button>
-                                    </div>
-
-                                    <div className="p-6">
-                                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                                            {/* Estado */}
-                                            <div className="filter-group bg-gray-800/30 p-4 rounded-xl border border-gray-700/50">
-                                                <label htmlFor="estado-select" className="flex items-center gap-2 text-sm font-medium text-gray-300 mb-3">
-                                                    <CircleSlash2 className="h-4 w-4 text-gray-400" />
-                                                    Estado
-                                                </label>
-                                                <div className="relative">
-                                                    <select
-                                                        id="estado-select"
-                                                        value={filters.estado}
-                                                        onChange={(e) => setFilters({ ...filters, estado: e.target.value })}
-                                                        className="w-full bg-gray-900/50 border border-gray-700 rounded-lg px-4 py-2.5 text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent appearance-none transition-all duration-200"
-                                                    >
-                                                        <option value="">Todos</option>
-                                                        {uniqueFilterOptions.estados.map((estado) => (
-                                                            <option key={estado} value={estado}>{estado}</option>
-                                                        ))}
-                                                    </select>
-                                                    <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
-                                                        <ChevronDown className="h-4 w-4 text-gray-400" />
-                                                    </div>
-                                                </div>
-                                            </div>
-
-                                            {/* Estatus */}
-                                            <div className="filter-group bg-gray-800/30 p-4 rounded-xl border border-gray-700/50">
-                                                <label htmlFor="estatus-select" className="flex items-center gap-2 text-sm font-medium text-gray-300 mb-3">
-                                                    <ActivitySquare className="h-4 w-4 text-gray-400" />
-                                                    Estatus
-                                                </label>
-                                                <div className="relative">
-                                                    <select
-                                                        id="estatus-select"
-                                                        value={filters.estatus}
-                                                        onChange={(e) => setFilters({ ...filters, estatus: e.target.value })}
-                                                        className="w-full bg-gray-900/50 border border-gray-700 rounded-lg px-4 py-2.5 text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent appearance-none transition-all duration-200"
-                                                    >
-                                                        <option value="">Todos</option>
-                                                        {uniqueFilterOptions.estatus.map((estatus) => (
-                                                            <option key={estatus} value={estatus}>{estatus}</option>
-                                                        ))}
-                                                    </select>
-                                                    <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
-                                                        <ChevronDown className="h-4 w-4 text-gray-400" />
-                                                    </div>
-                                                </div>
-                                            </div>
-
-                                            {/* Área */}
-                                            <div className="filter-group bg-gray-800/30 p-4 rounded-xl border border-gray-700/50">
-                                                <label htmlFor="area-select" className="flex items-center gap-2 text-sm font-medium text-gray-300 mb-3">
-                                                    <LayoutGrid className="h-4 w-4 text-gray-400" />
-                                                    Área
-                                                </label>
-                                                <div className="relative">
-                                                    <select
-                                                        id="area-select"
-                                                        value={filters.area}
-                                                        onChange={(e) => setFilters({ ...filters, area: e.target.value })}
-                                                        className="w-full bg-gray-900/50 border border-gray-700 rounded-lg px-4 py-2.5 text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent appearance-none transition-all duration-200"
-                                                    >
-                                                        <option value="">Todas</option>
-                                                        {areas.map((area) => (
-                                                            <option key={area.id_area} value={area.nombre}>{area.nombre}</option>
-                                                        ))}
-                                                    </select>
-                                                    <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
-                                                        <ChevronDown className="h-4 w-4 text-gray-400" />
-                                                    </div>
-                                                </div>
-                                            </div>
-
-                                            {/* Rubro */}
-                                            <div className="filter-group bg-gray-800/30 p-4 rounded-xl border border-gray-700/50">
-                                                <label htmlFor="rubro-select" className="flex items-center gap-2 text-sm font-medium text-gray-300 mb-3">
-                                                    <TagIcon className="h-4 w-4 text-gray-400" />
-                                                    Rubro
-                                                </label>
-                                                <div className="relative">
-                                                    <select
-                                                        id="rubro-select"
-                                                        value={filters.rubro}
-                                                        onChange={(e) => setFilters({ ...filters, rubro: e.target.value })}
-                                                        className="w-full bg-gray-900/50 border border-gray-700 rounded-lg px-4 py-2.5 text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent appearance-none transition-all duration-200"
-                                                    >
-                                                        <option value="">Todos</option>
-                                                        {uniqueFilterOptions.rubros.map((rubro) => (
-                                                            <option key={rubro} value={rubro}>{rubro}</option>
-                                                        ))}
-                                                    </select>
-                                                    <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
-                                                        <ChevronDown className="h-4 w-4 text-gray-400" />
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            )}
                         </div>
 
                         {/* Tabla */}
@@ -1294,20 +1363,20 @@ export default function ConsultasIteaGeneral() {
                                                     </div>
                                                 </td>
                                             </tr>
-                                        ) : muebles.length === 0 ? (
+                                        ) : paginatedMuebles.length === 0 ? (
                                             <tr className="h-96">
                                                 <td colSpan={5} className="px-6 py-24 text-center text-gray-400">
                                                     <div className="flex flex-col items-center justify-center space-y-4">
                                                         <Search className="h-12 w-12 text-gray-500" />
                                                         <p className="text-lg font-medium">No se encontraron resultados</p>
-                                                        {(searchTerm || Object.values(filters).some(value => value !== '')) ? (
+                                                        {(searchTerm || activeFilters.length > 0) ? (
                                                             <>
                                                                 <p className="text-sm text-gray-500 max-w-lg mx-auto">
                                                                     No hay elementos que coincidan con los criterios de búsqueda actuales
                                                                 </p>
                                                                 <button
-                                                                    onClick={clearFilters}
-                                                                    className="px-4 py-2 bg-gray-800 text-blue-400 rounded-md text-sm hover:bg-gray-700 transition-colors flex items-center gap-2"
+                                                                    onClick={clearAllFilters}
+                                                                    className="px-4 py-2 bg-gray-800 text-blue-400 rounded-md text-sm hover:bg-gray-700 transition-colores flex items-center gap-2"
                                                                 >
                                                                     <X className="h-4 w-4" />
                                                                     Limpiar filtros
@@ -1320,7 +1389,7 @@ export default function ConsultasIteaGeneral() {
                                                 </td>
                                             </tr>
                                         ) : (
-                                            muebles.map((item) => {
+                                            paginatedMuebles.map((item) => {
                                                 const normalizedStatus = item.estatus?.trim();
 
                                                 return (
@@ -1371,7 +1440,7 @@ export default function ConsultasIteaGeneral() {
                             <div className="px-6 py-4 border-t border-gray-800 bg-black flex flex-col sm:flex-row items-center justify-between gap-4 min-w-[93vh]">
                                 {/* Información de registros */}
                                 <div className="text-sm text-gray-400 font-medium">
-                                    Mostrando <span className="text-white">{(currentPage - 1) * rowsPerPage + 1}-{Math.min(currentPage * rowsPerPage, filteredCount)}</span> de <span className="text-white">{filteredCount}</span> registros
+                                    Mostrando <span className="text-white">{(currentPage - 1) * rowsPerPage + 1}-{Math.min(currentPage * rowsPerPage, totalCount)}</span> de <span className="text-white">{totalCount}</span> registros
                                 </div>
 
                                 <div className="flex items-center gap-4">
@@ -1493,6 +1562,7 @@ export default function ConsultasIteaGeneral() {
                                     <ClipboardList className="h-5 w-5 text-blue-400" />
                                     Detalle del Artículo
                                 </h2>
+
                                 <button
                                     type="button"
                                     onClick={closeDetail}
@@ -1583,6 +1653,7 @@ export default function ConsultasIteaGeneral() {
                                                         value={editFormData?.rubro || ''}
                                                         onChange={(e) => handleEditFormChange(e, 'rubro')}
                                                         className="appearance-none w-full bg-gray-800 border border-gray-700 rounded-lg pl-4 pr-10 py-2.5 text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                                                        title="Seleccionar rubro"
                                                     >
                                                         <option value="">Seleccione un rubro</option>
                                                         {[...new Set(filterOptions.rubros)].map((rubro) => (
@@ -1667,9 +1738,11 @@ export default function ConsultasIteaGeneral() {
                                             </div>
 
                                             <div className="form-group">
-                                                <label className="flex items-center gap-2 text-sm font-medium text-gray-300 mb-2">Estado</label>
+                                                <label className="flex items-center gap-2 text-sm font-medium text-gray-300 mb-2">
+                                                    <Building2 className="h-4 w-4 text-gray-400" />
+                                                    Estado
+                                                </label>
                                                 <div className="relative">
-                                                    <Building2 className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500 pointer-events-none" />
                                                     <input
                                                         type="text"
                                                         title="Estado"
@@ -1682,9 +1755,11 @@ export default function ConsultasIteaGeneral() {
                                             </div>
 
                                             <div className="form-group">
-                                                <label className="flex items-center gap-2 text-sm font-medium text-gray-300 mb-2">Municipio</label>
+                                                <label className="flex items-center gap-2 text-sm font-medium text-gray-300 mb-2">
+                                                    <Building2 className="h-4 w-4 text-gray-400" />
+                                                    Municipio
+                                                </label>
                                                 <div className="relative">
-                                                    <Building2 className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500 pointer-events-none" />
                                                     <input
                                                         type="text"
                                                         title="Municipio"
@@ -1697,9 +1772,11 @@ export default function ConsultasIteaGeneral() {
                                             </div>
 
                                             <div className="form-group">
-                                                <label className="flex items-center gap-2 text-sm font-medium text-gray-300 mb-2">Nomenclatura</label>
+                                                <label className="flex items-center gap-2 text-sm font-medium text-gray-300 mb-2">
+                                                    <Building2 className="h-4 w-4 text-gray-400" />
+                                                    Nomenclatura
+                                                </label>
                                                 <div className="relative">
-                                                    <Building2 className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500 pointer-events-none" />
                                                     <input
                                                         type="text"
                                                         title="Nomenclatura"
@@ -1800,14 +1877,14 @@ export default function ConsultasIteaGeneral() {
                                         <div className="flex items-center space-x-4 pt-6 border-t border-gray-800">
                                             <button
                                                 onClick={saveChanges}
-                                                className="px-5 py-2.5 bg-blue-600 text-white rounded-lg font-medium flex items-center gap-2 hover:bg-blue-700 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:ring-offset-gray-900"
+                                                className="px-5 py-2.5 bg-blue-600 text-white rounded-lg font-medium flex items-center gap-2 hover:bg-blue-700 transition-colores focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:ring-offset-gray-900"
                                             >
                                                 <Save className="h-4 w-4" />
                                                 Guardar Cambios
                                             </button>
                                             <button
                                                 onClick={cancelEdit}
-                                                className="px-5 py-2.5 bg-gray-800 text-gray-300 rounded-lg font-medium flex items-center gap-2 hover:bg-gray-700 transition-colors focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 focus:ring-offset-gray-900"
+                                                className="px-5 py-2.5 bg-gray-800 text-gray-300 rounded-lg font-medium flex items-center gap-2 hover:bg-gray-700 transition-colores focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 focus:ring-offset-gray-900"
                                             >
                                                 <X className="h-4 w-4" />
                                                 Cancelar
@@ -1949,29 +2026,29 @@ export default function ConsultasIteaGeneral() {
                                             )}
                                         </div>
                                         <RoleGuard roles={["admin", "superadmin"]} userRole={userRole}>
-                                        <div className="flex items-center space-x-4 pt-6 border-t border-gray-800">
-                                            <button
-                                                onClick={handleStartEdit}
-                                                className="px-5 py-2.5 bg-blue-600 text-white rounded-lg font-medium flex items-center gap-2 hover:bg-blue-700 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:ring-offset-gray-900"
-                                            >
-                                                <Edit className="h-4 w-4" />
-                                                Editar
-                                            </button>
-                                            <button
-                                                onClick={markAsInactive}
-                                                className="px-5 py-2.5 bg-yellow-500 text-black rounded-lg font-medium flex items-center gap-2 hover:bg-yellow-400 transition-colors focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:ring-offset-2 focus:ring-offset-gray-900"
-                                            >
-                                                <AlertTriangle className="h-4 w-4" />
-                                                Marcar como Inactivo
-                                            </button>
-                                            <button
-                                                onClick={markAsBaja}
-                                                className="px-5 py-2.5 bg-red-900 text-red-200 rounded-lg font-medium flex items-center gap-2 hover:bg-red-800 transition-colors focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 focus:ring-offset-gray-900"
-                                            >
-                                                <Trash2 className="h-4 w-4" />
-                                                Dar de Baja
-                                            </button>
-                                        </div>
+                                            <div className="flex items-center space-x-4 pt-6 border-t border-gray-800">
+                                                <button
+                                                    onClick={handleStartEdit}
+                                                    className="px-5 py-2.5 bg-blue-600 text-white rounded-lg font-medium flex items-center gap-2 hover:bg-blue-700 transition-colores focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:ring-offset-gray-900"
+                                                >
+                                                    <Edit className="h-4 w-4" />
+                                                    Editar
+                                                </button>
+                                                <button
+                                                    onClick={markAsInactive}
+                                                    className="px-5 py-2.5 bg-yellow-500 text-black rounded-lg font-medium flex items-center gap-2 hover:bg-yellow-400 transition-colores focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:ring-offset-2 focus:ring-offset-gray-900"
+                                                >
+                                                    <AlertTriangle className="h-4 w-4" />
+                                                    Marcar como Inactivo
+                                                </button>
+                                                <button
+                                                    onClick={markAsBaja}
+                                                    className="px-5 py-2.5 bg-red-900 text-red-200 rounded-lg font-medium flex items-center gap-2 hover:bg-red-800 transition-colores focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 focus:ring-offset-gray-900"
+                                                >
+                                                    <Trash2 className="h-4 w-4" />
+                                                    Dar de Baja
+                                                </button>
+                                            </div>
                                         </RoleGuard>
                                     </div>
                                 )}
@@ -2000,7 +2077,7 @@ export default function ConsultasIteaGeneral() {
 
                             <div className="space-y-5 mt-6">
                                 <div className="rounded-lg border border-gray-800 bg-gray-900/50 p-4">
-                                    <label className="block text-xs uppercase tracking-wider text-gray-500 mb-1">Director/Jefe seleccionado</label>
+                                    <label className="text-xs uppercase tracking-wider text-gray-500 mb-1 block">Director/Jefe seleccionado</label>
                                     <div className="flex items-center gap-3">
                                         <div className="p-2 bg-gray-800 rounded-lg">
                                             <User className="h-4 w-4 text-yellow-400" />
@@ -2024,7 +2101,7 @@ export default function ConsultasIteaGeneral() {
                                     />
                                     {!directorFormData.area && (
                                         <p className="text-xs text-yellow-500/80 mt-2 flex items-center gap-1">
-                                    <AlertCircle className="h-3 w-3" />
+                                            <AlertCircle className="h-3 w-3" />
                                             Este campo es obligatorio
                                         </p>
                                     )}
@@ -2035,7 +2112,7 @@ export default function ConsultasIteaGeneral() {
                         <div className="p-5 bg-black border-t border-gray-800 flex justify-end gap-3">
                             <button
                                 onClick={() => setShowDirectorModal(false)}
-                                className="px-5 py-2.5 bg-gray-900 text-white rounded-lg text-sm hover:bg-gray-800 border border-gray-800 transition-colors flex items-center gap-2"
+                                className="px-5 py-2.5 bg-gray-900 text-white rounded-lg text-sm hover:bg-gray-800 border border-gray-800 transition-colores flex items-center gap-2"
                             >
                                 <X className="h-4 w-4" />
                                 Cancelar
@@ -2139,13 +2216,15 @@ export default function ConsultasIteaGeneral() {
                                     </div>
                                     <h3 className="text-2xl font-bold text-white">¿Dar de baja este artículo?</h3>
                                 </div>
-                                <div className="rounded-lg border border-gray-800 bg-gray-900/50 p-4 mb-4">
-                                    <div className="text-left text-sm text-gray-300">
-                                        <div><span className="font-bold text-white">ID:</span> {selectedItem.id_inv}</div>
-                                        <div><span className="font-bold text-white">Descripción:</span> {selectedItem.descripcion}</div>
-                                        <div><span className="font-bold text-white">Área:</span> {selectedItem.area}</div>
+                                {selectedItem && (
+                                    <div className="rounded-lg border border-gray-800 bg-gray-900/50 p-4 mb-4">
+                                        <div className="text-left text-sm text-gray-300">
+                                            <div><span className="font-bold text-white">ID:</span> {selectedItem.id_inv}</div>
+                                            <div><span className="font-bold text-white">Descripción:</span> {selectedItem.descripcion}</div>
+                                            <div><span className="font-bold text-white">Área:</span> {selectedItem.area}</div>
+                                        </div>
                                     </div>
-                                </div>
+                                )}
                                 <div>
                                     <label className="flex items-center gap-2 text-sm font-medium text-gray-300 mb-2">
                                         <Info className="h-4 w-4 text-gray-400" />
@@ -2155,7 +2234,7 @@ export default function ConsultasIteaGeneral() {
                                         value={bajaCause}
                                         onChange={(e) => setBajaCause(e.target.value)}
                                         placeholder="Ingrese la causa de baja"
-                                        className="block w-full bg-gray-900 border border-gray-700 rounded-lg py-3 px-4 text-white placeholder-gray-500 focus:outline-none focus:border-red-500 focus:ring-1 focus:ring-red-500 transition-colors"
+                                        className="block w-full bg-gray-900 border border-gray-700 rounded-lg py-3 px-4 text-white placeholder-gray-500 focus:outline-none focus:border-red-500 focus:ring-1 focus:ring-red-500 transition-colores"
                                         rows={3}
                                         required
                                     />
@@ -2170,7 +2249,7 @@ export default function ConsultasIteaGeneral() {
                             <div className="p-5 bg-black border-t border-gray-800 flex justify-end gap-3">
                                 <button
                                     onClick={() => setShowBajaModal(false)}
-                                    className="px-5 py-2.5 bg-gray-900 text-white rounded-lg text-sm hover:bg-gray-800 border border-gray-800 transition-colors flex items-center gap-2"
+                                    className="px-5 py-2.5 bg-gray-900 text-white rounded-lg text-sm hover:bg-gray-800 border border-gray-800 transition-colores flex items-center gap-2"
                                 >
                                     <X className="h-4 w-4" />
                                     Cancelar
