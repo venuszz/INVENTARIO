@@ -1,9 +1,8 @@
 "use client"
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import {
-    Search, RefreshCw, Filter, ChevronLeft, ChevronRight,
-    ArrowUpDown, AlertCircle, X, Save, Trash2, CircleSlash2,
-    ActivitySquare, LayoutGrid, TagIcon, ChevronDown, Building2, User, Shield, AlertTriangle, Calendar, Info, Edit, Receipt, ClipboardList, Store, CheckCircle, XCircle, Plus, DollarSign
+    Search, RefreshCw, ChevronLeft, ChevronRight,
+    ArrowUpDown, AlertCircle, X, Save, Trash2, LayoutGrid, ChevronDown, Building2, User, Shield, AlertTriangle, Calendar, Info, Edit, Receipt, ClipboardList, Store, CheckCircle, XCircle, Plus, DollarSign
 } from 'lucide-react';
 import supabase from '@/app/lib/supabase/client';
 import Cookies from 'js-cookie';
@@ -54,6 +53,13 @@ interface Message {
     type: 'success' | 'error' | 'info' | 'warning';
     text: string;
 }
+
+// --- OMNIBOX FILTER STATE ---
+interface ActiveFilter {
+    term: string;
+    type: 'id' | 'descripcion' | 'rubro' | 'estado' | 'estatus' | 'area' | 'usufinal' | 'resguardante' | null;
+}
+// ... existing code ...
 
 const ImagePreview = ({ imagePath }: { imagePath: string | null }) => {
     const [imageUrl, setImageUrl] = useState<string | null>(null);
@@ -149,21 +155,27 @@ export default function ConsultasIneaGeneral() {
     const [muebles, setMuebles] = useState<Mueble[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
-    const [filteredCount, setFilteredCount] = useState(0);
     const [imageFile, setImageFile] = useState<File | null>(null);
     const [imagePreview, setImagePreview] = useState<string | null>(null);
     const [uploading, setUploading] = useState(false);
     const [currentPage, setCurrentPage] = useState(1);
     const [rowsPerPage, setRowsPerPage] = useState(10);
     const [searchTerm, setSearchTerm] = useState('');
+    const [searchMatchType, setSearchMatchType] = useState<ActiveFilter['type']>(null);
+    const [activeFilters, setActiveFilters] = useState<ActiveFilter[]>([]);
+    const [suggestions, setSuggestions] = useState<{ value: string; type: ActiveFilter['type'] }[]>([]);
+    const [highlightedIndex, setHighlightedIndex] = useState<number>(-1);
+    const [showSuggestions, setShowSuggestions] = useState(false);
+    const inputRef = useRef<HTMLInputElement>(null);
     const [sortField, setSortField] = useState<keyof Mueble>('id_inv');
     const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
-    const [filters, setFilters] = useState({
+    const [filtersState, setFiltersState] = useState({
         estado: '',
         estatus: '',
         area: '',
         rubro: ''
     });
+    const filters = useMemo(() => filtersState, [filtersState.estado, filtersState.estatus, filtersState.area, filtersState.rubro]);
     const [filterOptions, setFilterOptions] = useState<FilterOptions>({
         estados: [],
         estatus: [],
@@ -172,7 +184,7 @@ export default function ConsultasIneaGeneral() {
         formadq: [],
         directores: []
     });
-    const [uniqueFilterOptions, setUniqueFilterOptions] = useState<{
+    const [, setUniqueFilterOptions] = useState<{
         estados: string[];
         estatus: string[];
         areas: string[];
@@ -183,7 +195,6 @@ export default function ConsultasIneaGeneral() {
         areas: [],
         rubros: []
     });
-    const [showFilters, setShowFilters] = useState(false);
     const [selectedItem, setSelectedItem] = useState<Mueble | null>(null);
     const [isEditing, setIsEditing] = useState(false);
     const [editFormData, setEditFormData] = useState<Mueble | null>(null);
@@ -200,10 +211,6 @@ export default function ConsultasIneaGeneral() {
     const [bajaCause, setBajaCause] = useState('');
 
     const detailRef = useRef<HTMLDivElement>(null);
-
-    // Estados para totales
-    const [totalValue, setTotalValue] = useState(0); // Total de artículos filtrados
-    const [totalValueAllItems, setTotalValueAllItems] = useState(0); // Total de todos los artículos
 
     const { createNotification } = useNotifications();
 
@@ -466,125 +473,31 @@ export default function ConsultasIneaGeneral() {
     // Cambia el filtro para excluir los registros con estatus 'BAJA'
     const fetchMuebles = useCallback(async () => {
         setLoading(true);
-
         try {
-            let countQuery = supabase
-                .from('muebles')
-                .select('id, id_inv, rubro, descripcion, valor, f_adq, formadq, proveedor, factura, ubicacion_es, ubicacion_mu, ubicacion_no, estado, estatus, area, usufinal, fechabaja, causadebaja, resguardante, image_path', { count: 'exact', head: false })
-                .neq('estatus', 'BAJA');
-
-            let dataQuery = supabase.from('muebles').select('id, id_inv, rubro, descripcion, valor, f_adq, formadq, proveedor, factura, ubicacion_es, ubicacion_mu, ubicacion_no, estado, estatus, area, usufinal, fechabaja, causadebaja, resguardante, image_path')
-                .neq('estatus', 'BAJA');
-
-            if (searchTerm) {
-                const searchFilter = `id_inv.ilike.%${searchTerm}%,descripcion.ilike.%${searchTerm}%,resguardante.ilike.%${searchTerm}%,usufinal.ilike.%${searchTerm}%`;
-                countQuery = countQuery.or(searchFilter);
-                dataQuery = dataQuery.or(searchFilter);
+            let allData: Mueble[] = [];
+            let from = 0;
+            const batchSize = 1000;
+            let keepFetching = true;
+            while (keepFetching) {
+                const { data, error } = await supabase
+                    .from('muebles')
+                    .select('*')
+                    .neq('estatus', 'BAJA')
+                    .range(from, from + batchSize - 1);
+                if (error) throw error;
+                if (data && data.length > 0) {
+                    allData = allData.concat(data as Mueble[]);
+                    if (data.length < batchSize) {
+                        keepFetching = false;
+                    } else {
+                        from += batchSize;
+                    }
+                } else {
+                    keepFetching = false;
+                }
             }
-
-            if (filters.estado) {
-                countQuery = countQuery.eq('estado', filters.estado);
-                dataQuery = dataQuery.eq('estado', filters.estado);
-            }
-
-            if (filters.estatus) {
-                countQuery = countQuery.eq('estatus', filters.estatus);
-                dataQuery = dataQuery.eq('estatus', filters.estatus);
-            }
-
-            if (filters.area) {
-                countQuery = countQuery.eq('area', filters.area);
-                dataQuery = dataQuery.eq('area', filters.area);
-            }
-
-            if (filters.rubro) {
-                countQuery = countQuery.eq('rubro', filters.rubro);
-                dataQuery = dataQuery.eq('rubro', filters.rubro);
-            }
-
-            const { count } = await countQuery;
-            setFilteredCount(count || 0);
-
-            const { data, error } = await dataQuery
-                .order(sortField, { ascending: sortDirection === 'asc' })
-                .range((currentPage - 1) * rowsPerPage, currentPage * rowsPerPage - 1);
-
-            if (error) throw error;
-
-            const mueblesData = (data as Mueble[]) || [];
-            setMuebles(mueblesData);
-
-            if (selectedItem && !mueblesData.some(item => item.id === selectedItem.id)) {
-                setSelectedItem(null);
-                setIsEditing(false);
-                setEditFormData(null);
-            }
-
+            setMuebles(allData);
             setError(null);
-
-            // Función para sumar valores filtrados
-            async function sumFilteredMueblesValues(filters: { estado?: string; estatus?: string; area?: string; rubro?: string }) {
-                let total = 0;
-                let from = 0;
-                const pageSize = 1000;
-                let keepGoing = true;
-                while (keepGoing) {
-                    const { data, error } = await supabase
-                        .from('muebles')
-                        .select('valor')
-                        .neq('estatus', 'BAJA')
-                        .match({
-                            ...(filters.estado && { estado: filters.estado }),
-                            ...(filters.estatus && { estatus: filters.estatus }),
-                            ...(filters.area && { area: filters.area }),
-                            ...(filters.rubro && { rubro: filters.rubro })
-                        })
-                        .range(from, from + pageSize - 1);
-                    if (error) break;
-                    if (data && data.length > 0) {
-                        total += data.reduce((sum, item) => sum + (parseFloat(item.valor) || 0), 0);
-                        if (data.length < pageSize) {
-                            keepGoing = false;
-                        } else {
-                            from += pageSize;
-                        }
-                    } else {
-                        keepGoing = false;
-                    }
-                }
-                return total;
-            }
-            // Función para sumar todos los valores
-            async function sumAllMueblesValues() {
-                let total = 0;
-                let from = 0;
-                const pageSize = 1000;
-                let keepGoing = true;
-                while (keepGoing) {
-                    const { data, error } = await supabase
-                        .from('muebles')
-                        .select('valor')
-                        .neq('estatus', 'BAJA')
-                        .range(from, from + pageSize - 1);
-                    if (error) break;
-                    if (data && data.length > 0) {
-                        total += data.reduce((sum, item) => sum + (parseFloat(item.valor) || 0), 0);
-                        if (data.length < pageSize) {
-                            keepGoing = false;
-                        } else {
-                            from += pageSize;
-                        }
-                    } else {
-                        keepGoing = false;
-                    }
-                }
-                return total;
-            }
-            // Calcular totales
-            const totalFilteredItems = await sumFilteredMueblesValues(filters);
-            setTotalValue(totalFilteredItems);
-            const totalAllItems = await sumAllMueblesValues();
-            setTotalValueAllItems(totalAllItems);
         } catch (error) {
             console.error('Error fetching data:', error);
             setError('Error al cargar los datos. Por favor, intente nuevamente.');
@@ -592,7 +505,7 @@ export default function ConsultasIneaGeneral() {
         } finally {
             setLoading(false);
         }
-    }, [currentPage, rowsPerPage, searchTerm, filters, sortField, sortDirection, selectedItem]);
+    }, []);
 
     const fetchFilterOptions = useCallback(async () => {
         try {
@@ -903,7 +816,7 @@ export default function ConsultasIneaGeneral() {
 
     const clearFilters = () => {
         setSearchTerm('');
-        setFilters({
+        setFiltersState({
             estado: '',
             estatus: '',
             area: '',
@@ -928,55 +841,11 @@ export default function ConsultasIneaGeneral() {
         return date.toLocaleDateString('es-MX');
     };
 
-    const totalPages = Math.ceil(filteredCount / rowsPerPage);
-
     const changePage = (page: number) => {
         if (page === currentPage) return;
         if (page >= 1 && page <= totalPages) {
             setCurrentPage(page);
         }
-    };
-
-    const getPageNumbers = () => {
-        const pages: (number | string)[] = [];
-        const maxVisiblePages = 5;
-
-        if (totalPages <= maxVisiblePages) {
-            for (let i = 1; i <= totalPages; i++) {
-                pages.push(i);
-            }
-        } else {
-            pages.push(1);
-
-            let startPage = Math.max(2, currentPage - 1);
-            let endPage = Math.min(totalPages - 1, currentPage + 1);
-
-            if (currentPage <= 3) {
-                endPage = Math.min(totalPages - 1, 4);
-            }
-
-            if (currentPage >= totalPages - 2) {
-                startPage = Math.max(2, totalPages - 3);
-            }
-
-            if (startPage > 2) {
-                pages.push('...');
-            }
-
-            for (let i = startPage; i <= endPage; i++) {
-                pages.push(i);
-            }
-
-            if (endPage < totalPages - 1) {
-                pages.push('...');
-            }
-
-            if (totalPages > 1) {
-                pages.push(totalPages);
-            }
-        }
-
-        return pages;
     };
 
     const getMainContainerClass = () => {
@@ -1001,6 +870,261 @@ export default function ConsultasIneaGeneral() {
     }, [message]);
 
     const userRole = useUserRole();
+
+    // --- OMNIBOX MATCH TYPE DETECTION ---
+    useEffect(() => {
+        if (!searchTerm || muebles.length === 0) {
+            setSearchMatchType(null);
+            return;
+        }
+        const clean = (str: string) => (str || '').normalize('NFKD').replace(/\p{Diacritic}/gu, '').toLowerCase().trim();
+        const term = clean(searchTerm);
+        let bestMatch = { type: null, value: '', score: 0 } as { type: ActiveFilter['type'], value: string, score: number };
+        for (const item of muebles) {
+            if ((item.usufinal && clean(item.usufinal).includes(term)) || (item.resguardante && clean(item.resguardante).includes(term))) {
+                const exact = clean(item.usufinal || '') === term || clean(item.resguardante || '') === term;
+                const score = exact ? 10 : 9;
+                if (score > bestMatch.score) bestMatch = { type: 'usufinal', value: item.usufinal || item.resguardante || '', score };
+            }
+            if (item.area && clean(item.area).includes(term)) {
+                const exact = clean(item.area) === term;
+                const score = exact ? 8 : 7;
+                if (score > bestMatch.score) bestMatch = { type: 'area', value: item.area, score };
+            }
+            if (item.id_inv && clean(item.id_inv).includes(term)) {
+                const exact = clean(item.id_inv) === term;
+                const score = exact ? 6 : 5;
+                if (score > bestMatch.score) bestMatch = { type: 'id', value: item.id_inv, score };
+            }
+            if (item.descripcion && clean(item.descripcion).includes(term)) {
+                const exact = clean(item.descripcion) === term;
+                const score = exact ? 4 : 3;
+                if (score > bestMatch.score) bestMatch = { type: 'descripcion', value: item.descripcion, score };
+            }
+            if (item.rubro && clean(item.rubro).includes(term)) {
+                const exact = clean(item.rubro) === term;
+                const score = exact ? 2 : 1;
+                if (score > bestMatch.score) bestMatch = { type: 'rubro', value: item.rubro, score };
+            }
+            if (item.estado && clean(item.estado).includes(term)) {
+                const score = 1;
+                if (score > bestMatch.score) bestMatch = { type: 'estado', value: item.estado, score };
+            }
+            if (item.estatus && clean(item.estatus).includes(term)) {
+                const score = 1;
+                if (score > bestMatch.score) bestMatch = { type: 'estatus', value: item.estatus, score };
+            }
+            const otherFields: (keyof Mueble)[] = [
+                'valor', 'f_adq', 'formadq', 'proveedor', 'factura', 'ubicacion_es', 'ubicacion_mu', 'ubicacion_no', 'fechabaja', 'causadebaja', 'resguardante', 'image_path'
+            ];
+            for (const field of otherFields) {
+                const val = item[field];
+                if (typeof val === 'string' && clean(val).includes(term)) {
+                    if (bestMatch.score < 0.5) bestMatch = { type: null, value: val, score: 0.5 };
+                }
+            }
+        }
+        setSearchMatchType(bestMatch.type);
+    }, [searchTerm, muebles]);
+
+    // --- OMNIBOX AUTOCOMPLETADO Y SUGERENCIAS ---
+    function getTypeIcon(type: ActiveFilter['type']) {
+        switch (type) {
+            case 'id': return <span className="h-4 w-4 text-blue-400 font-bold">#</span>;
+            case 'area': return <span className="h-4 w-4 text-purple-400 font-bold">A</span>;
+            case 'usufinal': return <span className="h-4 w-4 text-amber-400 font-bold">D</span>;
+            case 'resguardante': return <span className="h-4 w-4 text-cyan-400 font-bold">R</span>;
+            case 'descripcion': return <span className="h-4 w-4 text-fuchsia-400 font-bold">Desc</span>;
+            case 'rubro': return <span className="h-4 w-4 text-green-400 font-bold">Ru</span>;
+            case 'estado': return <span className="h-4 w-4 text-cyan-400 font-bold">Edo</span>;
+            case 'estatus': return <span className="h-4 w-4 text-pink-400 font-bold">Est</span>;
+            default: return null;
+        }
+    }
+    function getTypeLabel(type: ActiveFilter['type']) {
+        switch (type) {
+            case 'id': return 'ID';
+            case 'area': return 'ÁREA';
+            case 'usufinal': return 'DIRECTOR';
+            case 'resguardante': return 'RESGUARDANTE';
+            case 'descripcion': return 'DESCRIPCIÓN';
+            case 'rubro': return 'RUBRO';
+            case 'estado': return 'ESTADO';
+            case 'estatus': return 'ESTATUS';
+            default: return '';
+        }
+    }
+    function SuggestionDropdown() {
+        if (!showSuggestions || suggestions.length === 0) return null;
+        return (
+            <ul
+                id="omnibox-suggestions"
+                role="listbox"
+                title="Sugerencias de búsqueda"
+                className={"absolute left-0 top-full w-full mt-1 animate-fadeInUp max-h-80 overflow-y-auto rounded-2xl shadow-2xl border border-neutral-800 bg-black/95 backdrop-blur-xl ring-1 ring-inset ring-neutral-900/60 transition-all duration-200 z-50"}
+            >
+                {suggestions.map((s, i) => {
+                    const isSelected = highlightedIndex === i;
+                    return (
+                        <li
+                            key={s.value + s.type}
+                            role="option"
+                            {...(isSelected && { 'aria-selected': 'true' })}
+                            onMouseDown={() => handleSuggestionClick(i)}
+                            className={`flex items-center gap-2 px-3 py-2 cursor-pointer select-none text-xs whitespace-normal break-words w-full ${isSelected ? 'bg-neutral-800/80 text-white' : 'text-neutral-300'} hover:bg-neutral-800/80`}
+                        >
+                            <span className="shrink-0">{getTypeIcon(s.type)}</span>
+                            <span className="font-semibold whitespace-normal break-words w-full">{s.value}</span>
+                            <span className="ml-auto text-[10px] text-neutral-400 font-mono">{getTypeLabel(s.type)}</span>
+                        </li>
+                    );
+                })}
+            </ul>
+        );
+    }
+    function handleSuggestionClick(index: number) {
+        const s = suggestions[index];
+        if (!s) return;
+        setActiveFilters(prev => [...prev, { term: s.value, type: s.type }]);
+        setSearchTerm('');
+        setSearchMatchType(null);
+        setShowSuggestions(false);
+    }
+    function handleInputKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
+        if (!showSuggestions || suggestions.length === 0) return;
+        if (e.key === 'ArrowDown') {
+            e.preventDefault();
+            setHighlightedIndex(i => (i + 1) % suggestions.length);
+        } else if (e.key === 'ArrowUp') {
+            e.preventDefault();
+            setHighlightedIndex(i => (i - 1 + suggestions.length) % suggestions.length);
+        } else if (e.key === 'Enter') {
+            e.preventDefault();
+            if (highlightedIndex >= 0 && suggestions[highlightedIndex]) {
+                handleSuggestionClick(highlightedIndex);
+            }
+        } else if (e.key === 'Escape') {
+            setShowSuggestions(false);
+        }
+    }
+    function handleInputBlur() {
+        setTimeout(() => setShowSuggestions(false), 100);
+    }
+    useEffect(() => {
+        if (!searchTerm || !muebles.length) {
+            setSuggestions([]);
+            setShowSuggestions(false);
+            setHighlightedIndex(-1);
+            return;
+        }
+        const clean = (str: string) => (str || '').normalize('NFKD').replace(/\p{Diacritic}/gu, '').toLowerCase().trim();
+        const term = clean(searchTerm);
+        const seen = new Set<string>();
+        const fields = [
+            { type: 'id' as ActiveFilter['type'], label: 'ID' },
+            { type: 'area' as ActiveFilter['type'], label: 'Área' },
+            { type: 'usufinal' as ActiveFilter['type'], label: 'Director' },
+            { type: 'resguardante' as ActiveFilter['type'], label: 'Resguardante' },
+            { type: 'descripcion' as ActiveFilter['type'], label: 'Descripción' },
+            { type: 'rubro' as ActiveFilter['type'], label: 'Rubro' },
+            { type: 'estado' as ActiveFilter['type'], label: 'Estado' },
+            { type: 'estatus' as ActiveFilter['type'], label: 'Estatus' },
+        ];
+        let allSuggestions: { value: string; type: ActiveFilter['type'] }[] = [];
+        for (const f of fields) {
+            let values: string[] = [];
+            switch (f.type) {
+                case 'id': values = muebles.map(m => m.id_inv || '').filter(Boolean) as string[]; break;
+                case 'area': values = muebles.map(m => m.area || '').filter(Boolean) as string[]; break;
+                case 'usufinal': values = muebles.map(m => m.usufinal || '').filter(Boolean) as string[]; break;
+                case 'resguardante': values = muebles.map(m => m.resguardante || '').filter(Boolean) as string[]; break;
+                case 'descripcion': values = muebles.map(m => m.descripcion || '').filter(Boolean) as string[]; break;
+                case 'rubro': values = muebles.map(m => m.rubro || '').filter(Boolean) as string[]; break;
+                case 'estado': values = muebles.map(m => m.estado || '').filter(Boolean) as string[]; break;
+                case 'estatus': values = muebles.map(m => m.estatus || '').filter(Boolean) as string[]; break;
+                default: values = [];
+            }
+            for (const v of values) {
+                if (!v) continue;
+                const vClean = clean(v);
+                if (vClean.includes(term) && !seen.has(f.type + ':' + vClean)) {
+                    allSuggestions.push({ value: v, type: f.type });
+                    seen.add(f.type + ':' + vClean);
+                }
+            }
+        }
+        allSuggestions = [
+            ...allSuggestions.filter(s => clean(s.value) === term),
+            ...allSuggestions.filter(s => clean(s.value) !== term)
+        ].slice(0, 7);
+        setSuggestions(allSuggestions);
+        setShowSuggestions(allSuggestions.length > 0);
+        setHighlightedIndex(allSuggestions.length > 0 ? 0 : -1);
+    }, [searchTerm, muebles]);
+
+    const saveCurrentFilter = () => {
+        if (searchTerm && searchMatchType) {
+            setActiveFilters(prev => [...prev, { term: searchTerm, type: searchMatchType }]);
+            setSearchTerm('');
+            setSearchMatchType(null);
+        }
+    };
+    const removeFilter = (index: number) => {
+        setActiveFilters(prev => prev.filter((_, i) => i !== index));
+    };
+    const clearAllFilters = () => {
+        setActiveFilters([]);
+        setSearchTerm('');
+        setSearchMatchType(null);
+    };
+
+    // --- OMNIBOX FILTERING Y PAGINACIÓN ---
+    const clean = (str: string) => (str || '').normalize('NFKD').replace(/\p{Diacritic}/gu, '').toLowerCase();
+    const filteredMueblesOmni = muebles.filter(item => {
+        if (activeFilters.length === 0 && !searchTerm) return true;
+        const passesActiveFilters = activeFilters.every(filter => {
+            const filterTerm = clean(filter.term);
+            if (!filterTerm) return true;
+            switch (filter.type) {
+                case 'id': return clean(item.id_inv || '').includes(filterTerm);
+                case 'descripcion': return clean(item.descripcion || '').includes(filterTerm);
+                case 'rubro': return clean(item.rubro || '').includes(filterTerm);
+                case 'estado': return clean(item.estado || '').includes(filterTerm);
+                case 'estatus': return clean(item.estatus || '').includes(filterTerm);
+                case 'area': return clean(item.area || '').includes(filterTerm);
+                case 'usufinal': return clean(item.usufinal || '').includes(filterTerm);
+                case 'resguardante': return clean(item.resguardante || '').includes(filterTerm);
+                default: return true;
+            }
+        });
+        const currentTerm = clean(searchTerm);
+        const passesCurrentSearch = !currentTerm ||
+            clean(item.id_inv || '').includes(currentTerm) ||
+            clean(item.descripcion || '').includes(currentTerm) ||
+            clean(item.rubro || '').includes(currentTerm) ||
+            clean(item.estado || '').includes(currentTerm) ||
+            clean(item.estatus || '').includes(currentTerm) ||
+            clean(item.area || '').includes(currentTerm) ||
+            clean(item.usufinal || '').includes(currentTerm) ||
+            clean(item.resguardante || '').includes(currentTerm);
+        return passesActiveFilters && passesCurrentSearch;
+    });
+    const totalCount = filteredMueblesOmni.length;
+    const totalPages = Math.max(1, Math.ceil(totalCount / rowsPerPage));
+    const paginatedMuebles = filteredMueblesOmni
+        .slice()
+        .sort((a, b) => {
+            const aValue = a[sortField] ?? '';
+            const bValue = b[sortField] ?? '';
+            if (aValue < bValue) return sortDirection === 'asc' ? -1 : 1;
+            if (aValue > bValue) return sortDirection === 'asc' ? 1 : -1;
+            return 0;
+        })
+        .slice((currentPage - 1) * rowsPerPage, currentPage * rowsPerPage);
+
+    // Calcular totales directamente
+    const filteredValue = filteredMueblesOmni.reduce((acc, item) => acc + (item.valor !== null && item.valor !== undefined ? Number(item.valor) : 0), 0);
+    const allValue = muebles.reduce((acc, item) => acc + (item.valor !== null && item.valor !== undefined ? Number(item.valor) : 0), 0);
 
     return (
         <div className="bg-black text-white min-h-screen p-2 sm:p-4 md:p-6 lg:p-8">
@@ -1031,12 +1155,13 @@ export default function ConsultasIneaGeneral() {
                                     <div className="flex flex-col">
                                         <h3 className="text-sm font-medium text-gray-400 mb-1 group-hover:text-indigo-300 transition-colors">Valor Total del Inventario</h3>
                                         <div className="relative">
-                                            <span className="text-3xl font-bold text-white">
-                                                ${new Intl.NumberFormat('es-MX').format(totalValue)}
-                                            </span>
+                                            <p className="text-4xl font-bold bg-gradient-to-r from-indigo-200 via-purple-200 to-pink-200 bg-clip-text text-transparent group-hover:from-indigo-300 group-hover:via-purple-300 group-hover:to-pink-300 transition-all duration-500">
+                                                ${(activeFilters.length > 0 || searchTerm ? filteredValue : allValue).toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                            </p>
+                                            <div className="absolute -bottom-2 left-0 w-full h-px bg-gradient-to-r from-indigo-500/50 via-purple-500/50 to-pink-500/50"></div>
                                         </div>
                                         <p className="text-sm text-gray-500 mt-2 group-hover:text-gray-400 transition-colors">
-                                            Valor total sin filtros: ${new Intl.NumberFormat('es-MX').format(totalValueAllItems)}
+                                            {activeFilters.length > 0 || searchTerm ? 'Valor de artículos filtrados' : 'Valor total de todos los artículos'}
                                         </p>
                                     </div>
                                 </div>
@@ -1051,7 +1176,7 @@ export default function ConsultasIneaGeneral() {
                                     <div className="relative">
                                         <div className="absolute inset-0 bg-gradient-to-r from-emerald-500/10 via-teal-500/10 to-cyan-500/10 opacity-0 group-hover:opacity-100 transition-opacity duration-500 rounded-xl"></div>
                                         <span className="relative text-3xl font-bold bg-gradient-to-r from-emerald-200 via-teal-200 to-cyan-200 bg-clip-text text-transparent group-hover:from-emerald-300 group-hover:via-teal-300 group-hover:to-cyan-300 transition-all duration-500 px-6 py-3">
-                                            {filteredCount}
+                                            {activeFilters.length > 0 || searchTerm ? filteredMueblesOmni.length : muebles.length}
                                         </span>
                                     </div>
                                 </div>
@@ -1064,174 +1189,94 @@ export default function ConsultasIneaGeneral() {
                 <div className={getMainContainerClass()}>
                     {/* Panel izquierdo: Búsqueda, filtros y tabla */}
                     <div className={`flex-1 min-w-0 flex flex-col ${selectedItem ? '' : 'w-full'}`}>
-                        {/* Panel de acciones y búsqueda */}
-                        <div className="mb-6 bg-gradient-to-br from-gray-900 via-black to-black p-6 rounded-xl border border-gray-800 shadow-lg">
-                            <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-4">
-                                <div className="relative flex-grow group">
-                                    <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                                        <Search className="h-5 w-5 text-gray-500 group-hover:text-blue-400 transition-colors duration-300" />
+                        {/* Panel de acciones y búsqueda omnibox */}
+                        <div className="mb-6 bg-gradient-to-br from-gray-900/20 to-gray-900/40 p-4 rounded-xl border border-gray-800 shadow-inner hover:shadow-lg transition-shadow">
+                            <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-4 mb-4">
+                                <div className="flex-1 relative">
+                                    <div className="flex gap-2">
+                                        <div className="relative flex-1">
+                                            <input
+                                                ref={inputRef}
+                                                type="text"
+                                                value={searchTerm}
+                                                onChange={e => setSearchTerm(e.target.value)}
+                                                onFocus={() => setShowSuggestions(suggestions.length > 0)}
+                                                onBlur={handleInputBlur}
+                                                onKeyDown={handleInputKeyDown}
+                                                placeholder="Buscar por ID, descripción, área, director, etc."
+                                                className="w-full px-4 py-2 rounded-lg bg-black border border-gray-700 text-white focus:outline-none focus:ring-2 focus:ring-blue-700"
+                                            />
+                                            <SuggestionDropdown />
+                                        </div>
+                                        <button
+                                            onClick={saveCurrentFilter}
+                                            disabled={!searchTerm || !searchMatchType}
+                                            className={`px-4 py-2 rounded-lg border flex items-center gap-2 ${searchTerm && searchMatchType
+                                                    ? 'bg-blue-600 hover:bg-blue-700 border-blue-500 text-white'
+                                                    : 'bg-gray-800/50 border-gray-700 text-gray-500 cursor-not-allowed'
+                                                } transition-all duration-200 hover:scale-105`}
+                                            title="Agregar filtro actual a la lista de filtros activos"
+                                        >
+                                            <Plus className="h-4 w-4" />
+                                        </button>
                                     </div>
-                                    <input
-                                        type="text"
-                                        value={searchTerm}
-                                        onChange={(e) => setSearchTerm(e.target.value)}
-                                        placeholder="Buscar por ID, descripción o usuario..."
-                                        className="pl-12 pr-4 py-3 w-full bg-gradient-to-r from-gray-900 to-gray-800 border border-gray-700 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-300 hover:border-gray-600"
-                                    />
+                                    {/* Filtros guardados debajo de la barra de búsqueda */}
+                                    {activeFilters.length > 0 && (
+                                        <div className="mt-3 flex flex-wrap gap-2 w-full">
+                                            {activeFilters.map((filter, index) => {
+                                                let colorClass = '';
+                                                switch (filter.type) {
+                                                    case 'id': colorClass = 'from-blue-900/80 via-blue-800/80 to-blue-700/80 border-blue-700/60 text-blue-200'; break;
+                                                    case 'area': colorClass = 'from-purple-900/80 via-purple-800/80 to-purple-700/80 border-purple-700/60 text-purple-200'; break;
+                                                    case 'usufinal': colorClass = 'from-amber-900/80 via-amber-800/80 to-amber-700/80 border-amber-700/60 text-amber-200'; break;
+                                                    case 'resguardante': colorClass = 'from-cyan-900/80 via-cyan-800/80 to-cyan-700/80 border-cyan-700/60 text-cyan-200'; break;
+                                                    case 'descripcion': colorClass = 'from-fuchsia-900/80 via-fuchsia-800/80 to-fuchsia-700/80 border-fuchsia-700/60 text-fuchsia-200'; break;
+                                                    case 'rubro': colorClass = 'from-green-900/80 via-green-800/80 to-green-700/80 border-green-700/60 text-green-200'; break;
+                                                    case 'estado': colorClass = 'from-cyan-900/80 via-cyan-800/80 to-cyan-700/80 border-cyan-700/60 text-cyan-200'; break;
+                                                    case 'estatus': colorClass = 'from-pink-900/80 via-pink-800/80 to-pink-700/80 border-pink-700/60 text-pink-200'; break;
+                                                    default: colorClass = 'from-gray-800 via-gray-700 to-gray-900 border-gray-600 text-gray-300';
+                                                }
+                                                return (
+                                                    <span
+                                                        key={filter.term + filter.type + index}
+                                                        className={`inline-flex items-center px-3 py-1 rounded-full bg-gradient-to-r ${colorClass} text-xs font-semibold shadow-md hover:shadow-lg transition-all duration-200 group`}
+                                                    >
+                                                        <span className="mr-2 font-bold uppercase tracking-wide text-[10px] opacity-80">{getTypeLabel(filter.type)}</span>
+                                                        <span className="truncate max-w-[160px] md:max-w-[220px] lg:max-w-[320px] group-hover:max-w-none">{filter.term}</span>
+                                                        <button
+                                                            onClick={() => removeFilter(index)}
+                                                            className="ml-2 opacity-80 hover:opacity-100 focus:outline-none"
+                                                            title="Eliminar filtro"
+                                                            tabIndex={-1}
+                                                        >
+                                                            <X className="h-3 w-3" />
+                                                        </button>
+                                                    </span>
+                                                );
+                                            })}
+                                            {activeFilters.length > 1 && (
+                                                <button
+                                                    onClick={clearAllFilters}
+                                                    className="inline-flex items-center px-2 py-1 rounded-full bg-gradient-to-r from-gray-800 via-gray-700 to-gray-900 border border-gray-600 text-gray-300 text-xs font-semibold ml-2 hover:bg-gray-700/80 transition-all duration-200"
+                                                    title="Limpiar todos los filtros"
+                                                >
+                                                    <X className="h-3 w-3 mr-1" /> Limpiar
+                                                </button>
+                                            )}
+                                        </div>
+                                    )}
                                 </div>
-
-                                <div className="flex gap-3">
-                                    <button
-                                        onClick={() => setShowFilters(!showFilters)}
-                                        className={`group relative px-5 py-3 rounded-xl font-medium flex items-center gap-2 transition-all duration-300 overflow-hidden ${
-                                            Object.values(filters).some(value => value !== '')
-                                                ? 'bg-gradient-to-r from-blue-600/20 to-blue-900/20 text-blue-300 border border-blue-500/50 hover:border-blue-400'
-                                                : 'bg-gradient-to-r from-gray-800 to-gray-900 text-gray-300 border border-gray-700 hover:border-gray-600'
-                                        }`}
-                                    >
-                                        <div className="absolute inset-0 bg-gradient-to-r from-blue-500/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-                                        <Filter className={`h-5 w-5 transition-transform duration-300 group-hover:scale-110 ${
-                                            Object.values(filters).some(value => value !== '') ? 'text-blue-400' : 'text-gray-400'
-                                        }`} />
-                                        <span>Filtros</span>
-                                        {Object.values(filters).some(value => value !== '') && (
-                                            <span className="ml-1 bg-blue-500/20 text-blue-300 rounded-full w-5 h-5 flex items-center justify-center text-xs animate-fadeIn">
-                                                {Object.values(filters).filter(value => value !== '').length}
-                                            </span>
-                                        )}
-                                    </button>
-
+                                <div className="flex items-center gap-2 mt-4 md:mt-0">
                                     <button
                                         onClick={fetchMuebles}
-                                        className="group relative px-5 py-3 bg-gradient-to-r from-gray-800 to-gray-900 text-gray-300 rounded-xl font-medium flex items-center gap-2 hover:text-white transition-all duration-300 border border-gray-700 hover:border-gray-600"
+                                        className="px-4 py-2 rounded-lg border border-blue-700 bg-blue-900/80 text-blue-200 hover:bg-blue-800 hover:text-white transition-all duration-200 flex items-center gap-2 shadow-md"
+                                        title="Actualizar datos"
                                     >
-                                        <div className="absolute inset-0 bg-gradient-to-r from-gray-500/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-                                        <RefreshCw className="h-5 w-5 text-gray-400 group-hover:text-gray-300 transition-transform duration-300 group-hover:rotate-180" />
-                                        <span className="hidden sm:inline">Actualizar</span>
+                                        <RefreshCw className="h-4 w-4 animate-spin-slow" />
+                                        Actualizar
                                     </button>
                                 </div>
                             </div>
-
-                            {/* Panel de filtros */}
-                            {showFilters && (
-                                <div className="mt-6 border border-gray-700/50 rounded-xl bg-gray-900/30 shadow-xl backdrop-blur-sm transition-all duration-300 overflow-hidden animate-fadeIn">
-                                    <div className="flex justify-between items-center px-5 py-4 border-b border-gray-700/50 bg-gradient-to-r from-gray-900 to-gray-800">
-                                        <div className="flex items-center gap-2">
-                                            <div className="p-2 bg-blue-500/10 rounded-lg border border-blue-500/20">
-                                                <Filter className="h-5 w-5 text-blue-400" />
-                                            </div>
-                                            <h3 className="font-semibold text-gray-200 text-lg">Filtros avanzados</h3>
-                                        </div>
-                                        <button
-                                            onClick={clearFilters}
-                                            className="text-sm text-gray-400 hover:text-gray-300 flex items-center gap-1.5 transition-all duration-200 px-3 py-1.5 rounded-lg hover:bg-gray-800 border border-gray-700/50 hover:border-gray-600 group"
-                                        >
-                                            <span>Limpiar filtros</span>
-                                            <X className="h-4 w-4 group-hover:rotate-90 transition-transform duration-300" />
-                                        </button>
-                                    </div>
-
-                                    <div className="p-5">
-                                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5">
-                                            {/* Estado */}
-                                            <div className="filter-group">
-                                                <label className="flex items-center gap-2 text-sm font-medium text-gray-300 mb-2">
-                                                    <CircleSlash2 className="h-4 w-4 text-gray-400" />
-                                                    Estado
-                                                </label>
-                                                <div className="relative">
-                                                    <select
-                                                        title='Filtrar por estado'
-                                                        value={filters.estado}
-                                                        onChange={(e) => setFilters({ ...filters, estado: e.target.value })}
-                                                        className="w-full bg-gray-700 border border-gray-600 rounded-lg px-3 py-2.5 text-white focus:outline-none focus:ring-2 focus:ring-gray-500 focus:border-gray-500 appearance-none transition-all duration-200"
-                                                    >
-                                                        <option value="">Todos los estados</option>
-                                                        {uniqueFilterOptions.estados.map((estado) => (
-                                                            <option key={estado} value={estado as string}>{estado}</option>
-                                                        ))}
-                                                    </select>
-                                                    <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
-                                                        <ChevronDown className="h-4 w-4 text-gray-400" />
-                                                    </div>
-                                                </div>
-                                            </div>
-
-                                            {/* Estatus */}
-                                            <div className="filter-group">
-                                                <label className="flex items-center gap-2 text-sm font-medium text-gray-300 mb-2">
-                                                    <ActivitySquare className="h-4 w-4 text-gray-400" />
-                                                    Estatus
-                                                </label>
-                                                <div className="relative">
-                                                    <select
-                                                        title='Filtrar por estatus'
-                                                        value={filters.estatus}
-                                                        onChange={(e) => setFilters({ ...filters, estatus: e.target.value })}
-                                                        className="w-full bg-gray-700 border border-gray-600 rounded-lg px-3 py-2.5 text-white focus:outline-none focus:ring-2 focus:ring-gray-500 focus:border-gray-500 appearance-none transition-all duration-200"
-                                                    >
-                                                        <option value="">Todos los estatus</option>
-                                                        {uniqueFilterOptions.estatus.map((estatus) => (
-                                                            <option key={estatus} value={estatus as string}>{estatus}</option>
-                                                        ))}
-                                                    </select>
-                                                    <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
-                                                        <ChevronDown className="h-4 w-4 text-gray-400" />
-                                                    </div>
-                                                </div>
-                                            </div>
-
-                                            {/* Área */}
-                                            <div className="filter-group">
-                                                <label className="flex items-center gap-2 text-sm font-medium text-gray-300 mb-2">
-                                                    <LayoutGrid className="h-4 w-4 text-gray-400" />
-                                                    Área
-                                                </label>
-                                                <div className="relative">
-                                                    <select
-                                                        title='Filtrar por área'
-                                                        value={filters.area}
-                                                        onChange={(e) => setFilters({ ...filters, area: e.target.value })}
-                                                        className="w-full bg-gray-700 border border-gray-600 rounded-lg px-3 py-2.5 text-white focus:outline-none focus:ring-2 focus:ring-gray-500 focus:border-gray-500 appearance-none transition-all duration-200"
-                                                    >
-                                                        <option value="">Todas las áreas</option>
-                                                        {uniqueFilterOptions.areas.map((area) => (
-                                                            <option key={area} value={area as string}>{area}</option>
-                                                        ))}
-                                                    </select>
-                                                    <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
-                                                        <ChevronDown className="h-4 w-4 text-gray-400" />
-                                                    </div>
-                                                </div>
-                                            </div>
-
-                                            {/* Rubro */}
-                                            <div className="filter-group">
-                                                <label className="flex items-center gap-2 text-sm font-medium text-gray-300 mb-2">
-                                                    <TagIcon className="h-4 w-4 text-gray-400" />
-                                                    Rubro
-                                                </label>
-                                                <div className="relative">
-                                                    <select
-                                                        title='Filtrar por rubro'
-                                                        value={filters.rubro}
-                                                        onChange={(e) => setFilters({ ...filters, rubro: e.target.value })}
-                                                        className="w-full bg-gray-700 border border-gray-600 rounded-lg px-3 py-2.5 text-white focus:outline-none focus:ring-2 focus:ring-gray-500 focus:border-gray-500 appearance-none transition-all duration-200"
-                                                    >
-                                                        <option value="">Todos los rubros</option>
-                                                        {uniqueFilterOptions.rubros.map((rubro) => (
-                                                            <option key={rubro} value={rubro as string}>{rubro}</option>
-                                                        ))}
-                                                    </select>
-                                                    <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
-                                                        <ChevronDown className="h-4 w-4 text-gray-400" />
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            )}
                         </div>
 
                         {/* Tabla */}
@@ -1340,7 +1385,7 @@ export default function ConsultasIneaGeneral() {
                                                 </td>
                                             </tr>
                                         ) : (
-                                            muebles.map((item) => (
+                                            paginatedMuebles.map((item) => (
                                                 <tr
                                                     key={item.id}
                                                     onClick={() => handleSelectItem(item)}
@@ -1378,117 +1423,135 @@ export default function ConsultasIneaGeneral() {
                             </div>
 
                             {/* Paginación */}
-                            <div className="px-6 py-4 border-t border-gray-800 bg-black flex flex-col sm:flex-row items-center justify-between gap-4 min-w-[93vh]">
-                                {/* Información de registros */}
-                                <div className="text-sm text-gray-400 font-medium">
-                                    Mostrando <span className="text-white">{(currentPage - 1) * rowsPerPage + 1}-{Math.min(currentPage * rowsPerPage, filteredCount)}</span> de <span className="text-white">{filteredCount}</span> registros
-                                </div>
-
-                                <div className="flex items-center gap-4">
-                                    {/* Controles de paginación */}
-                                    <div className="flex items-center space-x-1 bg-gray-850 rounded-lg p-1">
-                                        {/* Botón primera página */}
-                                        <button
-                                            onClick={() => changePage(1)}
-                                            disabled={currentPage === 1}
-                                            className={`p-1.5 rounded-md flex items-center justify-center ${currentPage === 1
-                                                ? 'text-gray-600 cursor-not-allowed'
-                                                : 'text-gray-400 hover:bg-gray-800 hover:text-white'
-                                                }`}
-                                            aria-label="Primera página"
-                                            title="Primera página"
-                                        >
-                                            <div className="flex">
-                                                <ChevronLeft className="h-4 w-4" />
-                                                <ChevronLeft className="h-4 w-4 -ml-2" />
-                                            </div>
-                                        </button>
-
-                                        {/* Botón página anterior */}
-                                        <button
-                                            onClick={() => changePage(currentPage - 1)}
-                                            disabled={currentPage === 1}
-                                            className={`p-1.5 rounded-md ${currentPage === 1
-                                                ? 'text-gray-600 cursor-not-allowed'
-                                                : 'text-gray-400 hover:bg-gray-800 hover:text-white'
-                                                }`}
-                                            aria-label="Página anterior"
-                                            title="Página anterior"
-                                        >
-                                            <ChevronLeft className="h-4 w-4" />
-                                        </button>
-
-                                        {/* Números de página */}
-                                        <div className="flex items-center">
-                                            {getPageNumbers().map((page, index) => (
-                                                <button
-                                                    key={index}
-                                                    onClick={() => typeof page === 'number' ? changePage(page) : null}
-                                                    disabled={page === '...'}
-                                                    className={`min-w-[32px] h-8 px-2 rounded-md text-sm font-medium flex items-center justify-center ${currentPage === page
-                                                        ? 'bg-black text-white'
-                                                        : page === '...'
-                                                            ? 'text-gray-500 cursor-default'
-                                                            : 'text-gray-400 hover:bg-gray-800 hover:text-white'
-                                                        }`}
-                                                >
-                                                    {page}
-                                                </button>
-                                            ))}
+                            <div className="flex flex-col sm:flex-row gap-3 items-center justify-between mt-4 mb-3 px-2">
+                                {/* Contador de registros con diseño mejorado */}
+                                <div className="flex items-center gap-2 bg-neutral-900/50 px-4 py-2 rounded-xl border border-neutral-800 shadow-inner">
+                                    {totalCount === 0 ? (
+                                        <span className="text-neutral-400 flex items-center gap-2">
+                                            <AlertCircle className="h-4 w-4 text-neutral-500" />
+                                            No hay registros para mostrar
+                                        </span>
+                                    ) : (
+                                        <div className="flex items-center gap-2">
+                                            <span className="text-neutral-300">Mostrando</span>
+                                            <span className="px-2 py-0.5 rounded-lg bg-blue-900/30 text-blue-300 font-mono border border-blue-800/50">
+                                                {((currentPage - 1) * rowsPerPage) + 1}–{Math.min(currentPage * rowsPerPage, totalCount)}
+                                            </span>
+                                            <span className="text-neutral-300">de</span>
+                                            <span className="px-2 py-0.5 rounded-lg bg-neutral-900 text-neutral-300 font-mono border border-neutral-800">
+                                                {totalCount}
+                                            </span>
+                                            <span className="text-neutral-400">registros</span>
+                                            {/* Selector de filas por página */}
+                                            <span className="ml-4 text-neutral-400">|</span>
+                                            <label htmlFor="rows-per-page" className="ml-2 text-xs text-neutral-400">Filas por página:</label>
+                                            <select
+                                                id="rows-per-page"
+                                                value={rowsPerPage}
+                                                onChange={e => { setRowsPerPage(Number(e.target.value)); setCurrentPage(1); }}
+                                                className="ml-1 px-2 py-1 rounded-lg bg-neutral-900 border border-neutral-700 text-blue-300 font-mono text-xs focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition"
+                                            >
+                                                {[10, 20, 30, 50, 100].map(opt => (
+                                                    <option key={opt} value={opt}>{opt}</option>
+                                                ))}
+                                            </select>
                                         </div>
-
-                                        {/* Botón página siguiente */}
-                                        <button
-                                            onClick={() => changePage(currentPage + 1)}
-                                            disabled={currentPage === totalPages || totalPages === 0}
-                                            className={`p-1.5 rounded-md ${currentPage === totalPages || totalPages === 0
-                                                ? 'text-gray-600 cursor-not-allowed'
-                                                : 'text-gray-400 hover:bg-gray-800 hover:text-white'
-                                                }`}
-                                            aria-label="Página siguiente"
-                                            title="Página siguiente"
-                                        >
-                                            <ChevronRight className="h-4 w-4" />
-                                        </button>
-
-                                        {/* Botón última página */}
-                                        <button
-                                            onClick={() => changePage(totalPages)}
-                                            disabled={currentPage === totalPages || totalPages === 0}
-                                            className={`p-1.5 rounded-md flex items-center justify-center ${currentPage === totalPages || totalPages === 0
-                                                ? 'text-gray-600 cursor-not-allowed'
-                                                : 'text-gray-400 hover:bg-gray-800 hover:text-white'
-                                                }`}
-                                            aria-label="Última página"
-                                            title="Última página"
-                                        >
-                                            <div className="flex">
-                                                <ChevronRight className="h-4 w-4" />
-                                                <ChevronRight className="h-4 w-4 -ml-2" />
-                                            </div>
-                                        </button>
-                                    </div>
-
-                                    {/* Selector de filas por página */}
-                                    <div className="flex items-center bg-gray-850 rounded-lg px-3 py-1.5">
-                                        <label htmlFor="rowsPerPage" className="text-sm text-gray-400 mr-2">Filas:</label>
-                                        <select
-                                            id="rowsPerPage"
-                                            value={rowsPerPage}
-                                            onChange={(e) => {
-                                                setRowsPerPage(Number(e.target.value));
-                                                setCurrentPage(1);
-                                            }}
-                                            className="bg-gray-800 border border-gray-700 rounded-md px-2 py-1 text-sm text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                                        >
-                                            <option value={10}>10</option>
-                                            <option value={25}>25</option>
-                                            <option value={50}>50</option>
-                                            <option value={100}>100</option>
-                                        </select>
-                                    </div>
+                                    )}
                                 </div>
+                                {/* Indicador de página actual con animación */}
+                                {totalPages > 1 && (
+                                    <div className="flex items-center gap-2 bg-neutral-900/50 px-4 py-2 rounded-xl border border-neutral-800 shadow-inner">
+                                        <span className="text-neutral-400">Página</span>
+                                        <div className="flex items-center gap-1.5">
+                                            <span className="px-2.5 py-0.5 rounded-lg bg-blue-900/40 text-blue-300 font-mono font-bold border border-blue-700/50 min-w-[2rem] text-center transition-all duration-300 hover:scale-105 hover:bg-blue-900/60">
+                                                {currentPage}
+                                            </span>
+                                            <span className="text-neutral-500">/</span>
+                                            <span className="px-2.5 py-0.5 rounded-lg bg-neutral-900 text-neutral-400 font-mono min-w-[2rem] text-center border border-neutral-800">
+                                                {totalPages}
+                                            </span>
+                                        </div>
+                                    </div>
+                                )}
                             </div>
+                            {/* Barra de paginación elegante y numerada */}
+                            {totalPages > 1 && (
+                                <div className="flex items-center justify-center gap-2 mt-6 select-none">
+                                    <button
+                                        onClick={() => changePage(1)}
+                                        disabled={currentPage === 1}
+                                        className="px-2 py-1 rounded-lg border border-neutral-800 bg-neutral-900 text-neutral-400 hover:text-white hover:bg-neutral-800 transition disabled:opacity-40 disabled:cursor-not-allowed"
+                                        title="Primera página"
+                                    >
+                                        <ChevronLeft className="inline h-4 w-4 -mr-1" />
+                                        <ChevronLeft className="inline h-4 w-4 -ml-2" />
+                                    </button>
+                                    <button
+                                        onClick={() => changePage(currentPage - 1)}
+                                        disabled={currentPage === 1}
+                                        className="px-2 py-1 rounded-lg border border-neutral-800 bg-neutral-900 text-neutral-400 hover:text-white hover:bg-neutral-800 transition disabled:opacity-40 disabled:cursor-not-allowed"
+                                        title="Página anterior"
+                                    >
+                                        <ChevronLeft className="h-4 w-4" />
+                                    </button>
+                                    {/* Botones numerados dinámicos */}
+                                    {(() => {
+                                        const pageButtons = [];
+                                        const maxButtons = 5; // cantidad máxima de botones numerados visibles
+                                        let start = Math.max(1, currentPage - 2);
+                                        let end = Math.min(totalPages, currentPage + 2);
+                                        if (currentPage <= 3) {
+                                            end = Math.min(totalPages, maxButtons);
+                                        } else if (currentPage >= totalPages - 2) {
+                                            start = Math.max(1, totalPages - maxButtons + 1);
+                                        }
+                                        if (start > 1) {
+                                            pageButtons.push(
+                                                <span key="start-ellipsis" className="px-2 text-neutral-500">...</span>
+                                            );
+                                        }
+                                        for (let i = start; i <= end; i++) {
+                                            pageButtons.push(
+                                                <button
+                                                    key={i}
+                                                    onClick={() => changePage(i)}
+                                                    className={`mx-0.5 px-3 py-1.5 rounded-lg border text-sm font-semibold transition
+                                                    ${i === currentPage
+                                                        ? 'bg-blue-900/80 text-blue-300 border-blue-700 shadow'
+                                                        : 'bg-neutral-900 text-neutral-300 border-neutral-700 hover:bg-blue-900/40 hover:text-blue-200 hover:border-blue-600'}
+                                            `}
+                                                    aria-current={i === currentPage ? 'page' : undefined}
+                                                >
+                                                    {i}
+                                                </button>
+                                            );
+                                        }
+                                        if (end < totalPages) {
+                                            pageButtons.push(
+                                                <span key="end-ellipsis" className="px-2 text-neutral-500">...</span>
+                                            );
+                                        }
+                                        return pageButtons;
+                                    })()}
+                                    <button
+                                        onClick={() => changePage(currentPage + 1)}
+                                        disabled={currentPage === totalPages}
+                                        className="px-2 py-1 rounded-lg border border-neutral-800 bg-neutral-900 text-neutral-400 hover:text-white hover:bg-neutral-800 transition disabled:opacity-40 disabled:cursor-not-allowed"
+                                        title="Página siguiente"
+                                    >
+                                        <ChevronRight className="h-4 w-4" />
+                                    </button>
+                                    <button
+                                        onClick={() => changePage(totalPages)}
+                                        disabled={currentPage === totalPages}
+                                        className="px-2 py-1 rounded-lg border border-neutral-800 bg-neutral-900 text-neutral-400 hover:text-white hover:bg-neutral-800 transition disabled:opacity-40 disabled:cursor-not-allowed"
+                                        title="Última página"
+                                    >
+                                        <ChevronRight className="inline h-4 w-4 -mr-2" />
+                                        <ChevronRight className="inline h-4 w-4 -ml-1" />
+                                    </button>
+                                </div>
+                            )}
                         </div>
                     </div>
 

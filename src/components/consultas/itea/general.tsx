@@ -1,5 +1,5 @@
 "use client"
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import {
     Search, RefreshCw, ChevronLeft, ChevronRight,
     ArrowUpDown, AlertCircle, X, Save, Trash2, Check,
@@ -209,6 +209,15 @@ export default function ConsultasIteaGeneral() {
     const [showAreaSelectModal, setShowAreaSelectModal] = useState(false);
     const [areaOptionsForDirector, setAreaOptionsForDirector] = useState<{ id_area: number; nombre: string }[]>([]);
     const [, setSelectedAreaForDirector] = useState<{ id_area: number; nombre: string } | null>(null);
+
+    // 1. Estado de filtros de tabla y memo
+    const [filtersState] = useState({
+        estado: '',
+        estatus: '',
+        area: '',
+        rubro: ''
+    });
+    const filters = useMemo(() => filtersState, [filtersState.estado, filtersState.estatus, filtersState.area, filtersState.rubro]);
 
     // Cargar áreas y relaciones N:M al montar
     useEffect(() => {
@@ -491,13 +500,10 @@ export default function ConsultasIteaGeneral() {
         fetchMuebles();
     }, [fetchDirectores, fetchFilterOptions, fetchMuebles]);
 
+    // 2. useEffect para resetear página igual que inea
     useEffect(() => {
         setCurrentPage(1);
-    }, [searchTerm, sortField, sortDirection, rowsPerPage]);
-
-    useEffect(() => {
-        fetchMuebles();
-    }, [currentPage, fetchMuebles]);
+    }, [searchTerm, filters, sortField, sortDirection, rowsPerPage]);
 
     const handleSelectItem = (item: Mueble) => {
         setSelectedItem(item);
@@ -854,7 +860,14 @@ export default function ConsultasIteaGeneral() {
 
     // --- OMNIBOX FILTERING ---
     const clean = (str: string) => (str || '').normalize('NFKD').replace(/\p{Diacritic}/gu, '').toLowerCase();
+    // 3. Filtrado de la tabla: aplica también los filtros de tabla (filters)
     const filteredMueblesOmni = muebles.filter(item => {
+        // Filtros de tabla (igual que inea)
+        if (filters.estado && clean(item.estado || '') !== clean(filters.estado)) return false;
+        if (filters.estatus && clean(item.estatus || '') !== clean(filters.estatus)) return false;
+        if (filters.area && clean(item.area || '') !== clean(filters.area)) return false;
+        if (filters.rubro && clean(item.rubro || '') !== clean(filters.rubro)) return false;
+        // Filtros omnibox
         if (activeFilters.length === 0 && !searchTerm) return true;
         const passesActiveFilters = activeFilters.every(filter => {
             const filterTerm = clean(filter.term);
@@ -884,8 +897,17 @@ export default function ConsultasIteaGeneral() {
         return passesActiveFilters && passesCurrentSearch;
     });
     const totalCount = filteredMueblesOmni.length;
-    const totalPages = Math.ceil(totalCount / rowsPerPage);
-    const paginatedMuebles = filteredMueblesOmni.slice((currentPage - 1) * rowsPerPage, currentPage * rowsPerPage);
+    const totalPages = Math.max(1, Math.ceil(totalCount / rowsPerPage));
+    const paginatedMuebles = filteredMueblesOmni
+        .slice()
+        .sort((a, b) => {
+            const aValue = a[sortField] ?? '';
+            const bValue = b[sortField] ?? '';
+            if (aValue < bValue) return sortDirection === 'asc' ? -1 : 1;
+            if (aValue > bValue) return sortDirection === 'asc' ? 1 : -1;
+            return 0;
+        })
+        .slice((currentPage - 1) * rowsPerPage, currentPage * rowsPerPage);
 
     // Calcular totales directamente
     const filteredValue = filteredMueblesOmni.reduce((acc, item) => acc + (parseFloat(item.valor || '0') || 0), 0);
@@ -1436,118 +1458,136 @@ export default function ConsultasIteaGeneral() {
                                 </table>
                             </div>
 
-                            {/* Paginación */}
-                            <div className="px-6 py-4 border-t border-gray-800 bg-black flex flex-col sm:flex-row items-center justify-between gap-4 min-w-[93vh]">
-                                {/* Información de registros */}
-                                <div className="text-sm text-gray-400 font-medium">
-                                    Mostrando <span className="text-white">{(currentPage - 1) * rowsPerPage + 1}-{Math.min(currentPage * rowsPerPage, totalCount)}</span> de <span className="text-white">{totalCount}</span> registros
-                                </div>
-
-                                <div className="flex items-center gap-4">
-                                    {/* Controles de paginación */}
-                                    <div className="flex items-center space-x-1 bg-gray-850 rounded-lg p-1">
-                                        {/* Botón primera página */}
-                                        <button
-                                            onClick={() => changePage(1)}
-                                            disabled={currentPage === 1}
-                                            className={`p-1.5 rounded-md flex items-center justify-center ${currentPage === 1
-                                                ? 'text-gray-600 cursor-not-allowed'
-                                                : 'text-gray-400 hover:bg-gray-800 hover:text-white'
-                                                }`}
-                                            aria-label="Primera página"
-                                            title="Primera página"
+                            {/* Paginación (igual que INEA) */}
+                            <div className="flex flex-col sm:flex-row gap-3 items-center justify-between mt-4 mb-3 px-2">
+                                {/* Contador de registros con diseño mejorado */}
+                                <div className="flex items-center gap-2 bg-neutral-900/50 px-4 py-2 rounded-xl border border-neutral-800 shadow-inner">
+                                    {totalCount === 0 ? (
+                                        <span className="text-neutral-400 flex items-center gap-2">
+                                            <AlertCircle className="h-4 w-4 text-neutral-500" />
+                                            No hay registros para mostrar
+                                        </span>
+                                    ) : (
+                                        <div className="flex items-center gap-2">
+                                            <span className="text-neutral-300">Mostrando</span>
+                                            <span className="px-2 py-0.5 rounded-lg bg-blue-900/30 text-blue-300 font-mono border border-blue-800/50">
+                                                {((currentPage - 1) * rowsPerPage) + 1}–{Math.min(currentPage * rowsPerPage, totalCount)}
+                                            </span>
+                                            <span className="text-neutral-300">de</span>
+                                            <span className="px-2 py-0.5 rounded-lg bg-neutral-900 text-neutral-300 font-mono border border-neutral-800">
+                                                {totalCount}
+                                            </span>
+                                            <span className="text-neutral-400">registros</span>
+                                            {/* Selector de filas por página */}
+                                            <span className="ml-4 text-neutral-400">|</span>
+                                            <label htmlFor="rows-per-page" className="ml-2 text-xs text-neutral-400">Filas por página:</label>
+                                            <select
+                                                id="rows-per-page"
+                                                value={rowsPerPage}
+                                                onChange={e => { setRowsPerPage(Number(e.target.value)); setCurrentPage(1); }}
+                                                className="ml-1 px-2 py-1 rounded-lg bg-neutral-900 border border-neutral-700 text-blue-300 font-mono text-xs focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition"
                                         >
-                                            <div className="flex">
-                                                <ChevronLeft className="h-4 w-4" />
-                                                <ChevronLeft className="h-4 w-4 -ml-2" />
-                                            </div>
-                                        </button>
-
-                                        {/* Botón página anterior */}
-                                        <button
-                                            onClick={() => changePage(currentPage - 1)}
-                                            disabled={currentPage === 1}
-                                            className={`p-1.5 rounded-md ${currentPage === 1
-                                                ? 'text-gray-600 cursor-not-allowed'
-                                                : 'text-gray-400 hover:bg-gray-800 hover:text-white'
-                                                }`}
-                                            aria-label="Página anterior"
-                                            title="Página anterior"
-                                        >
-                                            <ChevronLeft className="h-4 w-4" />
-                                        </button>
-
-                                        {/* Números de página */}
-                                        <div className="flex items-center">
-                                            {getPageNumbers().map((page, index) => (
-                                                <button
-                                                    key={index}
-                                                    onClick={() => typeof page === 'number' ? changePage(page) : null}
-                                                    disabled={page === '...'}
-                                                    className={`min-w-[32px] h-8 px-2 rounded-md text-sm font-medium flex items-center justify-center ${currentPage === page
-                                                        ? 'bg-black text-white'
-                                                        : page === '...'
-                                                            ? 'text-gray-500 cursor-default'
-                                                            : 'text-gray-400 hover:bg-gray-800 hover:text-white'
-                                                        }`}
-                                                >
-                                                    {page}
-                                                </button>
+                                            {[10, 20, 30, 50, 100].map(opt => (
+                                                <option key={opt} value={opt}>{opt}</option>
                                             ))}
-                                        </div>
-
-                                        {/* Botón página siguiente */}
-                                        <button
-                                            onClick={() => changePage(currentPage + 1)}
-                                            disabled={currentPage === totalPages || totalPages === 0}
-                                            className={`p-1.5 rounded-md ${currentPage === totalPages || totalPages === 0
-                                                ? 'text-gray-600 cursor-not-allowed'
-                                                : 'text-gray-400 hover:bg-gray-800 hover:text-white'
-                                                }`}
-                                            aria-label="Página siguiente"
-                                            title="Página siguiente"
-                                        >
-                                            <ChevronRight className="h-4 w-4" />
-                                        </button>
-
-                                        {/* Botón última página */}
-                                        <button
-                                            onClick={() => changePage(totalPages)}
-                                            disabled={currentPage === totalPages || totalPages === 0}
-                                            className={`p-1.5 rounded-md flex items-center justify-center ${currentPage === totalPages || totalPages === 0
-                                                ? 'text-gray-600 cursor-not-allowed'
-                                                : 'text-gray-400 hover:bg-gray-800 hover:text-white'
-                                                }`}
-                                            aria-label="Última página"
-                                            title="Última página"
-                                        >
-                                            <div className="flex">
-                                                <ChevronRight className="h-4 w-4" />
-                                                <ChevronRight className="h-4 w-4 -ml-2" />
-                                            </div>
-                                        </button>
-                                    </div>
-
-                                    {/* Selector de filas por página */}
-                                    <div className="flex items-center bg-gray-850 rounded-lg px-3 py-1.5">
-                                        <label htmlFor="rowsPerPage" className="text-sm text-gray-400 mr-2">Filas:</label>
-                                        <select
-                                            id="rowsPerPage"
-                                            value={rowsPerPage}
-                                            onChange={(e) => {
-                                                setRowsPerPage(Number(e.target.value));
-                                                setCurrentPage(1);
-                                            }}
-                                            className="bg-gray-800 border border-gray-700 rounded-md px-2 py-1 text-sm text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                                        >
-                                            <option value={10}>10</option>
-                                            <option value={25}>25</option>
-                                            <option value={50}>50</option>
-                                            <option value={100}>100</option>
                                         </select>
-                                    </div>
+                                        </div>
+                                    )}
                                 </div>
+                                {/* Indicador de página actual con animación */}
+                                {totalPages > 1 && (
+                                    <div className="flex items-center gap-2 bg-neutral-900/50 px-4 py-2 rounded-xl border border-neutral-800 shadow-inner">
+                                        <span className="text-neutral-400">Página</span>
+                                        <div className="flex items-center gap-1.5">
+                                            <span className="px-2.5 py-0.5 rounded-lg bg-blue-900/40 text-blue-300 font-mono font-bold border border-blue-700/50 min-w-[2rem] text-center transition-all duration-300 hover:scale-105 hover:bg-blue-900/60">
+                                                {currentPage}
+                                            </span>
+                                            <span className="text-neutral-500">/</span>
+                                            <span className="px-2.5 py-0.5 rounded-lg bg-neutral-900 text-neutral-400 font-mono min-w-[2rem] text-center border border-neutral-800">
+                                                {totalPages}
+                                            </span>
+                                        </div>
+                                    </div>
+                                )}
                             </div>
+                            {/* Barra de paginación elegante y numerada */}
+                            {totalPages > 1 && (
+                                <div className="flex items-center justify-center gap-2 mt-6 select-none">
+                                    <button
+                                        onClick={() => changePage(1)}
+                                        disabled={currentPage === 1}
+                                        className="px-2 py-1 rounded-lg border border-neutral-800 bg-neutral-900 text-neutral-400 hover:text-white hover:bg-neutral-800 transition disabled:opacity-40 disabled:cursor-not-allowed"
+                                        title="Primera página"
+                                    >
+                                        <ChevronLeft className="inline h-4 w-4 -mr-1" />
+                                        <ChevronLeft className="inline h-4 w-4 -ml-2" />
+                                    </button>
+                                    <button
+                                        onClick={() => changePage(currentPage - 1)}
+                                        disabled={currentPage === 1}
+                                        className="px-2 py-1 rounded-lg border border-neutral-800 bg-neutral-900 text-neutral-400 hover:text-white hover:bg-neutral-800 transition disabled:opacity-40 disabled:cursor-not-allowed"
+                                        title="Página anterior"
+                                    >
+                                        <ChevronLeft className="h-4 w-4" />
+                                    </button>
+                                    {/* Botones numerados dinámicos */}
+                                    {(() => {
+                                        const pageButtons = [];
+                                        const maxButtons = 5;
+                                        let start = Math.max(1, currentPage - 2);
+                                        let end = Math.min(totalPages, currentPage + 2);
+                                        if (currentPage <= 3) {
+                                            end = Math.min(totalPages, maxButtons);
+                                        } else if (currentPage >= totalPages - 2) {
+                                            start = Math.max(1, totalPages - maxButtons + 1);
+                                        }
+                                        if (start > 1) {
+                                            pageButtons.push(
+                                                <span key="start-ellipsis" className="px-2 text-neutral-500">...</span>
+                                            );
+                                        }
+                                        for (let i = start; i <= end; i++) {
+                                            pageButtons.push(
+                                                <button
+                                                    key={i}
+                                                    onClick={() => changePage(i)}
+                                                    className={`mx-0.5 px-3 py-1.5 rounded-lg border text-sm font-semibold transition
+                                                    ${i === currentPage
+                                                        ? 'bg-blue-900/80 text-blue-300 border-blue-700 shadow'
+                                                        : 'bg-neutral-900 text-neutral-300 border-neutral-700 hover:bg-blue-900/40 hover:text-blue-200 hover:border-blue-600'}
+                                                `}
+                                                    aria-current={i === currentPage ? 'page' : undefined}
+                                                >
+                                                    {i}
+                                                </button>
+                                            );
+                                        }
+                                        if (end < totalPages) {
+                                            pageButtons.push(
+                                                <span key="end-ellipsis" className="px-2 text-neutral-500">...</span>
+                                            );
+                                        }
+                                        return pageButtons;
+                                    })()}
+                                    <button
+                                        onClick={() => changePage(currentPage + 1)}
+                                        disabled={currentPage === totalPages}
+                                        className="px-2 py-1 rounded-lg border border-neutral-800 bg-neutral-900 text-neutral-400 hover:text-white hover:bg-neutral-800 transition disabled:opacity-40 disabled:cursor-not-allowed"
+                                        title="Página siguiente"
+                                    >
+                                        <ChevronRight className="h-4 w-4" />
+                                    </button>
+                                    <button
+                                        onClick={() => changePage(totalPages)}
+                                        disabled={currentPage === totalPages}
+                                        className="px-2 py-1 rounded-lg border border-neutral-800 bg-neutral-900 text-neutral-400 hover:text-white hover:bg-neutral-800 transition disabled:opacity-40 disabled:cursor-not-allowed"
+                                        title="Última página"
+                                    >
+                                        <ChevronRight className="inline h-4 w-4 -mr-2" />
+                                        <ChevronRight className="inline h-4 w-4 -ml-1" />
+                                    </button>
+                                </div>
+                            )}
                         </div>
                     </div>
 
