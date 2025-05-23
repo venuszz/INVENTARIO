@@ -912,49 +912,6 @@ export default function ConsultasIteaGeneral() {
     // Calcular totales directamente
     const filteredValue = filteredMueblesOmni.reduce((acc, item) => acc + (parseFloat(item.valor || '0') || 0), 0);
     const allValue = muebles.reduce((acc, item) => acc + (parseFloat(item.valor || '0') || 0), 0);
-
-    const getPageNumbers = () => {
-        const pages: (number | string)[] = [];
-        const maxVisiblePages = 5;
-
-        if (totalPages <= maxVisiblePages) {
-            for (let i = 1; i <= totalPages; i++) {
-                pages.push(i);
-            }
-        } else {
-            pages.push(1);
-
-            let startPage = Math.max(2, currentPage - 1);
-            let endPage = Math.min(totalPages - 1, currentPage + 1);
-
-            if (currentPage <= 3) {
-                endPage = Math.min(totalPages - 1, 4);
-            }
-
-            if (currentPage >= totalPages - 2) {
-                startPage = Math.max(2, totalPages - 3);
-            }
-
-            if (startPage > 2) {
-                pages.push('...');
-            }
-
-            for (let i = startPage; i <= endPage; i++) {
-                pages.push(i);
-            }
-
-            if (endPage < totalPages - 1) {
-                pages.push('...');
-            }
-
-            if (totalPages > 1) {
-                pages.push(totalPages);
-            }
-        }
-
-        return pages;
-    };
-
     const getMainContainerClass = () => {
         return selectedItem
             ? "grid grid-cols-1 lg:grid-cols-2 gap-6 h-full flex-1"
