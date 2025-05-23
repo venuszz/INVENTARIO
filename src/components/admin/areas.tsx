@@ -439,7 +439,23 @@ export default function ConfigManagementComponent() {
                                     />
                                     {error && <p className="text-red-500 text-xs mt-1">{error}</p>}
                                 </div>
-
+                                <div className="flex items-center gap-2 mt-2">
+                                    {currentItem.concepto && currentItem.concepto.trim() !== '' ? (
+                                        <span className={`inline-block px-2 py-0.5 rounded-full text-xs font-semibold flex items-center gap-1
+                                            ${activeTab === 'estatus' ? 'bg-blue-900/40 text-blue-200 border border-blue-700' :
+                                              activeTab === 'rubro' ? 'bg-green-900/40 text-green-200 border border-green-700' :
+                                              activeTab === 'formadq' ? 'bg-purple-900/40 text-purple-200 border border-purple-700' :
+                                              'bg-gray-900/40 text-gray-200 border border-gray-700'}
+                                        `}>
+                                            {currentItem.concepto}
+                                        </span>
+                                    ) : (
+                                        <span className="text-amber-400 flex items-center gap-1 bg-amber-900/30 border border-amber-500 rounded-full px-2 py-0.5 text-xs font-semibold animate-fade-in">
+                                            <AlertTriangle size={14} />
+                                            <span>Sin concepto</span>
+                                        </span>
+                                    )}
+                                </div>
                                 <div className="flex justify-end gap-2 mt-4">
                                     <button
                                         type="button"
@@ -546,7 +562,21 @@ export default function ConfigManagementComponent() {
                                                         </div>
                                                     </div>
                                                 ) : (
-                                                    item.concepto
+                                                    item.concepto && item.concepto.trim() !== '' ? (
+                                                        <span className={`inline-block px-2 py-0.5 rounded-full text-xs font-semibold flex items-center gap-1
+                                                            ${item.tipo === 'estatus' ? 'bg-blue-900/40 text-blue-200 border border-blue-700' :
+                                                              item.tipo === 'rubro' ? 'bg-green-900/40 text-green-200 border border-green-700' :
+                                                              item.tipo === 'formadq' ? 'bg-purple-900/40 text-purple-200 border border-purple-700' :
+                                                              'bg-gray-900/40 text-gray-200 border border-gray-700'}
+                                                        `}>
+                                                            {item.concepto}
+                                                        </span>
+                                                    ) : (
+                                                        <span className="text-amber-400 flex items-center gap-1 bg-amber-900/30 border border-amber-500 rounded-full px-2 py-0.5 text-xs font-semibold animate-fade-in">
+                                                            <AlertTriangle size={14} />
+                                                            <span>Sin concepto</span>
+                                                        </span>
+                                                    )
                                                 )}
                                                 {error && editingRow === item.id && (
                                                     <p className="text-red-500 text-xs mt-1">{error}</p>

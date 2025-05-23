@@ -525,15 +525,18 @@ export default function DirectorioManagementComponent() {
                                                 />
                                             </div>
                                         </td>
-                                        {/* Puesto */}
+                                        {/* Puesto como chip azul o aviso si no hay */}
                                         <td className="px-4 py-2 text-sm">
-                                            <input
-                                                type="text"
-                                                value={newEmployee.puesto || ''}
-                                                onChange={(e) => setNewEmployee({ ...newEmployee, puesto: e.target.value.toUpperCase() })}
-                                                placeholder="Puesto a desempeñar"
-                                                className="w-full bg-black border border-gray-700 rounded p-1.5 focus:border-white focus:ring focus:ring-gray-700 focus:ring-opacity-50 transition-all text-sm"
-                                            />
+                                            {newEmployee.puesto && newEmployee.puesto.trim() !== '' ? (
+                                                <span className="inline-block bg-blue-900/40 text-blue-200 border border-blue-700 rounded-full px-2 py-0.5 text-xs font-semibold flex items-center gap-1">
+                                                    {newEmployee.puesto}
+                                                </span>
+                                            ) : (
+                                                <span className="text-amber-400 flex items-center gap-1 bg-amber-900/30 border border-amber-500 rounded-full px-2 py-0.5 text-xs font-semibold animate-fade-in">
+                                                    <AlertTriangle size={14} />
+                                                    <span>Sin puesto</span>
+                                                </span>
+                                            )}
                                         </td>
                                         {/* Acciones */}
                                         <td className="px-4 py-2 text-sm text-right">
@@ -640,15 +643,18 @@ export default function DirectorioManagementComponent() {
                                                             />
                                                         </div>
                                                     </td>
-                                                    {/* Puesto */}
+                                                    {/* Puesto como chip azul o aviso si no hay */}
                                                     <td className="px-4 py-2 text-sm">
-                                                        <input
-                                                            title='Puesto'
-                                                            type="text"
-                                                            value={editEmployee.puesto || ''}
-                                                            onChange={(e) => setEditEmployee({ ...editEmployee, puesto: e.target.value.toUpperCase() })}
-                                                            className="w-full bg-black border border-gray-700 rounded p-1.5 focus:border-white focus:ring focus:ring-gray-700 focus:ring-opacity-50 transition-all text-sm"
-                                                        />
+                                                        {editEmployee.puesto && editEmployee.puesto.trim() !== '' ? (
+                                                            <span className="inline-block bg-blue-900/40 text-blue-200 border border-blue-700 rounded-full px-2 py-0.5 text-xs font-semibold flex items-center gap-1">
+                                                                {editEmployee.puesto}
+                                                            </span>
+                                                        ) : (
+                                                            <span className="text-amber-400 flex items-center gap-1 bg-amber-900/30 border border-amber-500 rounded-full px-2 py-0.5 text-xs font-semibold animate-fade-in">
+                                                                <AlertTriangle size={14} />
+                                                                <span>Sin puesto</span>
+                                                            </span>
+                                                        )}
                                                     </td>
                                                     {/* Acciones */}
                                                     <td className="px-4 py-2 text-sm text-right">
@@ -725,9 +731,14 @@ export default function DirectorioManagementComponent() {
                                                             )}
                                                         </div>
                                                     </td>
-                                                    <td className={`px-4 py-3 text-sm ${!employee.puesto || employee.puesto.trim() === '' ? 'bg-amber-900 bg-opacity-50 border-l-2 border-amber-500' : ''}`}>
-                                                        {employee.puesto || (
-                                                            <span className="text-amber-400 flex items-center gap-1">
+                                                    {/* Puesto como chip azul o aviso si no hay */}
+                                                    <td className={`px-4 py-3 text-sm ${!employee.puesto || employee.puesto.trim() === '' ? '' : ''}`}>
+                                                        {employee.puesto && employee.puesto.trim() !== '' ? (
+                                                            <span className="inline-block bg-blue-900/40 text-blue-200 border border-blue-700 rounded-full px-2 py-0.5 text-xs font-semibold flex items-center gap-1">
+                                                                {employee.puesto}
+                                                            </span>
+                                                        ) : (
+                                                            <span className="text-amber-400 flex items-center gap-1 bg-amber-900/30 border border-amber-500 rounded-full px-2 py-0.5 text-xs font-semibold animate-fade-in">
                                                                 <AlertTriangle size={14} />
                                                                 <span>Sin puesto</span>
                                                             </span>
@@ -819,9 +830,18 @@ export default function DirectorioManagementComponent() {
 
 // NUEVO: Componente para mostrar chips de áreas (solo visualización, recibe ids de áreas)
 function AreaChips({ areaIds, areas }: { areaIds: number[], areas: { id_area: number, nombre: string }[] }) {
+    const chips = areas.filter(a => areaIds.includes(a.id_area));
+    if (chips.length === 0) {
+        return (
+            <span className="text-amber-400 flex items-center gap-1 bg-amber-900/30 border border-amber-500 rounded-full px-2 py-0.5 text-xs font-semibold animate-fade-in">
+                <AlertTriangle size={14} />
+                <span>Sin área</span>
+            </span>
+        );
+    }
     return (
         <>
-            {areas.filter(a => areaIds.includes(a.id_area)).map(area => (
+            {chips.map(area => (
                 <span key={area.id_area} className="flex bg-emerald-900/40 text-emerald-200 border border-emerald-700 rounded-full px-2 py-0.5 text-xs font-semibold items-center gap-1">
                     {area.nombre}
                 </span>

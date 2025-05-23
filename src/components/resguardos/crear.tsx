@@ -14,6 +14,7 @@ import Cookies from 'js-cookie';
 import { generateResguardoPDF } from './ResguardoPDFReport';
 import { useUserRole } from "@/hooks/useUserRole";
 import { useNotifications } from '@/hooks/useNotifications';
+import ReactDOM from 'react-dom';
 
 interface Mueble {
     id: number;
@@ -799,6 +800,151 @@ export default function CrearResguardos() {
         setShowDirectorModal(false);
     };
 
+    // OMNIBOX SUGERENCIAS
+    const [suggestions, setSuggestions] = useState<{ value: string; type: ActiveFilter['type'] }[]>([]);
+    const [highlightedIndex, setHighlightedIndex] = useState<number>(-1);
+    const [showSuggestions, setShowSuggestions] = useState(false);
+    const inputRef = useRef<HTMLInputElement>(null);
+
+    // Generar sugerencias al escribir
+    useEffect(() => {
+        if (!searchTerm || !allMuebles.length) {
+            setSuggestions([]);
+            setShowSuggestions(false);
+            setHighlightedIndex(-1);
+            return;
+        }
+        const clean = (str: string) => (str || '').normalize('NFKD').replace(/\p{Diacritic}/gu, '').toLowerCase().trim();
+        const term = clean(searchTerm);
+        const seen = new Set<string>();
+        const fields = [
+            { type: 'id' as ActiveFilter['type'], label: 'ID' },
+            { type: 'area' as ActiveFilter['type'], label: 'Área' },
+            { type: 'usufinal' as ActiveFilter['type'], label: 'Usuario Final' },
+            { type: 'resguardante' as ActiveFilter['type'], label: 'Resguardante' },
+            { type: 'descripcion' as ActiveFilter['type'], label: 'Descripción' },
+            { type: 'rubro' as ActiveFilter['type'], label: 'Rubro' },
+            { type: 'estado' as ActiveFilter['type'], label: 'Estado' },
+            { type: 'estatus' as ActiveFilter['type'], label: 'Estatus' },
+        ];
+        let allSuggestions: { value: string; type: ActiveFilter['type'] }[] = [];
+        for (const f of fields) {
+            let values: string[] = [];
+            switch (f.type) {
+                case 'id': values = allMuebles.map(m => m.id_inv || '').filter(Boolean) as string[]; break;
+                case 'area': values = allMuebles.map(m => m.area || '').filter(Boolean) as string[]; break;
+                case 'usufinal': values = allMuebles.map(m => m.usufinal || '').filter(Boolean) as string[]; break;
+                case 'resguardante': values = allMuebles.map(m => m.resguardante || '').filter(Boolean) as string[]; break;
+                case 'descripcion': values = allMuebles.map(m => m.descripcion || '').filter(Boolean) as string[]; break;
+                case 'rubro': values = allMuebles.map(m => m.rubro || '').filter(Boolean) as string[]; break;
+                case 'estado': values = allMuebles.map(m => m.estado || '').filter(Boolean) as string[]; break;
+                case 'estatus': values = allMuebles.map(m => m.estatus || '').filter(Boolean) as string[]; break;
+                default: values = [];
+            }
+            for (const v of values) {
+                if (!v) continue;
+                const vClean = clean(v);
+                if (vClean.includes(term) && !seen.has(f.type + ':' + vClean)) {
+                    allSuggestions.push({ value: v, type: f.type });
+                    seen.add(f.type + ':' + vClean);
+                }
+            }
+        }
+        // Prioridad: exactos primero, luego parciales, máx 7
+        allSuggestions = [
+            ...allSuggestions.filter(s => clean(s.value) === term),
+            ...allSuggestions.filter(s => clean(s.value) !== term)
+        ].slice(0, 7);
+        setSuggestions(allSuggestions);
+        setShowSuggestions(allSuggestions.length > 0);
+        setHighlightedIndex(allSuggestions.length > 0 ? 0 : -1);
+    }, [searchTerm, allMuebles]);
+
+    function getTypeIcon(type: ActiveFilter['type']) {
+        switch (type) {
+            case 'id': return <span className="h-4 w-4 text-blue-400 font-bold">#</span>;
+            case 'area': return <span className="h-4 w-4 text-red-400 font-bold">A</span>;
+            case 'usufinal': return <span className="h-4 w-4 text-orange-400 font-bold">U</span>;
+            case 'resguardante': return <span className="h-4 w-4 text-orange-300 font-bold">R</span>;
+            case 'descripcion': return <span className="h-4 w-4 text-purple-400 font-bold">Desc</span>;
+            case 'rubro': return <span className="h-4 w-4 text-green-400 font-bold">Ru</span>;
+            case 'estado': return <span className="h-4 w-4 text-yellow-400 font-bold">Edo</span>;
+            case 'estatus': return <span className="h-4 w-4 text-teal-400 font-bold">Est</span>;
+            default: return null;
+        }
+    }
+    function getTypeLabel(type: ActiveFilter['type']) {
+        switch (type) {
+            case 'id': return 'ID';
+            case 'area': return 'ÁREA';
+            case 'usufinal': return 'USUARIO FINAL';
+            case 'resguardante': return 'RESGUARDANTE';
+            case 'descripcion': return 'DESCRIPCIÓN';
+            case 'rubro': return 'RUBRO';
+            case 'estado': return 'ESTADO';
+            case 'estatus': return 'ESTATUS';
+            default: return '';
+        }
+    }
+    function handleSuggestionClick(index: number) {
+        const s = suggestions[index];
+        if (!s) return;
+        setActiveFilters(prev => [...prev, { term: s.value, type: s.type }]);
+        setSearchTerm('');
+        setSearchMatchType(null);
+        setShowSuggestions(false);
+        inputRef.current?.focus();
+    }
+    function handleInputKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
+        if (!showSuggestions || suggestions.length === 0) return;
+        if (e.key === 'ArrowDown') {
+            e.preventDefault();
+            setHighlightedIndex(i => (i + 1) % suggestions.length);
+        } else if (e.key === 'ArrowUp') {
+            e.preventDefault();
+            setHighlightedIndex(i => (i - 1 + suggestions.length) % suggestions.length);
+        } else if (e.key === 'Enter') {
+            e.preventDefault();
+            if (highlightedIndex >= 0 && suggestions[highlightedIndex]) {
+                handleSuggestionClick(highlightedIndex);
+            }
+        } else if (e.key === 'Escape') {
+            setShowSuggestions(false);
+        }
+    }
+    function handleInputBlur() {
+        setTimeout(() => setShowSuggestions(false), 100); // Permite click en sugerencia
+    }
+    function SuggestionDropdown() {
+        if (!showSuggestions || suggestions.length === 0) return null;
+        return (
+            <ul
+                id="omnibox-suggestions"
+                role="listbox"
+                title="Sugerencias de búsqueda"
+                className="absolute left-0 top-full w-full mt-1 animate-fadeInUp max-h-80 overflow-y-auto rounded-lg shadow-2xl border border-gray-800 bg-black/95 backdrop-blur-xl ring-1 ring-inset ring-gray-900/60 transition-all duration-200 z-50"
+            >
+                {suggestions.map((s, i) => {
+                    const isSelected = highlightedIndex === i;
+                    return (
+                        <li
+                            key={s.value + s.type}
+                            role="option"
+                            aria-selected={isSelected}
+                            onMouseDown={() => handleSuggestionClick(i)}
+                            onMouseEnter={() => setHighlightedIndex(i)}
+                            className={`flex items-center gap-2 px-3 py-2 cursor-pointer select-none text-xs whitespace-normal break-words w-full border-b border-gray-800 last:border-b-0 ${isSelected ? 'bg-gray-800/80 text-white' : 'text-gray-300'} hover:bg-gray-800/80`}
+                        >
+                            <span className="shrink-0">{getTypeIcon(s.type)}</span>
+                            <span className="font-semibold whitespace-normal break-words w-full">{s.value}</span>
+                            <span className="ml-auto text-[10px] text-gray-400 font-mono">{getTypeLabel(s.type)}</span>
+                        </li>
+                    );
+                })}
+            </ul>
+        );
+    }
+
     return (
         <div className="bg-black text-white min-h-screen p-2 sm:p-4 md:p-6 lg:p-8">
             {/* Success message toast */}
@@ -878,39 +1024,25 @@ export default function CrearResguardos() {
 
                         {/* Search and filters */}
                         <div className="mb-6 bg-gradient-to-br from-gray-900/20 to-gray-900/40 p-4 rounded-xl border border-gray-800 shadow-inner hover:shadow-lg transition-shadow">                            <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-4 mb-4">
-                                <div className="flex-1 relative">
+                                <div className="relative flex-1">
                                     <div className="flex gap-2">
                                         <div className="relative flex-1">
                                             <input
+                                                ref={inputRef}
                                                 type="text"
                                                 value={searchTerm}
-                                                onChange={(e) => setSearchTerm(e.target.value)}
+                                                onChange={e => { setSearchTerm(e.target.value); setShowSuggestions(true); }}
+                                                onKeyDown={handleInputKeyDown}
+                                                onBlur={handleInputBlur}
                                                 placeholder="Buscar por cualquier campo..."
                                                 className="w-full px-4 py-2 bg-black/50 border border-gray-800 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-white placeholder-gray-500"
+                                                aria-autocomplete="list"
+                                                aria-controls="omnibox-suggestions"
+                                                aria-activedescendant={highlightedIndex >= 0 ? `omnibox-suggestion-${highlightedIndex}` : undefined}
+                                                autoComplete="off"
                                             />
-                                            {searchMatchType && (                                                <span className={`absolute right-2 top-1/2 -translate-y-1/2 px-2 py-1 ${
-                                                        searchMatchType === 'id' ? 'bg-blue-900/70 text-blue-200 border border-blue-700' :
-                                                        searchMatchType === 'descripcion' ? 'bg-purple-900/70 text-purple-200 border border-purple-700' :
-                                                        searchMatchType === 'rubro' ? 'bg-green-900/70 text-green-200 border border-green-700' :
-                                                        searchMatchType === 'estado' ? 'bg-yellow-900/70 text-yellow-200 border border-yellow-700' :
-                                                        searchMatchType === 'estatus' ? 'bg-teal-900/70 text-teal-200 border border-teal-700' :
-                                                        searchMatchType === 'area' ? 'bg-red-900/70 text-red-200 border border-red-700' :
-                                                        searchMatchType === 'usufinal' || searchMatchType === 'resguardante' ? 'bg-orange-900/70 text-orange-200 border border-orange-700' :
-                                                        'bg-gray-700 text-gray-300 border border-gray-600'
-                                                    } rounded-md text-xs font-medium flex items-center gap-2`}>
-                                                    <span>{
-                                                        searchMatchType === 'id' ? 'ID' :
-                                                        searchMatchType === 'descripcion' ? 'Descripción' :
-                                                        searchMatchType === 'rubro' ? 'Rubro' :
-                                                        searchMatchType === 'estado' ? 'Estado' :
-                                                        searchMatchType === 'estatus' ? 'Estatus' :
-                                                        searchMatchType === 'area' ? 'Área' :
-                                                        searchMatchType === 'usufinal' ? 'Usuario Final' :
-                                                        searchMatchType === 'resguardante' ? 'Resguardante' :
-                                                        searchMatchType
-                                                    }</span>
-                                                </span>
-                                            )}</div>
+                                            <SuggestionDropdown />
+                                        </div>
                                         <button
                                             onClick={saveCurrentFilter}
                                             disabled={!searchTerm || !searchMatchType}
@@ -926,50 +1058,52 @@ export default function CrearResguardos() {
                                         </button>
                                     </div>                                    {/* Filtros activos */}
                                     {activeFilters.length > 0 && (
-                                        <div className="mt-3 flex flex-wrap gap-2">
-                                            {activeFilters.map((filter, index) => (                                                <div
+                                        <div className="mt-2 flex flex-wrap gap-1">
+                                            {activeFilters.map((filter, index) => (
+                                                <div
                                                     key={index}
-                                                    className={`flex items-center gap-2 px-3 py-1.5 rounded-md text-sm animate-fadeIn transition-colors group ${
-                                                        filter.type === 'id' ? 'bg-blue-900/70 text-blue-200 border border-blue-700' :
-                                                        filter.type === 'descripcion' ? 'bg-purple-900/70 text-purple-200 border border-purple-700' :
-                                                        filter.type === 'rubro' ? 'bg-green-900/70 text-green-200 border border-green-700' :
-                                                        filter.type === 'estado' ? 'bg-yellow-900/70 text-yellow-200 border border-yellow-700' :
-                                                        filter.type === 'estatus' ? 'bg-teal-900/70 text-teal-200 border border-teal-700' :
-                                                        filter.type === 'area' ? 'bg-red-900/70 text-red-200 border border-red-700' :
-                                                        filter.type === 'usufinal' || filter.type === 'resguardante' ? 'bg-orange-900/70 text-orange-200 border border-orange-700' :
-                                                        'bg-gray-700 text-gray-300 border border-gray-600'
-                                                    }`}
+                                                    className={`flex items-center gap-1 px-2 py-0.5 rounded-full text-xs border font-medium transition-colors
+                                                        ${filter.type === 'id' ? 'border-blue-500 text-blue-300' :
+                                                        filter.type === 'descripcion' ? 'border-purple-500 text-purple-200' :
+                                                        filter.type === 'rubro' ? 'border-green-500 text-green-200' :
+                                                        filter.type === 'estado' ? 'border-yellow-500 text-yellow-200' :
+                                                        filter.type === 'estatus' ? 'border-teal-500 text-teal-200' :
+                                                        filter.type === 'area' ? 'border-red-500 text-red-200' :
+                                                        filter.type === 'usufinal' || filter.type === 'resguardante' ? 'border-orange-500 text-orange-200' :
+                                                        'border-gray-600 text-gray-300'}
+                                                        bg-transparent hover:bg-gray-900/40`}
                                                 >
-                                                    <span className="font-medium">{
+                                                    <span className="uppercase font-semibold opacity-70">{
                                                         filter.type === 'id' ? 'ID' :
-                                                        filter.type === 'descripcion' ? 'Descripción' :
+                                                        filter.type === 'descripcion' ? 'Desc' :
                                                         filter.type === 'rubro' ? 'Rubro' :
                                                         filter.type === 'estado' ? 'Estado' :
                                                         filter.type === 'estatus' ? 'Estatus' :
                                                         filter.type === 'area' ? 'Área' :
-                                                        filter.type === 'usufinal' ? 'Usuario Final' :
-                                                        filter.type === 'resguardante' ? 'Resguardante' :
+                                                        filter.type === 'usufinal' ? 'Usuario' :
+                                                        filter.type === 'resguardante' ? 'Resg.' :
                                                         filter.type
-                                                    }:</span>
-                                                    <span>{filter.term}</span>
+                                                    }</span>
+                                                    <span className="truncate max-w-[80px]">{filter.term}</span>
                                                     <button
                                                         onClick={() => removeFilter(index)}
-                                                        className="hover:text-red-400 transition-colors p-1 rounded-full hover:bg-red-900/30"
-                                                        title="Eliminar este filtro"
+                                                        className="ml-1 p-0.5 rounded-full text-xs text-gray-400 hover:text-red-400 focus:outline-none focus:ring-1 focus:ring-red-500"
+                                                        title="Eliminar filtro"
+                                                        tabIndex={0}
                                                     >
-                                                        <X className="h-3.5 w-3.5" />
+                                                        <svg width="10" height="10" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                                            <path d="M6 6L14 14M14 6L6 14" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+                                                        </svg>
                                                     </button>
                                                 </div>
                                             ))}
-                                            
                                             {activeFilters.length > 1 && (
                                                 <button
                                                     onClick={() => setActiveFilters([])}
-                                                    className="px-3 py-1.5 bg-red-900/30 rounded-lg border border-red-700/30 text-sm text-red-200 hover:bg-red-900/50 transition-all duration-200 flex items-center gap-2 hover:scale-105"
-                                                    title="Eliminar todos los filtros activos"
+                                                    className="ml-2 px-2 py-0.5 rounded-full border border-gray-700 text-xs text-gray-400 hover:text-red-400 hover:border-red-500 bg-transparent transition-colors"
+                                                    title="Limpiar todos los filtros"
                                                 >
-                                                    <X className="h-3.5 w-3.5" />
-                                                    <span>Limpiar filtros</span>
+                                                    Limpiar filtros
                                                 </button>
                                             )}
                                         </div>
@@ -1137,7 +1271,7 @@ export default function CrearResguardos() {
                                                                 ${mueble.estado === 'B' ? 'bg-green-900/20 text-green-300 border border-green-900' :
                                                                     mueble.estado === 'R' ? 'bg-yellow-900/20 text-yellow-300 border border-yellow-900' :
                                                                         mueble.estado === 'M' ? 'bg-red-900/20 text-red-300 border border-red-900' :
-                                                                            mueble.estado === 'N' ? 'bg-blue-900/20 text-blue-300 border-blue-900' :
+                                                                            mueble.estado === 'N' ? 'bg-blue-900/20 text-blue-300 border border-blue-900' :
                                                                                 'bg-gray-900/20 text-gray-300 border border-gray-900'}`}>
                                                                 {mueble.estado}
                                                             </div>
