@@ -311,6 +311,43 @@ export const generatePDF = async ({ data, columns, title, fileName, firmas = [] 
     };
 
     const origenesList = Object.keys(bienesPorOrigen);
+    // Obtener datos generales para el encabezado de la primera página
+    const areaGeneral = (data[0]?.area || '').toString().toUpperCase();
+    const directorGeneral = (data[0]?.usufinal || '').toString().toUpperCase();
+    const fechaActual = new Date();
+    const fechaFormateada = `${fechaActual.getDate().toString().padStart(2, '0')}/${(fechaActual.getMonth() + 1).toString().padStart(2, '0')}/${fechaActual.getFullYear()}`;
+    const drawGeneralInfo = (page: import('pdf-lib').PDFPage, yPos: number) => {
+        const infoFontSize = 8;
+        const x = margin;
+        const y = yPos;
+        const lineSpacing = 13;
+        const labelColor = rgb(0.2, 0.2, 0.2);
+        const valueColor = rgb(0, 0, 0);
+        const info = [
+            { label: 'ÁREA:', value: areaGeneral },
+            { label: 'DIRECTOR:', value: directorGeneral },
+            { label: 'FECHA:', value: fechaFormateada },
+            { label: 'FECHA DE EJECUCIÓN:', value: '' },
+        ];
+        info.forEach((item, idx) => {
+            page.drawText(item.label, {
+                x,
+                y: y - (idx * lineSpacing),
+                size: infoFontSize,
+                font: regularFont,
+                color: labelColor,
+            });
+            page.drawText(item.value, {
+                x: x + 70,
+                y: y - (idx * lineSpacing),
+                size: infoFontSize,
+                font: regularFont,
+                color: valueColor,
+            });
+        });
+        return y - (info.length * lineSpacing);
+    };
+    let headerDrawnOnPage = false; // Global para la página
     for (let o = 0; o < origenesList.length; o++) {
         const origen = origenesList[o];
         const color = origenColors[origen] || origenColors['SIN ORIGEN'];
@@ -318,10 +355,13 @@ export const generatePDF = async ({ data, columns, title, fileName, firmas = [] 
         const paginadas = paginarPorAltura(articulos);
         for (let currentPageIndex = 0; currentPageIndex < paginadas.length; currentPageIndex++) {
             const pageData = paginadas[currentPageIndex];
+            const isFirstPageOfOrigen = currentPageIndex === 0;
             if (!currentPage || currentYPos < 120) {
                 currentPage = pdfDoc.addPage([pageWidth, pageHeight]);
                 currentYPos = pageHeight - margin;
+                headerDrawnOnPage = false;
                 if (globalPageCount === 0) {
+                    // Logos y títulos generales
                     const ineaAspectRatio = ineaImage.width / ineaImage.height;
                     const iteaAspectRatio = iteaImage.width / iteaImage.height;
                     const maxImageHeight = 28;
@@ -351,28 +391,38 @@ export const generatePDF = async ({ data, columns, title, fileName, firmas = [] 
                                 });
                             }
                         });
+                        // Dibujar datos generales en la esquina superior izquierda
                         currentYPos -= 50;
+                        currentYPos = drawGeneralInfo(currentPage, currentYPos + 10); // +10 para dejar espacio tras los títulos
                     }
                 }
             }
-            const origenTitle = `ORIGEN: ${origen}`;
-            const titleWidth = font.widthOfTextAtSize(origenTitle, 10);
-            currentYPos -= 10;
-            currentPage.drawRectangle({ x: margin, y: currentYPos - 20, width: pageWidth - 2 * margin, height: 20, color: rgb(...color.bg) });
-            currentPage.drawText(origenTitle, { x: (pageWidth - titleWidth) / 2, y: currentYPos - 15, size: 10, font: font, color: rgb(...color.text) });
-            currentYPos -= 25;
-            currentYPos = drawTableHeader(currentPage, currentYPos, origen);
+            // Encabezado de ORIGEN solo en la primera página del origen
+            if (isFirstPageOfOrigen) {
+                const origenTitle = `ORIGEN: ${origen}`;
+                const titleWidth = font.widthOfTextAtSize(origenTitle, 10);
+                currentYPos -= 10;
+                currentPage.drawRectangle({ x: margin, y: currentYPos - 20, width: pageWidth - 2 * margin, height: 20, color: rgb(...color.bg) });
+                currentPage.drawText(origenTitle, { x: (pageWidth - titleWidth) / 2, y: currentYPos - 15, size: 10, font: font, color: rgb(...color.text) });
+                currentYPos -= 25;
+            }
+            // Encabezado de columnas solo si no se ha dibujado en esta página
+            if (!headerDrawnOnPage) {
+                currentYPos = drawTableHeader(currentPage, currentYPos, origen);
+                headerDrawnOnPage = true;
+            }
             for (let i = 0; i < pageData.length; i++) {
                 const row = pageData[i];
                 const rowHeight = calculateRowHeight(row, adjustedWidths);
                 if (currentYPos - rowHeight < 80) {
                     currentPage = pdfDoc.addPage([pageWidth, pageHeight]);
                     currentYPos = pageHeight - margin;
-                    currentYPos -= 10;
-                    currentPage.drawRectangle({ x: margin, y: currentYPos - 20, width: pageWidth - 2 * margin, height: 20, color: rgb(...color.bg) });
-                    currentPage.drawText(origenTitle, { x: (pageWidth - titleWidth) / 2, y: currentYPos - 15, size: 10, font: font, color: rgb(...color.text) });
-                    currentYPos -= 25;
+                    headerDrawnOnPage = false;
+                }
+                // Encabezado de columnas solo si no se ha dibujado en esta página
+                if (!headerDrawnOnPage) {
                     currentYPos = drawTableHeader(currentPage, currentYPos, origen);
+                    headerDrawnOnPage = true;
                 }
                 currentYPos = drawTableRow(currentPage, row, currentYPos, rowHeight, globalIndex + i + 1);
             }
