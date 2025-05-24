@@ -314,12 +314,18 @@ export const generatePDF = async ({ data, columns, title, fileName, firmas = [] 
     // Obtener datos generales para el encabezado de la primera página
     const areaGeneral = (data[0]?.area || '').toString().toUpperCase();
     const directorGeneral = (data[0]?.usufinal || '').toString().toUpperCase();
+    // Formatear la fecha como '1 de enero de 2025'
     const fechaActual = new Date();
-    const fechaFormateada = `${fechaActual.getDate().toString().padStart(2, '0')}/${(fechaActual.getMonth() + 1).toString().padStart(2, '0')}/${fechaActual.getFullYear()}`;
+    const meses = [
+        'enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio',
+        'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'
+    ];
+    const fechaFormateada = `${fechaActual.getDate()} de ${meses[fechaActual.getMonth()]} de ${fechaActual.getFullYear()}`;
     const drawGeneralInfo = (page: import('pdf-lib').PDFPage, yPos: number) => {
         const infoFontSize = 8;
         const x = margin;
-        const y = yPos;
+        // Bajamos más la sección de datos generales
+        const y = yPos - 30; // antes era yPos, ahora bajamos 30 puntos más
         const lineSpacing = 13;
         const labelColor = rgb(0.2, 0.2, 0.2);
         const valueColor = rgb(0, 0, 0);
