@@ -166,11 +166,123 @@ export default function CrearResguardos() {
     // Estado para mostrar mensaje de error por datos faltantes del director
     const [showMissingDirectorDataError, setShowMissingDirectorDataError] = useState(false);
 
+    // Estado para modal de error de select-all
+    const [showSelectAllErrorModal, setShowSelectAllErrorModal] = useState(false);
+    const [selectAllErrorMsg, setSelectAllErrorMsg] = useState('');
+
     const isFormValid =
         selectedMuebles.length > 0 &&
         formData.directorId.trim() !== '' &&
         formData.area.trim() !== '' &&
         formData.puesto.trim() !== '';
+
+    // Filtrado maestro (omnibox) y paginación
+    const filteredMueblesOmni = allMuebles.filter(item => {
+        if (activeFilters.length === 0 && !searchTerm) return true;
+
+        const clean = (str: string) => (str || '').normalize('NFKD').replace(/\p{Diacritic}/gu, '').toLowerCase();
+        const currentTerm = clean(searchTerm);
+
+        // Aplicar filtros activos
+        const passesActiveFilters = activeFilters.every(filter => {
+            const filterTerm = clean(filter.term);
+            if (!filterTerm) return true;
+
+            switch (filter.type) {
+                case 'id':
+                    return clean(item.id_inv || '').includes(filterTerm);
+                case 'descripcion':
+                    return clean(item.descripcion || '').includes(filterTerm);
+                case 'rubro':
+                    return clean(item.rubro || '').includes(filterTerm);
+                case 'estado':
+                    return clean(item.estado || '').includes(filterTerm);
+                case 'estatus':
+                    return clean(item.estatus || '').includes(filterTerm);
+                case 'area':
+                    return clean(item.area || '').includes(filterTerm);
+                case 'usufinal':
+                case 'resguardante':
+                    return clean(item.usufinal || '').includes(filterTerm) ||
+                        clean(item.resguardante || '').includes(filterTerm);
+                default:
+                    return true;
+            }
+        });
+
+        // Si hay término de búsqueda actual, aplicarlo también
+        const passesCurrentSearch = !currentTerm ||
+            clean(item.id_inv || '').includes(currentTerm) ||
+            clean(item.descripcion || '').includes(currentTerm) ||
+            clean(item.rubro || '').includes(currentTerm) ||
+            clean(item.estado || '').includes(currentTerm) ||
+            clean(item.estatus || '').includes(currentTerm) ||
+            clean(item.area || '').includes(currentTerm) ||
+            clean(item.usufinal || '').includes(currentTerm) ||
+            clean(item.resguardante || '').includes(currentTerm);
+
+        return passesActiveFilters && passesCurrentSearch;
+    });
+    const totalCount = filteredMueblesOmni.length;
+    const totalPages = Math.ceil(totalCount / rowsPerPage);
+    const paginatedMuebles = filteredMueblesOmni.slice((currentPage - 1) * rowsPerPage, currentPage * rowsPerPage);
+
+    // 1. STATE for select-all indeterminate
+    const selectAllRef = useRef<HTMLInputElement>(null);
+
+    // 2. SELECT-ALL LOGIC
+    const canSelectAllPage = () => {
+        if (paginatedMuebles.length === 0) return false;
+        // If nothing is selected, any group is valid
+        if (selectedMuebles.length === 0) return true;
+        // Get current selection constraints
+        const currentUsufinal = selectedMuebles[0]?.usufinal?.trim().toUpperCase();
+        const currentArea = selectedMuebles[0]?.area?.trim().toUpperCase();
+        // All items on page must match
+        return paginatedMuebles.every(m =>
+            (!currentUsufinal || (m.usufinal?.trim().toUpperCase() === currentUsufinal)) &&
+            (!currentArea || (m.area?.trim().toUpperCase() === currentArea))
+        );
+    };
+    const areAllPageSelected = paginatedMuebles.length > 0 && paginatedMuebles.every(m => selectedMuebles.some(s => s.id === m.id));
+    const isSomePageSelected = paginatedMuebles.some(m => selectedMuebles.some(s => s.id === m.id));
+
+    useEffect(() => {
+        if (selectAllRef.current) {
+            selectAllRef.current.indeterminate = !areAllPageSelected && isSomePageSelected;
+        }
+    }, [areAllPageSelected, isSomePageSelected]);
+
+    const handleSelectAllPage = () => {
+        if (areAllPageSelected) {
+            setSelectedMuebles(prev => prev.filter(m => !paginatedMuebles.some(p => p.id === m.id)));
+        } else {
+            const newSelection = [...selectedMuebles];
+            let constraintUsufinal = selectedMuebles[0]?.usufinal?.trim().toUpperCase();
+            let constraintArea = selectedMuebles[0]?.area?.trim().toUpperCase();
+            if (!constraintUsufinal && paginatedMuebles.length > 0) {
+                constraintUsufinal = paginatedMuebles[0]?.usufinal?.trim().toUpperCase();
+            }
+            if (!constraintArea && paginatedMuebles.length > 0) {
+                constraintArea = paginatedMuebles[0]?.area?.trim().toUpperCase();
+            }
+            const canAddAll = paginatedMuebles.every(m =>
+                (!constraintUsufinal || (m.usufinal?.trim().toUpperCase() === constraintUsufinal)) &&
+                (!constraintArea || (m.area?.trim().toUpperCase() === constraintArea))
+            );
+            if (!canAddAll) {
+                setSelectAllErrorMsg('No puedes seleccionar todos los artículos de la página porque no pertenecen al mismo responsable o área.');
+                setShowSelectAllErrorModal(true);
+                return;
+            }
+            paginatedMuebles.forEach(m => {
+                if (!newSelection.some(s => s.id === m.id)) {
+                    newSelection.push(m);
+                }
+            });
+            setSelectedMuebles(newSelection);
+        }
+    };
 
     useEffect(() => {
         const fetchData = async () => {
@@ -345,58 +457,6 @@ export default function CrearResguardos() {
         const debounce = setTimeout(analyzeMatch, 200);
         return () => clearTimeout(debounce);
     }, [searchTerm, allMuebles]);
-
-    // Filtrado maestro (omnibox) y paginación
-    const filteredMueblesOmni = allMuebles.filter(item => {
-        if (activeFilters.length === 0 && !searchTerm) return true;
-
-        const clean = (str: string) => (str || '').normalize('NFKD').replace(/\p{Diacritic}/gu, '').toLowerCase();
-        const currentTerm = clean(searchTerm);
-
-        // Aplicar filtros activos
-        const passesActiveFilters = activeFilters.every(filter => {
-            const filterTerm = clean(filter.term);
-            if (!filterTerm) return true;
-
-            switch (filter.type) {
-                case 'id':
-                    return clean(item.id_inv || '').includes(filterTerm);
-                case 'descripcion':
-                    return clean(item.descripcion || '').includes(filterTerm);
-                case 'rubro':
-                    return clean(item.rubro || '').includes(filterTerm);
-                case 'estado':
-                    return clean(item.estado || '').includes(filterTerm);
-                case 'estatus':
-                    return clean(item.estatus || '').includes(filterTerm);
-                case 'area':
-                    return clean(item.area || '').includes(filterTerm);
-                case 'usufinal':
-                case 'resguardante':
-                    return clean(item.usufinal || '').includes(filterTerm) ||
-                        clean(item.resguardante || '').includes(filterTerm);
-                default:
-                    return true;
-            }
-        });
-
-        // Si hay término de búsqueda actual, aplicarlo también
-        const passesCurrentSearch = !currentTerm ||
-            clean(item.id_inv || '').includes(currentTerm) ||
-            clean(item.descripcion || '').includes(currentTerm) ||
-            clean(item.rubro || '').includes(currentTerm) ||
-            clean(item.estado || '').includes(currentTerm) ||
-            clean(item.estatus || '').includes(currentTerm) ||
-            clean(item.area || '').includes(currentTerm) ||
-            clean(item.usufinal || '').includes(currentTerm) ||
-            clean(item.resguardante || '').includes(currentTerm);
-
-        return passesActiveFilters && passesCurrentSearch;
-    });
-
-    const totalCount = filteredMueblesOmni.length;
-    const totalPages = Math.ceil(totalCount / rowsPerPage);
-    const paginatedMuebles = filteredMueblesOmni.slice((currentPage - 1) * rowsPerPage, currentPage * rowsPerPage);
 
     const generateFolio = useCallback(async () => {
         try {
@@ -1120,7 +1180,40 @@ export default function CrearResguardos() {
                                         <tr className="divide-x divide-gray-800/30">
                                             <th className="px-2 py-3 w-10">
                                                 <div className="flex justify-center">
-                                                    <span className="sr-only">Seleccionar</span>
+                                                    {/* Select All Checkbox - Custom visual, fondo negro, checkmark azul, sin estilo nativo */}
+                                                    <div className="relative group flex items-center justify-center">
+                                                        <input
+                                                            ref={selectAllRef}
+                                                            type="checkbox"
+                                                            checked={areAllPageSelected}
+                                                            onChange={handleSelectAllPage}
+                                                            disabled={paginatedMuebles.length === 0 || !canSelectAllPage()}
+                                                            className={
+                                                                `appearance-none h-6 w-6 rounded-md border-2 border-blue-700 bg-black transition-all duration-200
+                                                                focus:ring-2 focus:ring-blue-500 focus:border-blue-400
+                                                                hover:border-blue-400 hover:shadow-blue-500/30
+                                                                disabled:opacity-40 disabled:cursor-not-allowed
+                                                                cursor-pointer shadow-md`
+                                                            }
+                                                            aria-label="Seleccionar todos los artículos de la página"
+                                                        />
+                                                        {/* Custom checkmark icon overlay, solo visible si checked */}
+                                                        {areAllPageSelected && (
+                                                            <span className="pointer-events-none absolute left-0 top-0 h-6 w-6 flex items-center justify-center">
+                                                                <CheckCircle className="h-5 w-5 text-blue-400 drop-shadow-lg animate-pulse" />
+                                                            </span>
+                                                        )}
+                                                        {/* Tooltip visual mejorado */}
+                                                        <span
+                                                            className="absolute left-0 top-8 z-40 px-3 py-1.5 rounded-lg bg-black text-blue-200 text-xs font-semibold shadow-xl border border-blue-800 opacity-0 group-hover:opacity-100 group-hover:translate-y-1 transition-all pointer-events-none whitespace-nowrap"
+                                                            style={{
+                                                                width: 'auto',
+                                                                minWidth: '180px',
+                                                            }}
+                                                        >
+                                                            Seleccionar todos los aríticulos de la página
+                                                        </span>
+                                                    </div>
                                                 </div>
                                             </th>
                                             {[
@@ -1412,13 +1505,32 @@ export default function CrearResguardos() {
 
                         {/* Selected Items */}
                         <div className="bg-gradient-to-br from-gray-900/20 to-gray-900/40 rounded-xl border border-gray-800 p-4 flex-grow overflow-y-hidden shadow-inner relative max-h-[70vh] hover:shadow-lg transition-shadow">
-                            <h2 className="text-lg font-medium text-gray-100 mb-2 flex items-center gap-2 sticky top-0 z-20 bg-black/80 p-2 -m-2 backdrop-blur-md">
+                            <div className="flex items-center gap-2 mb-2 sticky top-0 z-30 bg-black/80 p-2 -m-2 backdrop-blur-md">
                                 <LayoutGrid className="h-5 w-5 text-blue-400 animate-pulse" />
                                 <span className="bg-clip-text text-transparent bg-gradient-to-r from-blue-300 to-blue-100">
                                     Artículos Seleccionados ({selectedMuebles.length})
                                 </span>
-                            </h2>
-
+                                {/* Eliminar todos button */}
+                                {selectedMuebles.length > 0 && (
+                                    <button
+                                        onClick={() => {
+                                            setSelectedMuebles([]);
+                                            setFormData(prev => ({
+                                                ...prev,
+                                                resguardante: '',
+                                                area: '',
+                                                puesto: '',
+                                                directorId: ''
+                                            }));
+                                            setDirectorInputDisabled(false);
+                                        }}
+                                        className="ml-2 px-3 py-1 rounded bg-red-700/80 text-white text-xs font-semibold hover:bg-red-600 transition-colors border border-red-900 flex items-center gap-1"
+                                        title="Eliminar todos los artículos seleccionados"
+                                    >
+                                        <Trash2 className="h-3 w-3" /> Eliminar todos
+                                    </button>
+                                )}
+                            </div>
                             {selectedMuebles.length === 0 ? (
                                 <div className="flex flex-col items-center justify-center h-full min-h-[200px] text-gray-500">
                                     <TagIcon className="h-12 w-12 mb-2 text-gray-600" />
@@ -1847,6 +1959,28 @@ export default function CrearResguardos() {
                                     Cerrar
                                 </button>
                             </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* MODAL DE ERROR SELECT-ALL */}
+            {showSelectAllErrorModal && (
+                <div className="fixed inset-0 bg-black/90 flex items-center justify-center z-[100] px-4 animate-fadeIn">
+                    <div className="bg-black rounded-2xl shadow-2xl border-2 border-blue-700/40 w-full max-w-md overflow-hidden transition-all duration-300 hover:border-blue-500/60">
+                        <div className="relative p-7 flex flex-col items-center text-center bg-gradient-to-b from-black to-gray-900">
+                            <div className="p-3 bg-blue-500/10 rounded-full border border-blue-500/30 mb-3 animate-pulse">
+                                <ListChecks className="h-8 w-8 text-blue-400 animate-pulse" />
+                            </div>
+                            <h3 className="text-2xl font-bold text-blue-200 mb-2 tracking-tight">No se puede seleccionar todo</h3>
+                            <p className="text-blue-100 text-base mb-6 max-w-xs">{selectAllErrorMsg}</p>
+                            <button
+                                onClick={() => setShowSelectAllErrorModal(false)}
+                                className="mt-2 px-6 py-2.5 rounded-lg bg-gradient-to-r from-blue-700 to-blue-500 hover:from-blue-600 hover:to-blue-400 text-white font-semibold shadow-lg border border-blue-700 transition-all flex items-center gap-2"
+                            >
+                                <X className="h-4 w-4" />
+                                Cerrar
+                            </button>
                         </div>
                     </div>
                 </div>
