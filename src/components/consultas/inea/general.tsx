@@ -2,7 +2,7 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import {
     Search, RefreshCw, ChevronLeft, ChevronRight,
-    ArrowUpDown, AlertCircle, X, Save, Trash2, LayoutGrid, ChevronDown, Building2, User, Shield, AlertTriangle, Calendar, Info, Edit, Receipt, ClipboardList, Store, CheckCircle, XCircle, Plus, DollarSign
+    ArrowUpDown, AlertCircle, X, Save, Trash2, LayoutGrid, ChevronDown, Building2, User, Shield, AlertTriangle, Calendar, Info, Edit, Receipt, ClipboardList, Store, CheckCircle, XCircle, Plus, DollarSign, BadgeCheck
 } from 'lucide-react';
 import supabase from '@/app/lib/supabase/client';
 import Cookies from 'js-cookie';
@@ -151,6 +151,35 @@ const ImagePreview = ({ imagePath }: { imagePath: string | null }) => {
     );
 };
 
+// Función para generar color HSL único y consistente a partir de un string
+function stringToHslColor(str: string, s = 60, l = 30) {
+    let hash = 0;
+    for (let i = 0; i < str.length; i++) {
+        hash = str.charCodeAt(i) + ((hash << 5) - hash);
+    }
+    const h = Math.abs(hash) % 360;
+    return `hsl(${h}, ${s}%, ${l}%)`;
+}
+function getStatusBadgeColors(status: string | null | undefined) {
+    if (!status) return {
+        bg: 'bg-gray-700',
+        border: 'border-gray-600',
+        text: 'text-gray-300',
+        style: {}
+    };
+    const bg = stringToHslColor(status, 60, 22);
+    const border = stringToHslColor(status, 60, 32);
+    // Contraste: si el color es "oscuro" (l<30), texto claro, si no, texto oscuro
+    const l = 22;
+    const text = l < 30 ? 'text-white' : 'text-black';
+    return {
+        bg: '',
+        border: '',
+        text,
+        style: { backgroundColor: bg, borderColor: border }
+    };
+}
+
 export default function ConsultasIneaGeneral() {
     const [muebles, setMuebles] = useState<Mueble[]>([]);
     const [loading, setLoading] = useState(true);
@@ -175,7 +204,7 @@ export default function ConsultasIneaGeneral() {
         area: '',
         rubro: ''
     });
-    const filters = useMemo(() => filtersState, [filtersState.estado, filtersState.estatus, filtersState.area, filtersState.rubro]);
+    const filters = useMemo(() => filtersState, [filtersState]);
     const [filterOptions, setFilterOptions] = useState<FilterOptions>({
         estados: [],
         estatus: [],
@@ -220,6 +249,23 @@ export default function ConsultasIneaGeneral() {
     const [showAreaSelectModal, setShowAreaSelectModal] = useState(false);
     const [areaOptionsForDirector, setAreaOptionsForDirector] = useState<{ id_area: number; nombre: string }[]>([]);
     const [, setSelectedAreaForDirector] = useState<{ id_area: number; nombre: string } | null>(null);
+
+    // 1. Estado para folios de resguardo y detalles
+    interface ResguardoDetalle {
+        folio: string;
+        f_resguardo: string;
+        area_resguardo: string | null;
+        dir_area: string;
+        puesto: string;
+        origen: string;
+        usufinal: string | null;
+        descripcion: string;
+        rubro: string;
+        condicion: string;
+        created_by: string;
+    }
+    const [foliosResguardo, setFoliosResguardo] = useState<{ [id_inv: string]: string | null }>({});
+    const [resguardoDetalles, setResguardoDetalles] = useState<{ [folio: string]: ResguardoDetalle }>({});
 
     // Cargar áreas y relaciones N:M al montar
     useEffect(() => {
@@ -1126,6 +1172,46 @@ export default function ConsultasIneaGeneral() {
     const filteredValue = filteredMueblesOmni.reduce((acc, item) => acc + (item.valor !== null && item.valor !== undefined ? Number(item.valor) : 0), 0);
     const allValue = muebles.reduce((acc, item) => acc + (item.valor !== null && item.valor !== undefined ? Number(item.valor) : 0), 0);
 
+    // Fetch de resguardos y detalles (igual que ITEA)
+    useEffect(() => {
+        async function fetchFoliosYDetalles() {
+            if (!muebles.length) return;
+            const { data, error } = await supabase
+                .from('resguardos')
+                .select('*');
+            if (!error && data) {
+                const folioMap: { [id_inv: string]: string } = {};
+                const detallesMap: { [folio: string]: ResguardoDetalle } = {};
+                data.forEach(r => {
+                    if (r.num_inventario && r.folio) {
+                        folioMap[r.num_inventario] = r.folio;
+                        if (!detallesMap[r.folio]) {
+                            detallesMap[r.folio] = {
+                                folio: r.folio,
+                                f_resguardo: r.f_resguardo,
+                                area_resguardo: r.area_resguardo,
+                                dir_area: r.dir_area,
+                                puesto: r.puesto,
+                                origen: r.origen,
+                                usufinal: r.usufinal,
+                                descripcion: r.descripcion,
+                                rubro: r.rubro,
+                                condicion: r.condicion,
+                                created_by: r.created_by
+                            };
+                        }
+                    }
+                });
+                setFoliosResguardo(folioMap);
+                setResguardoDetalles(detallesMap);
+            } else {
+                setFoliosResguardo({});
+                setResguardoDetalles({});
+            }
+        }
+        fetchFoliosYDetalles();
+    }, [muebles]);
+
     return (
         <div className="bg-black text-white min-h-screen p-2 sm:p-4 md:p-6 lg:p-8">
             {/* Header con título */}
@@ -1330,6 +1416,7 @@ export default function ConsultasIneaGeneral() {
                                                     <ArrowUpDown className="h-3 w-3" />
                                                 </div>
                                             </th>
+                                            <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Folio Resguardo</th>
                                         </tr>
                                     </thead>
                                     <tbody className="bg-black divide-y divide-gray-800">
@@ -1385,38 +1472,71 @@ export default function ConsultasIneaGeneral() {
                                                 </td>
                                             </tr>
                                         ) : (
-                                            paginatedMuebles.map((item) => (
-                                                <tr
-                                                    key={item.id}
-                                                    onClick={() => handleSelectItem(item)}
-                                                    className={`hover:bg-gray-800 cursor-pointer transition-colors ${selectedItem?.id === item.id ? 'bg-blue-900/20 border-l-4 border-blue-600' : ''}`}
-                                                >
-                                                    <td className="px-4 py-3 whitespace-nowrap text-sm font-medium text-white">
-                                                        {item.id_inv}
-                                                    </td>
-                                                    <td className="px-4 py-3 text-sm text-gray-300">
-                                                        {truncateText(item.descripcion, 40)}
-                                                    </td>
-                                                    <td className="px-4 py-3 text-sm text-gray-300">
-                                                        {truncateText(item.area, 20)}
-                                                    </td>
-                                                    <td className="px-4 py-3 text-sm text-gray-300">
-                                                        {truncateText(item.usufinal, 20)}
-                                                    </td>
-                                                    <td className="px-4 py-3 text-sm">
-                                                        <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium ${item.estatus === 'ACTIVO' ? 'bg-green-900/70 text-green-200 border border-green-700' :
-                                                            item.estatus === 'INACTIVO' ? 'bg-red-900/70 text-red-200 border border-red-700' :
-                                                                item.estatus === 'NO LOCALIZADO' ? 'bg-yellow-900/70 text-yellow-200 border border-yellow-700' :
-                                                                    'bg-gray-700 text-gray-300 border border-gray-600'
-                                                            }`}>
-                                                            {item.estatus === 'ACTIVO' && <CheckCircle className="h-3.5 w-3.5 mr-1.5" />}
-                                                            {item.estatus === 'INACTIVO' && <XCircle className="h-3.5 w-3.5 mr-1.5" />}
-                                                            {item.estatus === 'NO LOCALIZADO' && <AlertTriangle className="h-3.5 w-3.5 mr-1.5" />}
-                                                            {truncateText(item.estatus, 20)}
-                                                        </span>
-                                                    </td>
-                                                </tr>
-                                            ))
+                                            paginatedMuebles.map(item => {
+                                                const folio = item.id_inv ? foliosResguardo[item.id_inv] : undefined;
+                                                return (
+                                                    <tr
+                                                        key={item.id}
+                                                        onClick={() => handleSelectItem(item)}
+                                                        className={`hover:bg-gray-800 cursor-pointer transition-colors ${selectedItem?.id === item.id ? 'bg-blue-900/20 border-l-4 border-blue-600' : ''}`}
+                                                    >
+                                                        <td className="px-4 py-3 whitespace-nowrap text-sm font-medium text-white">
+                                                            {item.id_inv}
+                                                        </td>
+                                                        <td className="px-4 py-3 text-sm text-gray-300">
+                                                            {truncateText(item.descripcion, 40)}
+                                                        </td>
+                                                        <td className="px-4 py-3 text-sm text-gray-300">
+                                                            {truncateText(item.area, 20)}
+                                                        </td>
+                                                        <td className="px-4 py-3 text-sm text-gray-300">
+                                                            {truncateText(item.usufinal, 20)}
+                                                        </td>
+                                                        <td className="px-4 py-3 text-sm">
+                                                            {/* Badge de estatus con color automático */}
+                                                            {(() => {
+                                                                const status = item.estatus;
+                                                                const { text, style } = getStatusBadgeColors(status);
+                                                                return (
+                                                                    <span
+                                                                        className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium border ${text}`}
+                                                                        style={style}
+                                                                    >
+                                                                        {status === 'ACTIVO' && <CheckCircle className="h-3.5 w-3.5 mr-1.5" />}
+                                                                        {status === 'INACTIVO' && <XCircle className="h-3.5 w-3.5 mr-1.5" />}
+                                                                        {status === 'NO LOCALIZADO' && <AlertTriangle className="h-3.5 w-3.5 mr-1.5" />}
+                                                                        {truncateText(status, 20)}
+                                                                    </span>
+                                                                );
+                                                            })()}
+                                                        </td>
+                                                        <td className="px-4 py-3 text-sm text-gray-300">
+                                                            {folio ? (
+                                                                <div className="relative">
+                                                                    <button
+                                                                        className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full font-bold bg-gradient-to-r from-blue-900/60 to-blue-700/60 text-blue-200 border border-blue-700 hover:from-blue-800 hover:to-blue-600 hover:text-white shadow-sm hover:scale-105 transition-all duration-200"
+                                                                        title={`Ver resguardo ${folio}`}
+                                                                        onClick={e => {
+                                                                            e.stopPropagation();
+                                                                            window.location.href = `/resguardos/consultar?folio=${folio}`;
+                                                                        }}
+                                                                    >
+                                                                        <BadgeCheck className="h-4 w-4 mr-1 text-blue-300" />
+                                                                        {folio}
+                                                                    </button>
+                                                                </div>
+                                                            ) : (
+                                                                <div className="relative">
+                                                                    <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full font-bold bg-gradient-to-r from-gray-800/60 to-gray-700/60 text-gray-400 border border-gray-700 shadow-sm cursor-default select-none">
+                                                                        <XCircle className="h-4 w-4 mr-1 text-gray-400" />
+                                                                        Sin resguardo
+                                                                    </span>
+                                                                </div>
+                                                            )}
+                                                        </td>
+                                                    </tr>
+                                                );
+                                            })
                                         )}
                                     </tbody>
                                 </table>
@@ -1918,6 +2038,31 @@ export default function ConsultasIneaGeneral() {
                                             </h3>
                                             <ImagePreview imagePath={selectedItem.image_path} />
                                         </div>
+                                        {/* Sección de detalles de resguardo si existe (minimalista) */}
+                                        {(() => {
+                                            const folio = selectedItem?.id_inv ? foliosResguardo[selectedItem.id_inv] : undefined;
+                                            const detalleResguardo = folio ? resguardoDetalles[folio] : undefined;
+                                            if (folio && detalleResguardo) {
+                                                return (
+                                                    <div className="flex flex-wrap items-center gap-2 bg-blue-950/60 border border-blue-900 rounded-lg px-4 py-2 mb-4 text-xs text-blue-200 font-mono shadow-sm overflow-hidden break-words min-w-0">
+                                                        <span className="font-bold text-blue-300">Folio:</span> <span className="truncate break-words min-w-0">{detalleResguardo.folio}</span>
+                                                        <span className="mx-2 text-blue-400">|</span>
+                                                        <span className="font-bold text-blue-300">Fecha:</span> <span className="truncate break-words min-w-0">{formatDate(detalleResguardo.f_resguardo)}</span>
+                                                        <span className="mx-2 text-blue-400">|</span>
+                                                        <span className="font-bold text-blue-300">Área:</span> <span className="truncate break-words min-w-0">{detalleResguardo.area_resguardo}</span>
+                                                        <span className="mx-2 text-blue-400">|</span>
+                                                        <span className="font-bold text-blue-300">Director:</span> <span className="truncate break-words min-w-0">{detalleResguardo.dir_area}</span>
+                                                    </div>
+                                                );
+                                            } else {
+                                                return (
+                                                    <div className="flex flex-wrap items-center gap-2 bg-gray-800/60 border border-gray-700 rounded-lg px-4 py-2 mb-4 text-xs text-gray-400 font-mono shadow-sm overflow-hidden break-words min-w-0">
+                                                        <XCircle className="h-4 w-4 mr-1 text-gray-400" />
+                                                        Sin resguardo asignado
+                                                    </div>
+                                                );
+                                            }
+                                        })()}
                                         {/* Sección de detalles del artículo */}
                                         <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
                                             <div className="detail-card bg-gray-800/50 rounded-lg p-4 hover:bg-gray-800/80 transition-all">

@@ -3,13 +3,14 @@ import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import {
     Search, RefreshCw, ChevronLeft, ChevronRight,
     ArrowUpDown, AlertCircle, X, Save, Trash2, Check,
-    LayoutGrid, ChevronDown, Building2, FileText, User, Shield, AlertTriangle, Calendar, Info, Edit, Receipt, ClipboardList, Store, CheckCircle, XCircle, Plus, Clock, DollarSign
+    LayoutGrid, ChevronDown, Building2, FileText, User, Shield, AlertTriangle, Calendar, Info, Edit, Receipt, ClipboardList, Store, CheckCircle, XCircle, Plus, Clock, DollarSign, BadgeCheck
 } from 'lucide-react';
 import supabase from '@/app/lib/supabase/client';
 import Cookies from 'js-cookie';
 import { useUserRole } from "@/hooks/useUserRole";
 import RoleGuard from "@/components/roleGuard";
 import { useNotifications } from '@/hooks/useNotifications';
+import { useRouter } from 'next/navigation';
 
 // Utility function to format date strings as 'DD/MM/YYYY'
 function formatDate(dateString: string | null | undefined): string {
@@ -203,12 +204,30 @@ export default function ConsultasIteaGeneral() {
     const [bajaCause, setBajaCause] = useState('');
     const detailRef = useRef<HTMLDivElement>(null);
     const { createNotification } = useNotifications();
+    const router = useRouter();
 
     // Estados para áreas y relaciones N:M
     const [directorAreasMap, setDirectorAreasMap] = useState<{ [id_directorio: number]: number[] }>({});
     const [showAreaSelectModal, setShowAreaSelectModal] = useState(false);
     const [areaOptionsForDirector, setAreaOptionsForDirector] = useState<{ id_area: number; nombre: string }[]>([]);
     const [, setSelectedAreaForDirector] = useState<{ id_area: number; nombre: string } | null>(null);
+
+    // Estado para folios de resguardo y detalles
+    interface ResguardoDetalle {
+        folio: string;
+        f_resguardo: string;
+        area_resguardo: string | null;
+        dir_area: string;
+        puesto: string;
+        origen: string;
+        usufinal: string | null;
+        descripcion: string;
+        rubro: string;
+        condicion: string;
+        created_by: string;
+    }
+    const [foliosResguardo, setFoliosResguardo] = useState<{ [id_inv: string]: string | null }>({});
+    const [resguardoDetalles, setResguardoDetalles] = useState<{ [folio: string]: ResguardoDetalle }>({});
 
     // 1. Estado de filtros de tabla y memo
     const [filtersState] = useState({
@@ -217,7 +236,7 @@ export default function ConsultasIteaGeneral() {
         area: '',
         rubro: ''
     });
-    const filters = useMemo(() => filtersState, [filtersState.estado, filtersState.estatus, filtersState.area, filtersState.rubro]);
+    const filters = useMemo(() => filtersState, [filtersState]);
 
     // Cargar áreas y relaciones N:M al montar
     useEffect(() => {
@@ -1087,6 +1106,47 @@ export default function ConsultasIteaGeneral() {
         setHighlightedIndex(allSuggestions.length > 0 ? 0 : -1);
     }, [searchTerm, muebles]);
 
+    // --- OMNIBOX FILTER STATE (continuación) ---
+    // Buscar folio de resguardo y detalles para los artículos mostrados
+    useEffect(() => {
+        async function fetchFoliosYDetalles() {
+            if (!muebles.length) return;
+            const { data, error } = await supabase
+                .from('resguardos')
+                .select('*');
+            if (!error && data) {
+                const folioMap: { [id_inv: string]: string } = {};
+                const detallesMap: { [folio: string]: ResguardoDetalle } = {};
+                data.forEach(r => {
+                    if (r.num_inventario && r.folio) {
+                        folioMap[r.num_inventario] = r.folio;
+                        if (!detallesMap[r.folio]) {
+                            detallesMap[r.folio] = {
+                                folio: r.folio,
+                                f_resguardo: r.f_resguardo,
+                                area_resguardo: r.area_resguardo,
+                                dir_area: r.dir_area,
+                                puesto: r.puesto,
+                                origen: r.origen,
+                                usufinal: r.usufinal,
+                                descripcion: r.descripcion,
+                                rubro: r.rubro,
+                                condicion: r.condicion,
+                                created_by: r.created_by
+                            };
+                        }
+                    }
+                });
+                setFoliosResguardo(folioMap);
+                setResguardoDetalles(detallesMap);
+            } else {
+                setFoliosResguardo({});
+                setResguardoDetalles({});
+            }
+        }
+        fetchFoliosYDetalles();
+    }, [muebles]);
+
     return (
         <div className="bg-black text-white min-h-screen p-2 sm:p-4 md:p-6 lg:p-8">
             {/* Notificación de mensaje */}
@@ -1193,8 +1253,8 @@ export default function ConsultasIteaGeneral() {
                                             onClick={saveCurrentFilter}
                                             disabled={!searchTerm || !searchMatchType}
                                             className={`px-4 py-2 rounded-lg border flex items-center gap-2 ${searchTerm && searchMatchType
-                                                    ? 'bg-blue-600 hover:bg-blue-700 border-blue-500 text-white'
-                                                    : 'bg-gray-800/50 border-gray-700 text-gray-500 cursor-not-allowed'
+                                                ? 'bg-blue-600 hover:bg-blue-700 border-blue-500 text-white'
+                                                : 'bg-gray-800/50 border-gray-700 text-gray-500 cursor-not-allowed'
                                                 } transition-all duration-200 hover:scale-105`}
                                             title="Agregar filtro actual a la lista de filtros activos"
                                         >
@@ -1268,57 +1328,28 @@ export default function ConsultasIteaGeneral() {
                                 <table className="min-w-full divide-y divide-gray-800">
                                     <thead className="bg-black sticky top-0 z-10">
                                         <tr>
-                                            <th
-                                                onClick={() => handleSort('id_inv')}
-                                                className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider cursor-pointer hover:bg-gray-700"
-                                            >
-                                                <div className="flex items-center gap-1">
-                                                    ID Inventario
-                                                    <ArrowUpDown className="h-3 w-3" />
-                                                </div>
+                                            <th onClick={() => handleSort('id_inv')} className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider cursor-pointer hover:bg-gray-700">
+                                                <div className="flex items-center gap-1">ID Inventario<ArrowUpDown className="h-3 w-3" /></div>
                                             </th>
-                                            <th
-                                                onClick={() => handleSort('descripcion')}
-                                                className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider cursor-pointer hover:bg-gray-700"
-                                            >
-                                                <div className="flex items-center gap-1">
-                                                    Descripción
-                                                    <ArrowUpDown className="h-3 w-3" />
-                                                </div>
+                                            <th onClick={() => handleSort('descripcion')} className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider cursor-pointer hover:bg-gray-700">
+                                                <div className="flex items-center gap-1">Descripción<ArrowUpDown className="h-3 w-3" /></div>
                                             </th>
-                                            <th
-                                                onClick={() => handleSort('area')}
-                                                className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider cursor-pointer hover:bg-gray-700"
-                                            >
-                                                <div className="flex items-center gap-1">
-                                                    Área
-                                                    <ArrowUpDown className="h-3 w-3" />
-                                                </div>
+                                            <th onClick={() => handleSort('area')} className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider cursor-pointer hover:bg-gray-700">
+                                                <div className="flex items-center gap-1">Área<ArrowUpDown className="h-3 w-3" /></div>
                                             </th>
-                                            <th
-                                                onClick={() => handleSort('usufinal')}
-                                                className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider cursor-pointer hover:bg-gray-700"
-                                            >
-                                                <div className="flex items-center gap-1">
-                                                    Director/Jefe de Área
-                                                    <ArrowUpDown className="h-3 w-3" />
-                                                </div>
+                                            <th onClick={() => handleSort('usufinal')} className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider cursor-pointer hover:bg-gray-700">
+                                                <div className="flex items-center gap-1">Director/Jefe de Área<ArrowUpDown className="h-3 w-3" /></div>
                                             </th>
-                                            <th
-                                                onClick={() => handleSort('estatus')}
-                                                className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider cursor-pointer hover:bg-gray-700"
-                                            >
-                                                <div className="flex items-center gap-1">
-                                                    Estado
-                                                    <ArrowUpDown className="h-3 w-3" />
-                                                </div>
+                                            <th onClick={() => handleSort('estatus')} className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider cursor-pointer hover:bg-gray-700">
+                                                <div className="flex items-center gap-1">Estado<ArrowUpDown className="h-3 w-3" /></div>
                                             </th>
+                                            <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Folio Resguardo</th>
                                         </tr>
                                     </thead>
                                     <tbody className="bg-black divide-y divide-gray-800">
                                         {loading ? (
                                             <tr className="h-96">
-                                                <td colSpan={5} className="px-6 py-24 text-center text-gray-400">
+                                                <td colSpan={6} className="px-6 py-24 text-center text-gray-400">
                                                     <div className="flex flex-col items-center justify-center space-y-4">
                                                         <RefreshCw className="h-12 w-12 animate-spin text-gray-500" />
                                                         <p className="text-lg font-medium">Cargando datos...</p>
@@ -1328,7 +1359,7 @@ export default function ConsultasIteaGeneral() {
                                             </tr>
                                         ) : error ? (
                                             <tr className="h-96">
-                                                <td colSpan={5} className="px-6 py-24 text-center">
+                                                <td colSpan={6} className="px-6 py-24 text-center">
                                                     <div className="flex flex-col items-center justify-center space-y-4 text-red-400">
                                                         <AlertCircle className="h-12 w-12" />
                                                         <p className="text-lg font-medium">Error al cargar datos</p>
@@ -1344,7 +1375,7 @@ export default function ConsultasIteaGeneral() {
                                             </tr>
                                         ) : paginatedMuebles.length === 0 ? (
                                             <tr className="h-96">
-                                                <td colSpan={5} className="px-6 py-24 text-center text-gray-400">
+                                                <td colSpan={6} className="px-6 py-24 text-center text-gray-400">
                                                     <div className="flex flex-col items-center justify-center space-y-4">
                                                         <Search className="h-12 w-12 text-gray-500" />
                                                         <p className="text-lg font-medium">No se encontraron resultados</p>
@@ -1368,14 +1399,13 @@ export default function ConsultasIteaGeneral() {
                                                 </td>
                                             </tr>
                                         ) : (
-                                            paginatedMuebles.map((item) => {
+                                            paginatedMuebles.map((item, idx) => {
                                                 const normalizedStatus = item.estatus?.trim();
-
                                                 return (
                                                     <tr
                                                         key={item.id}
                                                         onClick={() => handleSelectItem(item)}
-                                                        className={`hover:bg-gray-800 cursor-pointer transition-colors ${selectedItem?.id === item.id ? 'bg-blue-900/20 border-l-4 border-blue-600' : ''}`}
+                                                        className={`group transition-colors cursor-pointer ${selectedItem?.id === item.id ? 'bg-blue-900/30 border-l-4 border-blue-600' : idx % 2 === 0 ? 'bg-black' : 'bg-gray-900/30'} hover:bg-blue-900/10`}
                                                     >
                                                         <td className="px-4 py-3 whitespace-nowrap text-sm font-medium text-white">
                                                             {item.id_inv}
@@ -1390,22 +1420,38 @@ export default function ConsultasIteaGeneral() {
                                                             {truncateText(item.usufinal, 20)}
                                                         </td>
                                                         <td className="px-4 py-3 text-sm">
-                                                            <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium ${normalizedStatus === 'ACTIVO' ? 'bg-green-900/70 text-green-200 border border-green-700' :
-                                                                normalizedStatus === 'INACTIVO' ? 'bg-red-900/70 text-red-200 border border-red-700' :
-                                                                    normalizedStatus === 'NO LOCALIZADO' ? 'bg-yellow-900/70 text-yellow-200 border border-yellow-700' :
-                                                                        normalizedStatus === 'EN PROCESO DE BAJA' ? 'bg-purple-900/70 text-purple-200 border border-purple-700' :
-                                                                            normalizedStatus?.startsWith('C.1./') || normalizedStatus?.startsWith('CIATLAX/') ?
-                                                                                'bg-blue-900/70 text-blue-200 border border-blue-700' :
-                                                                                'bg-gray-700 text-gray-300 border border-gray-600'
-                                                                }`}>
+                                                            <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium ${normalizedStatus === 'ACTIVO' ? 'bg-green-900/70 text-green-200 border border-green-700' : normalizedStatus === 'INACTIVO' ? 'bg-red-900/70 text-red-200 border border-red-700' : normalizedStatus === 'NO LOCALIZADO' ? 'bg-yellow-900/70 text-yellow-200 border-yellow-700' : normalizedStatus === 'EN PROCESO DE BAJA' ? 'bg-purple-900/70 text-purple-200 border-purple-700' : normalizedStatus?.startsWith('C.1./') || normalizedStatus?.startsWith('CIATLAX/') ? 'bg-blue-900/70 text-blue-200 border-blue-700' : 'bg-gray-700 text-gray-300 border-gray-600'}`}>
                                                                 {normalizedStatus === 'ACTIVO' && <CheckCircle className="h-3.5 w-3.5 mr-1.5" />}
                                                                 {normalizedStatus === 'INACTIVO' && <XCircle className="h-3.5 w-3.5 mr-1.5" />}
                                                                 {normalizedStatus === 'NO LOCALIZADO' && <AlertTriangle className="h-3.5 w-3.5 mr-1.5" />}
                                                                 {normalizedStatus === 'EN PROCESO DE BAJA' && <Clock className="h-3.5 w-3.5 mr-1.5" />}
-                                                                {(normalizedStatus?.startsWith('C.1./') || normalizedStatus?.startsWith('CIATLAX/')) &&
-                                                                    <FileText className="h-3.5 w-3.5 mr-1.5" />}
+                                                                {(normalizedStatus?.startsWith('C.1./') || normalizedStatus?.startsWith('CIATLAX/')) && <FileText className="h-3.5 w-3.5 mr-1.5" />}
                                                                 {truncateText(normalizedStatus ?? null, 20)}
                                                             </span>
+                                                        </td>
+                                                        <td className="px-4 py-3 text-sm text-gray-300">
+                                                            {foliosResguardo[item.id_inv || ''] ? (
+                                                                <div className="relative">
+                                                                    <button
+                                                                        className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full font-bold bg-gradient-to-r from-blue-900/60 to-blue-700/60 text-blue-200 border border-blue-700 hover:from-blue-800 hover:to-blue-600 hover:text-white shadow-sm hover:scale-105 transition-all duration-200"
+                                                                        title={`Ver resguardo ${foliosResguardo[item.id_inv || '']}`}
+                                                                        onClick={e => {
+                                                                            e.stopPropagation();
+                                                                            router.push(`/resguardos/consultar?folio=${foliosResguardo[item.id_inv || '']}`);
+                                                                        }}
+                                                                    >
+                                                                        <BadgeCheck className="h-4 w-4 mr-1 text-blue-300" />
+                                                                        {foliosResguardo[item.id_inv || '']}
+                                                                    </button>
+                                                                </div>
+                                                            ) : (
+                                                                <div className="relative">
+                                                                    <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full font-bold bg-gradient-to-r from-gray-800/60 to-gray-700/60 text-gray-400 border border-gray-700 shadow-sm cursor-default select-none">
+                                                                        <XCircle className="h-4 w-4 mr-1 text-gray-400" />
+                                                                        Sin resguardo
+                                                                    </span>
+                                                                </div>
+                                                            )}
                                                         </td>
                                                     </tr>
                                                 );
@@ -1443,11 +1489,11 @@ export default function ConsultasIteaGeneral() {
                                                 value={rowsPerPage}
                                                 onChange={e => { setRowsPerPage(Number(e.target.value)); setCurrentPage(1); }}
                                                 className="ml-1 px-2 py-1 rounded-lg bg-neutral-900 border border-neutral-700 text-blue-300 font-mono text-xs focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition"
-                                        >
-                                            {[10, 20, 30, 50, 100].map(opt => (
-                                                <option key={opt} value={opt}>{opt}</option>
-                                            ))}
-                                        </select>
+                                            >
+                                                {[10, 20, 30, 50, 100].map(opt => (
+                                                    <option key={opt} value={opt}>{opt}</option>
+                                                ))}
+                                            </select>
                                         </div>
                                     )}
                                 </div>
@@ -1509,10 +1555,13 @@ export default function ConsultasIteaGeneral() {
                                                     key={i}
                                                     onClick={() => changePage(i)}
                                                     className={`mx-0.5 px-3 py-1.5 rounded-lg border text-sm font-semibold transition
-                                                    ${i === currentPage
-                                                        ? 'bg-blue-900/80 text-blue-300 border-blue-700 shadow'
-                                                        : 'bg-neutral-900 text-neutral-300 border-neutral-700 hover:bg-blue-900/40 hover:text-blue-200 hover:border-blue-600'}
-                                                `}
+                                                       
+                                                       
+                                                       
+                                                        ${i === currentPage
+                                                            ? 'bg-blue-900/80 text-blue-300 border-blue-700 shadow'
+                                                            : 'bg-neutral-900 text-neutral-300 border-neutral-700 hover:bg-blue-900/40 hover:text-blue-200 hover:border-blue-600'}
+                                                    `}
                                                     aria-current={i === currentPage ? 'page' : undefined}
                                                 >
                                                     {i}
@@ -1559,7 +1608,6 @@ export default function ConsultasIteaGeneral() {
                                     <ClipboardList className="h-5 w-5 text-blue-400" />
                                     Detalle del Artículo
                                 </h2>
-
                                 <button
                                     type="button"
                                     onClick={closeDetail}
@@ -1569,7 +1617,6 @@ export default function ConsultasIteaGeneral() {
                                     <X className="h-5 w-5" />
                                 </button>
                             </div>
-
                             <div className="flex-grow p-6 overflow-y-auto">
                                 {isEditing ? (
                                     <div className="space-y-6">
@@ -1637,7 +1684,7 @@ export default function ConsultasIteaGeneral() {
                                                     type="text"
                                                     value={editFormData?.id_inv || ''}
                                                     onChange={(e) => handleEditFormChange(e, 'id_inv')}
-                                                    className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2.5 text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                                                    className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2.5 text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
                                                     placeholder="Ingrese el ID de inventario"
                                                 />
                                             </div>
@@ -1897,6 +1944,22 @@ export default function ConsultasIteaGeneral() {
                                             </h3>
                                             <ImagePreview imagePath={selectedItem.image_path} />
                                         </div>
+                                        {/* Sección de detalles de resguardo si existe (minimalista) */}
+                                        {(() => {
+                                            const folio = selectedItem.id_inv ? foliosResguardo[selectedItem.id_inv] : undefined;
+                                            const detalleResguardo = folio ? resguardoDetalles[folio] : undefined;
+                                            return folio && detalleResguardo && (
+                                                <div className="flex flex-wrap items-center gap-2 bg-blue-950/60 border border-blue-900 rounded-lg px-4 py-2 mb-4 text-xs text-blue-200 font-mono shadow-sm overflow-hidden break-words min-w-0">
+                                                    <span className="font-bold text-blue-300">Folio:</span> <span className="truncate break-words min-w-0">{detalleResguardo.folio}</span>
+                                                    <span className="mx-2 text-blue-400">|</span>
+                                                    <span className="font-bold text-blue-300">Fecha:</span> <span className="truncate break-words min-w-0">{formatDate(detalleResguardo.f_resguardo)}</span>
+                                                    <span className="mx-2 text-blue-400">|</span>
+                                                    <span className="font-bold text-blue-300">Área:</span> <span className="truncate break-words min-w-0">{detalleResguardo.area_resguardo}</span>
+                                                    <span className="mx-2 text-blue-400">|</span>
+                                                    <span className="font-bold text-blue-300">Director:</span> <span className="truncate break-words min-w-0">{detalleResguardo.dir_area}</span>
+                                                </div>
+                                            );
+                                        })()}
                                         {/* Sección de detalles del artículo */}
                                         <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
                                             <div className="detail-card bg-gray-900/50 rounded-lg p-4 hover:bg-gray-800/80 transition-all">
@@ -1954,7 +2017,7 @@ export default function ConsultasIteaGeneral() {
                                                             'bg-gray-700 text-gray-300 border border-gray-600'
                                                         }`}>
                                                         {selectedItem.estatus === 'ACTIVO' && <Check className="h-3.5 w-3.5 mr-1.5" />}
-                                                        {selectedItem.estatus === 'INACTIVO' && <AlertCircle className="h-3.5 w-3.5 mr-1.5" />}
+                                                        {selectedItem.estatus === 'INACTIVO' && <AlertTriangle className="h-3.5 w-3.5 mr-1.5" />}
                                                         {selectedItem.estatus || 'No especificado'}
                                                     </span>
                                                 </div>

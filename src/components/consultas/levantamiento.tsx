@@ -638,16 +638,17 @@ export default function LevantamientoUnificado() {
     useEffect(() => {
         async function fetchFolios() {
             if (!muebles.length) return;
-            const ids = muebles.map(m => m.id_inv);
             // Buscar todos los folios de resguardo para los id_inv actuales
+            // NUEVO: Buscar en la tabla resguardos todos los registros y agrupar por num_inventario
             const { data, error } = await supabase
                 .from('resguardos')
-                .select('num_inventario, folio')
-                .in('num_inventario', ids);
+                .select('num_inventario, folio');
             if (!error && data) {
                 const map: { [id_inv: string]: string } = {};
                 data.forEach(r => {
-                    map[r.num_inventario] = r.folio;
+                    if (r.num_inventario && r.folio) {
+                        map[r.num_inventario] = r.folio;
+                    }
                 });
                 setFoliosResguardo(map);
             } else {
