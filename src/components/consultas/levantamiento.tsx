@@ -1524,9 +1524,8 @@ export default function LevantamientoUnificado() {
                                                                 >
                                                                     <BadgeCheck className="h-4 w-4 mr-1 text-blue-300" />
                                                                     {foliosResguardo[item.id_inv]}
-                                                                </button>
-                                                            ) : (
-                                                                <span className="text-gray-600 italic">—</span>
+                                                                </button>                                                            ) : (
+                                                                <span className="inline-flex items-center px-2.5 py-1 rounded-full font-bold bg-gradient-to-r from-gray-900/60 to-gray-800/60 text-gray-400 border border-gray-700">Sin resguardo</span>
                                                             )}
                                                         </td>
                                                         <td className="px-4 py-3 whitespace-nowrap text-sm font-medium text-white">

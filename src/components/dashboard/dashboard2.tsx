@@ -198,30 +198,6 @@ const modalVariants = {
 };
 
 // Componente de carga
-const LoadingSpinner = () => (
-    <motion.div 
-        className="fixed inset-0 bg-black/90 z-50 flex items-center justify-center"
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        exit={{ opacity: 0 }}
-    >
-        <motion.div
-            className="relative w-12 h-12"
-            animate={{
-                rotate: 360
-            }}
-            transition={{
-                duration: 1.5,
-                repeat: Infinity,
-                ease: "linear"
-            }}
-        >
-            <div className="absolute inset-0 border-2 border-white/10 rounded-full"></div>
-            <div className="absolute inset-0 border-t-2 border-white rounded-full"></div>
-        </motion.div>
-        <span className="absolute mt-20 text-white/70 text-sm">Cargando...</span>
-    </motion.div>
-);
 
 interface EditableRubro {
     numeroPartida: string;
@@ -231,6 +207,50 @@ interface EditableRubro {
     isPreFilled?: boolean; // Nuevo campo para identificar rubros pre-rellenados
     id?: string; // Para drag and drop
 }
+
+// Skeletons para loading
+const Skeleton = ({ className = "" }: { className?: string }) => (
+    <div className={`animate-pulse bg-gray-800/60 rounded ${className}`}></div>
+);
+
+const CardSkeleton = () => (
+    <div className="flex flex-col p-7 rounded-2xl bg-gradient-to-br from-black via-gray-900/20 to-black border-2 border-gray-700/30 cursor-pointer transition-all duration-300 shadow-[0_8px_32px_0_rgba(34,211,238,0.08)] backdrop-blur-lg glassmorphism-card overflow-hidden min-h-[180px]">
+        <div className="flex justify-between items-start flex-grow w-full">
+            <div className="flex-1 min-w-0">
+                <Skeleton className="h-4 w-24 mb-2" />
+                <Skeleton className="h-10 w-32 mb-1" />
+            </div>
+            <Skeleton className="w-10 h-10 ml-4 rounded-xl" />
+        </div>
+        <Skeleton className="mt-5 h-5 w-20" />
+    </div>
+);
+
+const HeaderSkeleton = () => (
+    <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center border-b border-white/10 gap-2 sm:gap-0 p-4 sm:p-6">
+        <div className="flex items-center">
+            <Skeleton className="w-12 h-12 mr-3 rounded-xl" />
+            <Skeleton className="h-8 w-40" />
+        </div>
+        <div className="flex gap-2 items-center">
+            <Skeleton className="h-10 w-32 rounded-xl" />
+            <Skeleton className="h-10 w-40 rounded-xl" />
+        </div>
+    </div>
+);
+
+const TableSkeleton = () => (
+    <div className="overflow-y-auto px-6 py-4 space-y-2">
+        <Skeleton className="h-6 w-full mb-2" />
+        {[...Array(5)].map((_, i) => (
+            <div key={i} className="flex gap-2 mb-2">
+                <Skeleton className="h-4 w-1/3" />
+                <Skeleton className="h-4 w-1/6" />
+                <Skeleton className="h-4 w-1/4" />
+            </div>
+        ))}
+    </div>
+);
 
 export default function InventoryDashboard() {
     const [activeWarehouse, setActiveWarehouse] = useState('INEA');
@@ -741,12 +761,11 @@ export default function InventoryDashboard() {
 
     return (
         <div className="bg-black text-white min-h-screen p-2 sm:p-4 md:p-6 lg:p-8">
-            <AnimatePresence>
-                {loading && <LoadingSpinner />}
-            </AnimatePresence>
-            
             <div className="w-full mx-auto bg-black rounded-2xl sm:rounded-3xl shadow-2xl overflow-hidden border border-white/10 transition-all duration-500">
                 {/* Header Section */}
+                {loading ? (
+                    <HeaderSkeleton />
+                ) : (
                 <div className="bg-black p-4 sm:p-6 flex flex-col sm:flex-row justify-between items-start sm:items-center border-b border-white/10 gap-2 sm:gap-0">
                     <motion.h1 
                         initial={{ x: -20, opacity: 0 }}
@@ -793,7 +812,7 @@ export default function InventoryDashboard() {
                         </motion.button>
                     </div>
                 </div>
-
+                )}
                 {/* Main Content */}
                 <AnimatePresence custom={direction} initial={false} mode="wait">
                     <motion.div
@@ -809,51 +828,55 @@ export default function InventoryDashboard() {
                             <div className="p-2 rounded-xl bg-black border border-white/10 shadow-md">
                                 <BarChart3 className="text-white" size={28} />
                             </div>
-                            <h2 className="text-xl font-semibold text-white tracking-wide">
-                                {currentData.title}
-                            </h2>
+                            {loading ? (
+                                <Skeleton className="h-8 w-40" />
+                            ) : (
+                                <h2 className="text-xl font-semibold text-white tracking-wide">
+                                    {currentData.title}
+                                </h2>
+                            )}
                         </div>
-
-                        {/* Las tarjetas mantienen sus colores originales */}
                         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
-                            {currentData.cards.map((card, i) => {
-                                const colorScheme = getRandomColor(activeWarehouse as 'INEA' | 'ITEA', i);
-                                return (
-                                    <motion.div
-                                        key={card.id}
-                                        custom={i}
-                                        variants={cardVariants}
-                                        initial="hidden"
-                                        animate="visible"
-                                        whileHover="hover"
-                                        onClick={() => openModal(card)}
-                                        className={`group relative flex flex-col p-7 rounded-2xl bg-gradient-to-br ${colorScheme.gradient} border-2 ${colorScheme.border} ${colorScheme.hover} cursor-pointer transition-all duration-300 hover:shadow-[0_8px_32px_0_rgba(34,211,238,0.15)] backdrop-blur-lg transform-gpu glassmorphism-card overflow-hidden`}
-                                        style={{
-                                            boxShadow: "0 4px 32px 0 rgba(34,211,238,0.08), 0 1.5px 8px 0 rgba(0,0,0,0.18)"
-                                        }}
-                                    >
-                                        <div className="flex justify-between items-start flex-grow w-full">
-                                            <div className="flex-1 min-w-0">
-                                                <h3 className={`${colorScheme.text} text-xs font-semibold uppercase tracking-widest mb-2 group-hover:text-cyan-100 transition-colors truncate`}>
-                                                    {card.title}
-                                                </h3>
-                                                <p className="text-4xl font-light bg-clip-text text-transparent bg-gradient-to-r from-cyan-100 to-white drop-shadow-[0_2px_8px_rgba(34,211,238,0.10)] truncate">
-                                                    {card.value}
-                                                </p>
+                            {loading
+                                ? Array.from({ length: 4 }).map((_, i) => <CardSkeleton key={i} />)
+                                : currentData.cards.map((card, i) => {
+                                    const colorScheme = getRandomColor(activeWarehouse as 'INEA' | 'ITEA', i);
+                                    return (
+                                        <motion.div
+                                            key={card.id}
+                                            custom={i}
+                                            variants={cardVariants}
+                                            initial="hidden"
+                                            animate="visible"
+                                            whileHover="hover"
+                                            onClick={() => openModal(card)}
+                                            className={`group relative flex flex-col p-7 rounded-2xl bg-gradient-to-br ${colorScheme.gradient} border-2 ${colorScheme.border} ${colorScheme.hover} cursor-pointer transition-all duration-300 hover:shadow-[0_8px_32px_0_rgba(34,211,238,0.15)] backdrop-blur-lg transform-gpu glassmorphism-card overflow-hidden`}
+                                            style={{
+                                                boxShadow: "0 4px 32px 0 rgba(34,211,238,0.08), 0 1.5px 8px 0 rgba(0,0,0,0.18)"
+                                            }}
+                                        >
+                                            <div className="flex justify-between items-start flex-grow w-full">
+                                                <div className="flex-1 min-w-0">
+                                                    <h3 className={`${colorScheme.text} text-xs font-semibold uppercase tracking-widest mb-2 group-hover:text-cyan-100 transition-colors truncate`}>
+                                                        {card.title}
+                                                    </h3>
+                                                    <p className="text-4xl font-light bg-clip-text text-transparent bg-gradient-to-r from-cyan-100 to-white drop-shadow-[0_2px_8px_rgba(34,211,238,0.10)] truncate">
+                                                        {card.value}
+                                                    </p>
+                                                </div>
+                                                <motion.div 
+                                                    className={`flex-shrink-0 ml-4 p-2.5 rounded-xl ${card.bgColor} group-hover:scale-110 transition-transform duration-300 shadow-md`}
+                                                    whileHover={{ rotate: 8 }}
+                                                >
+                                                    <card.icon className={`${card.color} drop-shadow-[0_1px_4px_rgba(34,211,238,0.3)] w-5 h-5`} />
+                                                </motion.div>
                                             </div>
-                                            <motion.div 
-                                                className={`flex-shrink-0 ml-4 p-2.5 rounded-xl ${card.bgColor} group-hover:scale-110 transition-transform duration-300 shadow-md`}
-                                                whileHover={{ rotate: 8 }}
-                                            >
-                                                <card.icon className={`${card.color} drop-shadow-[0_1px_4px_rgba(34,211,238,0.3)] w-5 h-5`} />
-                                            </motion.div>
-                                        </div>
-                                        <div className="mt-auto pt-5 text-base text-cyan-400/80 border-t border-cyan-400/20 group-hover:text-cyan-200 transition-colors font-medium tracking-wide truncate">
-                                            {card.count} artículos
-                                        </div>
-                                    </motion.div>
-                                );
-                            })}
+                                            <div className="mt-auto pt-5 text-base text-cyan-400/80 border-t border-cyan-400/20 group-hover:text-cyan-200 transition-colors font-medium tracking-wide truncate">
+                                                {card.count} artículos
+                                            </div>
+                                        </motion.div>
+                                    );
+                                })}
                         </div>
                     </motion.div>
                 </AnimatePresence>
@@ -895,9 +918,10 @@ export default function InventoryDashboard() {
                                     <X size={18} />
                                 </button>
                             </div>
-
                             {/* Mostrar rubros si existen (incluido para el total) */}
-                            {selectedCard?.categories.length > 0 && (
+                            {loading ? (
+                                <TableSkeleton />
+                            ) : selectedCard?.categories.length > 0 && (
                                 <div className="overflow-y-auto px-6 py-4 space-y-2">
                                     <table className="w-full text-left border-separate border-spacing-0 text-xs bg-black">
                                         <thead>
@@ -922,7 +946,6 @@ export default function InventoryDashboard() {
                                     </table>
                                 </div>
                             )}
-
                             <div className="px-6 py-4 border-t border-white/10 bg-black">
                                 <div className="flex justify-between items-center">
                                     <span className="text-white/70 text-sm">Total</span>

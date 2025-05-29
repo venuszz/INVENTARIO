@@ -1147,6 +1147,26 @@ export default function ConsultasIteaGeneral() {
         fetchFoliosYDetalles();
     }, [muebles]);
 
+    // Skeleton para la tabla de inventario
+    const TableSkeleton = () => (
+        <tr>
+            <td colSpan={6} className="px-6 py-24 text-center text-gray-400">
+                <div className="flex flex-col items-center justify-center space-y-4 animate-pulse">
+                    {[...Array(8)].map((_, i) => (
+                        <div key={i} className="flex gap-4 w-full max-w-3xl mx-auto">
+                            <div className="h-6 w-24 bg-gray-800/60 rounded" />
+                            <div className="h-6 w-40 bg-gray-800/60 rounded" />
+                            <div className="h-6 w-32 bg-gray-800/60 rounded" />
+                            <div className="h-6 w-32 bg-gray-800/60 rounded" />
+                            <div className="h-6 w-28 bg-gray-800/60 rounded" />
+                            <div className="h-6 w-32 bg-gray-800/60 rounded" />
+                        </div>
+                    ))}
+                </div>
+            </td>
+        </tr>
+    );
+
     return (
         <div className="bg-black text-white min-h-screen p-2 sm:p-4 md:p-6 lg:p-8">
             {/* Notificación de mensaje */}
@@ -1348,15 +1368,7 @@ export default function ConsultasIteaGeneral() {
                                     </thead>
                                     <tbody className="bg-black divide-y divide-gray-800">
                                         {loading ? (
-                                            <tr className="h-96">
-                                                <td colSpan={6} className="px-6 py-24 text-center text-gray-400">
-                                                    <div className="flex flex-col items-center justify-center space-y-4">
-                                                        <RefreshCw className="h-12 w-12 animate-spin text-gray-500" />
-                                                        <p className="text-lg font-medium">Cargando datos...</p>
-                                                        <p className="text-sm text-gray-500">Por favor espere mientras se cargan los registros de inventario</p>
-                                                    </div>
-                                                </td>
-                                            </tr>
+                                            <TableSkeleton />
                                         ) : error ? (
                                             <tr className="h-96">
                                                 <td colSpan={6} className="px-6 py-24 text-center">

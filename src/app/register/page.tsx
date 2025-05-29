@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from 'react'
 import supabase from '@/app/lib/supabase/client'
 import { useRouter } from 'next/navigation'
-import { User, Lock, Shield, UserCircle, Users } from 'lucide-react'
+import { User, Lock, Shield, UserCircle, Users, Eye, EyeOff } from 'lucide-react'
 import { useUserRole } from "@/hooks/useUserRole";
 import RoleGuard from "@/components/roleGuard";
 import Link from 'next/link'
@@ -23,6 +23,9 @@ export default function RegisterPage() {
     const containerRef = useRef<HTMLDivElement>(null)
     const router = useRouter()
     const [isMobile, setIsMobile] = useState(false)
+    const [showPassword, setShowPassword] = useState(false)
+    const [showConfirmPassword, setShowConfirmPassword] = useState(false)
+    const [confirmPassword, setConfirmPassword] = useState('')
 
     useEffect(() => {
         // Detectar si es móvil
@@ -132,6 +135,10 @@ export default function RegisterPage() {
         }
         if (password.length < 8) {
             setError('La contraseña debe tener al menos 8 caracteres')
+            return false
+        }
+        if (password !== confirmPassword) {
+            setError('Las contraseñas no coinciden')
             return false
         }
         return true
@@ -610,14 +617,69 @@ export default function RegisterPage() {
                                                     <Lock className="text-blue-400" size={18} />
                                                 </div>
                                                 <input
-                                                    type="password"
+                                                    type={showPassword ? "text" : "password"}
                                                     placeholder="Contraseña"
                                                     value={password}
                                                     onChange={(e) => setPassword(e.target.value)}
                                                     required
                                                     minLength={8}
-                                                    className="w-full pl-10 pr-4 py-3 md:py-4 bg-gray-800 text-white rounded-lg md:rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all text-base"
+                                                    className="w-full pl-10 pr-10 py-3 md:py-4 bg-gray-800 text-white rounded-lg md:rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all text-base password-input"
                                                 />
+                                                <button
+                                                    type="button"
+                                                    className={`eye-toggle absolute inset-y-0 right-0 pr-3 flex items-center justify-center focus:outline-none transition-all duration-200`}
+                                                    tabIndex={-1}
+                                                    onClick={() => setShowPassword((v) => !v)}
+                                                    aria-label={showPassword ? "Ocultar contraseña" : "Mostrar contraseña"}
+                                                >
+                                                    <span
+                                                        className={`inline-flex items-center justify-center rounded-full transition-all duration-200
+                                                            ${showPassword ? 'bg-blue-100 scale-110 rotate-12 shadow-lg' : 'bg-transparent scale-100 rotate-0'}
+                                                            eye-toggle-icon
+                                                        `}
+                                                        style={{ width: 32, height: 32 }}
+                                                    >
+                                                        {showPassword
+                                                            ? <EyeOff size={18} className="text-blue-500 transition-all duration-200" />
+                                                            : <Eye size={18} className="text-blue-500 transition-all duration-200" />
+                                                        }
+                                                    </span>
+                                                </button>
+                                            </div>
+
+                                            <div className="relative">
+                                                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                                    <Lock className="text-blue-400" size={18} />
+                                                </div>
+                                                <input
+                                                    type={showConfirmPassword ? "text" : "password"}
+                                                    placeholder="Confirmar Contraseña"
+                                                    value={confirmPassword}
+                                                    onChange={(e) => setConfirmPassword(e.target.value)}
+                                                    required
+                                                    minLength={8}
+                                                    className="w-full pl-10 pr-10 py-3 md:py-4 bg-gray-800 text-white rounded-lg md:rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all text-base password-input"
+                                                />
+                                                <button
+                                                    type="button"
+                                                    className={`eye-toggle absolute inset-y-0 right-0 pr-3 flex items-center justify-center focus:outline-none transition-all duration-200`}
+                                                    tabIndex={-1}
+                                                    onClick={() => setShowConfirmPassword((v) => !v)}
+                                                    aria-label={showConfirmPassword ? "Ocultar contraseña" : "Mostrar contraseña"}
+                                                >
+                                                    <span
+                                                        className={`inline-flex items-center justify-center rounded-full transition-all duration-200
+                                                            ${showConfirmPassword ? 'bg-blue-100 scale-110 rotate-12 shadow-lg' : 'bg-transparent scale-100 rotate-0'}
+                                                            eye-toggle-icon
+                                                        `}
+                                                        style={{ width: 32, height: 32 }}
+                                                    >
+                                                        {showConfirmPassword
+                                                            ? <EyeOff size={18} className="text-blue-500 transition-all duration-200" />
+                                                            : <Eye size={18} className="text-blue-500 transition-all duration-200" />
+                                                        }
+                                                    </span>
+                                                </button>
                                             </div>
 
                                             <div className="relative">

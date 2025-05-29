@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from 'react'
 import supabase from '@/app/lib/supabase/client'
 import { useRouter, useSearchParams } from 'next/navigation'
-import { User, Lock } from 'lucide-react'
+import { User, Lock, Eye, EyeOff } from 'lucide-react'
 import Cookies from 'js-cookie'
 
 export default function LoginPage() {
@@ -19,6 +19,7 @@ export default function LoginPage() {
     const searchParams = useSearchParams()
     const redirectPath = searchParams.get('from') || '/'
     const [isMobile, setIsMobile] = useState(false)
+    const [showPassword, setShowPassword] = useState(false)
 
     useEffect(() => {
         // Detectar si es móvil
@@ -303,13 +304,33 @@ export default function LoginPage() {
                                         <Lock className="text-blue-400" size={18} />
                                     </div>
                                     <input
-                                        type="password"
+                                        type={showPassword ? "text" : "password"}
                                         placeholder="Contraseña"
                                         value={password}
                                         onChange={(e) => setPassword(e.target.value)}
                                         required
-                                        className="w-full pl-10 pr-4 py-3 md:py-4 bg-gray-800 text-white rounded-lg md:rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all text-base"
+                                        className={`w-full pl-10 pr-10 py-3 md:py-4 bg-gray-800 text-white rounded-lg md:rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all text-base password-input`}
                                     />
+                                    <button
+                                        type="button"
+                                        className={`eye-toggle absolute inset-y-0 right-0 pr-3 flex items-center justify-center focus:outline-none transition-all duration-200`}
+                                        tabIndex={-1}
+                                        onClick={() => setShowPassword((v) => !v)}
+                                        aria-label={showPassword ? "Ocultar contraseña" : "Mostrar contraseña"}
+                                    >
+                                        <span
+                                            className={`inline-flex items-center justify-center rounded-full transition-all duration-200
+                                                ${showPassword ? 'bg-blue-100 scale-110 rotate-12 shadow-lg' : 'bg-transparent scale-100 rotate-0'}
+                                                eye-toggle-icon
+                                            `}
+                                            style={{ width: 32, height: 32 }}
+                                        >
+                                            {showPassword
+                                                ? <EyeOff size={18} className="text-blue-500 transition-all duration-200" />
+                                                : <Eye size={18} className="text-blue-500 transition-all duration-200" />
+                                            }
+                                        </span>
+                                    </button>
                                 </div>
 
                                 <div className="pt-2 md:pt-4">
@@ -469,6 +490,83 @@ export default function LoginPage() {
                         from { transform: rotate(0deg) translateX(50px) rotate(0deg); }
                         to { transform: rotate(360deg) translateX(50px) rotate(-360deg); }
                     }
+                }
+
+                /* Ocultar el icono nativo de mostrar/ocultar contraseña en Chrome, Edge, Safari */
+                input[type="password"]::-ms-reveal,
+                input[type="password"]::-ms-clear {
+                    display: none;
+                }
+                input[type="password"]::-webkit-credentials-auto-fill-button,
+                input[type="password"]::-webkit-input-password-toggle-button,
+                input[type="password"]::-webkit-input-clear-button,
+                input[type="password"]::-webkit-input-password-toggle {
+                    display: none !important;
+                }
+                input[type="password"]::-webkit-textfield-decoration-container {
+                    display: none !important;
+                }
+                input[type="password"]::-webkit-input-placeholder {
+                    color: inherit;
+                }
+                input[type="password"]::-moz-placeholder {
+                    color: inherit;
+                }
+                input[type="password"]:-ms-input-placeholder {
+                    color: inherit;
+                }
+                input[type="password"]::placeholder {
+                    color: inherit;
+                }
+                /* Para Firefox */
+                input[type="password"]::-moz-eye {
+                    display: none;
+                }
+                /* Para Safari */
+                input[type="password"]::-webkit-input-password-toggle-button {
+                    display: none;
+                }
+                /* Para todos los inputs de contraseña (también cuando se muestra como texto) */
+                input[type="text"].password-input::-ms-reveal,
+                input[type="text"].password-input::-ms-clear {
+                    display: none;
+                }
+                input[type="text"].password-input::-webkit-credentials-auto-fill-button,
+                input[type="text"].password-input::-webkit-input-password-toggle-button,
+                input[type="text"].password-input::-webkit-input-clear-button,
+                input[type="text"].password-input::-webkit-input-password-toggle {
+                    display: none !important;
+                }
+                input[type="text"].password-input::-webkit-textfield-decoration-container {
+                    display: none !important;
+                }
+
+                .eye-toggle {
+                    z-index: 2;
+                }
+                .eye-toggle-icon {
+                    cursor: pointer;
+                    transition:
+                        background 0.2s,
+                        transform 0.2s,
+                        box-shadow 0.2s;
+                }
+                .eye-toggle:hover .eye-toggle-icon,
+                .eye-toggle:focus .eye-toggle-icon {
+                    background: #3b82f622;
+                    box-shadow: 0 2px 8px 0 #3b82f644;
+                    transform: scale(1.15) rotate(8deg);
+                }
+                .eye-toggle-icon svg {
+                    transition: color 0.2s, transform 0.2s;
+                }
+                .eye-toggle:active .eye-toggle-icon svg {
+                    color: #2563eb;
+                    transform: scale(1.1);
+                }
+                /* Animación extra al cambiar de estado */
+                .eye-toggle-icon {
+                    will-change: transform, background, box-shadow;
                 }
             `}</style>
         </div>
