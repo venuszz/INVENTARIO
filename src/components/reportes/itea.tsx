@@ -32,6 +32,10 @@ export default function ReportesIteaDashboard() {
     const [firmas, setFirmas] = useState<Firma[]>([]);
     const [editingFirma, setEditingFirma] = useState<Firma | null>(null);
 
+    // Loader de exportación
+    const [isExporting, setIsExporting] = useState(false);
+    const [exportingFormat, setExportingFormat] = useState<string | null>(null);
+
     const { createNotification } = useNotifications();
 
     // Fetch firmas on component mount
@@ -153,6 +157,8 @@ export default function ReportesIteaDashboard() {
     // Exporta el reporte real trayendo todos los datos (paginación manual)
     const handleExport = async (format: string) => {
         setError(null);
+        setIsExporting(true);
+        setExportingFormat(format);
         try {
             let query = supabase.from('mueblesitea').select('*', { count: 'exact', head: false });
             const estatus = getEstatusFilter(selectedReport);
@@ -304,6 +310,9 @@ export default function ReportesIteaDashboard() {
                 importance: 'high',
                 data: { affectedTables: ['mueblesitea'] }
             });
+        } finally {
+            setIsExporting(false);
+            setExportingFormat(null);
         }
     };
 
@@ -411,6 +420,7 @@ export default function ReportesIteaDashboard() {
                                     <button
                                         onClick={() => handleExport('PDF')}
                                         className="flex flex-col items-center justify-center p-4 bg-black hover:bg-violet-900/20 rounded-xl border border-violet-800/30 hover:border-violet-500/50 transition-all transform hover:scale-[1.02] group"
+                                        disabled={isExporting}
                                     >
                                         <File size={32} className="text-rose-400 group-hover:text-rose-300 transition-colors mb-2" />
                                         <span className="font-medium text-violet-100">PDF</span>
@@ -419,6 +429,7 @@ export default function ReportesIteaDashboard() {
                                     <button
                                         onClick={() => handleExport('Excel')}
                                         className="flex flex-col items-center justify-center p-4 bg-black hover:bg-violet-900/20 rounded-xl border border-violet-800/30 hover:border-violet-500/50 transition-all transform hover:scale-[1.02] group"
+                                        disabled={isExporting}
                                     >
                                         <FileSpreadsheet size={32} className="text-teal-400 group-hover:text-teal-300 transition-colors mb-2" />
                                         <span className="font-medium text-violet-100">Excel</span>
@@ -427,6 +438,7 @@ export default function ReportesIteaDashboard() {
                                     <button
                                         onClick={() => handleExport('CSV')}
                                         className="flex flex-col items-center justify-center p-4 bg-black hover:bg-violet-900/20 rounded-xl border border-violet-800/30 hover:border-violet-500/50 transition-all transform hover:scale-[1.02] group"
+                                        disabled={isExporting}
                                     >
                                         <FileText size={32} className="text-cyan-400 group-hover:text-cyan-300 transition-colors mb-2" />
                                         <span className="font-medium text-violet-100">CSV</span>
@@ -619,6 +631,39 @@ export default function ReportesIteaDashboard() {
                             <X className="h-4 w-4" />
                         </button>
                     </div>
+                </div>
+            )}
+
+            {/* Loader de exportación moderno */}
+            {isExporting && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm animate-fadeIn">
+                    <div className="bg-gradient-to-br from-violet-950/60 via-black to-violet-950/30 rounded-2xl shadow-2xl border border-violet-600/30 w-full max-w-xs p-8 flex flex-col items-center relative">
+                        {/* Barra animada */}
+                        <div className="w-full h-2 bg-violet-900/30 rounded-full overflow-hidden mb-6 mt-2">
+                            <div className="h-full bg-gradient-to-r from-violet-400 via-teal-400 to-cyan-400 animate-loader-bar rounded-full" style={{ width: '40%' }}></div>
+                        </div>
+                        <div className="flex flex-col items-center">
+                            <FileDigit className="h-10 w-10 text-violet-400 mb-4 animate-pulse" />
+                            <h3 className="text-lg font-bold text-white mb-2">{exportingFormat === 'PDF' ? 'Generando PDF...' : exportingFormat === 'Excel' ? 'Generando Excel...' : 'Generando CSV...'}</h3>
+                            <p className="text-gray-300 text-sm text-center max-w-xs">
+                                {exportingFormat === 'PDF'
+                                    ? 'Por favor espera mientras se genera el PDF. Este proceso puede tardar varios minutos si hay muchos registros.'
+                                    : exportingFormat === 'Excel'
+                                        ? 'Por favor espera mientras se genera el archivo Excel.'
+                                        : 'Por favor espera mientras se genera el archivo CSV.'}
+                            </p>
+                        </div>
+                    </div>
+                    {/* Animación de barra (keyframes) */}
+                    <style jsx>{`
+                        @keyframes loader-bar {
+                            0% { transform: translateX(-100%); }
+                            100% { transform: translateX(250%); }
+                        }
+                        .animate-loader-bar {
+                            animation: loader-bar 1.5s infinite linear;
+                        }
+                    `}</style>
                 </div>
             )}
         </div>
