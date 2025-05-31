@@ -158,7 +158,13 @@ export default function CrearResguardos() {
     const [directorAreasMap, setDirectorAreasMap] = useState<{ [id_directorio: number]: number[] }>({});
 
     // Estado para autocompletado de director (solo exacto)
+    // Si hay artículos seleccionados, sugerir automáticamente el director en base al usufinal
+    const initialDirectorSuggestion = selectedMuebles.length > 0 ? (selectedMuebles[0]?.usufinal || '') : '';
     const [directorSearchTerm, setDirectorSearchTerm] = useState('');
+    const [showDirectorSuggestions, setShowDirectorSuggestions] = useState(false);
+    const [highlightedDirectorIndex, setHighlightedDirectorIndex] = useState(-1);
+    const [forceShowAllDirectors, setForceShowAllDirectors] = useState(false);
+    const directorInputRef = useRef<HTMLInputElement>(null);
 
     const [conflictArea, setConflictArea] = useState<string | null>(null);
     const [showAreaConflictModal, setShowAreaConflictModal] = useState(false);
@@ -819,33 +825,135 @@ export default function CrearResguardos() {
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [formData.directorId, areas, directorAreasMap]);
 
-    // Autocompletado exacto director
-    const handleDirectorInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        const value = e.target.value;
-        setDirectorSearchTerm(value);
-        const match = directorio.find(d => d.nombre.trim().toLowerCase() === value.trim().toLowerCase());
-        if (match) {
-            const areasForDirector = getAreasForDirector(match.id_directorio.toString());
-            if (!match.puesto || !areasForDirector.length) {
-                setIncompleteDirector(match);
-                setDirectorFormData({ area: match.area || '', puesto: match.puesto || '' });
-                setShowDirectorModal(true);
-                setShowMissingDirectorDataError(false);
-                setFormData(prev => ({ ...prev, directorId: match.id_directorio.toString(), area: '', puesto: '' }));
-                return;
+    // --- DIRECTOR SUGGESTIONS LOGIC (tipo omnibox) ---
+    // Sugerido: el que más coincide por nombre y área
+    const clean = (str: string) => (str || '').normalize('NFKD').replace(/\p{Diacritic}/gu, '').toLowerCase().trim();
+    const directorSugerido = (() => {
+        // Si el usuario no ha escrito nada, sugerir en base al usufinal de los artículos seleccionados
+        const term = directorSearchTerm || initialDirectorSuggestion;
+        if (!term) return null;
+        const targetNombre = clean(term);
+        // 1. Coincidencia exacta nombre
+        let match = directorio.find(opt => clean(opt.nombre) === targetNombre);
+        // 2. Coincidencia parcial por nombre (más flexible)
+        if (!match) {
+            // Split nombre en palabras y buscar coincidencias parciales
+            const nombreParts = targetNombre.split(/\s+/);
+            // Encontrar el que más palabras coincide
+            const matches = directorio
+                .map(opt => {
+                    const optNombre = clean(opt.nombre);
+                    const matchCount = nombreParts.filter(part =>
+                        optNombre.includes(part) || (part.length > 3 && optNombre.includes(part.slice(0, -1)))
+                    ).length;
+                    return { opt, matchCount };
+                })
+                .filter(({ matchCount }) => matchCount > 0)
+                .sort((a, b) => b.matchCount - a.matchCount);
+            if (matches.length > 0) {
+                match = matches[0].opt;
             }
-            setFormData(prev => ({
-                ...prev,
-                directorId: match.id_directorio.toString(),
-                area: match.area || '',
-                puesto: match.puesto || ''
-            }));
+        }
+        return match || null;
+    })();
+
+    const filteredDirectorOptions = (() => {
+        let options = directorio;
+        const filterTerm = forceShowAllDirectors ? '' : (directorSearchTerm || initialDirectorSuggestion);
+        if (filterTerm) {
+            options = options.filter(opt => clean(opt.nombre).includes(clean(filterTerm)));
+        }
+        // Sugerido primero
+        if (!forceShowAllDirectors && directorSugerido) {
+            options = [directorSugerido, ...options.filter(opt => opt.id_directorio !== directorSugerido.id_directorio)];
+        }
+        return options;
+    })();
+
+    const handleDirectorInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        setDirectorSearchTerm(e.target.value);
+        setShowDirectorSuggestions(true);
+        setHighlightedDirectorIndex(-1);
+        setForceShowAllDirectors(false);
+    };
+
+    const handleDirectorSuggestionClick = (opt: Directorio) => {
+        const areasForDirector = getAreasForDirector(opt.id_directorio.toString());
+        if (!opt.puesto || !areasForDirector.length) {
+            setIncompleteDirector(opt);
+            setDirectorFormData({ area: opt.area || '', puesto: opt.puesto || '' });
+            setShowDirectorModal(true);
             setShowMissingDirectorDataError(false);
-        } else {
-            setFormData(prev => ({ ...prev, directorId: '', area: '', puesto: '' }));
-            setShowMissingDirectorDataError(false);
+            setFormData(prev => ({ ...prev, directorId: opt.id_directorio.toString(), area: '', puesto: '' }));
+            setDirectorInputDisabled(true);
+            setShowDirectorSuggestions(false);
+            return;
+        }
+        setFormData(prev => ({
+            ...prev,
+            directorId: opt.id_directorio.toString(),
+            area: areasForDirector[0]?.nombre || '',
+            puesto: opt.puesto || ''
+        }));
+        setDirectorInputDisabled(true);
+        setShowMissingDirectorDataError(false);
+        setDirectorSearchTerm(opt.nombre);
+        setShowDirectorSuggestions(false);
+    };
+
+    const handleDirectorInputKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+        if (!showDirectorSuggestions || filteredDirectorOptions.length === 0) return;
+        if (e.key === 'ArrowDown') {
+            e.preventDefault();
+            setHighlightedDirectorIndex(i => (i + 1) % filteredDirectorOptions.length);
+        } else if (e.key === 'ArrowUp') {
+            e.preventDefault();
+            setHighlightedDirectorIndex(i => (i - 1 + filteredDirectorOptions.length) % filteredDirectorOptions.length);
+        } else if (e.key === 'Enter') {
+            e.preventDefault();
+            if (highlightedDirectorIndex >= 0 && filteredDirectorOptions[highlightedDirectorIndex]) {
+                handleDirectorSuggestionClick(filteredDirectorOptions[highlightedDirectorIndex]);
+            }
+        } else if (e.key === 'Escape') {
+            setShowDirectorSuggestions(false);
         }
     };
+    const handleDirectorInputBlur = () => {
+        setTimeout(() => setShowDirectorSuggestions(false), 100);
+    };
+
+    function DirectorSuggestionDropdown() {
+        if (!showDirectorSuggestions || filteredDirectorOptions.length === 0) return null;
+        return (
+            <ul
+                className="absolute left-0 top-full w-full mt-1 animate-fadeInUp max-h-80 overflow-y-auto rounded-lg shadow-2xl border border-gray-800 bg-black/95 backdrop-blur-xl ring-1 ring-inset ring-gray-900/60 transition-all duration-200 z-50"
+            >
+                {filteredDirectorOptions.map((opt, i) => {
+                    const isSelected = highlightedDirectorIndex === i;
+                    const isSugerido = !forceShowAllDirectors && directorSugerido && opt.id_directorio === directorSugerido.id_directorio;
+                    return (
+                        <li
+                            key={opt.id_directorio}
+                            role="option"
+                            {...(isSelected && { 'aria-selected': 'true' })}
+                            onMouseDown={() => handleDirectorSuggestionClick(opt)}
+                            onMouseEnter={() => setHighlightedDirectorIndex(i)}
+                            className={`flex flex-col px-3 py-2 cursor-pointer select-none text-xs whitespace-normal break-words w-full border-b border-gray-800 last:border-b-0
+        ${isSelected ? 'bg-gray-800/80 text-white' : 'text-gray-300'}
+        ${isSugerido ? 'font-bold text-blue-300' : ''}
+        hover:bg-gray-800/80`}
+                        >
+                            <span className="flex items-center gap-2">
+                                <span className="font-semibold">{opt.nombre}</span>
+                                {isSugerido && <span className="ml-2 px-2 py-0.5 rounded-full bg-blue-700/60 text-xs text-white">Sugerido</span>}
+                            </span>
+                            <span className="text-[10px] text-gray-400">{opt.puesto || <span className="italic text-yellow-400">Sin puesto</span>}</span>
+                        </li>
+                    );
+                })}
+            </ul>
+        );
+    }
 
     const handleCloseDirectorModal = () => {
         if (!directorFormData.area.trim() || !directorFormData.puesto.trim()) {
@@ -1018,6 +1126,20 @@ export default function CrearResguardos() {
             </td>
         </tr>
     );
+
+    // Sugerencia de área para el director seleccionado
+    let areaSuggestion = '';
+    if (formData.directorId) {
+        const directorAreas = getAreasForDirector(formData.directorId);
+        if (selectedMuebles.length > 0 && selectedMuebles[0].area) {
+            const clean = (str: string) => (str || '').normalize('NFKD').replace(/\p{Diacritic}/gu, '').toLowerCase().trim();
+            const selectedArea = clean(selectedMuebles[0].area);
+            const match = directorAreas.find((a: { nombre: string }) => clean(a.nombre) === selectedArea);
+            areaSuggestion = match ? match.nombre : (directorAreas[0]?.nombre || '');
+        } else {
+            areaSuggestion = directorAreas[0]?.nombre || '';
+        }
+    }
 
     return (
         <div className="bg-black text-white min-h-screen p-2 sm:p-4 md:p-6 lg:p-8">
@@ -1454,21 +1576,49 @@ export default function CrearResguardos() {
                                 <label className="text-sm font-medium text-gray-400 mb-1">Director de Área</label>
                                 <div className="relative">
                                     <input
+                                        ref={directorInputRef}
                                         type="text"
-                                        value={formData.directorId ? directorio.find(d => d.id_directorio.toString() === formData.directorId)?.nombre || directorSearchTerm : directorSearchTerm}
+                                        value={
+                                            formData.directorId
+                                                ? directorio.find(d => d.id_directorio.toString() === formData.directorId)?.nombre || directorSearchTerm
+                                                : directorSearchTerm
+                                        }
                                         onChange={handleDirectorInputChange}
-                                        placeholder="Buscar director por nombre..."
-                                        className="w-full bg-black border border-gray-800 rounded-lg py-2.5 px-4 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-gray-300 appearance-none hover:border-blue-500 transition-colors"
-                                        list="directores-list"
+                                        onFocus={() => { setShowDirectorSuggestions(true); setForceShowAllDirectors(false); }}
+                                        onKeyDown={handleDirectorInputKeyDown}
+                                        onBlur={handleDirectorInputBlur}
+                                        placeholder={initialDirectorSuggestion ? `Buscar director...` : 'Buscar director por nombre...'}
+                                        className="w-full bg-black border border-gray-800 rounded-lg py-2.5 px-4 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 hover:border-blue-500 transition-colors"
                                         disabled={inputsDisabled || directorInputDisabled}
                                         autoComplete="off"
                                     />
-                                    <datalist id="directores-list">
-                                        {directorio.map(d => (
-                                            <option key={d.id_directorio} value={d.nombre} />
-                                        ))}
-                                    </datalist>
+                                    <DirectorSuggestionDropdown />
                                 </div>
+                                {/* Chip de sugerencia debajo del input */}
+                                {(!directorSearchTerm && !formData.directorId && directorSugerido && initialDirectorSuggestion) && (
+                                    <div className="mt-2 flex flex-wrap gap-2">
+                                        <button
+                                            type="button"
+                                            onMouseDown={e => { e.preventDefault(); handleDirectorSuggestionClick(directorSugerido); }}
+                                            className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-900/30 text-blue-200 border border-blue-700 hover:bg-blue-900/50 hover:text-white font-semibold text-xs shadow transition-all"
+                                            title={`Usar sugerencia: ${directorSugerido.nombre}`}
+                                        >
+                                            <span className="font-bold">Sugerido:</span> {directorSugerido.nombre}
+                                        </button>
+                                    </div>
+                                )}
+                                {/* Botón Ver todo el directorio solo si hay sugerencia de director y el campo está vacío */}
+                                {(!directorSearchTerm && !formData.directorId && directorSugerido && initialDirectorSuggestion) && (
+                                    <div className="mt-2">
+                                        <button
+                                            type="button"
+                                            className="px-4 py-1.5 rounded-lg bg-gray-900 text-gray-200 border border-gray-700 hover:bg-blue-900/30 hover:text-blue-200 text-xs font-semibold shadow transition-all"
+                                            onMouseDown={e => { e.preventDefault(); setShowDirectorSuggestions(true); setForceShowAllDirectors(true); setHighlightedDirectorIndex(-1); }}
+                                        >
+                                            Ver todo el directorio
+                                        </button>
+                                    </div>
+                                )}
                             </div>
                             <div className="mb-4 flex gap-4">
                                 <div className="flex-1">
@@ -1496,6 +1646,19 @@ export default function CrearResguardos() {
                                             <option key={a.id_area} value={a.nombre}>{a.nombre}</option>
                                         ))}
                                     </select>
+                                    {/* Chip de sugerencia de área debajo del select */}
+                                    {formData.directorId && selectedMuebles.length > 0 && areaSuggestion && formData.area !== areaSuggestion && (
+                                        <div className="mt-2 flex flex-wrap gap-2">
+                                            <button
+                                                type="button"
+                                                onMouseDown={e => { e.preventDefault(); setFormData(prev => ({ ...prev, area: areaSuggestion })); }}
+                                                className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-900/30 text-blue-200 border border-blue-700 hover:bg-blue-900/50 hover:text-white font-semibold text-xs shadow transition-all"
+                                                title={`Usar sugerencia: ${areaSuggestion}`}
+                                            >
+                                                <span className="font-bold">Sugerido:</span> {areaSuggestion}
+                                            </button>
+                                        </div>
+                                    )}
                                 </div>
                             </div>
 
