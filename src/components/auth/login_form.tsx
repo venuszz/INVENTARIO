@@ -54,7 +54,7 @@ export default function LoginPage() {
                 return;
             }
 
-            const expires = new Date(Date.now() + 60 * 60 * 1000);
+            const expires = new Date(Date.now() + 4 * 60 * 60 * 1000);
             Cookies.set('authToken', authData.session.access_token, {
                 expires,
                 path: '/',
