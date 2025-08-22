@@ -101,50 +101,50 @@ export default function ReportesIteaDashboard() {
             title: 'General',
             path: '/reportes/itea/general',
             icon: <Database className="h-5 w-5" />,
-            color: 'bg-violet-900/20',
-            borderColor: 'border-violet-800',
-            hoverColor: 'hover:border-violet-500',
-            iconColor: 'text-violet-400'
+            color: 'bg-gray-900/20',
+            borderColor: 'border-gray-700',
+            hoverColor: 'hover:border-gray-600',
+            iconColor: 'text-gray-400'
         },
         {
             id: 2,
             title: 'Activos',
             path: '/reportes/itea/activos',
             icon: <CheckCircle className="h-5 w-5" />,
-            color: 'bg-teal-900/20',
-            borderColor: 'border-teal-800',
-            hoverColor: 'hover:border-teal-500',
-            iconColor: 'text-teal-400'
+            color: 'bg-gray-900/20',
+            borderColor: 'border-gray-700',
+            hoverColor: 'hover:border-gray-600',
+            iconColor: 'text-gray-400'
         },
         {
             id: 3,
             title: 'Inactivos',
             path: '/reportes/itea/inactivos',
             icon: <UserX className="h-5 w-5" />,
-            color: 'bg-pink-900/20',
-            borderColor: 'border-pink-800',
-            hoverColor: 'hover:border-pink-500',
-            iconColor: 'text-pink-400'
+            color: 'bg-gray-900/20',
+            borderColor: 'border-gray-700',
+            hoverColor: 'hover:border-gray-600',
+            iconColor: 'text-gray-400'
         },
         {
             id: 4,
             title: 'No localizados',
             path: '/reportes/itea/no-localizados',
             icon: <MapPin className="h-5 w-5" />,
-            color: 'bg-cyan-900/20',
-            borderColor: 'border-cyan-800',
-            hoverColor: 'hover:border-cyan-500',
-            iconColor: 'text-cyan-400'
+            color: 'bg-gray-900/20',
+            borderColor: 'border-gray-700',
+            hoverColor: 'hover:border-gray-600',
+            iconColor: 'text-gray-400'
         },
         {
             id: 5,
             title: 'Obsoletos',
             path: '/reportes/itea/obsoletos',
             icon: <Trash2 className="h-5 w-5" />,
-            color: 'bg-rose-900/20',
-            borderColor: 'border-rose-800',
-            hoverColor: 'hover:border-rose-500',
-            iconColor: 'text-rose-400'
+            color: 'bg-gray-900/20',
+            borderColor: 'border-gray-700',
+            hoverColor: 'hover:border-gray-600',
+            iconColor: 'text-gray-400'
         },
     ];
 
@@ -320,11 +320,11 @@ export default function ReportesIteaDashboard() {
 
     return (
         <div className="bg-black text-white min-h-screen p-2 sm:p-4 md:p-6 lg:p-8">
-            <div className="w-full mx-auto bg-gradient-to-br from-violet-950/30 via-black to-violet-950/20 rounded-lg sm:rounded-xl shadow-2xl overflow-hidden border border-violet-800/30 transition-all duration-500 transform">
+            <div className="w-full mx-auto bg-gradient-to-br from-gray-900/30 via-black to-gray-900/20 rounded-lg sm:rounded-xl shadow-2xl overflow-hidden border border-gray-800/30 transition-all duration-500 transform">
                 {/* Header */}
-                <div className="bg-black/50 p-4 sm:p-6 flex flex-col sm:flex-row justify-between items-start sm:items-center border-b border-violet-800/30 gap-2 sm:gap-0">
+                <div className="bg-black/50 p-4 sm:p-6 flex flex-col sm:flex-row justify-between items-start sm:items-center border-b border-gray-800/30 gap-2 sm:gap-0">
                     <h1 className="text-xl sm:text-2xl md:text-3xl font-bold flex items-center text-white">
-                        <span className="mr-2 sm:mr-3 bg-violet-900/30 text-white p-1 sm:p-2 rounded-lg border border-violet-700/50 text-sm sm:text-base">
+                        <span className="mr-2 sm:mr-3 bg-gray-900/30 text-white p-1 sm:p-2 rounded-lg border border-gray-700/50 text-sm sm:text-base">
                             <FileText className="h-4 w-4 inline mr-1" />
                             REP
                         </span>
@@ -388,7 +388,7 @@ export default function ReportesIteaDashboard() {
                 </div>
 
                 {/* Footer con nuevo diseño */}
-                <div className="bg-black/50 p-4 border-t border-violet-800/30 text-center text-sm text-violet-300/70">
+                <div className="bg-black/50 p-4 border-t border-gray-800/30 text-center text-sm text-gray-300/70">
                     <p>Selecciona un reporte para exportarlo en PDF, Excel o CSV</p>
                 </div>
             </div>
@@ -396,52 +396,52 @@ export default function ReportesIteaDashboard() {
             {/* Modal de exportación - Actualizado con el nuevo esquema de colores */}
             {exportModalOpen && (
                 <div className="fixed inset-0 bg-black/90 flex items-center justify-center z-50 px-4 animate-fadeIn backdrop-blur-sm">
-                    <div className="bg-gradient-to-br from-violet-950/50 via-black to-violet-950/30 rounded-2xl shadow-2xl border border-violet-600/30 w-full max-w-md overflow-hidden transition-all duration-300 transform flex flex-col items-center">
+                    <div className="bg-gradient-to-br from-gray-900/50 via-black to-gray-900/30 rounded-2xl shadow-2xl border border-gray-600/30 w-full max-w-md overflow-hidden transition-all duration-300 transform flex flex-col items-center">
                         <div className="relative p-6 flex flex-col items-center w-full">
-                            <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-violet-500/60 via-violet-400 to-violet-500/60"></div>
+                            <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-gray-500/60 via-gray-400 to-gray-500/60"></div>
                             <button
                                 onClick={() => setExportModalOpen(false)}
-                                className="absolute top-3 right-3 p-2 rounded-full bg-black/60 hover:bg-violet-900/30 text-violet-400 hover:text-violet-300 border border-violet-500/30 transition-colors"
+                                className="absolute top-3 right-3 p-2 rounded-full bg-black/60 hover:bg-gray-900/30 text-gray-400 hover:text-gray-300 border border-gray-500/30 transition-colors"
                                 title="Cerrar"
                             >
                                 <X className="h-4 w-4" />
                             </button>
                             <div className="flex flex-col items-center text-center mb-4 w-full">
-                                <div className="p-3 bg-violet-500/10 rounded-full border border-violet-500/30 mb-3 mx-auto">
-                                    <FileDigit className="h-8 w-8 text-violet-400" />
+                                <div className="p-3 bg-gray-500/10 rounded-full border border-gray-500/30 mb-3 mx-auto">
+                                    <FileDigit className="h-8 w-8 text-gray-400" />
                                 </div>
                                 <h3 className="text-2xl font-bold text-white">Exportar Reporte</h3>
                                 <p className="text-gray-400 mt-2">
-                                    Selecciona el formato para exportar el reporte <span className="text-violet-300 font-bold">{selectedReport}</span>
+                                    Selecciona el formato para exportar el reporte <span className="text-gray-300 font-bold">{selectedReport}</span>
                                 </p>
                             </div>
                             <div className="space-y-5 mt-6 w-full">
                                 <div className="grid grid-cols-3 gap-3">
                                     <button
                                         onClick={() => handleExport('PDF')}
-                                        className="flex flex-col items-center justify-center p-4 bg-black hover:bg-violet-900/20 rounded-xl border border-violet-800/30 hover:border-violet-500/50 transition-all transform hover:scale-[1.02] group"
+                                        className="flex flex-col items-center justify-center p-4 bg-black hover:bg-gray-900/20 rounded-xl border border-gray-800/30 hover:border-gray-600/50 transition-all transform hover:scale-[1.02] group"
                                         disabled={isExporting}
                                     >
-                                        <File size={32} className="text-rose-400 group-hover:text-rose-300 transition-colors mb-2" />
-                                        <span className="font-medium text-violet-100">PDF</span>
+                                        <File size={32} className="text-gray-400 group-hover:text-gray-300 transition-colors mb-2" />
+                                        <span className="font-medium text-gray-100">PDF</span>
                                         <span className="text-xs text-gray-400">Documento</span>
                                     </button>
                                     <button
                                         onClick={() => handleExport('Excel')}
-                                        className="flex flex-col items-center justify-center p-4 bg-black hover:bg-violet-900/20 rounded-xl border border-violet-800/30 hover:border-violet-500/50 transition-all transform hover:scale-[1.02] group"
+                                        className="flex flex-col items-center justify-center p-4 bg-black hover:bg-gray-900/20 rounded-xl border border-gray-800/30 hover:border-gray-600/50 transition-all transform hover:scale-[1.02] group"
                                         disabled={isExporting}
                                     >
-                                        <FileSpreadsheet size={32} className="text-teal-400 group-hover:text-teal-300 transition-colors mb-2" />
-                                        <span className="font-medium text-violet-100">Excel</span>
+                                        <FileSpreadsheet size={32} className="text-gray-400 group-hover:text-gray-300 transition-colors mb-2" />
+                                        <span className="font-medium text-gray-100">Excel</span>
                                         <span className="text-xs text-gray-400">Hoja cálculo</span>
                                     </button>
                                     <button
                                         onClick={() => handleExport('CSV')}
-                                        className="flex flex-col items-center justify-center p-4 bg-black hover:bg-violet-900/20 rounded-xl border border-violet-800/30 hover:border-violet-500/50 transition-all transform hover:scale-[1.02] group"
+                                        className="flex flex-col items-center justify-center p-4 bg-black hover:bg-gray-900/20 rounded-xl border border-gray-800/30 hover:border-gray-600/50 transition-all transform hover:scale-[1.02] group"
                                         disabled={isExporting}
                                     >
-                                        <FileText size={32} className="text-cyan-400 group-hover:text-cyan-300 transition-colors mb-2" />
-                                        <span className="font-medium text-violet-100">CSV</span>
+                                        <FileText size={32} className="text-gray-400 group-hover:text-gray-300 transition-colors mb-2" />
+                                        <span className="font-medium text-gray-100">CSV</span>
                                         <span className="text-xs text-gray-400">Datos crudos</span>
                                     </button>
                                 </div>
@@ -462,9 +462,9 @@ export default function ReportesIteaDashboard() {
             {/* Modal de Firmas - Actualizado con el nuevo esquema de colores */}
             {firmasModalOpen && (
                 <div className="fixed inset-0 bg-black/95 flex items-center justify-center z-50 px-4 backdrop-blur-md animate-fadeIn">
-                    <div className="bg-gradient-to-br from-violet-950/30 via-black to-violet-950/20 w-full max-w-md rounded-2xl overflow-hidden border border-violet-800/30">
+                    <div className="bg-gradient-to-br from-gray-900/30 via-black to-gray-900/20 w-full max-w-md rounded-2xl overflow-hidden border border-gray-800/30">
                         {/* Barra superior */}
-                        <div className="h-0.5 w-full bg-gradient-to-r from-violet-700/80 via-violet-400 to-violet-700/80"></div>
+                        <div className="h-0.5 w-full bg-gradient-to-r from-gray-700/80 via-gray-400 to-gray-700/80"></div>
                         <div className="p-6">
                             {/* Header */}
                             <div className="flex items-center justify-between mb-5">
@@ -491,8 +491,8 @@ export default function ReportesIteaDashboard() {
                                             key={firma.id} 
                                             className={`group p-4 relative rounded-xl transition-all duration-300 ${
                                                 isEditing 
-                                                    ? 'bg-violet-900/20 border border-violet-700/50' 
-                                                    : 'bg-black border border-violet-800/30 hover:border-violet-600/40'
+                                                    ? 'bg-gray-900/20 border border-gray-700/50' 
+                                                    : 'bg-black border border-gray-800/30 hover:border-gray-600/40'
                                             }`}
                                         >
                                             {isEditing ? (
@@ -637,13 +637,13 @@ export default function ReportesIteaDashboard() {
             {/* Loader de exportación moderno */}
             {isExporting && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm animate-fadeIn">
-                    <div className="bg-gradient-to-br from-violet-950/60 via-black to-violet-950/30 rounded-2xl shadow-2xl border border-violet-600/30 w-full max-w-xs p-8 flex flex-col items-center relative">
+                    <div className="bg-gradient-to-br from-gray-900/60 via-black to-gray-900/30 rounded-2xl shadow-2xl border border-gray-600/30 w-full max-w-xs p-8 flex flex-col items-center relative">
                         {/* Barra animada */}
-                        <div className="w-full h-2 bg-violet-900/30 rounded-full overflow-hidden mb-6 mt-2">
-                            <div className="h-full bg-gradient-to-r from-violet-400 via-teal-400 to-cyan-400 animate-loader-bar rounded-full" style={{ width: '40%' }}></div>
+                        <div className="w-full h-2 bg-gray-900/30 rounded-full overflow-hidden mb-6 mt-2">
+                            <div className="h-full bg-gradient-to-r from-gray-400 via-gray-500 to-gray-600 animate-loader-bar rounded-full" style={{ width: '40%' }}></div>
                         </div>
                         <div className="flex flex-col items-center">
-                            <FileDigit className="h-10 w-10 text-violet-400 mb-4 animate-pulse" />
+                            <FileDigit className="h-10 w-10 text-gray-400 mb-4 animate-pulse" />
                             <h3 className="text-lg font-bold text-white mb-2">{exportingFormat === 'PDF' ? 'Generando PDF...' : exportingFormat === 'Excel' ? 'Generando Excel...' : 'Generando CSV...'}</h3>
                             <p className="text-gray-300 text-sm text-center max-w-xs">
                                 {exportingFormat === 'PDF'

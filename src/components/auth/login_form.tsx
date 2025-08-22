@@ -112,7 +112,7 @@ export default function LoginPage() {
                         </div>
 
                         <h1 className="text-5xl lg:text-6xl font-extralight text-white mb-6 tracking-tight">
-                            Sistema de
+                            Sistema
                             <span className="block text-blue-400">Gubernamental</span>
                         </h1>
                         <p className="text-xl text-gray-400 font-light">

@@ -126,50 +126,50 @@ export default function ReportesIneaDashboard() {
             title: 'General',
             path: '/reportes/inea/general',
             icon: <Database className="h-5 w-5" />,
-            color: 'bg-rose-900/20',
-            borderColor: 'border-rose-800',
-            hoverColor: 'hover:border-rose-500',
-            iconColor: 'text-rose-400'
+            color: 'bg-gray-900/20',
+            borderColor: 'border-gray-700',
+            hoverColor: 'hover:border-gray-600',
+            iconColor: 'text-gray-400'
         },
         {
             id: 2,
             title: 'En Uso*',
             path: '/reportes/inea/en-uso-asterisk',
             icon: <CheckCircle className="h-5 w-5" />,
-            color: 'bg-pink-900/20',
-            borderColor: 'border-pink-800',
-            hoverColor: 'hover:border-pink-500',
-            iconColor: 'text-pink-400'
+            color: 'bg-gray-900/20',
+            borderColor: 'border-gray-700',
+            hoverColor: 'hover:border-gray-600',
+            iconColor: 'text-gray-400'
         },
         {
             id: 3,
             title: 'Sin Uso e Integrado PADFBM',
             path: '/reportes/inea/integrado',
             icon: <ListChecks className="h-5 w-5" />,
-            color: 'bg-fuchsia-900/20',
-            borderColor: 'border-fuchsia-800',
-            hoverColor: 'hover:border-fuchsia-500',
-            iconColor: 'text-fuchsia-400'
+            color: 'bg-gray-900/20',
+            borderColor: 'border-gray-700',
+            hoverColor: 'hover:border-gray-600',
+            iconColor: 'text-gray-400'
         },
         {
             id: 4,
             title: 'Sin Uso y No Integrado PADFBM',
             path: '/reportes/inea/no-integrado',
             icon: <AlertCircle className="h-5 w-5" />,
-            color: 'bg-rose-900/20',
-            borderColor: 'border-rose-800',
-            hoverColor: 'hover:border-rose-500',
-            iconColor: 'text-rose-400'
+            color: 'bg-gray-900/20',
+            borderColor: 'border-gray-700',
+            hoverColor: 'hover:border-gray-600',
+            iconColor: 'text-gray-400'
         },
         {
             id: 5,
             title: 'En Uso',
             path: '/reportes/inea/en-uso',
             icon: <CheckCircle className="h-5 w-5" />,
-            color: 'bg-pink-900/20',
-            borderColor: 'border-pink-800',
-            hoverColor: 'hover:border-pink-500',
-            iconColor: 'text-pink-400'
+            color: 'bg-gray-900/20',
+            borderColor: 'border-gray-700',
+            hoverColor: 'hover:border-gray-600',
+            iconColor: 'text-gray-400'
         }
     ];
 
@@ -327,11 +327,11 @@ export default function ReportesIneaDashboard() {
 
     return (
         <div className="bg-black text-white min-h-screen p-2 sm:p-4 md:p-6 lg:p-8">
-            <div className="w-full mx-auto bg-gradient-to-br from-rose-950/30 via-black to-rose-950/20 rounded-lg sm:rounded-xl shadow-2xl overflow-hidden border border-rose-800/30 transition-all duration-500 transform">
+            <div className="w-full mx-auto bg-gradient-to-br from-gray-900/30 via-black to-gray-900/20 rounded-lg sm:rounded-xl shadow-2xl overflow-hidden border border-gray-800/30 transition-all duration-500 transform">
                 {/* Header */}
-                <div className="bg-black/50 p-4 sm:p-6 flex flex-col sm:flex-row justify-between items-start sm:items-center border-b border-rose-800/30 gap-2 sm:gap-0">
+                <div className="bg-black/50 p-4 sm:p-6 flex flex-col sm:flex-row justify-between items-start sm:items-center border-b border-gray-800/30 gap-2 sm:gap-0">
                     <h1 className="text-xl sm:text-2xl md:text-3xl font-bold flex items-center text-white">
-                        <span className="mr-2 sm:mr-3 bg-rose-900/30 text-white p-1 sm:p-2 rounded-lg border border-rose-700/50 text-sm sm:text-base">
+                        <span className="mr-2 sm:mr-3 bg-gray-900/30 text-white p-1 sm:p-2 rounded-lg border border-gray-700/50 text-sm sm:text-base">
                             <FileText className="h-4 w-4 inline mr-1" />
                             REP
                         </span>
@@ -395,7 +395,7 @@ export default function ReportesIneaDashboard() {
                 </div>
 
                 {/* Footer con nuevo diseño */}
-                <div className="bg-black/50 p-4 border-t border-rose-800/30 text-center text-sm text-rose-300/70">
+                <div className="bg-black/50 p-4 border-t border-gray-800/30 text-center text-sm text-gray-300/70">
                     <p>Selecciona un reporte para exportarlo en PDF, Excel o CSV</p>
                 </div>
             </div>
@@ -403,23 +403,23 @@ export default function ReportesIneaDashboard() {
             {/* Modal de exportación - Actualizado con nuevo esquema de colores */}
             {exportModalOpen && (
                 <div className="fixed inset-0 bg-black/90 flex items-center justify-center z-50 px-4 animate-fadeIn backdrop-blur-sm">
-                    <div className="bg-gradient-to-br from-rose-950/50 via-black to-rose-950/30 rounded-2xl shadow-2xl border border-rose-600/30 w-full max-w-md overflow-hidden transition-all duration-300 transform flex flex-col items-center">
+                    <div className="bg-gradient-to-br from-gray-900/50 via-black to-gray-900/30 rounded-2xl shadow-2xl border border-gray-600/30 w-full max-w-md overflow-hidden transition-all duration-300 transform flex flex-col items-center">
                         <div className="relative p-6 flex flex-col items-center w-full">
-                            <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-rose-500/60 via-rose-400 to-rose-500/60"></div>
+                            <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-gray-500/60 via-gray-400 to-gray-500/60"></div>
                             <button
                                 onClick={() => setExportModalOpen(false)}
-                                className="absolute top-3 right-3 p-2 rounded-full bg-black/60 hover:bg-rose-900/30 text-rose-400 hover:text-rose-300 border border-rose-500/30 transition-colors"
+                                className="absolute top-3 right-3 p-2 rounded-full bg-black/60 hover:bg-gray-900/30 text-gray-400 hover:text-gray-300 border border-gray-500/30 transition-colors"
                                 title="Cerrar"
                             >
                                 <X className="h-4 w-4" />
                             </button>
                             <div className="flex flex-col items-center text-center mb-4 w-full">
-                                <div className="p-3 bg-rose-500/10 rounded-full border border-rose-500/30 mb-3 mx-auto">
-                                    <FileDigit className="h-8 w-8 text-rose-400" />
+                                <div className="p-3 bg-gray-500/10 rounded-full border border-gray-500/30 mb-3 mx-auto">
+                                    <FileDigit className="h-8 w-8 text-gray-400" />
                                 </div>
                                 <h3 className="text-2xl font-bold text-white">Exportar Reporte</h3>
                                 <p className="text-gray-400 mt-2">
-                                    Selecciona el formato para exportar el reporte <span className="text-rose-300 font-bold">{selectedReport}</span>
+                                    Selecciona el formato para exportar el reporte <span className="text-gray-300 font-bold">{selectedReport}</span>
                                 </p>
                             </div>
                             <div className="space-y-5 mt-6 w-full">
@@ -455,7 +455,7 @@ export default function ReportesIneaDashboard() {
                                 <div className="flex justify-end mt-4">
                                     <button
                                         onClick={() => setExportModalOpen(false)}
-                                        className="px-4 py-2 bg-black hover:bg-rose-900/20 rounded-lg transition-colors text-sm border border-rose-800/30 text-rose-300 hover:text-rose-200"
+                                        className="px-4 py-2 bg-black hover:bg-gray-900/20 rounded-lg transition-colors text-sm border border-gray-800/30 text-gray-300 hover:text-gray-200"
                                     >
                                         Cancelar
                                     </button>
@@ -628,16 +628,16 @@ export default function ReportesIneaDashboard() {
 
             {/* Error Alert - Actualizado con el nuevo esquema de colores */}
             {error && (
-                <div className="fixed bottom-4 left-4 right-4 md:left-auto md:right-4 md:w-96 bg-rose-900/80 text-rose-100 px-4 py-3 rounded-lg shadow-lg border border-rose-800 z-50 backdrop-blur-sm animate-fade-in">
+                <div className="fixed bottom-4 left-4 right-4 md:left-auto md:right-4 md:w-96 bg-gray-900/80 text-gray-100 px-4 py-3 rounded-lg shadow-lg border border-gray-800 z-50 backdrop-blur-sm animate-fade-in">
                     <div className="flex items-center">
-                        <AlertCircle className="h-5 w-5 text-rose-400 mr-3 flex-shrink-0" />
+                        <AlertCircle className="h-5 w-5 text-gray-400 mr-3 flex-shrink-0" />
                         <div className="flex-1 min-w-0">
                             <p className="text-sm font-medium">{error}</p>
                         </div>
                         <button
                             title='Cerrar alerta'
                             onClick={() => setError(null)}
-                            className="ml-4 flex-shrink-0 p-1 rounded-full text-rose-200 hover:text-white hover:bg-rose-800/60"
+                            className="ml-4 flex-shrink-0 p-1 rounded-full text-gray-200 hover:text-white hover:bg-gray-800/60"
                         >
                             <X className="h-4 w-4" />
                         </button>
@@ -648,13 +648,13 @@ export default function ReportesIneaDashboard() {
             {/* Loader de exportación moderno */}
             {isExporting && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm animate-fadeIn">
-                    <div className="bg-gradient-to-br from-rose-950/60 via-black to-rose-950/30 rounded-2xl shadow-2xl border border-rose-600/30 w-full max-w-xs p-8 flex flex-col items-center relative">
+                    <div className="bg-gradient-to-br from-gray-900/60 via-black to-gray-900/30 rounded-2xl shadow-2xl border border-gray-600/30 w-full max-w-xs p-8 flex flex-col items-center relative">
                         {/* Barra animada */}
-                        <div className="w-full h-2 bg-rose-900/30 rounded-full overflow-hidden mb-6 mt-2">
-                            <div className="h-full bg-gradient-to-r from-rose-400 via-pink-400 to-fuchsia-400 animate-loader-bar rounded-full" style={{ width: '40%' }}></div>
+                        <div className="w-full h-2 bg-gray-900/30 rounded-full overflow-hidden mb-6 mt-2">
+                            <div className="h-full bg-gradient-to-r from-gray-400 via-gray-500 to-gray-600 animate-loader-bar rounded-full" style={{ width: '40%' }}></div>
                         </div>
                         <div className="flex flex-col items-center">
-                            <FileDigit className="h-10 w-10 text-rose-400 mb-4 animate-pulse" />
+                            <FileDigit className="h-10 w-10 text-gray-400 mb-4 animate-pulse" />
                             <h3 className="text-lg font-bold text-white mb-2">{exportingFormat === 'PDF' ? 'Generando PDF...' : exportingFormat === 'Excel' ? 'Generando Excel...' : 'Generando CSV...'}</h3>
                             <p className="text-gray-300 text-sm text-center max-w-xs">
                                 {exportingFormat === 'PDF'
