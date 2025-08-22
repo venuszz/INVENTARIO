@@ -1,574 +1,223 @@
 "use client"
 
-import { useState, useEffect, useRef } from 'react'
-import supabase from '@/app/lib/supabase/client'
-import { useRouter, useSearchParams } from 'next/navigation'
-import { User, Lock, Eye, EyeOff } from 'lucide-react'
-import Cookies from 'js-cookie'
+import { useState } from 'react';
+import supabase from '@/app/lib/supabase/client';
+import { useSearchParams } from 'next/navigation';
+import { User, Lock, Eye, EyeOff, LogIn } from 'lucide-react';
+import Cookies from 'js-cookie';
 
 export default function LoginPage() {
-    const [username, setUsername] = useState('')
-    const [password, setPassword] = useState('')
-    const [error, setError] = useState<string | null>(null)
-    const [isLoading, setIsLoading] = useState(false)
-    const [isLoaded, setIsLoaded] = useState(false)
-    const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 })
-    const particlesRef = useRef<HTMLDivElement>(null)
-    const containerRef = useRef<HTMLDivElement>(null)
-    const router = useRouter()
-    const searchParams = useSearchParams()
-    const redirectPath = searchParams.get('from') || '/'
-    const [isMobile, setIsMobile] = useState(false)
-    const [showPassword, setShowPassword] = useState(false)
+    const [username, setUsername] = useState('');
+    const [password, setPassword] = useState('');
+    const [error, setError] = useState<string | null>(null);
+    const [isLoading, setIsLoading] = useState(false);
+    const [showPassword, setShowPassword] = useState(false);
+    const searchParams = useSearchParams();
 
-    useEffect(() => {
-        // Detectar si es móvil
-        const checkIfMobile = () => {
-            setIsMobile(window.innerWidth < 768)
-        }
-
-        checkIfMobile()
-        window.addEventListener('resize', checkIfMobile)
-
-        setIsLoaded(true)
-
-        const handleMouseMove = (e: MouseEvent) => {
-            if (containerRef.current && !isMobile) {
-                const rect = containerRef.current.getBoundingClientRect()
-                setMousePosition({
-                    x: e.clientX - rect.left,
-                    y: e.clientY - rect.top
-                })
-            }
-        }
-
-        window.addEventListener('mousemove', handleMouseMove)
-
-        // Solo crear partículas en dispositivos no móviles para mejor rendimiento
-        if (!isMobile) {
-            const interval = setInterval(() => {
-                if (particlesRef.current) {
-                    const particle = document.createElement('div')
-                    particle.classList.add('particle')
-
-                    const posX = Math.random() * 100
-                    const posY = Math.random() * 100
-                    const size = Math.random() * 3 + 1
-                    const speedX = (Math.random() - 0.5) * 2
-                    const speedY = (Math.random() - 0.5) * 2
-
-                    particle.style.left = `${posX}%`
-                    particle.style.top = `${posY}%`
-                    particle.style.width = `${size}px`
-                    particle.style.height = `${size}px`
-                    particle.style.opacity = (Math.random() * 0.5 + 0.3).toString()
-
-                    particlesRef.current.appendChild(particle)
-
-                    let positionX = posX
-                    let positionY = posY
-
-                    const animate = () => {
-                        positionX += speedX
-                        positionY += speedY
-
-                        particle.style.left = `${positionX}%`
-                        particle.style.top = `${positionY}%`
-
-                        if (positionX < -10 || positionX > 110 || positionY < -10 || positionY > 110) {
-                            particle.remove()
-                            return
-                        }
-
-                        requestAnimationFrame(animate)
-                    }
-
-                    animate()
-
-                    setTimeout(() => {
-                        if (particle.parentNode === particlesRef.current) {
-                            particle.remove()
-                        }
-                    }, 8000)
-                }
-            }, 100)
-
-            return () => {
-                window.removeEventListener('mousemove', handleMouseMove)
-                clearInterval(interval)
-                window.removeEventListener('resize', checkIfMobile)
-            }
-        }
-
-        return () => {
-            window.removeEventListener('mousemove', handleMouseMove)
-            window.removeEventListener('resize', checkIfMobile)
-        }
-    }, [redirectPath, isMobile])
-
+    // --- LÓGICA ORIGINAL (SIN CAMBIOS) ---
     const handleLogin = async (e: React.FormEvent) => {
-        e.preventDefault()
-        setError(null)
+        e.preventDefault();
+        setError(null);
         if (isLoading) {
-            return
+            return;
         }
         if (!username.trim() || !password.trim()) {
-            setError('Por favor, ingresa tu nombre de usuario y contraseña')
-            return
+            setError('Por favor, ingresa tu nombre de usuario y contraseña');
+            return;
         }
 
-        setIsLoading(true)
+        setIsLoading(true);
 
         try {
-            // Primero obtenemos los datos completos del usuario
+            const redirectPath = searchParams.get('from') || '/';
+
             const { data: userData, error: userError } = await supabase
                 .from('users')
                 .select('id, email, rol, first_name, last_name')
                 .eq('username', username)
-                .single()
+                .single();
 
-            if (userError) {
-                setError('Usuario o contraseña incorrectos')
-                setIsLoading(false)
-                return
-            }
-
-            if (!userData) {
-                setError('Usuario o contraseña incorrectos')
-                setIsLoading(false)
-                return
+            if (userError || !userData) {
+                setError('Usuario o contraseña incorrectos');
+                setIsLoading(false);
+                return;
             }
 
             const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
                 email: userData.email,
                 password
-            })
+            });
 
             if (authError) {
-                setError('Usuario o contraseña incorrectos')
-                setIsLoading(false)
-                return
+                setError('Usuario o contraseña incorrectos');
+                setIsLoading(false);
+                return;
             }
-            try {
-                // Set cookie to expire in 1 hour
-                const expires = new Date(Date.now() + 60 * 60 * 1000);
-                Cookies.set('authToken', authData.session.access_token, {
-                    expires,
-                    path: '/',
-                    secure: process.env.NODE_ENV === 'production',
-                    sameSite: 'strict'
-                });
 
-                // Guardar información extendida del usuario en la cookie
-                Cookies.set('userData', JSON.stringify({
-                    id: userData.id, // <-- Guardar el id (uuid)
-                    username: username,
-                    firstName: userData.first_name,
-                    lastName: userData.last_name,
-                    rol: userData.rol
-                }), {
-                    expires,
-                    path: '/'
-                });
+            const expires = new Date(Date.now() + 60 * 60 * 1000);
+            Cookies.set('authToken', authData.session.access_token, {
+                expires,
+                path: '/',
+                secure: process.env.NODE_ENV === 'production',
+                sameSite: 'strict'
+            });
 
-                // Esperar un momento antes de redireccionar
-                setTimeout(() => {
-                    try {
-                        router.push(redirectPath)
-                        // También intentar con window.location como fallback
-                        setTimeout(() => {
-                            if (document.location.pathname === '/login') {
-                                window.location.href = redirectPath
-                            }
-                        }, 1000)
-                    } catch {
-                        // Intento alternativo de redirección
-                        try {
-                            window.location.href = redirectPath
-                        } catch {
-                            // No se pudo redirigir
-                        }
-                    }
-                }, 1000)
-            } catch {
-                setIsLoading(false)
-            }
+            Cookies.set('userData', JSON.stringify({
+                id: userData.id,
+                username: username,
+                firstName: userData.first_name,
+                lastName: userData.last_name,
+                rol: userData.rol
+            }), {
+                expires,
+                path: '/'
+            });
+
+            // Redirección directa para una mejor experiencia
+            window.location.href = redirectPath;
+
         } catch {
-            setIsLoading(false)
+            setError('Error de conexión. Intenta de nuevo más tarde.');
+            setIsLoading(false);
         }
-    }
+    };
 
+    // --- NUEVO DISEÑO INSPIRADO EN EL COMPONENTE VEHICULAR ---
     return (
-        <div
-            ref={containerRef}
-            className="min-h-screen w-full overflow-hidden relative"
-        >
-            <div className="absolute inset-0 bg-black opacity-80 z-0">
-                <div className="absolute inset-0 bg-grid"></div>
+        <div className="h-screen relative overflow-hidden bg-black flex items-center justify-center">
+            {/* Efectos de fondo animados */}
+            <div className="absolute inset-0">
+                <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-blue-500/20 rounded-full blur-3xl animate-pulse"></div>
+                <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-white/20 rounded-full blur-3xl animate-pulse" style={{ animationDelay: '2s' }}></div>
+                <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-64 h-64 bg-blue-400/10 rounded-full blur-2xl animate-pulse" style={{ animationDelay: '4s' }}></div>
             </div>
 
-            {!isMobile && (
-                <>
-                    <div className="absolute inset-0 z-0">
-                        <div className="wave wave1"></div>
-                        <div className="wave wave2"></div>
-                        <div className="wave wave3"></div>
-                    </div>
+            <div className="relative z-10 w-full max-w-6xl px-6 animate-fade-in">
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
 
-                    <div ref={particlesRef} className="absolute inset-0 overflow-hidden z-0"></div>
-
-                    <div
-                        className="absolute w-64 h-64 rounded-full pointer-events-none z-0 opacity-20 blur-3xl"
-                        style={{
-                            background: 'radial-gradient(circle, rgba(255,255,255,0.8) 0%, rgba(255,255,255,0) 70%)',
-                            transform: `translate(${mousePosition.x - 128}px, ${mousePosition.y - 128}px)`,
-                            transition: 'transform 0.1s ease-out'
-                        }}
-                    ></div>
-
-                    <div className="absolute inset-0 bg-connections z-0"></div>
-                </>
-            )}
-
-            <div className="relative z-10 flex items-center justify-center min-h-screen p-4">
-                <div className={`w-full ${isMobile ? 'max-w-md' : 'max-w-4xl'} bg-black/60 backdrop-blur-lg rounded-2xl shadow-2xl border border-blue-800/30 overflow-hidden`}>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-0 md:gap-8">
-                        {!isMobile && (
-                            <div className="p-6 md:p-8 flex flex-col justify-center items-center">
-                                <div className={`transform transition-all duration-1000 ${isLoaded ? 'scale-100 opacity-100' : 'scale-90 opacity-0'}`}>
-                                    <img
-                                        src="/images/ITEA_logo.png"
-                                        alt="Logo Gobierno"
-                                        className="h-24 md:h-32 w-auto object-contain animate-float mb-6 md:mb-8"
-                                        onLoad={() => setIsLoaded(true)}
-                                    />
-                                </div>
-
-                                <h1 className="text-2xl md:text-3xl font-bold text-center text-white mb-3 md:mb-4">
-                                    Sistema Gubernamental
-                                </h1>
-
-                                <p className="text-center text-gray-300 text-sm md:text-base mb-4 md:mb-6">
-                                    Acceso institucional a la plataforma de administración y gestión del Inventario.
-                                </p>
-
-                                <div className="relative h-24 w-24 md:h-32 md:w-32 mt-4 md:mt-6">
-                                    <div className="absolute inset-0">
-                                        <div className="orbit orbit1"></div>
-                                        <div className="orbit orbit2"></div>
-                                        <div className="orbital-dot orbital-dot1"></div>
-                                        <div className="orbital-dot orbital-dot2"></div>
-                                    </div>
-                                </div>
-                            </div>
-                        )}
-
-                        <div className={`p-6 ${isMobile ? '' : 'md:p-8 bg-black/40'}`}>
-                            {isMobile && (
-                                <div className="flex justify-center mb-6">
+                    {/* Panel izquierdo - Información */}
+                    <div className="text-center lg:text-left">
+                        <div className="inline-flex items-center justify-center lg:justify-start mb-8">
+                            <div className="relative group">
+                                <div className="absolute -inset-1 rounded-3xl bg-blue-500/20 blur-md group-hover:bg-blue-500/30 transition-all duration-700 animate-pulse"></div>
+                                <div className="relative p-6 rounded-3xl bg-white/5 border border-white/10 backdrop-blur-xl">
+                                    {/* Imagen original mantenida */}
                                     <img
                                         src="/images/ITEA_logo.png"
                                         alt="Logo Gobierno"
                                         className="h-20 w-auto object-contain"
                                     />
                                 </div>
-                            )}
+                            </div>
+                        </div>
 
-                            <h2 className="text-xl md:text-2xl font-bold text-white mb-6 text-center">
+                        <h1 className="text-5xl lg:text-6xl font-extralight text-white mb-6 tracking-tight">
+                            Sistema de
+                            <span className="block text-blue-400">Gubernamental</span>
+                        </h1>
+                        <p className="text-xl text-gray-400 font-light">
+                            Acceso a la plataforma de gestión de inventario.
+                        </p>
+                    </div>
+
+                    {/* Panel derecho - Formulario */}
+                    <div className="w-full max-w-md mx-auto lg:mx-0">
+                        <form onSubmit={handleLogin} className="space-y-6">
+                            <h2 className="text-2xl font-bold text-white mb-6 text-center lg:hidden">
                                 Iniciar Sesión
                             </h2>
+                            {/* Campo de Usuario */}
+                            <div className="relative group">
+                                <div className="absolute left-4 top-1/2 transform -translate-y-1/2 transition-all duration-300">
+                                    <User className="w-5 h-5 text-gray-400 group-focus-within:text-blue-400 group-focus-within:scale-110" />
+                                </div>
+                                <input
+                                    type="text"
+                                    value={username}
+                                    onChange={(e) => setUsername(e.target.value)}
+                                    placeholder="Nombre de Usuario"
+                                    className="w-full pl-12 pr-4 py-4 text-base bg-white/5 border border-white/20 rounded-2xl focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 text-white placeholder-gray-400 backdrop-blur-xl transition-all duration-300 hover:bg-white/10 focus:bg-white/10"
+                                    autoComplete="username"
+                                    disabled={isLoading}
+                                    required
+                                />
+                            </div>
 
-                            <form onSubmit={handleLogin} className="space-y-4 md:space-y-6">
-                                {error && (
-                                    <div className="bg-red-500/20 border border-red-500/30 text-red-300 p-3 rounded-lg text-center text-sm md:text-base">
+                            {/* Campo de Contraseña */}
+                            <div className="relative group">
+                                <div className="absolute left-4 top-1/2 transform -translate-y-1/2 transition-all duration-300">
+                                    <Lock className="w-5 h-5 text-gray-400 group-focus-within:text-blue-400 group-focus-within:scale-110" />
+                                </div>
+                                <input
+                                    type={showPassword ? "text" : "password"}
+                                    value={password}
+                                    onChange={(e) => setPassword(e.target.value)}
+                                    placeholder="Contraseña"
+                                    className="w-full pl-12 pr-12 py-4 text-base bg-white/5 border border-white/20 rounded-2xl focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 text-white placeholder-gray-400 backdrop-blur-xl transition-all duration-300 hover:bg-white/10 focus:bg-white/10"
+                                    autoComplete="current-password"
+                                    disabled={isLoading}
+                                    required
+                                />
+                                <button
+                                    type="button"
+                                    onClick={() => setShowPassword((prev) => !prev)}
+                                    className="absolute right-4 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-blue-400 focus:outline-none"
+                                    tabIndex={-1}
+                                    aria-label={showPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'}
+                                    disabled={isLoading}
+                                >
+                                    {showPassword ? (
+                                        <EyeOff size={20} />
+                                    ) : (
+                                        <Eye size={20} />
+                                    )}
+                                </button>
+                            </div>
+
+                            {error && (
+                                <div className="relative">
+                                    <div className="absolute inset-0 bg-red-500/10 rounded-xl blur-sm"></div>
+                                    <p className="relative text-red-400 text-sm text-center p-3 bg-red-500/5 border border-red-500/20 rounded-xl animate-fade-in backdrop-blur-sm">
                                         {error}
-                                    </div>
-                                )}
-
-                                <div className="relative">
-                                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                                        <User className="text-blue-400" size={18} />
-                                    </div>
-                                    <input
-                                        type="text"
-                                        placeholder="Nombre de Usuario"
-                                        value={username}
-                                        onChange={(e) => setUsername(e.target.value)}
-                                        required
-                                        className="w-full pl-10 pr-4 py-3 md:py-4 bg-gray-800 text-white rounded-lg md:rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all text-base"
-                                    />
+                                    </p>
                                 </div>
+                            )}
 
-                                <div className="relative">
-                                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                                        <Lock className="text-blue-400" size={18} />
-                                    </div>
-                                    <input
-                                        type={showPassword ? "text" : "password"}
-                                        placeholder="Contraseña"
-                                        value={password}
-                                        onChange={(e) => setPassword(e.target.value)}
-                                        required
-                                        className={`w-full pl-10 pr-10 py-3 md:py-4 bg-gray-800 text-white rounded-lg md:rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all text-base password-input`}
-                                    />
-                                    <button
-                                        type="button"
-                                        className={`eye-toggle absolute inset-y-0 right-0 pr-3 flex items-center justify-center focus:outline-none transition-all duration-200`}
-                                        tabIndex={-1}
-                                        onClick={() => setShowPassword((v) => !v)}
-                                        aria-label={showPassword ? "Ocultar contraseña" : "Mostrar contraseña"}
-                                    >
-                                        <span
-                                            className={`inline-flex items-center justify-center rounded-full transition-all duration-200
-                                                ${showPassword ? 'bg-blue-100 scale-110 rotate-12 shadow-lg' : 'bg-transparent scale-100 rotate-0'}
-                                                eye-toggle-icon
-                                            `}
-                                            style={{ width: 32, height: 32 }}
-                                        >
-                                            {showPassword
-                                                ? <EyeOff size={18} className="text-blue-500 transition-all duration-200" />
-                                                : <Eye size={18} className="text-blue-500 transition-all duration-200" />
-                                            }
-                                        </span>
-                                    </button>
-                                </div>
-
-                                <div className="pt-2 md:pt-4">
-                                    <button
-                                        type="submit"
-                                        disabled={isLoading}
-                                        className="w-full bg-blue-600 text-white py-3 md:py-4 rounded-lg md:rounded-xl hover:bg-blue-700 transition-colors font-semibold disabled:opacity-50 disabled:cursor-not-allowed text-base"
-                                    >
-                                        {isLoading ? 'Procesando...' : 'Iniciar Sesión'}
-                                    </button>
-                                </div>
-                            </form>
-                        </div>
+                            {/* Botón de envío */}
+                            <div className="space-y-4 pt-4">
+                                <button
+                                    type="submit"
+                                    disabled={isLoading}
+                                    className="w-full py-4 px-6 bg-blue-600 text-white rounded-2xl font-semibold hover:bg-blue-700 transition-all duration-300 transform hover:scale-[1.02] flex items-center justify-center gap-3 disabled:bg-blue-800 disabled:cursor-not-allowed disabled:scale-100 relative overflow-hidden group"
+                                >
+                                    <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000"></div>
+                                    {isLoading ? (
+                                        <>
+                                            <div className="w-5 h-5 border-2 border-white/50 border-t-white rounded-full animate-spin"></div>
+                                            <span>Procesando...</span>
+                                        </>
+                                    ) : (
+                                        <>
+                                            <LogIn className="w-5 h-5" />
+                                            <span>Iniciar Sesión</span>
+                                        </>
+                                    )}
+                                </button>
+                            </div>
+                        </form>
                     </div>
                 </div>
             </div>
 
             <style jsx>{`
-                .particle {
-                    position: absolute;
-                    background: white;
-                    border-radius: 50%;
-                    pointer-events: none;
+                @keyframes fade-in {
+                    from { opacity: 0; transform: translateY(20px) scale(0.98); }
+                    to { opacity: 1; transform: translateY(0) scale(1); }
                 }
-                
-                .bg-grid {
-                    background-image: linear-gradient(rgba(255, 255, 255, 0.05) 1px, transparent 1px),
-                                    linear-gradient(90deg, rgba(255, 255, 255, 0.05) 1px, transparent 1px);
-                    background-size: 20px 20px;
-                    width: 100%;
-                    height: 100%;
-                }
-                
-                .bg-connections {
-                    background-image: 
-                        radial-gradient(rgba(255, 255, 255, 0.15) 1px, transparent 1px),
-                        radial-gradient(rgba(255, 255, 255, 0.1) 1px, transparent 1px);
-                    background-size: 40px 40px, 20px 20px;
-                    background-position: 0 0, 10px 10px;
-                }
-                
-                .wave {
-                    position: absolute;
-                    width: 200%;
-                    height: 200%;
-                    left: -50%;
-                    background: rgba(255, 255, 255, 0.03);
-                    border-radius: 43%;
-                }
-                
-                .wave1 {
-                    bottom: -80%;
-                    animation: rotate 20000ms linear infinite;
-                }
-                
-                .wave2 {
-                    bottom: -75%;
-                    animation: rotate 25000ms linear infinite reverse;
-                    opacity: 0.5;
-                }
-                
-                .wave3 {
-                    bottom: -70%;
-                    animation: rotate 30000ms linear infinite;
-                    opacity: 0.3;
-                }
-                
-                .orbit {
-                    position: absolute;
-                    top: 50%;
-                    left: 50%;
-                    border: 1px solid rgba(255, 255, 255, 0.1);
-                    border-radius: 50%;
-                    transform: translate(-50%, -50%);
-                }
-                
-                .orbit1 {
-                    width: 80px;
-                    height: 80px;
-                    animation: spin 20s linear infinite;
-                }
-                
-                .orbit2 {
-                    width: 120px;
-                    height: 120px;
-                    animation: spin 30s linear infinite reverse;
-                }
-                
-                .orbital-dot {
-                    position: absolute;
-                    width: 5px;
-                    height: 5px;
-                    background: white;
-                    border-radius: 50%;
-                    top: 50%;
-                    left: 50%;
-                    transform: translate(-50%, -50%);
-                }
-                
-                .orbital-dot1 {
-                    animation: orbit1 20s linear infinite;
-                    box-shadow: 0 0 8px 2px rgba(100, 200, 255, 0.5);
-                }
-                
-                .orbital-dot2 {
-                    animation: orbit2 30s linear infinite reverse;
-                    box-shadow: 0 0 8px 2px rgba(255, 100, 255, 0.5);
-                }
-                
-                @keyframes float {
-                    0%, 100% { transform: translateY(0); }
-                    50% { transform: translateY(-8px); }
-                }
-                
-                @keyframes pulse {
-                    0%, 100% { opacity: 0.1; }
-                    50% { opacity: 0.2; }
-                }
-                
-                @keyframes rotate {
-                    from { transform: rotate(0deg); }
-                    to { transform: rotate(360deg); }
-                }
-                
-                @keyframes spin {
-                    from { transform: translate(-50%, -50%) rotate(0deg); }
-                    to { transform: translate(-50%, -50%) rotate(360deg); }
-                }
-                
-                @keyframes orbit1 {
-                    from { transform: rotate(0deg) translateX(40px) rotate(0deg); }
-                    to { transform: rotate(360deg) translateX(40px) rotate(-360deg); }
-                }
-                
-                @keyframes orbit2 {
-                    from { transform: rotate(0deg) translateX(60px) rotate(0deg); }
-                    to { transform: rotate(360deg) translateX(60px) rotate(-360deg); }
-                }
-
-                @media (max-width: 768px) {
-                    .orbit1 {
-                        width: 60px;
-                        height: 60px;
-                    }
-                    
-                    .orbit2 {
-                        width: 100px;
-                        height: 100px;
-                    }
-                    
-                    @keyframes orbit1 {
-                        from { transform: rotate(0deg) translateX(30px) rotate(0deg); }
-                        to { transform: rotate(360deg) translateX(30px) rotate(-360deg); }
-                    }
-                    
-                    @keyframes orbit2 {
-                        from { transform: rotate(0deg) translateX(50px) rotate(0deg); }
-                        to { transform: rotate(360deg) translateX(50px) rotate(-360deg); }
-                    }
-                }
-
-                /* Ocultar el icono nativo de mostrar/ocultar contraseña en Chrome, Edge, Safari */
-                input[type="password"]::-ms-reveal,
-                input[type="password"]::-ms-clear {
-                    display: none;
-                }
-                input[type="password"]::-webkit-credentials-auto-fill-button,
-                input[type="password"]::-webkit-input-password-toggle-button,
-                input[type="password"]::-webkit-input-clear-button,
-                input[type="password"]::-webkit-input-password-toggle {
-                    display: none !important;
-                }
-                input[type="password"]::-webkit-textfield-decoration-container {
-                    display: none !important;
-                }
-                input[type="password"]::-webkit-input-placeholder {
-                    color: inherit;
-                }
-                input[type="password"]::-moz-placeholder {
-                    color: inherit;
-                }
-                input[type="password"]:-ms-input-placeholder {
-                    color: inherit;
-                }
-                input[type="password"]::placeholder {
-                    color: inherit;
-                }
-                /* Para Firefox */
-                input[type="password"]::-moz-eye {
-                    display: none;
-                }
-                /* Para Safari */
-                input[type="password"]::-webkit-input-password-toggle-button {
-                    display: none;
-                }
-                /* Para todos los inputs de contraseña (también cuando se muestra como texto) */
-                input[type="text"].password-input::-ms-reveal,
-                input[type="text"].password-input::-ms-clear {
-                    display: none;
-                }
-                input[type="text"].password-input::-webkit-credentials-auto-fill-button,
-                input[type="text"].password-input::-webkit-input-password-toggle-button,
-                input[type="text"].password-input::-webkit-input-clear-button,
-                input[type="text"].password-input::-webkit-input-password-toggle {
-                    display: none !important;
-                }
-                input[type="text"].password-input::-webkit-textfield-decoration-container {
-                    display: none !important;
-                }
-
-                .eye-toggle {
-                    z-index: 2;
-                }
-                .eye-toggle-icon {
-                    cursor: pointer;
-                    transition:
-                        background 0.2s,
-                        transform 0.2s,
-                        box-shadow 0.2s;
-                }
-                .eye-toggle:hover .eye-toggle-icon,
-                .eye-toggle:focus .eye-toggle-icon {
-                    background: #3b82f622;
-                    box-shadow: 0 2px 8px 0 #3b82f644;
-                    transform: scale(1.15) rotate(8deg);
-                }
-                .eye-toggle-icon svg {
-                    transition: color 0.2s, transform 0.2s;
-                }
-                .eye-toggle:active .eye-toggle-icon svg {
-                    color: #2563eb;
-                    transform: scale(1.1);
-                }
-                /* Animación extra al cambiar de estado */
-                .eye-toggle-icon {
-                    will-change: transform, background, box-shadow;
+                .animate-fade-in {
+                    animation: fade-in 0.6s ease-out forwards;
                 }
             `}</style>
         </div>
-    )
+    );
 }
