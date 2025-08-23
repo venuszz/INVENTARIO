@@ -72,6 +72,83 @@ interface Message {
     text: string;
 }
 
+// Componente para animar el conteo de valores
+interface AnimatedCounterProps {
+    value: number;
+    className?: string;
+    prefix?: string;
+    suffix?: string;
+    loading?: boolean;
+    isInteger?: boolean;
+}
+
+const AnimatedCounter = ({ value, className, prefix = '', suffix = '', loading = false, isInteger = false }: AnimatedCounterProps) => {
+    // Estado para el valor actual mostrado
+    const [displayValue, setDisplayValue] = useState(0);
+    
+    // Referencia para el intervalo de animación
+    const intervalRef = useRef<NodeJS.Timeout | null>(null);
+    
+    // Formatear el número según sea entero o decimal
+    const formatNumber = (num: number) => {
+        if (isInteger) {
+            return Math.floor(num).toLocaleString('es-MX');
+        } else {
+            return num.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        }
+    };
+    
+    // Efecto para animar el contador
+    useEffect(() => {
+        // Limpiar intervalo anterior si existe
+        if (intervalRef.current) {
+            clearInterval(intervalRef.current);
+        }
+        
+        if (loading) {
+            // Durante la carga, mostrar números aleatorios
+            intervalRef.current = setInterval(() => {
+                const randomValue = isInteger ? 
+                    Math.floor(Math.random() * 1000) : 
+                    Math.random() * 10000;
+                setDisplayValue(randomValue);
+            }, 100);
+        } else {
+            // Animación de conteo hasta el valor final
+            const duration = 1500; // duración total en ms
+            const steps = 20; // número de pasos
+            const increment = (value - displayValue) / steps;
+            let currentStep = 0;
+            
+            intervalRef.current = setInterval(() => {
+                if (currentStep >= steps) {
+                    setDisplayValue(value);
+                    if (intervalRef.current) clearInterval(intervalRef.current);
+                    return;
+                }
+                
+                setDisplayValue(prev => prev + increment);
+                currentStep++;
+            }, duration / steps);
+        }
+        
+        // Limpiar intervalo al desmontar
+        return () => {
+            if (intervalRef.current) {
+                clearInterval(intervalRef.current);
+            }
+        };
+    }, [value, loading, isInteger]);
+    
+    return (
+        <div className={className}>
+            {prefix}
+            {formatNumber(displayValue)}
+            {suffix}
+        </div>
+    );
+};
+
 const ImagePreview = ({ imagePath }: { imagePath: string | null }) => {
     const [imageUrl, setImageUrl] = useState<string | null>(null);
     const [loading, setLoading] = useState(true);
@@ -1214,9 +1291,12 @@ export default function ConsultasIteaGeneral() {
                                     <div className="flex flex-col">
                                         <h3 className="text-sm font-medium text-gray-400 mb-1 group-hover:text-white transition-colors">Valor Total del Inventario</h3>
                                         <div className="relative">
-                                            <p className="text-4xl font-bold text-white transition-all duration-500">
-                                                ${(activeFilters.length > 0 || searchTerm ? filteredValue : allValue).toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                                            </p>
+                                            <AnimatedCounter 
+                                            value={(activeFilters.length > 0 || searchTerm ? filteredValue : allValue)} 
+                                            prefix="$" 
+                                            className="text-4xl font-bold text-white" 
+                                            loading={loading}
+                                        />
                                             <div className="absolute -bottom-2 left-0 w-full h-px bg-white/50"></div>
                                         </div>
                                         <p className="text-sm text-gray-500 mt-2 group-hover:text-gray-400 transition-colors">
@@ -1233,9 +1313,12 @@ export default function ConsultasIteaGeneral() {
                                 <div className="text-center">
                                     <p className="text-sm text-gray-400 mb-2 group-hover:text-white transition-colors">Artículos Registrados</p>
                                     <div className="relative">
-                                        <span className="relative text-3xl font-bold text-white transition-all duration-500 px-6 py-3">
-                                            {activeFilters.length > 0 || searchTerm ? filteredMueblesOmni.length : muebles.length}
-                                        </span>
+                                        <AnimatedCounter 
+                                        value={activeFilters.length > 0 || searchTerm ? filteredMueblesOmni.length : muebles.length} 
+                                        className="relative text-3xl font-bold text-white transition-all duration-500 px-6 py-3" 
+                                        loading={loading}
+                                        isInteger={true}
+                                    />
                                     </div>
                                 </div>
                             </div>
