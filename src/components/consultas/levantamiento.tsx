@@ -46,15 +46,15 @@ interface Message {
 }
 
 const ORIGEN_COLORS = {
-    INEA: 'bg-blue-900/70 text-blue-200 border border-blue-700',
-    ITEA: 'bg-purple-900/70 text-purple-200 border border-purple-700',
+    INEA: 'bg-white/90 text-gray-900 border border-white/80',
+    ITEA: 'bg-white/80 text-gray-900 border border-white/70',
 };
 
 const ESTATUS_COLORS = {
-    ACTIVO: 'bg-green-900/70 text-green-200 border border-green-700',
-    INACTIVO: 'bg-red-900/70 text-red-200 border border-red-700',
-    'NO LOCALIZADO': 'bg-yellow-900/70 text-yellow-200 border border-yellow-700',
-    DEFAULT: 'bg-gray-700 text-gray-300 border border-gray-600'
+    ACTIVO: 'bg-white/90 text-gray-900 border border-white/80',
+    INACTIVO: 'bg-white/80 text-gray-900 border border-white/70',
+    'NO LOCALIZADO': 'bg-white/70 text-gray-900 border border-white/60',
+    DEFAULT: 'bg-white/60 text-gray-900 border border-white/50'
 };
 
 // Utilidad para limpiar texto
@@ -65,6 +65,7 @@ function clean(str: string) {
 export default function LevantamientoUnificado() {
     const [muebles, setMuebles] = useState<LevMueble[]>([]);
     const [loading, setLoading] = useState(false);
+    const [loadingProgress, setLoadingProgress] = useState({ count: 0, total: 0, message: '' });
     const role = useUserRole();
     const isAdmin = role === "admin" || role === "superadmin";
     const [error, setError] = useState<string | null>(null);
@@ -135,19 +136,6 @@ export default function LevantamientoUnificado() {
     }, [showSuggestions, suggestions.length]);
 
     // Componente para el dropdown flotante
-    function getTypeColor(type: ActiveFilter['type']) {
-        switch (type) {
-            case 'id': return 'blue';
-            case 'area': return 'purple';
-            case 'usufinal': return 'amber';
-            case 'resguardante': return 'cyan';
-            case 'descripcion': return 'fuchsia';
-            case 'rubro': return 'green';
-            case 'estado': return 'cyan';
-            case 'estatus': return 'pink';
-            default: return 'gray';
-        }
-    }
     function getTypeLabel(type: ActiveFilter['type']) {
         switch (type) {
             case 'id': return 'ID';
@@ -163,14 +151,14 @@ export default function LevantamientoUnificado() {
     }
     function getTypeIcon(type: ActiveFilter['type']) {
         switch (type) {
-            case 'id': return <Search className="h-4 w-4 text-blue-400" />;
-            case 'area': return <span title="Área" className="font-bold text-purple-400">A</span>;
-            case 'usufinal': return <span title="Director" className="font-bold text-amber-400">D</span>;
-            case 'resguardante': return <span title="Resguardante" className="font-bold text-cyan-400">R</span>;
-            case 'descripcion': return <span title="Descripción" className="font-bold text-fuchsia-400">Desc</span>;
-            case 'rubro': return <span title="Rubro" className="font-bold text-green-400">Ru</span>;
-            case 'estado': return <span title="Estado" className="font-bold text-cyan-400">Edo</span>;
-            case 'estatus': return <span title="Estatus" className="font-bold text-pink-400">Est</span>;
+            case 'id': return <Search className="h-3.5 w-3.5 text-white/80" />;
+            case 'area': return <span title="Área" className="font-medium text-white/80">A</span>;
+            case 'usufinal': return <span title="Director" className="font-medium text-white/80">D</span>;
+            case 'resguardante': return <span title="Resguardante" className="font-medium text-white/80">R</span>;
+            case 'descripcion': return <span title="Descripción" className="font-medium text-white/80">Desc</span>;
+            case 'rubro': return <span title="Rubro" className="font-medium text-white/80">Ru</span>;
+            case 'estado': return <span title="Estado" className="font-medium text-white/80">Edo</span>;
+            case 'estatus': return <span title="Estatus" className="font-medium text-white/80">Est</span>;
             default: return null;
         }
     }
@@ -181,10 +169,9 @@ export default function LevantamientoUnificado() {
                 id="omnibox-suggestions"
                 role="listbox"
                 title="Sugerencias de búsqueda"
-                className={`animate-fadeInUp max-h-80 overflow-y-auto rounded-2xl shadow-2xl border border-neutral-800 bg-black/95 backdrop-blur-xl ring-1 ring-inset ring-neutral-900/60 transition-all duration-200 ${dropdownClass}`}
+                className={`animate-fadeInUp max-h-48 overflow-y-auto rounded-md shadow-md border border-white/10 bg-black/95 backdrop-blur-xl transition-all duration-200 ${dropdownClass}`}
             >
                 {suggestions.map((s, i) => {
-                    const itemColor = getTypeColor(s.type);
                     const isSelected = highlightedIndex === i;
                     return (
                         <li
@@ -193,12 +180,12 @@ export default function LevantamientoUnificado() {
                             role="option"
                             {...(isSelected && { 'aria-selected': 'true' })}
                             tabIndex={-1}
-                            className={`group flex items-center gap-3 px-5 py-3 cursor-pointer select-none
+                            className={`group flex items-center gap-1.5 px-2 py-1 cursor-pointer select-none text-xs
                                         transition-all duration-150 ease-in-out
                                         ${isSelected
-                                    ? `bg-neutral-900/80 shadow-[0_0_0_2px] shadow-${itemColor}-500/30 text-${itemColor}-200`
-                                    : 'hover:bg-neutral-800/80 text-neutral-200'}
-                                        border-b border-neutral-800 last:border-b-0`}
+                                    ? `bg-white/5 text-white border-l border-l-white/40`
+                                    : 'hover:bg-white/5 text-white/70'}
+                                        border-b border-white/5 last:border-b-0`}
                             onMouseDown={e => {
                                 e.preventDefault();
                                 setActiveFilters(prev => [...prev, { term: s.value, type: s.type }]);
@@ -211,21 +198,21 @@ export default function LevantamientoUnificado() {
                         >
                             {/* Icono minimalista */}
                             <span
-                                className={`flex items-center justify-center w-8 h-8 rounded-xl
-                                    transition-colors duration-200 bg-neutral-800/60
-                                    group-hover:bg-${itemColor}-900/20 text-${itemColor}-300
-                                    group-hover:text-${itemColor}-200 font-bold text-lg`}
+                                className={`flex items-center justify-center w-5 h-5 rounded-md
+                                    transition-colors duration-200 bg-neutral-800/40
+                                    group-hover:bg-white/5 text-white/70
+                                    group-hover:text-white font-medium text-xs`}
                             >
                                 {getTypeIcon(s.type)}
                             </span>
 
                             {/* Texto principal */}
-                            <span className="flex-1 text-base font-medium truncate tracking-wide" title={s.value}>
+                            <span className="flex-1 text-xs font-normal truncate tracking-wide" title={s.value}>
                                 {s.value}
                             </span>
 
                             {/* Etiqueta de tipo */}
-                            <span className={`text-xs font-semibold px-2 py-0.5 rounded-lg bg-neutral-900/70 text-${itemColor}-300 border border-${itemColor}-800 ml-2 tracking-wider`}
+                            <span className="text-[10px] font-medium px-1.5 py-0.5 rounded-md bg-neutral-900/50 text-white/60 border border-white/10 ml-1 tracking-wide"
                             >
                                 {getTypeLabel(s.type)}
                             </span>
@@ -556,6 +543,8 @@ export default function LevantamientoUnificado() {
     const fetchMuebles = useCallback(async () => {
         setLoading(true);
         setError(null);
+        setLoadingProgress({ count: 0, total: 0, message: 'Iniciando carga de registros...' });
+        
         try {
             // Helper para traer todos los datos en lotes grandes
             const fetchAllRows = async (table: 'muebles' | 'mueblesitea') => {
@@ -563,11 +552,29 @@ export default function LevantamientoUnificado() {
                 let from = 0;
                 const pageSize = 1000;
                 let keepGoing = true;
+                
+                // Primero obtenemos el conteo total para mostrar progreso
+                const { count } = await supabase.from(table).select('*', { count: 'exact', head: true });
+                const totalInTable = count || 0;
+                setLoadingProgress(prev => ({
+                    count: prev.count,
+                    total: prev.total + totalInTable,
+                    message: `Preparando carga de ${prev.total + totalInTable} registros...`
+                }));
+                
                 while (keepGoing) {
                     const { data, error } = await supabase.from(table).select('*').range(from, from + pageSize - 1);
                     if (error) throw error;
                     if (data && data.length > 0) {
                         allRows = allRows.concat(data);
+                        
+                        // Actualizar progreso
+                        setLoadingProgress(prev => ({
+                            count: prev.count + data.length,
+                            total: prev.total,
+                            message: `Cargando ${prev.count + data.length} de ${prev.total} registros...`
+                        }));
+                        
                         if (data.length < pageSize) {
                             keepGoing = false;
                         } else {
@@ -579,12 +586,16 @@ export default function LevantamientoUnificado() {
                 }
                 return allRows;
             };
+            
             // Traer todos los datos de ambas tablas
+            setLoadingProgress(prev => ({ ...prev, message: 'Conectando con la base de datos...' }));
             const [ineaRows, iteaRows] = await Promise.all([
                 fetchAllRows('muebles'),
                 fetchAllRows('mueblesitea')
             ]);
+            
             // Combinar y procesar los resultados
+            setLoadingProgress(prev => ({ ...prev, message: 'Procesando datos...' }));
             const allData = [
                 ...ineaRows.map(item => ({ ...item, origen: 'INEA' as const })),
                 ...iteaRows.map(item => ({ ...item, origen: 'ITEA' as const }))
@@ -676,14 +687,14 @@ export default function LevantamientoUnificado() {
         // Recolectar valores únicos por campo
         const seen = new Set<string>();
         const fields = [
-            { type: 'id' as ActiveFilter['type'], label: 'ID', icon: <Search className="h-4 w-4 text-blue-400" /> },
-            { type: 'area' as ActiveFilter['type'], label: 'Área', icon: <span className="h-4 w-4 text-purple-400 font-bold">A</span> },
-            { type: 'usufinal' as ActiveFilter['type'], label: 'Director', icon: <span className="h-4 w-4 text-amber-400 font-bold">D</span> },
-            { type: 'resguardante' as ActiveFilter['type'], label: 'Resguardante', icon: <span className="h-4 w-4 text-cyan-400 font-bold">R</span> },
-            { type: 'descripcion' as ActiveFilter['type'], label: 'Descripción', icon: <span className="h-4 w-4 text-fuchsia-400 font-bold">Desc</span> },
-            { type: 'rubro' as ActiveFilter['type'], label: 'Rubro', icon: <span className="h-4 w-4 text-green-400 font-bold">Ru</span> },
-            { type: 'estado' as ActiveFilter['type'], label: 'Estado', icon: <span className="h-4 w-4 text-cyan-400 font-bold">Edo</span> },
-            { type: 'estatus' as ActiveFilter['type'], label: 'Estatus', icon: <span className="h-4 w-4 text-pink-400 font-bold">Est</span> },
+            { type: 'id' as ActiveFilter['type'], label: 'ID', icon: <Search className="h-3.5 w-3.5 text-white/80" /> },
+            { type: 'area' as ActiveFilter['type'], label: 'Área', icon: <span className="h-3.5 w-3.5 text-white/80 font-medium">A</span> },
+            { type: 'usufinal' as ActiveFilter['type'], label: 'Director', icon: <span className="h-3.5 w-3.5 text-white/80 font-medium">D</span> },
+            { type: 'resguardante' as ActiveFilter['type'], label: 'Resguardante', icon: <span className="h-3.5 w-3.5 text-white/80 font-medium">R</span> },
+            { type: 'descripcion' as ActiveFilter['type'], label: 'Descripción', icon: <span className="h-3.5 w-3.5 text-white/80 font-medium">Desc</span> },
+            { type: 'rubro' as ActiveFilter['type'], label: 'Rubro', icon: <span className="h-3.5 w-3.5 text-white/80 font-medium">Ru</span> },
+            { type: 'estado' as ActiveFilter['type'], label: 'Estado', icon: <span className="h-3.5 w-3.5 text-white/80 font-medium">Edo</span> },
+            { type: 'estatus' as ActiveFilter['type'], label: 'Estatus', icon: <span className="h-3.5 w-3.5 text-white/80 font-medium">Est</span> },
         ];
         let allSuggestions: { value: string; type: ActiveFilter['type'] }[] = [];
         for (const f of fields) {
@@ -849,23 +860,23 @@ export default function LevantamientoUnificado() {
         return (
             showDirectorDataModal && !!directorToUpdate && isAdmin && (
                 <div className="fixed inset-0 z-[110] flex items-center justify-center bg-black/90 backdrop-blur-sm px-4 animate-fadeIn">
-                    <div className="bg-gradient-to-br from-fuchsia-900/90 via-black/95 to-fuchsia-800/90 border-2 border-fuchsia-700/80 rounded-2xl shadow-2xl w-full max-w-md overflow-hidden transition-all duration-300 transform">
+                    <div className="bg-black border-2 border-white/30 rounded-2xl shadow-2xl w-full max-w-md overflow-hidden transition-all duration-300 transform">
                         <div className="relative p-7 sm:p-8">
-                            <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-fuchsia-500/60 via-fuchsia-400 to-fuchsia-500/60" />
-                            <h2 className="text-2xl font-extrabold mb-2 text-fuchsia-200 flex items-center gap-2 tracking-tight drop-shadow-fuchsia-700/30">
-                                <FileUp className="h-6 w-6 text-fuchsia-400" /> Completar datos del director
+                            <div className="absolute top-0 left-0 w-full h-1 bg-white/30" />
+                            <h2 className="text-2xl font-extrabold mb-2 text-white flex items-center gap-2 tracking-tight">
+                                <FileUp className="h-6 w-6 text-white" /> Completar datos del director
                             </h2>
-                            <p className="text-fuchsia-100/80 text-base mb-6 font-medium flex items-center gap-2">
-                                <AlertCircle className="h-5 w-5 text-amber-400" />
+                            <p className="text-gray-300 text-base mb-6 font-medium flex items-center gap-2">
+                                <AlertCircle className="h-5 w-5 text-gray-400" />
                                 El director seleccionado no tiene todos sus datos completos. Por favor, completa la información faltante.
                             </p>
                             {directorToUpdate && (
                                 <div className="flex flex-col gap-6">
                                     <div>
-                                        <label className="block text-xs uppercase tracking-wider text-fuchsia-400 mb-1 font-bold">Nombre</label>
+                                        <label className="block text-xs uppercase tracking-wider text-gray-400 mb-1 font-bold">Nombre</label>
                                         <input
                                             type="text"
-                                            className="w-full bg-gray-900 border-2 border-fuchsia-700 focus:border-fuchsia-400 rounded-xl px-4 py-3 text-lg text-white font-semibold shadow-inner focus:outline-none transition-all duration-200 placeholder:text-fuchsia-300/40"
+                                            className="w-full bg-gray-900 border-2 border-white/30 focus:border-white/60 rounded-xl px-4 py-3 text-lg text-white font-semibold shadow-inner focus:outline-none transition-all duration-200 placeholder:text-gray-400/60"
                                             value={directorToUpdate.nombre ?? ''}
                                             onChange={e => setDirectorToUpdate(prev => prev ? { ...prev, nombre: e.target.value.toUpperCase() } : null)}
                                             placeholder="Ej: JUAN PÉREZ GÓMEZ"
@@ -874,10 +885,10 @@ export default function LevantamientoUnificado() {
                                         />
                                     </div>
                                     <div>
-                                        <label className="block text-xs uppercase tracking-wider text-fuchsia-400 mb-1 font-bold">Cargo</label>
+                                        <label className="block text-xs uppercase tracking-wider text-gray-400 mb-1 font-bold">Cargo</label>
                                         <input
                                             type="text"
-                                            className="w-full bg-gray-900 border-2 border-fuchsia-700 focus:border-fuchsia-400 rounded-xl px-4 py-3 text-lg text-white font-semibold shadow-inner focus:outline-none transition-all duration-200 placeholder:text-fuchsia-300/40"
+                                            className="w-full bg-gray-900 border-2 border-white/30 focus:border-white/60 rounded-xl px-4 py-3 text-lg text-white font-semibold shadow-inner focus:outline-none transition-all duration-200 placeholder:text-gray-400/60"
                                             value={directorToUpdate.puesto ?? ''}
                                             onChange={e => setDirectorToUpdate(prev => prev ? { ...prev, puesto: e.target.value.toUpperCase() } : null)}
                                             placeholder="Ej: DIRECTOR, JEFE DE ÁREA..."
@@ -893,8 +904,8 @@ export default function LevantamientoUnificado() {
                                 >Cancelar</button>
                                 <button
                                     className={`px-4 py-2 rounded-lg text-sm font-bold flex items-center gap-2 transition-all duration-200
-                            bg-gradient-to-r from-fuchsia-700 to-fuchsia-500 text-white shadow border border-fuchsia-400/60
-                            ${savingDirectorData || !directorToUpdate || !(directorToUpdate.nombre || '').trim() || !(directorToUpdate.puesto || '').trim() ? 'opacity-60 cursor-not-allowed' : 'hover:from-fuchsia-800 hover:to-fuchsia-600'}`}
+                            bg-white/10 text-white shadow border border-white/30
+                            ${savingDirectorData || !directorToUpdate || !(directorToUpdate.nombre || '').trim() || !(directorToUpdate.puesto || '').trim() ? 'opacity-60 cursor-not-allowed' : 'hover:bg-white/20'}`}
                                     onClick={() => saveDirectorData()}
                                     disabled={savingDirectorData || !directorToUpdate || !(directorToUpdate.nombre || '').trim() || !(directorToUpdate.puesto || '').trim()}
                                 >
@@ -959,7 +970,7 @@ export default function LevantamientoUnificado() {
                                 <div className="w-full flex flex-col gap-2">
                                     <div className="relative flex items-center w-full">
                                         <div className="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none transition-transform duration-300 group-focus-within:scale-110">
-                                            <Search className="h-5 w-5 text-blue-400 group-focus-within:text-blue-500 transition-colores duration-300" />
+                                            <Search className="h-5 w-5 text-white/70 group-focus-within:text-white transition-colores duration-300" />
                                         </div>
                                         <input
                                             ref={inputRef}
@@ -972,20 +983,14 @@ export default function LevantamientoUnificado() {
                                             placeholder="Buscar por ID, área, director, descripción, etc..."
                                             className={`
                                             pl-14 pr-32 py-3 w-full bg-black/80 text-white placeholder-neutral-500
-                                            focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500
+                                            focus:outline-none focus:ring-2 focus:ring-white/50 focus:border-white/50
                                             rounded-2xl border border-neutral-800 shadow-2xl transition-all duration-300
                                             text-lg font-semibold tracking-wide
                                             backdrop-blur-xl
-                                            hover:shadow-blue-500/10
+                                            hover:shadow-white/10
                                             focus:scale-[1.03]
                                             focus:bg-black/90
-                                            ${searchMatchType === 'id' ? 'border-blue-500/80 shadow-blue-500/20' : ''}
-                                            ${searchMatchType === 'area' ? 'border-purple-500/80 shadow-purple-500/20' : ''}
-                                            ${searchMatchType === 'usufinal' ? 'border-amber-500/80 shadow-amber-500/20' : ''}
-                                            ${searchMatchType === 'descripcion' ? 'border-fuchsia-500/80 shadow-fuchsia-500/20' : ''}
-                                            ${searchMatchType === 'rubro' ? 'border-green-500/80 shadow-green-500/20' : ''}
-                                            ${searchMatchType === 'estado' ? 'border-cyan-500/80 shadow-cyan-500/20' : ''}
-                                            ${searchMatchType === 'estatus' ? 'border-pink-500/80 shadow-pink-500/20' : ''}
+                                            ${searchMatchType ? 'border-white/80 shadow-white/20' : ''}
                                         `}
                                             title="Buscar"
                                             aria-autocomplete="list"
@@ -1002,8 +1007,8 @@ export default function LevantamientoUnificado() {
                                             {activeFilters.map((filter, index) => (
                                                 <span
                                                     key={index}
-                                                    className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold border border-neutral-700 shadow-sm animate-fadeIn transition-all duration-200
-                                                    bg-neutral-900/80 text-neutral-200 group relative hover:scale-[1.04] hover:shadow-lg hover:shadow-black/10`}
+                                                    className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium border border-white/20 shadow-sm animate-fadeIn transition-all duration-200
+                                                    bg-black/60 text-white/80 group relative hover:bg-white/5`}
                                                 >
                                                     <span className="mr-1">
                                                         {getTypeIcon(filter.type)}
@@ -1012,7 +1017,7 @@ export default function LevantamientoUnificado() {
                                                     <span className="ml-1 text-[10px] opacity-60 font-bold">{getTypeLabel(filter.type)}</span>
                                                     <button
                                                         onClick={() => removeFilter(index)}
-                                                        className="ml-2 p-0.5 rounded-full bg-neutral-800 hover:bg-red-700/60 text-neutral-400 hover:text-white transition-colores duration-200 focus:outline-none focus:ring-2 focus:ring-red-500"
+                                                        className="ml-2 p-0.5 rounded-full bg-neutral-800 hover:bg-white/20 text-neutral-400 hover:text-white transition-colores duration-200 focus:outline-none focus:ring-2 focus:ring-white/50"
                                                         title="Eliminar filtro"
                                                         tabIndex={0}
                                                     >
@@ -1033,17 +1038,13 @@ export default function LevantamientoUnificado() {
                                         setExportType('excel');
                                         setShowExportModal(true);
                                     }}
-                                    className="group relative px-4 py-2 bg-gradient-to-br from-green-600 to-emerald-600 text-white rounded-md font-medium flex items-center gap-2 hover:from-emerald-600 hover:to-green-600 transition-all duration-300 shadow-lg hover:shadow-emerald-500/30 border border-emerald-700/50 hover:border-emerald-500"
+                                    className="group relative px-4 py-2 bg-white text-gray-900 rounded-md font-medium flex items-center gap-2 hover:bg-white/90 transition-all duration-300 shadow-lg border border-white/80 hover:border-white"
                                     title="Exportar a Excel"
                                 >
-                                    <div className={`
-                                    absolute inset-0 bg-gradient-to-r from-emerald-600/20 to-transparent
-                                    opacity-0 group-hover:opacity-100 transition-opacity duration-300 rounded-md
-                                `}></div>
                                     <FileUp className="h-4 w-4 transition-transform group-hover:scale-110 group-hover:-translate-y-0.5 duration-300" />
                                     <span className="hidden sm:flex items-center gap-1">
                                         Excel
-                                        <span className="text-xs text-emerald-300 opacity-0 group-hover:opacity-100 transition-all duration-300 -translate-x-2 group-hover:translate-x-0">
+                                        <span className="text-xs opacity-0 group-hover:opacity-100 transition-all duration-300 -translate-x-2 group-hover:translate-x-0">
                                             .xlsx
                                         </span>
                                     </span>
@@ -1059,18 +1060,22 @@ export default function LevantamientoUnificado() {
                                             setShowExportModal(true);
                                         }
                                     }}
-                                    className={
-                                        `group relative px-4 py-2.5 rounded-lg font-medium 
+                                    className={`group relative px-4 py-2.5 rounded-lg font-medium 
                                     flex items-center gap-2.5 transition-all duration-300
                                     ${isCustomPDFEnabled
-                                            ? 'bg-gradient-to-br from-fuchsia-600 to-purple-600 hover:from-purple-600 hover:to-fuchsia-600 text-white hover:shadow-fuchsia-500/30 border-fuchsia-700/50 hover:border-fuchsia-500'
-                                            : 'bg-gradient-to-br from-red-600 to-rose-600 hover:from-rose-600 hover:to-red-600 text-white hover:shadow-red-500/30 border-red-700/50 hover:border-red-500'
+                                            ? 'bg-gradient-to-r from-white/90 to-white/70 text-gray-900 hover:from-white hover:to-white/80 border border-white/80 hover:border-white shadow-lg shadow-white/10'
+                                            : 'bg-white/80 text-gray-900 hover:bg-white/70 border border-white/70 hover:border-white'
                                     }`}
                                     title={isCustomPDFEnabled ? 'Exportar PDF personalizado por área y director (solo si ambos filtros son exactos)' : 'Exportar a PDF'}
                                 >
                                     <FileUp className="h-4 w-4 transition-transform group-hover:scale-110 group-hover:-translate-y-0.5 duration-300" />
                                     <span className="hidden sm:flex items-center gap-1">
-                                        {isCustomPDFEnabled ? 'PDF Personalizado' : 'PDF'}
+                                        {isCustomPDFEnabled ? (
+                                            <>
+                                                PDF Personalizado
+                                                <span className="ml-1 px-1.5 py-0.5 text-xs bg-white/20 rounded-full border border-white/30 text-gray-900 font-semibold">Área+Director</span>
+                                            </>
+                                        ) : 'PDF'}
                                     </span>
                                 </button>
                                 {/* Refresh Button */}
@@ -1079,19 +1084,17 @@ export default function LevantamientoUnificado() {
                                     className={`
                                     group relative px-4 py-2.5 rounded-lg font-medium 
                                     flex items-center gap-2.5 transition-all duration-300
-                                    bg-gradient-to-br from-cyan-600/20 to-blue-600/20 
-                                    hover:from-cyan-500/30 hover:to-blue-500/30
-                                    text-cyan-300 hover:text-cyan-200
-                                    border border-cyan-500/30 hover:border-cyan-400/50
-                                    shadow-lg hover:shadow-cyan-500/20
+                                    bg-white/70 
+                                    hover:bg-white/80
+                                    text-gray-900
+                                    border border-white/60 hover:border-white/70
+                                    shadow-lg
                                     hover:scale-[1.02] active:scale-[0.98]
                                     overflow-hidden
                                 `}
                                     title="Actualizar datos"
                                     disabled={loading}
                                 >
-                                    {/* Animated gradient background */}
-                                    <div className="absolute inset-0 bg-gradient-to-r from-cyan-500/20 via-blue-500/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 animate-gradient-x"></div>
 
                                     {/* Icon wrapper with animation */}
                                     <div className="relative">
@@ -1128,35 +1131,27 @@ export default function LevantamientoUnificado() {
                     )}
                     {showExportModal && (
                         <div className="fixed inset-0 bg-black/90 flex items-center justify-center z-50 px-4 animate-fadeIn">
-                            <div className={`bg-black rounded-2xl shadow-2xl border w-full max-w-md overflow-hidden transition-all duration-300 transform ${exportType === 'excel' ? 'border-green-600/30' : 'border-red-600/30'
-                                }`}>
-                                <div className={`relative p-6 bg-gradient-to-b from-black to-gray-900 ${exportType === 'excel' ? 'from-green-950 to-green-900' : 'from-red-950 to-red-900'
-                                    }`}>
-                                    <div className={`absolute top-0 left-0 w-full h-1 bg-gradient-to-r ${exportType === 'excel'
-                                        ? 'from-green-500/60 via-green-400 to-green-500/60'
-                                        : 'from-red-500/60 via-red-400 to-red-500/60'
-                                        }`}></div>
+                            <div className="bg-black rounded-2xl shadow-2xl border border-white/30 w-full max-w-md overflow-hidden transition-all duration-300 transform">
+                                <div className="relative p-6 bg-black">
+                                    <div className="absolute top-0 left-0 w-full h-1 bg-white/30"></div>
 
                                     <button
                                         onClick={() => setShowExportModal(false)}
-                                        className={`absolute top-3 right-3 p-2 rounded-full bg-black/60 hover:bg-gray-900 ${exportType === 'excel' ? 'text-green-400 hover:text-green-500 border-green-500/30' : 'text-red-400 hover:text-red-500 border-red-500/30'
-                                            } border transition-colores`}
+                                        className="absolute top-3 right-3 p-2 rounded-full bg-black/60 hover:bg-white/10 text-white hover:text-white border border-white/30 transition-colors"
                                         title="Cerrar"
                                     >
                                         <X className="h-4 w-4" />
                                     </button>
 
                                     <div className="flex flex-col items-center text-center mb-4">
-                                        <div className={`p-3 rounded-full border mb-3 ${exportType === 'excel' ? 'bg-green-500/10 border-green-500/30' : 'bg-red-500/10 border-red-500/30'
-                                            }`}>
+                                        <div className="p-3 rounded-full border border-white/30 bg-white/10 mb-3">
                                             {exportType === 'excel' ? (
-                                                <FileUp className="h-8 w-8 text-green-500" />
+                                                <FileUp className="h-8 w-8 text-white" />
                                             ) : (
-                                                <File className="h-8 w-8 text-red-500" />
+                                                <File className="h-8 w-8 text-white" />
                                             )}
                                         </div>
-                                        <h3 className={`text-2xl font-bold ${exportType === 'excel' ? 'text-green-400' : 'text-red-400'
-                                            }`}>
+                                        <h3 className="text-2xl font-bold text-white">
                                             Exportar a {exportType === 'excel' ? 'Excel' : 'PDF'}
                                         </h3>
                                         <p className="text-gray-400 mt-2">
@@ -1168,11 +1163,11 @@ export default function LevantamientoUnificado() {
                                         <div className="rounded-lg border border-gray-800 bg-gray-900/50 p-4">
                                             <label className="block text-xs uppercase tracking-wider text-gray-500 mb-1 font-bold">Documento a generar</label>
                                             <div className="flex items-center gap-3">
-                                                <div className="p-2 bg-gray-800 rounded-lg">
+                                                <div className="p-2 bg-white/10 rounded-lg">
                                                     {exportType === 'excel' ? (
-                                                        <FileUp className="h-4 w-4 text-green-400" />
+                                                        <FileUp className="h-4 w-4 text-white" />
                                                     ) : (
-                                                        <File className="h-4 w-4 text-red-400" />
+                                                        <File className="h-4 w-4 text-white" />
                                                     )}
                                                 </div>
                                                 <span className="text-white font-medium">
@@ -1185,10 +1180,7 @@ export default function LevantamientoUnificado() {
                                             <div className="w-full">
                                                 <button
                                                     onClick={handleExport}
-                                                    className={`w-full py-3 px-4 font-medium rounded-lg flex items-center justify-center gap-2 transition-all transform hover:scale-[1.02] shadow-lg ${exportType === 'excel'
-                                                        ? 'bg-gradient-to-r from-green-600 to-green-500 hover:from-green-500 hover:to-green-400'
-                                                        : 'bg-gradient-to-r from-red-600 to-red-500 hover:from-red-500 hover:to-red-400'
-                                                        } text-black`}
+                                                    className="w-full py-3 px-4 font-medium rounded-lg flex items-center justify-center gap-2 transition-all transform hover:scale-[1.02] shadow-lg bg-white/20 hover:bg-white/30 text-white border border-white/30"
                                                 >
                                                     {loading ? (
                                                         <>
@@ -1215,14 +1207,14 @@ export default function LevantamientoUnificado() {
                     )}
                     {showAreaPDFModal && (
                         <div className="fixed inset-0 bg-black/90 flex items-center justify-center z-50 px-4 animate-fadeIn">
-                            <div className="bg-black rounded-2xl shadow-2xl border w-full max-w-lg overflow-hidden border-fuchsia-700/40">
+                            <div className="bg-black rounded-2xl shadow-2xl border w-full max-w-lg overflow-hidden border-white/20">
                                 <div className="p-6">
-                                    <h2 className="text-xl font-bold mb-2 text-fuchsia-300 flex items-center gap-2">
-                                        <FileUp className="h-5 w-5 text-fuchsia-400" /> Exportar PDF por Área y Director
+                                    <h2 className="text-xl font-bold mb-2 text-white flex items-center gap-2">
+                                        <FileUp className="h-5 w-5 text-white" /> Exportar PDF por Área y Director
                                     </h2>
                                     <div className="mb-3 flex items-center gap-2 text-xs text-gray-400">
                                         <span>Registros a exportar</span>
-                                        <span className="inline-block px-2 py-0.5 rounded-full bg-gradient-to-r from-fuchsia-700 via-purple-700 to-amber-600 text-white font-bold shadow border border-fuchsia-400/60 min-w-[32px] text-center">
+                                        <span className="inline-block px-2 py-0.5 rounded-full bg-white/10 text-white font-bold shadow border border-white/30 min-w-[32px] text-center">
                                             {getFilteredMueblesForExportPDF().length}
                                         </span>
                                     </div>
@@ -1232,7 +1224,7 @@ export default function LevantamientoUnificado() {
                                                 <label className="block text-xs uppercase tracking-wider text-gray-400 mb-1 font-bold">Área seleccionada</label>
                                                 <input
                                                     type="text"
-                                                    className="w-full bg-gray-800 border-2 border-fuchsia-700 focus:border-fuchsia-400 rounded-xl px-4 py-3 text-lg text-white font-semibold shadow-inner focus:outline-none transition-all duration-200 placeholder:text-fuchsia-300/40"
+                                                    className="w-full bg-gray-800 border-2 border-white/30 focus:border-white/60 rounded-xl px-4 py-3 text-lg text-white font-semibold shadow-inner focus:outline-none transition-all duration-200 placeholder:text-gray-400/60"
                                                     value={areaPDFTarget.area}
                                                     readOnly
                                                     title="Área seleccionada para el PDF"
@@ -1254,14 +1246,14 @@ export default function LevantamientoUnificado() {
                                                 <label className="block text-xs uppercase tracking-wider text-gray-400 mb-1 font-bold">Buscar director</label>
                                                 <input
                                                     type="text"
-                                                    className="w-full bg-gray-800 border-2 border-fuchsia-700 focus:border-fuchsia-400 rounded-xl px-4 py-3 text-lg text-white font-semibold shadow-inner focus:outline-none transition-all duration-200 placeholder:text-fuchsia-300/40"
+                                                    className="w-full bg-gray-800 border-2 border-white/30 focus:border-white/60 rounded-xl px-4 py-3 text-lg text-white font-semibold shadow-inner focus:outline-none transition-all duration-200 placeholder:text-gray-400/60"
                                                     placeholder="Buscar director por nombre..."
                                                     value={searchDirectorTerm || ''}
                                                     onChange={e => setSearchDirectorTerm(e.target.value)}
                                                     title="Buscar director por nombre"
                                                     autoFocus
                                                 />
-                                                <div className="max-h-48 overflow-y-auto rounded-lg border border-fuchsia-700/30 bg-gray-900/80 shadow-inner divide-y divide-fuchsia-800/30">
+                                                <div className="max-h-48 overflow-y-auto rounded-lg border border-white/20 bg-gray-900/80 shadow-inner divide-y divide-white/10">
                                                     {filteredDirectorOptions.length === 0 ? (
                                                         <div className="text-gray-400 text-sm p-3">No se encontraron directores.</div>
                                                     ) : (
@@ -1270,9 +1262,9 @@ export default function LevantamientoUnificado() {
                                                                 key={opt.id_directorio}
                                                                 className={`w-full text-left px-4 py-2 flex flex-col gap-0.5 transition-all duration-150
                                                             border-l-4
-                                                            ${directorSugerido && opt.id_directorio === directorSugerido.id_directorio ? 'border-fuchsia-400 bg-fuchsia-900/30 text-fuchsia-200 font-bold shadow-lg' :
-                                                                    areaDirectorForm.nombre === opt.nombre ? 'border-fuchsia-600 bg-fuchsia-800/40 text-fuchsia-100 font-semibold' :
-                                                                        'border-transparent hover:bg-fuchsia-800/20 text-white'}
+                                                            ${directorSugerido && opt.id_directorio === directorSugerido.id_directorio ? 'border-white bg-white/10 text-white font-bold shadow-lg' :
+                                                                    areaDirectorForm.nombre === opt.nombre ? 'border-white/60 bg-white/5 text-white font-semibold' :
+                                                                        'border-transparent hover:bg-white/5 text-white'}
         `}
                                                                 onClick={() => {
                                                                     setAreaDirectorForm({ nombre: opt.nombre, puesto: opt.puesto });
@@ -1288,13 +1280,13 @@ export default function LevantamientoUnificado() {
                                                                 <span className="text-base font-semibold flex items-center gap-2">
                                                                     {opt.nombre}
                                                                     {directorSugerido && opt.id_directorio === directorSugerido.id_directorio && (
-                                                                        <BadgeCheck className="inline h-4 w-4 text-fuchsia-400 ml-1" />
+                                                                        <BadgeCheck className="inline h-4 w-4 text-white ml-1" />
                                                                     )}
                                                                     {areaDirectorForm.nombre === opt.nombre && (
-                                                                        <span className="ml-2 px-2 py-0.5 rounded-full bg-fuchsia-700/60 text-xs text-white">Seleccionado</span>
+                                                                        <span className="ml-2 px-2 py-0.5 rounded-full bg-white/20 text-xs text-white">Seleccionado</span>
                                                                     )}
                                                                 </span>
-                                                                <span className="text-xs text-fuchsia-300">{opt.puesto}</span>
+                                                                <span className="text-xs text-gray-300">{opt.puesto}</span>
                                                             </button>
                                                         ))
                                                     )}
@@ -1304,7 +1296,7 @@ export default function LevantamientoUnificado() {
                                                 <label className="block text-xs uppercase tracking-wider text-gray-400 mb-1 font-bold">Puesto</label>
                                                 <input
                                                     type="text"
-                                                    className="w-full bg-gray-800 border-2 border-fuchsia-700 focus:border-fuchsia-400 rounded-xl px-4 py-3 text-lg text-white font-semibold shadow-inner focus:outline-none transition-all duration-200 placeholder:text-fuchsia-300/40"
+                                                    className="w-full bg-gray-800 border-2 border-white/30 focus:border-white/60 rounded-xl px-4 py-3 text-lg text-white font-semibold shadow-inner focus:outline-none transition-all duration-200 placeholder:text-gray-400/60"
                                                     value={areaDirectorForm.puesto || ''}
                                                     readOnly
                                                     title="Puesto del director o jefe de área"
@@ -1319,7 +1311,7 @@ export default function LevantamientoUnificado() {
                                             onClick={() => setShowAreaPDFModal(false)}
                                         >Cancelar</button>
                                         <button
-                                            className="px-4 py-2 rounded bg-fuchsia-700 text-white font-bold hover:bg-fuchsia-600 border border-fuchsia-800 disabled:opacity-50"
+                                            className="px-4 py-2 rounded bg-white/10 text-white font-bold hover:bg-white/20 border border-white/30 disabled:opacity-50"
                                             disabled={
                                                 areaPDFLoading ||
                                                 getFilteredMueblesForExportPDF().length === 0 ||
@@ -1390,28 +1382,61 @@ export default function LevantamientoUnificado() {
                     {/* Modal para completar datos del director (fucsia, moderno) se renderiza con renderDirectorDataModal() */}
                     <div className="flex flex-col lg:flex-row gap-6">
                         <div className="w-full">
-                            {/* Spinner de carga */}
+                            {/* Spinner de carga mejorado con contador de registros */}
 
                             {loading ? (
                                 <div className="flex flex-col items-center justify-center min-h-[300px] w-full bg-black/80 rounded-lg animate-fadeIn">
                                     <div className="relative flex flex-col items-center justify-center gap-4 py-12">
-                                        <span className="relative flex h-16 w-16">
-                                            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-fuchsia-500 opacity-40"></span>
-                                            <span className="relative inline-flex rounded-full h-16 w-16 border-4 border-fuchsia-600 border-t-transparent animate-spin"></span>
-                                        </span>
-                                        <span className="text-xl font-bold text-fuchsia-300 drop-shadow-fuchsia-700/30">Cargando inventario...</span>
-                                        <span className="text-sm text-fuchsia-100/70">Por favor espera, esto puede tardar unos segundos.</span>
+                                        {/* Spinner animado */}
+                                        <div className="relative">
+                                            <span className="relative flex h-20 w-20">
+                                                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-white opacity-20"></span>
+                                                <span className="relative inline-flex rounded-full h-20 w-20 border-4 border-white border-t-transparent animate-spin"></span>
+                                            </span>
+                                            
+                                            {/* Contador numérico en el centro del spinner */}
+                                            {loadingProgress.total > 0 && (
+                                                <div className="absolute inset-0 flex items-center justify-center">
+                                                    <span className="text-sm font-mono font-bold text-white">
+                                                        {Math.round((loadingProgress.count / Math.max(loadingProgress.total, 1)) * 100)}%
+                                                    </span>
+                                                </div>
+                                            )}
+                                        </div>
+                                        
+                                        {/* Mensaje de carga con efecto de typing */}
+                                        <div className="flex flex-col items-center gap-1">
+                                            <span className="text-2xl font-bold text-white drop-shadow-md">
+                                                {loadingProgress.message || "Cargando inventario..."}
+                                            </span>
+                                            
+                                            {/* Barra de progreso */}
+                                            {loadingProgress.total > 0 && (
+                                                <div className="w-64 h-2 bg-white/10 rounded-full overflow-hidden mt-2">
+                                                    <div 
+                                                        className="h-full bg-white/40 rounded-full transition-all duration-300"
+                                                        style={{ width: `${Math.min(100, Math.round((loadingProgress.count / loadingProgress.total) * 100))}%` }}
+                                                    ></div>
+                                                </div>
+                                            )}
+                                            
+                                            <span className="text-sm text-gray-300 mt-2">
+                                                {loadingProgress.total > 0 
+                                                    ? `${loadingProgress.count.toLocaleString()} de ${loadingProgress.total.toLocaleString()} registros` 
+                                                    : "Por favor espera, esto puede tardar unos segundos."}
+                                            </span>
+                                        </div>
                                     </div>
                                 </div>
                             ) : error ? (
                                 <div className="flex flex-col items-center justify-center min-h-[300px] w-full bg-black/80 rounded-lg animate-fadeIn">
                                     <div className="flex flex-col items-center gap-4 py-12">
-                                        <AlertCircle className="h-14 w-14 text-rose-400 animate-bounce" />
-                                        <span className="text-2xl font-bold text-rose-300 drop-shadow-rose-700/30">Error al cargar los datos</span>
-                                        <span className="text-base text-rose-100/80 mb-2">{error}</span>
+                                        <AlertCircle className="h-14 w-14 text-gray-400 animate-bounce" />
+                                        <span className="text-2xl font-bold text-white drop-shadow-white/30">Error al cargar los datos</span>
+                                        <span className="text-base text-gray-300 mb-2">{error}</span>
                                         <button
                                             onClick={() => fetchMuebles()}
-                                            className="px-6 py-3 rounded-xl bg-gradient-to-r from-fuchsia-700 to-fuchsia-500 text-white font-bold text-lg shadow-lg border border-fuchsia-400/60 hover:from-fuchsia-800 hover:to-fuchsia-600 transition-all duration-200 flex items-center gap-2 mt-2"
+                                            className="px-6 py-3 rounded-xl bg-white/10 text-white font-bold text-lg shadow-lg border border-white/30 hover:bg-white/20 transition-all duration-200 flex items-center gap-2 mt-2"
                                         >
                                             <RefreshCw className="h-5 w-5 animate-spin-slow" />
                                             Reintentar
@@ -1421,12 +1446,12 @@ export default function LevantamientoUnificado() {
                             ) : totalFilteredCount === 0 ? (
                                 <div className="flex flex-col items-center justify-center min-h-[300px] w-full bg-black/80 rounded-lg animate-fadeIn">
                                     <div className="flex flex-col items-center gap-4 py-12">
-                                        <Search className="h-14 w-14 text-fuchsia-400 animate-pulse" />
-                                        <span className="text-2xl font-bold text-fuchsia-200 drop-shadow-fuchsia-700/30">No se encontraron resultados</span>
-                                        <span className="text-base text-fuchsia-100/80 mb-2">Intenta ajustar los filtros o la búsqueda.</span>
+                                        <Search className="h-14 w-14 text-gray-400 animate-pulse" />
+                                        <span className="text-2xl font-bold text-white drop-shadow-white/30">No se encontraron resultados</span>
+                                        <span className="text-base text-gray-300 mb-2">Intenta ajustar los filtros o la búsqueda.</span>
                                         <button
                                             onClick={() => fetchMuebles()}
-                                            className="px-6 py-3 rounded-xl bg-gradient-to-r from-fuchsia-700 to-fuchsia-500 text-white font-bold text-lg shadow-lg border border-fuchsia-400/60 hover:from-fuchsia-800 hover:to-fuchsia-600 transition-all duration-200 flex items-center gap-2 mt-2"
+                                            className="px-6 py-3 rounded-xl bg-white/10 text-white font-bold text-lg shadow-lg border border-white/30 hover:bg-white/20 transition-all duration-200 flex items-center gap-2 mt-2"
                                         >
                                             <RefreshCw className="h-5 w-5 animate-spin-slow" />
                                             Recargar inventario
@@ -1436,16 +1461,16 @@ export default function LevantamientoUnificado() {
                             ) : (
                                 <div className="bg-black rounded-lg border border-gray-800 overflow-x-auto overflow-y-auto flex flex-col flex-grow max-h-[70vh]">
                                     <table className="min-w-full divide-y divide-gray-800">
-                                        <thead className="bg-black sticky top-0 z-10">
+                                        <thead className="bg-black/80 sticky top-0 z-10 border-b border-white/10">
                                             <tr>
-                                                <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Origen</th>
-                                                <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Resguardo</th>
+                                                <th className="px-4 py-3 text-left text-xs font-medium text-white uppercase tracking-wider">Origen</th>
+                                                <th className="px-4 py-3 text-left text-xs font-medium text-white uppercase tracking-wider">Resguardo</th>
                                                 <th
                                                     onClick={() => {
                                                         setSortField('id_inv');
                                                         setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
                                                     }}
-                                                    className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider cursor-pointer hover:bg-gray-700"
+                                                    className="px-4 py-3 text-left text-xs font-medium text-white uppercase tracking-wider cursor-pointer hover:bg-white/10"
                                                 >
                                                     <div className="flex items-center gap-1">ID Inventario<ArrowUpDown className="h-3 w-3" /></div>
                                                 </th>
@@ -1454,7 +1479,7 @@ export default function LevantamientoUnificado() {
                                                         setSortField('descripcion');
                                                         setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
                                                     }}
-                                                    className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider cursor-pointer hover:bg-gray-700"
+                                                    className="px-4 py-3 text-left text-xs font-medium text-white uppercase tracking-wider cursor-pointer hover:bg-white/10"
                                                 >
                                                     <div className="flex items-center gap-1">Descripción<ArrowUpDown className="h-3 w-3" /></div>
                                                 </th>
@@ -1463,7 +1488,7 @@ export default function LevantamientoUnificado() {
                                                         setSortField('area');
                                                         setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
                                                     }}
-                                                    className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider cursor-pointer hover:bg-gray-700"
+                                                    className="px-4 py-3 text-left text-xs font-medium text-white uppercase tracking-wider cursor-pointer hover:bg-white/10"
                                                 >
                                                     <div className="flex items-center gap-1">Área<ArrowUpDown className="h-3 w-3" /></div>
                                                 </th>
@@ -1472,7 +1497,7 @@ export default function LevantamientoUnificado() {
                                                         setSortField('usufinal');
                                                         setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
                                                     }}
-                                                    className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider cursor-pointer hover:bg-gray-700"
+                                                    className="px-4 py-3 text-left text-xs font-medium text-white uppercase tracking-wider cursor-pointer hover:bg-white/10"
                                                 >
                                                     <div className="flex items-center gap-1">Jefe/Director de Área<ArrowUpDown className="h-3 w-3" /></div>
                                                 </th>
@@ -1481,13 +1506,13 @@ export default function LevantamientoUnificado() {
                                                         setSortField('estatus');
                                                         setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
                                                     }}
-                                                    className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider cursor-pointer hover:bg-gray-700"
+                                                    className="px-4 py-3 text-left text-xs font-medium text-white uppercase tracking-wider cursor-pointer hover:bg-white/10"
                                                 >
                                                     <div className="flex items-center gap-1">Estatus<ArrowUpDown className="h-3 w-3" /></div>
                                                 </th>
                                             </tr>
                                         </thead>
-                                        <tbody className="bg-black divide-y divide-gray-800">
+                                        <tbody className="bg-black/60 divide-y divide-gray-800">
                                             {error ? (
                                                 <tr className="h-96">
                                                     <td colSpan={6} className="px-6 py-24 text-center text-red-400">
@@ -1518,14 +1543,14 @@ export default function LevantamientoUnificado() {
                                                         <td className="px-4 py-3 text-xs">
                                                             {foliosResguardo[item.id_inv] ? (
                                                                 <button
-                                                                    className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full font-bold bg-gradient-to-r from-blue-900/60 to-blue-700/60 text-blue-200 border border-blue-700 hover:from-blue-800 hover:to-blue-600 hover:text-white shadow-sm hover:scale-105 transition-all duration-200"
+                                                                    className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full font-bold bg-white/10 text-white border border-white/30 hover:bg-white/20 hover:text-white shadow-sm hover:scale-105 transition-all duration-200"
                                                                     title={`Ver resguardo ${foliosResguardo[item.id_inv]}`}
                                                                     onClick={() => handleFolioClick(foliosResguardo[item.id_inv]!)}
                                                                 >
-                                                                    <BadgeCheck className="h-4 w-4 mr-1 text-blue-300" />
+                                                                    <BadgeCheck className="h-4 w-4 mr-1 text-white/80" />
                                                                     {foliosResguardo[item.id_inv]}
                                                                 </button>                                                            ) : (
-                                                                <span className="inline-flex items-center px-2.5 py-1 rounded-full font-bold bg-gradient-to-r from-gray-900/60 to-gray-800/60 text-gray-400 border border-gray-700">Sin resguardo</span>
+                                                                <span className="inline-flex items-center px-2.5 py-1 rounded-full font-bold bg-gray-900/60 text-gray-400 border border-gray-700">Sin resguardo</span>
                                                             )}
                                                         </td>
                                                         <td className="px-4 py-3 whitespace-nowrap text-sm font-medium text-white">
@@ -1543,7 +1568,7 @@ export default function LevantamientoUnificado() {
                                                                     {truncateText(item.usufinal, 20) || <span className="text-gray-500">Sin director</span>}
                                                                 </span>
                                                                 {item.resguardante && (
-                                                                    <span className="inline-block px-2 py-0.5 text-xs font-medium bg-gradient-to-r from-cyan-900/50 to-blue-900/50 text-cyan-200 rounded-full border border-cyan-500/30 shadow-sm">
+                                                                    <span className="inline-block px-2 py-0.5 text-xs font-medium bg-white/10 text-white rounded-full border border-white/20 shadow-sm">
                                                                         {truncateText(item.resguardante, 20)}
                                                                     </span>
                                                                 )}
@@ -1577,7 +1602,7 @@ export default function LevantamientoUnificado() {
                                     ) : (
                                         <div className="flex items-center gap-2">
                                             <span className="text-neutral-300">Mostrando</span>
-                                            <span className="px-2 py-0.5 rounded-lg bg-blue-900/30 text-blue-300 font-mono border border-blue-800/50">
+                                            <span className="px-2 py-0.5 rounded-lg bg-white/10 text-white font-mono border border-white/30">
                                                 {((currentPage - 1) * rowsPerPage) + 1}–{Math.min(currentPage * rowsPerPage, totalFilteredCount)}
                                             </span>
                                             <span className="text-neutral-300">de</span>
@@ -1592,7 +1617,7 @@ export default function LevantamientoUnificado() {
                                                 id="rows-per-page"
                                                 value={rowsPerPage}
                                                 onChange={e => { setRowsPerPage(Number(e.target.value)); setCurrentPage(1); }}
-                                                className="ml-1 px-2 py-1 rounded-lg bg-neutral-900 border border-neutral-700 text-blue-300 font-mono text-xs focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition"
+                                                className="ml-1 px-2 py-1 rounded-lg bg-neutral-900 border border-neutral-700 text-white font-mono text-xs focus:outline-none focus:ring-2 focus:ring-white/50 focus:border-white/50 transition"
                                             >
                                                 {[10, 20, 30, 50, 100].map(opt => (
                                                     <option key={opt} value={opt}>{opt}</option>
@@ -1607,7 +1632,7 @@ export default function LevantamientoUnificado() {
                                     <div className="flex items-center gap-2 bg-neutral-900/50 px-4 py-2 rounded-xl border border-neutral-800 shadow-inner">
                                         <span className="text-neutral-400">Página</span>
                                         <div className="flex items-center gap-1.5">
-                                            <span className="px-2.5 py-0.5 rounded-lg bg-blue-900/40 text-blue-300 font-mono font-bold border border-blue-700/50 min-w-[2rem] text-center transition-all duration-300 hover:scale-105 hover:bg-blue-900/60">
+                                            <span className="px-2.5 py-0.5 rounded-lg bg-white/20 text-white font-mono font-bold border border-white/40 min-w-[2rem] text-center transition-all duration-300 hover:scale-105 hover:bg-white/30">
                                                 {currentPage}
                                             </span>
                                             <span className="text-neutral-500">/</span>
@@ -1661,8 +1686,8 @@ export default function LevantamientoUnificado() {
                                                     onClick={() => changePage(i)}
                                                     className={`mx-0.5 px-3 py-1.5 rounded-lg border text-sm font-semibold transition
                                                 ${i === currentPage
-                                                        ? 'bg-blue-900/80 text-blue-300 border-blue-700 shadow'
-                                                        : 'bg-neutral-900 text-neutral-300 border-neutral-700 hover:bg-blue-900/40 hover:text-blue-200 hover:border-blue-600'}
+                                                        ? 'bg-white/10 text-white border-white/30 shadow'
+                                                        : 'bg-neutral-900 text-neutral-300 border-neutral-700 hover:bg-white/5 hover:text-white hover:border-white/20'}
                                             `}
                                                     aria-current={i === currentPage ? 'page' : undefined}
                                                 >
