@@ -76,7 +76,7 @@ interface ActiveFilter {
 }
 
 const colorPalette = [
-    'bg-blue-900/30 text-blue-200 border-blue-700 hover:bg-blue-900/40 transition-colors',
+    'bg-gray-900/30 text-white border-white hover:bg-gray-900/40 transition-colors',
     'bg-green-900/30 text-green-200 border-green-700 hover:bg-green-900/40 transition-colors',
     'bg-yellow-900/30 text-yellow-200 border-yellow-700 hover:bg-yellow-900/40 transition-colors',
     'bg-purple-900/30 text-purple-200 border-purple-700 hover:bg-purple-900/40 transition-colors',
@@ -940,12 +940,12 @@ export default function CrearResguardos() {
                             onMouseEnter={() => setHighlightedDirectorIndex(i)}
                             className={`flex flex-col px-3 py-2 cursor-pointer select-none text-xs whitespace-normal break-words w-full border-b border-gray-800 last:border-b-0
         ${isSelected ? 'bg-gray-800/80 text-white' : 'text-gray-300'}
-        ${isSugerido ? 'font-bold text-blue-300' : ''}
+        ${isSugerido ? 'font-bold text-white' : ''}
         hover:bg-gray-800/80`}
                         >
                             <span className="flex items-center gap-2">
                                 <span className="font-semibold">{opt.nombre}</span>
-                                {isSugerido && <span className="ml-2 px-2 py-0.5 rounded-full bg-blue-700/60 text-xs text-white">Sugerido</span>}
+                                {isSugerido && <span className="ml-2 px-2 py-0.5 rounded-full bg-gray-700/60 text-xs text-white">Sugerido</span>}
                             </span>
                             <span className="text-[10px] text-gray-400">{opt.puesto || <span className="italic text-yellow-400">Sin puesto</span>}</span>
                         </li>
@@ -1024,7 +1024,7 @@ export default function CrearResguardos() {
 
     function getTypeIcon(type: ActiveFilter['type']) {
         switch (type) {
-            case 'id': return <span className="h-4 w-4 text-blue-400 font-bold">#</span>;
+            case 'id': return <span className="h-4 w-4 text-white font-bold">#</span>;
             case 'area': return <span className="h-4 w-4 text-red-400 font-bold">A</span>;
             case 'usufinal': return <span className="h-4 w-4 text-orange-400 font-bold">U</span>;
             case 'resguardante': return <span className="h-4 w-4 text-orange-300 font-bold">R</span>;
@@ -1153,20 +1153,20 @@ export default function CrearResguardos() {
 
             <div className="w-full mx-auto bg-black rounded-lg sm:rounded-xl shadow-2xl overflow-hidden transition-all duration-500 transform border border-gray-800 hover:border-gray-700">
                 {/* Header */}
-                <div className="bg-gradient-to-r from-black to-gray-900 p-4 sm:p-6 flex flex-col sm:flex-row justify-between items-start sm:items-center border-b border-gray-800 gap-2 sm:gap-0">
+                <div className="bg-black p-4 sm:p-6 flex flex-col sm:flex-row justify-between items-start sm:items-center border-b border-gray-800 gap-2 sm:gap-0">
                     <h1 className="text-xl sm:text-2xl md:text-3xl font-bold flex items-center">
-                        <span className="mr-2 sm:mr-3 bg-gradient-to-br from-blue-600 to-blue-800 text-white p-1 sm:p-2 rounded-lg border border-blue-700 text-sm sm:text-base shadow-lg">RES</span>
-                        <span className="bg-clip-text text-transparent bg-gradient-to-r from-blue-300 to-blue-100">
+                        <span className="mr-2 sm:mr-3 bg-gray-800 text-white p-1 sm:p-2 rounded-lg border border-white text-sm sm:text-base shadow-lg">RES</span>
+                        <span className="text-white">
                             Creación de Resguardos
                         </span>
                     </h1>
                     <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-4">
                         <p className="text-gray-400 text-sm sm:text-base flex items-center gap-2">
-                            <ListChecks className="h-4 w-4 text-blue-400 animate-pulse" />
-                            <span className="font-medium text-blue-300">{selectedMuebles.length}</span> artículos seleccionados
+                            <ListChecks className="h-4 w-4 text-white animate-pulse" />
+                            <span className="font-medium text-white">{selectedMuebles.length}</span> artículos seleccionados
                         </p>
                         <p className="text-gray-400 text-sm sm:text-base flex items-center gap-2">
-                            <Info className="h-4 w-4 text-blue-400 animate-pulse" />
+                            <Info className="h-4 w-4 text-white animate-pulse" />
                             Seleccione artículos para el resguardo
                         </p>
                     </div>
@@ -1177,29 +1177,29 @@ export default function CrearResguardos() {
                     {/* Left panel - Muebles table */}
                     <div className="flex-1 min-w-0 flex flex-col p-4 lg:col-span-3">
                         {/* Folio and director information */}
-                        <div className="mb-6 bg-gradient-to-br from-gray-900/20 to-gray-900/40 p-4 rounded-xl border border-gray-800 shadow-inner hover:shadow-lg transition-shadow">
+                        <div className="mb-6 bg-gray-900/30 p-4 rounded-xl border border-gray-800 shadow-inner hover:shadow-lg transition-shadow">
                             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                                <div className="bg-gradient-to-br from-black to-gray-900 p-3 rounded-lg border border-gray-800 flex flex-col hover:border-blue-500 transition-colors">
+                                <div className="bg-black p-3 rounded-lg border border-gray-800 flex flex-col hover:border-white transition-colors">
                                     <div className="flex justify-between items-center mb-1">
                                         <span className="text-xs uppercase text-gray-500 font-medium">Folio</span>
                                         <button
                                             onClick={resetFolio}
-                                            className="text-xs bg-blue-900/20 hover:bg-blue-900/30 text-blue-400 hover:text-blue-300 flex items-center gap-1 px-2 py-1 rounded border border-blue-800/50 transition-all"
+                                            className="text-xs bg-gray-900/20 hover:bg-gray-900/30 text-white hover:text-gray-300 flex items-center gap-1 px-2 py-1 rounded border border-white/50 transition-all"
                                         >
                                             <RefreshCw className="h-3 w-3" />
                                             Nuevo
                                         </button>
                                     </div>
                                     <div className="flex items-center">
-                                        <FileDigit className="h-4 w-4 text-blue-400 mr-2 animate-pulse" />
+                                        <FileDigit className="h-4 w-4 text-white mr-2 animate-pulse" />
                                         <span className="text-sm font-medium text-white">{formData.folio || 'Generando...'}</span>
                                     </div>
                                 </div>
 
-                                <div className="bg-gradient-to-br from-black to-gray-900 p-3 rounded-lg border border-gray-800 flex flex-col hover:border-blue-500 transition-colors">
+                                <div className="bg-black p-3 rounded-lg border border-gray-800 flex flex-col hover:border-white transition-colors">
                                     <span className="text-xs uppercase text-gray-500 font-medium mb-1">Director de Área</span>
                                     <div className="flex items-center">
-                                        <Building2 className="h-4 w-4 text-blue-400 mr-2 animate-pulse" />
+                                        <Building2 className="h-4 w-4 text-white mr-2 animate-pulse" />
                                         <span className="text-sm text-white">
                                             {formData.directorId ?
                                                 directorio.find(d => d.id_directorio.toString() === formData.directorId)?.nombre || 'Seleccionar' :
@@ -1208,10 +1208,10 @@ export default function CrearResguardos() {
                                     </div>
                                 </div>
 
-                                <div className="bg-gradient-to-br from-black to-gray-900 p-3 rounded-lg border border-gray-800 flex flex-col hover:border-blue-500 transition-colors">
+                                <div className="bg-black p-3 rounded-lg border border-gray-800 flex flex-col hover:border-white transition-colors">
                                     <span className="text-xs uppercase text-gray-500 font-medium mb-1">Fecha</span>
                                     <div className="flex items-center">
-                                        <Calendar className="h-4 w-4 text-blue-400 mr-2 animate-pulse" />
+                                        <Calendar className="h-4 w-4 text-white mr-2 animate-pulse" />
                                         <span className="text-sm text-white">{new Date().toLocaleDateString()}</span>
                                     </div>
                                 </div>
@@ -1219,7 +1219,7 @@ export default function CrearResguardos() {
                         </div>
 
                         {/* Search and filters */}
-                        <div className="mb-6 bg-gradient-to-br from-gray-900/20 to-gray-900/40 p-4 rounded-xl border border-gray-800 shadow-inner hover:shadow-lg transition-shadow">                            <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-4 mb-4">
+                        <div className="mb-6 bg-gray-900/30 p-4 rounded-xl border border-gray-800 shadow-inner hover:shadow-lg transition-shadow">                            <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-4 mb-4">
                             <div className="relative flex-1">
                                 <div className="flex gap-2">
                                     <div className="relative flex-1">
@@ -1231,7 +1231,7 @@ export default function CrearResguardos() {
                                             onKeyDown={handleInputKeyDown}
                                             onBlur={handleInputBlur}
                                             placeholder="Buscar por cualquier campo..."
-                                            className="w-full px-4 py-2 bg-black/50 border border-gray-800 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-white placeholder-gray-500"
+                                            className="w-full px-4 py-2 bg-black/50 border border-gray-800 rounded-lg focus:outline-none focus:ring-2 focus:ring-white focus:border-transparent text-white placeholder-gray-500"
                                             aria-autocomplete="list"
                                             aria-controls="omnibox-suggestions"
                                             {...(highlightedIndex >= 0 && { 'aria-activedescendant': `omnibox-suggestion-${highlightedIndex}` })}
@@ -1243,7 +1243,7 @@ export default function CrearResguardos() {
                                         onClick={saveCurrentFilter}
                                         disabled={!searchTerm || !searchMatchType}
                                         className={`px-4 py-2 rounded-lg border flex items-center gap-2 ${searchTerm && searchMatchType
-                                            ? 'bg-blue-600 hover:bg-blue-700 border-blue-500 text-white'
+                                            ? 'bg-gray-600 hover:bg-gray-700 border-white text-white'
                                             : 'bg-gray-800/50 border-gray-700 text-gray-500 cursor-not-allowed'
                                             } transition-all duration-200 hover:scale-105`}
                                         title="Agregar filtro actual a la lista de filtros activos"
@@ -1258,7 +1258,7 @@ export default function CrearResguardos() {
                                             <div
                                                 key={index}
                                                 className={`flex items-center gap-1 px-2 py-0.5 rounded-full text-xs border font-medium transition-colors
-                                                        ${filter.type === 'id' ? 'border-blue-500 text-blue-300' :
+                                                        ${filter.type === 'id' ? 'border-white text-white' :
                                                         filter.type === 'descripcion' ? 'border-purple-500 text-purple-200' :
                                                             filter.type === 'rubro' ? 'border-green-500 text-green-200' :
                                                                 filter.type === 'estado' ? 'border-yellow-500 text-yellow-200' :
@@ -1307,15 +1307,15 @@ export default function CrearResguardos() {
                         </div>
                             <div className="flex items-center gap-2 text-sm text-gray-400">
                                 <RefreshCw
-                                    className={`h-4 w-4 text-blue-400 cursor-pointer hover:text-blue-300 ${loading ? 'animate-spin' : ''}`}
+                                    className={`h-4 w-4 text-white cursor-pointer hover:text-gray-300 ${loading ? 'animate-spin' : ''}`}
                                     onClick={() => fetchData(sortField, sortDirection)}
                                 />
-                                <span>Total: <span className="text-blue-300">{totalCount}</span> registros</span>
+                                <span>Total: <span className="text-white">{totalCount}</span> registros</span>
                             </div>
                         </div>
 
                         {/* Table */}
-                        <div className="bg-gradient-to-br from-gray-900/20 to-gray-900/40 rounded-xl border border-gray-800 overflow-hidden mb-6 flex flex-col flex-grow max-h-[60vh] shadow-lg hover:shadow-xl transition-all duration-300 transform hover:border-gray-700">
+                        <div className="bg-gray-900/30 rounded-xl border border-gray-800 overflow-hidden mb-6 flex flex-col flex-grow max-h-[60vh] shadow-lg hover:shadow-xl transition-all duration-300 transform hover:border-gray-700">
                             <div className="flex-grow min-w-[800px] overflow-x-auto overflow-y-auto scrollbar-thin scrollbar-track-gray-900 scrollbar-thumb-gray-800 hover:scrollbar-thumb-gray-700">
                                 <table className="min-w-full divide-y divide-gray-800/50">
                                     <thead className="bg-black/90 backdrop-blur-sm sticky top-0 z-10">
@@ -1331,9 +1331,9 @@ export default function CrearResguardos() {
                                                             onChange={handleSelectAllPage}
                                                             disabled={paginatedMuebles.length === 0 || !canSelectAllPage()}
                                                             className={
-                                                                `appearance-none h-6 w-6 rounded-md border-2 border-blue-700 bg-black transition-all duration-200
-                                                                focus:ring-2 focus:ring-blue-500 focus:border-blue-400
-                                                                hover:border-blue-400 hover:shadow-blue-500/30
+                                                                `appearance-none h-6 w-6 rounded-md border-2 border-white bg-black transition-all duration-200
+                                                                focus:ring-2 focus:ring-white focus:border-white
+                                                                hover:border-white hover:shadow-white/30
                                                                 disabled:opacity-40 disabled:cursor-not-allowed
                                                                 cursor-pointer shadow-md`
                                                             }
@@ -1342,12 +1342,12 @@ export default function CrearResguardos() {
                                                         {/* Custom checkmark icon overlay, solo visible si checked */}
                                                         {areAllPageSelected && (
                                                             <span className="pointer-events-none absolute left-0 top-0 h-6 w-6 flex items-center justify-center">
-                                                                <CheckCircle className="h-5 w-5 text-blue-400 drop-shadow-lg animate-pulse" />
+                                                                <CheckCircle className="h-5 w-5 text-white drop-shadow-lg animate-pulse" />
                                                             </span>
                                                         )}
                                                         {/* Tooltip visual mejorado */}
                                                         <span
-                                                            className="absolute left-0 top-8 z-40 px-3 py-1.5 rounded-lg bg-black text-blue-200 text-xs font-semibold shadow-xl border border-blue-800 opacity-0 group-hover:opacity-100 group-hover:translate-y-1 transition-all pointer-events-none whitespace-nowrap"
+                                                            className="absolute left-0 top-8 z-40 px-3 py-1.5 rounded-lg bg-black text-white text-xs font-semibold shadow-xl border border-white opacity-0 group-hover:opacity-100 group-hover:translate-y-1 transition-all pointer-events-none whitespace-nowrap"
                                                             style={{
                                                                 width: 'auto',
                                                                 minWidth: '180px',
@@ -1373,12 +1373,12 @@ export default function CrearResguardos() {
                                                     <div className="flex items-center gap-2">
                                                         {label}
                                                         <ArrowUpDown className={`h-3.5 w-3.5 transition-all duration-200 transform
-                                                            ${sortField === field ? 'text-blue-400 scale-110' : 'text-gray-600 group-hover:text-gray-400'}
+                                                            ${sortField === field ? 'text-white scale-110' : 'text-gray-600 group-hover:text-gray-400'}
                                                             ${sortField === field && 'animate-pulse'}`}
                                                         />
                                                     </div>
                                                     {sortField === field && (
-                                                        <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-blue-500/50 animate-pulse" />
+                                                        <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-white/50 animate-pulse" />
                                                     )}
                                                 </th>
                                             ))}
@@ -1399,7 +1399,7 @@ export default function CrearResguardos() {
                                                         <p className="text-sm text-gray-400">{error}</p>
                                                         <button
                                                             onClick={() => fetchData(sortField, sortDirection)}
-                                                            className="px-4 py-2 bg-black text-blue-300 rounded-lg text-sm hover:bg-gray-900 transition-all duration-300 border border-gray-800 hover:border-blue-500 hover:scale-105 transform"
+                                                            className="px-4 py-2 bg-black text-white rounded-lg text-sm hover:bg-gray-900 transition-all duration-300 border border-gray-800 hover:border-white hover:scale-105 transform"
                                                         >
                                                             Intentar nuevamente
                                                         </button>
@@ -1418,7 +1418,7 @@ export default function CrearResguardos() {
                                                         {searchTerm && (
                                                             <button
                                                                 onClick={() => setSearchTerm('')}
-                                                                className="px-4 py-2 bg-black text-blue-400 rounded-lg text-sm hover:bg-gray-900 transition-all duration-300 flex items-center gap-2 border border-gray-800 hover:border-blue-500 hover:scale-105 transform group"
+                                                                className="px-4 py-2 bg-black text-white rounded-lg text-sm hover:bg-gray-900 transition-all duration-300 flex items-center gap-2 border border-gray-800 hover:border-white hover:scale-105 transform group"
                                                             >
                                                                 <X className="h-4 w-4 group-hover:rotate-90 transition-transform duration-300" />
                                                                 Limpiar búsqueda
@@ -1434,8 +1434,8 @@ export default function CrearResguardos() {
                                                     <tr
                                                         key={`${mueble.id}`}
                                                         className={`group transition-all duration-200 animate-fadeIn
-                                                            ${isSelected ? 'bg-blue-900/10 hover:bg-blue-900/20' : 'hover:bg-gray-900/40'}
-                                                            ${isSelected ? 'border-l-2 border-blue-500' : 'border-l-2 border-transparent hover:border-gray-700'}
+                                                            ${isSelected ? 'bg-gray-900/10 hover:bg-gray-900/20' : 'hover:bg-gray-900/40'}
+                                                            ${isSelected ? 'border-l-2 border-white' : 'border-l-2 border-transparent hover:border-gray-700'}
                                                         `}
                                                         onClick={() => toggleMuebleSelection(mueble)}
                                                         style={{ animationDelay: `${index * 50}ms` }}
@@ -1443,7 +1443,7 @@ export default function CrearResguardos() {
                                                         <td className="px-2 py-4">
                                                             <div className="flex justify-center">
                                                                 <div className={`h-5 w-5 rounded-md border transform transition-all duration-300
-                                                                    ${isSelected ? 'bg-blue-500 border-blue-300 scale-110' : 'border-gray-700 group-hover:border-blue-400'}
+                                                                    ${isSelected ? 'bg-white border-gray-300 scale-110' : 'border-gray-700 group-hover:border-white'}
                                                                     flex items-center justify-center`}
                                                                 >
                                                                     {isSelected && (
@@ -1454,14 +1454,14 @@ export default function CrearResguardos() {
                                                         </td>
                                                         <td className="px-4 py-4">
                                                             <div className="flex flex-col space-y-1">
-                                                                <div className="text-sm font-medium text-white group-hover:text-blue-300 transition-colors">
+                                                                <div className="text-sm font-medium text-white group-hover:text-gray-300 transition-colors">
                                                                     {mueble.id_inv}
                                                                 </div>
                                                                 <div className="text-xs text-gray-500 group-hover:text-gray-400 transition-colors">
                                                                     {mueble.rubro}
                                                                 </div>
                                                                 <div className={`text-[10px] font-mono px-2 py-0.5 rounded-full border inline-block w-fit transition-all duration-300
-                                                                    ${mueble.origen === 'INEA' ? 'bg-blue-900/30 text-blue-300 border-blue-700 group-hover:bg-blue-900/40' :
+                                                                    ${mueble.origen === 'INEA' ? 'bg-gray-900/30 text-white border-white group-hover:bg-gray-900/40' :
                                                                         mueble.origen === 'ITEA' ? 'bg-pink-900/30 text-pink-200 border-pink-700 group-hover:bg-pink-900/40' :
                                                                             'bg-gray-900/40 text-gray-400 border-gray-800 group-hover:bg-gray-900/60'}`}
                                                                 >
@@ -1470,7 +1470,7 @@ export default function CrearResguardos() {
                                                             </div>
                                                         </td>
                                                         <td className="px-4 py-4">
-                                                            <div className="text-sm text-white group-hover:text-blue-300 transition-colors line-clamp-2">
+                                                            <div className="text-sm text-white group-hover:text-gray-300 transition-colors line-clamp-2">
                                                                 {mueble.descripcion}
                                                             </div>
                                                         </td>
@@ -1483,7 +1483,7 @@ export default function CrearResguardos() {
                                                         <td className="px-4 py-4">
                                                             <div className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border gap-1 
                                                                 ${getColorClass(mueble.usufinal)} transform group-hover:scale-105 transition-all duration-300`}>
-                                                                <User className="h-3.5 w-3.5 text-blue-400" />
+                                                                <User className="h-3.5 w-3.5 text-white" />
                                                                 {mueble.usufinal || 'No asignado'}
                                                             </div>
                                                         </td>
@@ -1492,7 +1492,7 @@ export default function CrearResguardos() {
                                                                 ${mueble.estado === 'B' ? 'bg-green-900/20 text-green-300 border-green-900 group-hover:bg-green-900/30' :
                                                                     mueble.estado === 'R' ? 'bg-yellow-900/20 text-yellow-300 border-yellow-900 group-hover:bg-yellow-900/30' :
                                                                         mueble.estado === 'M' ? 'bg-red-900/20 text-red-300 border-red-900 group-hover:bg-red-900/30' :
-                                                                            mueble.estado === 'N' ? 'bg-blue-900/20 text-blue-300 border-blue-900 group-hover:bg-blue-900/30' :
+                                                                            mueble.estado === 'N' ? 'bg-gray-900/20 text-white border-gray-900 group-hover:bg-gray-900/30' :
                                                                                 'bg-gray-900/20 text-gray-300 border-gray-900 group-hover:bg-gray-900/30'}`}
                                                             >
                                                                 {mueble.estado}
@@ -1506,7 +1506,7 @@ export default function CrearResguardos() {
                                             <tr>
                                                 <td colSpan={6} className="px-6 py-4 text-center text-gray-400">
                                                     <div className="flex justify-center items-center space-x-2">
-                                                        <RefreshCw className="h-5 w-5 animate-spin text-blue-500" />
+                                                        <RefreshCw className="h-5 w-5 animate-spin text-white" />
                                                         <span>Cargando más resultados...</span>
                                                     </div>
                                                 </td>
@@ -1519,10 +1519,10 @@ export default function CrearResguardos() {
 
                         {/* Pagination */}
                         {paginatedMuebles.length > 0 && (
-                            <div className="flex items-center justify-between bg-gradient-to-br from-gray-900/20 to-gray-900/40 p-4 rounded-xl border border-gray-800 shadow-inner mb-4 hover:shadow-lg transition-shadow">
+                            <div className="flex items-center justify-between bg-gray-900/30 p-4 rounded-xl border border-gray-800 shadow-inner mb-4 hover:shadow-lg transition-shadow">
                                 <div className="flex items-center space-x-4">
                                     <span className="text-sm text-gray-400">
-                                        Página <span className="text-blue-300">{currentPage}</span> de <span className="text-blue-300">{totalPages}</span>
+                                        Página <span className="text-white">{currentPage}</span> de <span className="text-white">{totalPages}</span>
                                     </span>
                                     <select
                                         title='Artículos por página'
@@ -1531,7 +1531,7 @@ export default function CrearResguardos() {
                                             setRowsPerPage(Number(e.target.value));
                                             setCurrentPage(1);
                                         }}
-                                        className="bg-black border border-gray-800 rounded-lg text-white text-sm py-1.5 px-3 focus:outline-none focus:ring-2 focus:ring-blue-500 hover:border-blue-500 transition-colors"
+                                        className="bg-black border border-gray-800 rounded-lg text-white text-sm py-1.5 px-3 focus:outline-none focus:ring-2 focus:ring-white hover:border-white transition-colors"
                                     >
                                         <option value={10}>10 por página</option>
                                         <option value={25}>25 por página</option>
@@ -1544,7 +1544,7 @@ export default function CrearResguardos() {
                                         title='Anterior'
                                         onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
                                         disabled={currentPage === 1}
-                                        className={`p-2 rounded-lg ${currentPage === 1 ? 'text-gray-600 bg-black cursor-not-allowed' : 'text-white bg-black hover:bg-gray-900 border border-gray-800 hover:border-blue-500'} transition-colors`}
+                                        className={`p-2 rounded-lg ${currentPage === 1 ? 'text-gray-600 bg-black cursor-not-allowed' : 'text-white bg-black hover:bg-gray-900 border border-gray-800 hover:border-white'} transition-colors`}
                                     >
                                         <ChevronLeft className="h-5 w-5" />
                                     </button>
@@ -1552,7 +1552,7 @@ export default function CrearResguardos() {
                                         title='Siguiente'
                                         onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
                                         disabled={currentPage >= totalPages}
-                                        className={`p-2 rounded-lg ${currentPage >= totalPages ? 'text-gray-600 bg-black cursor-not-allowed' : 'text-white bg-black hover:bg-gray-900 border border-gray-800 hover:border-blue-500'} transition-colors`}
+                                        className={`p-2 rounded-lg ${currentPage >= totalPages ? 'text-gray-600 bg-black cursor-not-allowed' : 'text-white bg-black hover:bg-gray-900 border border-gray-800 hover:border-white'} transition-colors`}
                                     >
                                         <ChevronRight className="h-5 w-5" />
                                     </button>
@@ -1563,10 +1563,10 @@ export default function CrearResguardos() {
 
                     {/* Right panel - Details */}
                     <div ref={detailRef} className="flex-1 bg-black p-4 border-t lg:border-t-0 lg:border-l border-gray-800 flex flex-col lg:col-span-2">
-                        <div className="bg-gradient-to-br from-gray-900/20 to-gray-900/40 rounded-xl border border-gray-800 p-4 mb-4 shadow-inner hover:shadow-lg transition-shadow">
+                        <div className="bg-gray-900/30 rounded-xl border border-gray-800 p-4 mb-4 shadow-inner hover:shadow-lg transition-shadow">
                             <h2 className="text-lg font-medium text-gray-100 mb-4 flex items-center gap-2">
-                                <ActivitySquare className="h-5 w-5 text-blue-400 animate-pulse" />
-                                <span className="bg-clip-text text-transparent bg-gradient-to-r from-blue-300 to-blue-100">
+                                <ActivitySquare className="h-5 w-5 text-white animate-pulse" />
+                                <span className="text-white">
                                     Información del Resguardo
                                 </span>
                             </h2>
@@ -1612,7 +1612,7 @@ export default function CrearResguardos() {
                                     <div className="mt-2">
                                         <button
                                             type="button"
-                                            className="px-4 py-1.5 rounded-lg bg-gray-900 text-gray-200 border border-gray-700 hover:bg-blue-900/30 hover:text-blue-200 text-xs font-semibold shadow transition-all"
+                                            className="px-4 py-1.5 rounded-lg bg-gray-900 text-gray-200 border border-gray-700 hover:bg-gray-900/30 hover:text-white text-xs font-semibold shadow transition-all"
                                             onMouseDown={e => { e.preventDefault(); setShowDirectorSuggestions(true); setForceShowAllDirectors(true); setHighlightedDirectorIndex(-1); }}
                                         >
                                             Ver todo el directorio
@@ -1677,10 +1677,10 @@ export default function CrearResguardos() {
                         </div>
 
                         {/* Selected Items */}
-                        <div className="bg-gradient-to-br from-gray-900/20 to-gray-900/40 rounded-xl border border-gray-800 p-4 flex-grow overflow-y-hidden shadow-inner relative max-h-[70vh] hover:shadow-lg transition-shadow">
+                        <div className="bg-gray-900/30 rounded-xl border border-gray-800 p-4 flex-grow overflow-y-hidden shadow-inner relative max-h-[70vh] hover:shadow-lg transition-shadow">
                             <div className="flex items-center gap-2 mb-2 sticky top-0 z-30 bg-black/80 p-2 -m-2 backdrop-blur-md">
-                                <LayoutGrid className="h-5 w-5 text-blue-400 animate-pulse" />
-                                <span className="bg-clip-text text-transparent bg-gradient-to-r from-blue-300 to-blue-100">
+                                <LayoutGrid className="h-5 w-5 text-white animate-pulse" />
+                                <span className="text-white">
                                     Artículos Seleccionados ({selectedMuebles.length})
                                 </span>
                                 {/* Eliminar todos button */}
@@ -1802,7 +1802,7 @@ export default function CrearResguardos() {
                                 className={`px-4 py-2 rounded-lg text-sm flex items-center justify-center gap-2 flex-grow sm:flex-grow-0 transition-all transform hover:scale-[1.02]
                                     ${!isFormValid || loading ?
                                         'bg-blue-900/10 text-blue-300/50 border border-blue-900/20 cursor-not-allowed' :
-                                        'bg-gradient-to-r from-blue-600 to-blue-500 text-white hover:from-blue-500 hover:to-blue-400 shadow-lg hover:shadow-blue-500/30'}`}
+                                        'bg-blue-600 text-white hover:bg-blue-500 shadow-lg hover:shadow-blue-500/30'}`}
                             >
                                 {loading ? (
                                     <RefreshCw className="h-4 w-4 animate-spin" />
@@ -1853,8 +1853,8 @@ export default function CrearResguardos() {
             {showDirectorModal && (
                 <div className="fixed inset-0 bg-black/90 flex items-center justify-center z-50 px-4 animate-fadeIn">
                     <div className="bg-black rounded-2xl shadow-2xl border border-yellow-600/30 w-full max-w-md overflow-hidden transition-all duration-300 transform hover:border-yellow-500/50">
-                        <div className="relative p-6 bg-gradient-to-b from-black to-gray-900">
-                            <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-yellow-500/60 via-yellow-400 to-yellow-500/60 animate-pulse"></div>
+                        <div className="relative p-6 bg-black">
+                            <div className="absolute top-0 left-0 w-full h-1 bg-yellow-500/40 animate-pulse"></div>
 
                             <div className="flex flex-col items-center text-center mb-4">
                                 <div className="p-3 bg-yellow-500/10 rounded-full border border-yellow-500/30 mb-3 animate-pulse">
@@ -1931,7 +1931,7 @@ export default function CrearResguardos() {
                                 className={`px-5 py-2.5 rounded-lg text-sm flex items-center gap-2 transition-all duration-300 transform hover:scale-[1.02]
                                     ${savingDirector || !directorFormData.area || !directorFormData.puesto || isUsuario ?
                                         'bg-gray-900 text-gray-500 cursor-not-allowed border border-gray-800' :
-                                        'bg-gradient-to-r from-yellow-600 to-yellow-500 text-black font-medium hover:shadow-lg hover:shadow-yellow-500/20'}`}
+                                        'bg-yellow-600 text-black font-medium hover:shadow-lg hover:shadow-yellow-500/20'}`}
                             >
                                 {savingDirector ? (
                                     <RefreshCw className="h-4 w-4 animate-spin" />
@@ -1949,8 +1949,8 @@ export default function CrearResguardos() {
             {showUsufinalModal && (
                 <div className="fixed inset-0 bg-black/90 flex items-center justify-center z-50 px-4 animate-fadeIn">
                     <div className="bg-black rounded-2xl shadow-2xl border border-red-600/30 w-full max-w-md overflow-hidden transition-all duration-300 transform hover:border-red-500/50">
-                        <div className="relative p-6 bg-gradient-to-b from-black to-gray-900">
-                            <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-red-500/60 via-red-400 to-red-500/60 animate-pulse"></div>
+                        <div className="relative p-6 bg-black">
+                            <div className="absolute top-0 left-0 w-full h-1 bg-red-500/40 animate-pulse"></div>
                             <div className="flex flex-col items-center text-center mb-4">
                                 <div className="p-3 bg-red-500/10 rounded-full border border-red-500/30 mb-3 animate-pulse">
                                     <AlertTriangle className="h-8 w-8 text-red-500" />
@@ -1982,8 +1982,8 @@ export default function CrearResguardos() {
             {showAreaConflictModal && (
                 <div className="fixed inset-0 bg-black/90 flex items-center justify-center z-50 px-4 animate-fadeIn">
                     <div className="bg-black rounded-2xl shadow-2xl border border-blue-600/30 w-full max-w-md overflow-hidden transition-all duration-300 transform hover:border-blue-500/50">
-                        <div className="relative p-6 bg-gradient-to-b from-black to-gray-900">
-                            <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-blue-500/60 via-blue-400 to-blue-500/60 animate-pulse"></div>
+                        <div className="relative p-6 bg-black">
+                            <div className="absolute top-0 left-0 w-full h-1 bg-blue-500/40 animate-pulse"></div>
 
                             <div className="flex flex-col items-center text-center mb-4">
                                 <div className="p-3 bg-blue-500/10 rounded-full border border-blue-500/30 mb-3 animate-pulse">
@@ -2000,7 +2000,7 @@ export default function CrearResguardos() {
                                     <label className="block text-xs uppercase tracking-wider text-gray-500 mb-1">Área en Conflicto</label>
                                     <div className="flex items-center gap-3">
                                         <div className="p-2 bg-gray-800 rounded-lg">
-                                            <Building2 className="h-4 w-4 text-blue-400 animate-pulse" />
+                                            <Building2 className="h-4 w-4 text-white animate-pulse" />
                                         </div>
                                         <span className="text-white font-medium">{conflictArea || 'Sin especificar'}</span>
                                     </div>
@@ -2008,7 +2008,7 @@ export default function CrearResguardos() {
 
                                 <div className="bg-blue-950/30 border border-blue-900/50 rounded-lg p-4">
                                     <div className="flex items-start gap-3">
-                                        <Info className="h-5 w-5 text-blue-400 mt-0.5" />
+                                        <Info className="h-5 w-5 text-white mt-0.5" />
                                         <p className="text-sm text-blue-200">
                                             Los artículos en un resguardo deben pertenecer a la misma área para mantener la organización y trazabilidad.
                                         </p>
@@ -2020,7 +2020,7 @@ export default function CrearResguardos() {
                         <div className="p-5 bg-black border-t border-gray-800 flex justify-end gap-3">
                             <button
                                 onClick={() => setShowAreaConflictModal(false)}
-                                className="px-5 py-2.5 rounded-lg text-sm flex items-center gap-2 bg-gradient-to-r from-blue-600 to-blue-500 text-white hover:from-blue-500 hover:to-blue-400 font-medium transition-all duration-300 transform hover:scale-[1.02] shadow-lg hover:shadow-blue-500/30"
+                                className="px-5 py-2.5 rounded-lg text-sm flex items-center gap-2 bg-blue-600 text-white hover:bg-blue-500 font-medium transition-all duration-300 transform hover:scale-[1.02] shadow-lg hover:shadow-blue-500/30"
                             >
                                 <CheckCircle className="h-4 w-4" />
                                 Entendido
@@ -2047,8 +2047,8 @@ export default function CrearResguardos() {
                         className="bg-black rounded-2xl shadow-2xl border border-green-600/30 w-full max-w-md overflow-hidden transition-all duration-300 transform hover:border-green-500/50"
                         onClick={e => e.stopPropagation()}
                     >
-                        <div className="relative p-6 bg-gradient-to-b from-black to-gray-900">
-                            <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-green-500/60 via-green-400 to-green-500/60 animate-pulse"></div>
+                        <div className="relative p-6 bg-black">
+                            <div className="absolute top-0 left-0 w-full h-1 bg-green-500/40 animate-pulse"></div>
 
                             <button
                                 onClick={() => {
@@ -2088,7 +2088,7 @@ export default function CrearResguardos() {
                                 <button
                                     onClick={handleGeneratePDF}
                                     disabled={generatingPDF}
-                                    className="w-full py-3 px-4 bg-gradient-to-r from-green-600 to-green-500 hover:from-green-500 hover:to-green-400 text-black font-medium rounded-lg flex items-center justify-center gap-2 transition-all transform hover:scale-[1.02] shadow-lg hover:shadow-green-500/30"
+                                    className="w-full py-3 px-4 bg-green-600 hover:bg-green-500 text-black font-medium rounded-lg flex items-center justify-center gap-2 transition-all transform hover:scale-[1.02] shadow-lg hover:shadow-green-500/30"
                                 >
                                     <Download className="h-4 w-4" />
                                     {generatingPDF ? 'Generando PDF...' : 'Descargar PDF'}
@@ -2141,7 +2141,7 @@ export default function CrearResguardos() {
             {showSelectAllErrorModal && (
                 <div className="fixed inset-0 bg-black/90 flex items-center justify-center z-[100] px-4 animate-fadeIn">
                     <div className="bg-black rounded-2xl shadow-2xl border-2 border-blue-700/40 w-full max-w-md overflow-hidden transition-all duration-300 hover:border-blue-500/60">
-                        <div className="relative p-7 flex flex-col items-center text-center bg-gradient-to-b from-black to-gray-900">
+                        <div className="relative p-7 flex flex-col items-center text-center bg-black">
                             <div className="p-3 bg-blue-500/10 rounded-full border border-blue-500/30 mb-3 animate-pulse">
                                 <ListChecks className="h-8 w-8 text-blue-400 animate-pulse" />
                             </div>
@@ -2149,7 +2149,7 @@ export default function CrearResguardos() {
                             <p className="text-blue-100 text-base mb-6 max-w-xs">{selectAllErrorMsg}</p>
                             <button
                                 onClick={() => setShowSelectAllErrorModal(false)}
-                                className="mt-2 px-6 py-2.5 rounded-lg bg-gradient-to-r from-blue-700 to-blue-500 hover:from-blue-600 hover:to-blue-400 text-white font-semibold shadow-lg border border-blue-700 transition-all flex items-center gap-2"
+                                className="mt-2 px-6 py-2.5 rounded-lg bg-blue-600 hover:bg-blue-500 text-white font-semibold shadow-lg border border-blue-700 transition-all flex items-center gap-2"
                             >
                                 <X className="h-4 w-4" />
                                 Cerrar

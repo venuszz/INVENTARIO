@@ -552,11 +552,11 @@ const ConsultarBajasResguardos = () => {
 
     return (
         <div className="bg-black text-white min-h-screen p-2 sm:p-4 md:p-6 lg:p-8">
-            <div className="w-full mx-auto bg-gradient-to-b from-gray-900/80 to-black rounded-lg sm:rounded-xl shadow-2xl overflow-hidden transition-all duration-500 transform border border-gray-800/50">
+            <div className="w-full mx-auto bg-black rounded-lg sm:rounded-xl shadow-2xl overflow-hidden transition-all duration-500 transform border-2 border-white/10">
                 {/* Header */}
-                <div className="bg-black p-4 sm:p-6 flex flex-col sm:flex-row justify-between items-start sm:items-center border-b border-gray-800 gap-2 sm:gap-0">
-                    <h1 className="text-xl sm:text-2xl md:text-3xl font-bold flex items-center bg-clip-text text-transparent bg-gradient-to-r from-red-400 to-red-600">
-                        <span className="mr-2 sm:mr-3 bg-gradient-to-br from-red-600 to-red-800 text-white p-1 sm:p-2 rounded-lg border border-red-700/50 text-sm sm:text-base shadow-md">BAJ</span>
+                <div className="bg-black p-4 sm:p-6 flex flex-col sm:flex-row justify-between items-start sm:items-center border-b-2 border-white/10 gap-2 sm:gap-0">
+                    <h1 className="text-xl sm:text-2xl md:text-3xl font-bold flex items-center text-red-500">
+                        <span className="mr-2 sm:mr-3 bg-red-800 text-white p-1 sm:p-2 rounded-lg border border-red-700/50 text-sm sm:text-base shadow-md">BAJ</span>
                         Consulta de Resguardos Dados de Baja
                     </h1>
                     <div className="flex items-center gap-2 text-sm text-gray-400 bg-gray-900/50 px-3 py-1.5 rounded-full border border-gray-800/50">
@@ -570,7 +570,7 @@ const ConsultarBajasResguardos = () => {
                     {/* Left panel - Bajas table */}
                     <div className="flex-1 min-w-0 flex flex-col p-4 lg:col-span-3">
                         {/* Search */}
-                        <div className="mb-6 bg-gradient-to-b from-gray-900/40 to-gray-900/20 p-4 rounded-xl border border-gray-800/50 shadow-inner shadow-red-900/20">
+                        <div className="mb-6 bg-black p-4 rounded-xl border-2 border-white/10 shadow-inner shadow-red-900/20">
                             <div className="flex flex-col gap-4">
                                 <div className="relative flex-grow">
                                     <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -602,7 +602,7 @@ const ConsultarBajasResguardos = () => {
                                             setPdfBajaData(null);
                                             fetchBajas();
                                         }}
-                                        className="px-4 py-2 bg-gradient-to-b from-gray-900/50 to-gray-900/30 border border-gray-800/50 text-gray-300 rounded-lg hover:from-gray-800/60 hover:to-gray-800/40 transition-all duration-300 flex items-center gap-2 text-sm hover:border-gray-700 hover:text-white"
+                                        className="px-4 py-2 bg-gray-900/40 border border-gray-800/50 text-gray-300 rounded-lg hover:bg-gray-800/60 transition-all duration-300 flex items-center gap-2 text-sm hover:border-gray-700 hover:text-white"
                                     >
                                         <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
                                         Actualizar
@@ -612,7 +612,7 @@ const ConsultarBajasResguardos = () => {
                         </div>
 
                         {/* Filtro avanzado */}
-                        <div className="mb-6 bg-gradient-to-b from-gray-900/40 to-gray-900/20 p-4 rounded-xl border border-gray-800/50 shadow-inner shadow-red-900/20">
+                        <div className="mb-6 bg-black p-4 rounded-xl border-2 border-white/10 shadow-inner shadow-red-900/20">
                             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                                 <div>
                                     <label className="block text-xs uppercase tracking-wider text-gray-500 mb-1">Filtrar por fecha</label>
@@ -672,10 +672,10 @@ const ConsultarBajasResguardos = () => {
                         </div>
 
                         {/* Table */}
-                        <div className="bg-gradient-to-b from-gray-900/40 to-gray-900/20 rounded-xl border border-gray-800/50 overflow-x-auto overflow-y-auto mb-6 flex flex-col flex-grow shadow-lg h-[40vh] max-h-[78vh]">
+                        <div className="bg-black rounded-xl border-2 border-white/10 overflow-x-auto overflow-y-auto mb-6 flex flex-col flex-grow shadow-lg h-[40vh] max-h-[78vh]">
                             <div className="flex-grow min-w-[800px]">
-                                <table className="min-w-full divide-y divide-gray-800/50">
-                                    <thead className="bg-gradient-to-b from-gray-900 to-gray-900/80 sticky top-0 z-10 backdrop-blur-sm">
+                                <table className="min-w-full divide-y-2 divide-white/10">
+                                    <thead className="bg-black sticky top-0 z-10 backdrop-blur-sm">
                                         <tr>
                                             <th
                                                 onClick={() => handleSort('folio_resguardo')}
@@ -762,7 +762,7 @@ const ConsultarBajasResguardos = () => {
                                                 return (
                                                     <tr
                                                         key={baja.id}
-                                                        className={`hover:bg-gray-900/50 cursor-pointer transition-all duration-300 ${selectedBaja?.folio_resguardo === baja.folio_resguardo ? 'bg-gradient-to-r from-red-900/10 to-red-900/5 border-l-4 border-red-500' : ''}`}
+                                                        className={`hover:bg-gray-900/50 cursor-pointer transition-all duration-300 ${selectedBaja?.folio_resguardo === baja.folio_resguardo ? 'bg-red-900/10 border-l-4 border-red-500' : ''}`}
                                                         onClick={() => fetchBajaDetails(baja.folio_resguardo)}
                                                     >
                                                         <td className="px-4 py-4">
@@ -845,7 +845,7 @@ const ConsultarBajasResguardos = () => {
 
                         {/* Pagination */}
                         {bajas.length > 0 && (
-                            <div className="flex items-center justify-between bg-gradient-to-b from-gray-900/40 to-gray-900/20 p-4 rounded-xl border border-gray-800/50 shadow-inner mb-4">
+                            <div className="flex items-center justify-between bg-black p-4 rounded-xl border-2 border-white/10 shadow-inner mb-4">
                                 <div className="flex items-center space-x-4">
                                     <span className="text-sm text-gray-400">
                                         Página {currentPage} de {totalPages}
@@ -888,8 +888,8 @@ const ConsultarBajasResguardos = () => {
                     </div>
 
                     {/* Right panel - Details */}
-                    <div ref={detailRef} className="flex-1 bg-gradient-to-b from-gray-900/80 to-black p-4 border-t lg:border-t-0 lg:border-l border-gray-800/50 flex flex-col lg:col-span-2">
-                        <div className="bg-gradient-to-b from-gray-900/40 to-gray-900/20 rounded-xl border border-gray-800/50 p-4 mb-4 shadow-inner shadow-red-900/20">
+                    <div ref={detailRef} className="flex-1 bg-black p-4 border-t lg:border-t-0 lg:border-l border-gray-800/50 flex flex-col lg:col-span-2">
+                        <div className="bg-black rounded-xl border-2 border-white/10 p-4 mb-4 shadow-inner shadow-red-900/20">
                             <h2 className="text-lg font-medium text-gray-100 mb-4 flex items-center gap-2">
                                 <FileText className="h-5 w-5 text-red-400" />
                                 Detalles del Resguardo
@@ -965,7 +965,7 @@ const ConsultarBajasResguardos = () => {
 
                                     <button
                                         onClick={handleBajaPDF}
-                                        className="mt-6 w-full py-2.5 bg-gradient-to-r from-red-600/30 to-red-700/20 border border-red-800 text-red-400 rounded-lg hover:from-red-600/40 hover:to-red-700/30 transition-all duration-300 flex items-center justify-center gap-2 hover:text-white hover:shadow-[0_0_15px_-3px_rgba(239,68,68,0.3)]"
+                                        className="mt-6 w-full py-2.5 bg-red-900/20 border border-red-800 text-red-400 rounded-lg hover:bg-red-800/30 transition-all duration-300 flex items-center justify-center gap-2 hover:text-white hover:shadow-[0_0_15px_-3px_rgba(239,68,68,0.3)]"
                                     >
                                         <Download className="h-4 w-4" />
                                         Generar PDF de {Object.values(selectedItems).filter(Boolean).length > 0 ? 'Artículos Seleccionados' : 'Baja Completa'}
@@ -990,8 +990,8 @@ const ConsultarBajasResguardos = () => {
                         </div>
 
                         {/* Selected Items Panel */}
-                        <div className="bg-transparent rounded-xl border border-gray-800/50 p-4 flex-grow shadow-inner shadow-red-900/20 relative max-h-[70vh] overflow-hidden">
-                            <h2 className="text-lg font-medium text-gray-100 mb-4 flex items-center gap-2 sticky top-0 z-20 bg-gradient-to-b from-black/90 to-black/70 p-2 -m-2 backdrop-blur-md">
+                        <div className="bg-black rounded-xl border-2 border-white/10 p-4 flex-grow shadow-inner shadow-red-900/20 relative max-h-[70vh] overflow-hidden">
+                            <h2 className="text-lg font-medium text-gray-100 mb-4 flex items-center gap-2 sticky top-0 z-20 bg-black p-2 -m-2 backdrop-blur-md">
                                 <ListChecks className="h-5 w-5 text-red-400" />
                                 Artículos Dados de Baja ({selectedBaja?.articulos.length || 0})
                             </h2>
@@ -1003,7 +1003,7 @@ const ConsultarBajasResguardos = () => {
                                             <div className="flex items-center gap-2">
                                                 <button
                                                     onClick={clearSelections}
-                                                    className="px-3 py-1.5 bg-gradient-to-b from-gray-900/30 to-gray-900/10 text-gray-400 rounded-lg text-sm hover:from-gray-900/40 hover:to-gray-900/20 transition-all duration-300 border border-gray-800/50 hover:text-gray-300"
+                                                    className="px-3 py-1.5 bg-black text-gray-400 rounded-lg text-sm hover:bg-gray-900 transition-all duration-300 border border-gray-800/50 hover:text-gray-300"
                                                 >
                                                     Limpiar Selección
                                                 </button>
@@ -1014,7 +1014,7 @@ const ConsultarBajasResguardos = () => {
                                                                 const selectedArticulos = selectedBaja.articulos.filter(art => selectedItems[art.id]);
                                                                 initiateDelete('selected', { articulos: selectedArticulos });
                                                             }}
-                                                            className="px-3 py-1.5 bg-gradient-to-r from-red-900/20 to-red-900/10 text-red-400 rounded-lg text-sm hover:from-red-900/30 hover:to-red-900/20 transition-all duration-300 border border-red-900/50 flex items-center gap-2 hover:text-white"
+                                                            className="px-3 py-1.5 bg-red-900/20 text-red-400 rounded-lg text-sm hover:bg-red-900/30 transition-all duration-300 border border-red-900/50 flex items-center gap-2 hover:text-white"
                                                         >
                                                             <X className="h-3 w-3" />
                                                             Eliminar Seleccionados
@@ -1029,7 +1029,7 @@ const ConsultarBajasResguardos = () => {
                                     </div>
 
                                     {Object.entries(groupedItems).map(([folioBaja, articulos]) => (
-                                        <div key={folioBaja} className="mb-6 bg-gradient-to-b from-gray-900/20 to-gray-900/10 p-4 rounded-xl border border-gray-800/50">
+                                        <div key={folioBaja} className="mb-6 bg-gray-900/20 p-4 rounded-xl border border-gray-800/50">
                                             <div className="flex items-center justify-between mb-3">
                                                 <h3 className="text-sm font-medium text-red-400 flex items-center gap-2 group">
                                                     <FileDigit className="h-4 w-4 text-red-400 group-hover:animate-pulse" />
@@ -1037,7 +1037,7 @@ const ConsultarBajasResguardos = () => {
                                                 </h3>
                                                 <button
                                                     onClick={() => handleGroupSelection(folioBaja)}
-                                                    className="px-2 py-1 text-xs bg-gradient-to-r from-red-900/20 to-red-900/10 text-red-400 rounded-lg hover:from-red-900/30 hover:to-red-900/20 transition-all duration-300 border border-red-900/50 hover:text-white"
+                                                    className="px-2 py-1 text-xs bg-red-900/20 text-red-400 rounded-lg hover:bg-red-900/30 transition-all duration-300 border border-red-900/50 hover:text-white"
                                                 >
                                                     {articulos.every(art => selectedItems[art.id]) ? 'Deseleccionar Grupo' : 'Seleccionar Grupo'}
                                                 </button>
@@ -1115,7 +1115,7 @@ const ConsultarBajasResguardos = () => {
 
             {/* Error Alert */}
             {error && (
-                <div className="fixed bottom-4 left-4 right-4 md:left-auto md:right-4 md:w-96 bg-gradient-to-br from-red-900/80 to-red-900/60 text-red-100 px-4 py-3 rounded-lg shadow-lg border border-red-800/50 z-50 backdrop-blur-sm animate-fade-in">
+                <div className="fixed bottom-4 left-4 right-4 md:left-auto md:right-4 md:w-96 bg-red-900/70 text-red-100 px-4 py-3 rounded-lg shadow-lg border border-red-800/50 z-50 backdrop-blur-sm animate-fade-in">
                     <div className="flex items-center">
                         <AlertCircle className="h-5 w-5 text-red-400 mr-3 flex-shrink-0 animate-pulse" />
                         <div className="flex-1 min-w-0">
@@ -1135,9 +1135,9 @@ const ConsultarBajasResguardos = () => {
             {/* Modal para descargar PDF de baja */}
             {showPDFModal && pdfBajaData && (
                 <div className="fixed inset-0 bg-black/90 flex items-center justify-center z-50 px-4 animate-fadeIn">
-                    <div className="bg-gradient-to-b from-black to-gray-900 rounded-2xl shadow-2xl border border-red-600/30 w-full max-w-md overflow-hidden transition-all duration-300 transform">
+                    <div className="bg-black rounded-2xl shadow-2xl border border-red-600/30 w-full max-w-md overflow-hidden transition-all duration-300 transform">
                         <div className="relative p-6">
-                            <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-red-500/60 via-red-400 to-red-500/60"></div>
+                            <div className="absolute top-0 left-0 w-full h-1 bg-red-500/60"></div>
 
                             <button
                                 onClick={() => setShowPDFModal(false)}
@@ -1211,7 +1211,7 @@ const ConsultarBajasResguardos = () => {
                                                 setShowPDFModal(false);
                                             }
                                         }}
-                                        className="w-full py-3 px-4 bg-gradient-to-r from-red-600 to-red-700 text-white rounded-lg font-medium hover:from-red-500 hover:to-red-600 transition-all duration-300 flex items-center justify-center gap-2 hover:shadow-[0_0_15px_-3px_rgba(239,68,68,0.5)]"
+                                        className="w-full py-3 px-4 bg-red-600 text-white rounded-lg font-medium hover:bg-red-500 transition-all duration-300 flex items-center justify-center gap-2 hover:shadow-[0_0_15px_-3px_rgba(239,68,68,0.5)]"
                                     >
                                         <Download className="h-4 w-4" />
                                         Descargar PDF
@@ -1226,12 +1226,12 @@ const ConsultarBajasResguardos = () => {
             {/* Modal de confirmación de eliminación */}
             {showDeleteModal && (
                 <div className="fixed inset-0 bg-black/90 flex items-center justify-center z-50 px-4 animate-fadeIn">
-                    <div className="bg-gradient-to-b from-black to-gray-900 rounded-2xl shadow-2xl border border-red-900/30 w-full max-w-md overflow-hidden">
+                    <div className="bg-black rounded-2xl shadow-2xl border border-red-900/30 w-full max-w-md overflow-hidden">
                         <div className="relative p-6">
-                            <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-red-800/60 via-red-600 to-red-800/60"></div>
+                            <div className="absolute top-0 left-0 w-full h-1 bg-red-800/60"></div>
 
                             <div className="flex flex-col items-center text-center mb-4">
-                                <div className="p-3 bg-gradient-to-br from-red-900/20 to-red-800/20 rounded-full border border-red-900/30 mb-3 animate-pulse">
+                                <div className="p-3 bg-red-900/20 rounded-full border border-red-900/30 mb-3 animate-pulse">
                                     <AlertCircle className="h-8 w-8 text-red-500" />
                                 </div>
                                 <h3 className="text-2xl font-bold text-white">Confirmar eliminación</h3>
