@@ -264,7 +264,7 @@ export default function NavigationBar() {
                 <div className="flex justify-between h-16">
                     <div className="flex items-center">
                         <div className="flex-shrink-0 flex items-center">
-                            <Link href="/" onClick={closeAll} className="hover:opacity-80 transition-opacity">
+                            <Link href="/" onClick={closeAll} className="hover:opacity-80 transition-opacity duration-300">
                                 <img
                                     src="/images/ITEA_logo.svg"  // Ruta a tu imagen en la carpeta public
                                     alt="Logo ITEA"
@@ -277,20 +277,26 @@ export default function NavigationBar() {
                                 <div className="relative">
                                     <button
                                         onClick={() => toggleMenu("Inventario")}
-                                        className={`flex items-center px-4 py-2 rounded-md ${isActive("/inventario") ? 'text-blue-400 bg-blue-950' : 'text-gray-300 hover:text-white hover:bg-gray-800'}`}
+                                        className={`flex items-center px-4 py-2 rounded-md transition-all duration-300 ease-in-out transform ${isActive("/inventario")
+                                                ? 'text-white bg-white/10 border border-white/20 scale-105'
+                                                : 'text-gray-300 hover:text-white hover:bg-gray-800 hover:scale-105'
+                                            }`}
                                     >
                                         <span className="mr-2"><Database className="w-4 h-4" /></span>
                                         Inventario
-                                        <ChevronDown className={`ml-1 w-3 h-3 transition-transform ${openMenu === "Inventario" ? 'rotate-180' : ''}`} />
+                                        <ChevronDown className={`ml-1 w-3 h-3 transition-transform duration-300 ${openMenu === "Inventario" ? 'rotate-180' : ''}`} />
                                     </button>
                                     {openMenu === "Inventario" && (
-                                        <div className="absolute left-0 mt-1 w-56 rounded-md bg-black shadow-lg z-20">
+                                        <div className="absolute left-0 mt-1 w-56 rounded-md bg-black shadow-lg z-20 border border-white/10 animate-in slide-in-from-top-2 fade-in duration-200">
                                             <div className="py-1">
                                                 <RoleGuard roles={["admin", "superadmin"]} userRole={userData.rol}>
                                                     <Link
                                                         href="/inventario/registro"
                                                         onClick={closeAll}
-                                                        className={`block px-4 py-2 text-sm ${pathname === "/inventario/registro" ? 'text-blue-400 bg-black' : 'text-gray-300 hover:bg-gray-800 hover:text-white'}`}
+                                                        className={`block px-4 py-2 text-sm transition-all duration-200 ${pathname === "/inventario/registro"
+                                                                ? 'text-white bg-white/10 border-r-2 border-white'
+                                                                : 'text-gray-300 hover:bg-gray-800 hover:text-white hover:translate-x-1'
+                                                            }`}
                                                     >
                                                         Registro de nuevos bienes
                                                     </Link>
@@ -306,14 +312,17 @@ export default function NavigationBar() {
                                         <>
                                             <button
                                                 onClick={() => toggleMenu(item.title)}
-                                                className={`flex items-center px-4 py-2 rounded-md ${isActive(item.path) ? 'text-blue-400 bg-blue-950' : 'text-gray-300 hover:text-white hover:bg-gray-800'}`}
+                                                className={`flex items-center px-4 py-2 rounded-md transition-all duration-300 ease-in-out transform ${isActive(item.path)
+                                                        ? 'text-white bg-white/10 border border-white/20 scale-105'
+                                                        : 'text-gray-300 hover:text-white hover:bg-gray-800 hover:scale-105'
+                                                    }`}
                                             >
                                                 <span className="mr-2">{item.icon}</span>
                                                 {item.title}
-                                                <ChevronDown className={`ml-1 w-3 h-3 transition-transform ${openMenu === item.title ? 'rotate-180' : ''}`} />
+                                                <ChevronDown className={`ml-1 w-3 h-3 transition-transform duration-300 ${openMenu === item.title ? 'rotate-180' : ''}`} />
                                             </button>
                                             {openMenu === item.title && (
-                                                <div className="absolute left-0 mt-1 w-56 rounded-md bg-black shadow-lg z-20">
+                                                <div className="absolute left-0 mt-1 w-56 rounded-md bg-black shadow-lg z-20 border border-white/10 animate-in slide-in-from-top-2 fade-in duration-200">
                                                     <div className="py-1">
                                                         {item.submenu.map((subItem) => (
                                                             <div key={subItem.title}>
@@ -321,20 +330,26 @@ export default function NavigationBar() {
                                                                     <div className="relative">
                                                                         <button
                                                                             onClick={(e) => toggleSubmenu(`${item.title}-${subItem.title}`, e)}
-                                                                            className={`flex justify-between w-full px-4 py-2 text-sm ${isActive(subItem.path) ? 'text-blue-400 bg-black' : 'text-gray-300 hover:bg-gray-800 hover:text-white'}`}
+                                                                            className={`flex justify-between w-full px-4 py-2 text-sm transition-all duration-200 ${isActive(subItem.path)
+                                                                                    ? 'text-white bg-white/10 border-r-2 border-white'
+                                                                                    : 'text-gray-300 hover:bg-gray-800 hover:text-white hover:translate-x-1'
+                                                                                }`}
                                                                         >
                                                                             {subItem.title}
                                                                             <ChevronRight className="w-3 h-3" />
                                                                         </button>
                                                                         {openSubmenu === `${item.title}-${subItem.title}` && (
-                                                                            <div className="absolute left-full top-0 w-56 rounded-md bg-black shadow-lg z-30">
+                                                                            <div className="absolute left-full top-0 w-56 rounded-md bg-black shadow-lg z-30 border border-white/10 animate-in slide-in-from-left-2 fade-in duration-200">
                                                                                 <div className="py-1">
                                                                                     {subItem.children.map((child) => (
                                                                                         <Link
                                                                                             key={child.title}
                                                                                             href={child.path}
                                                                                             onClick={closeAll}
-                                                                                            className={`block px-4 py-2 text-sm ${pathname === child.path ? 'text-blue-400 bg-black' : 'text-gray-300 hover:bg-gray-800 hover:text-white'}`}
+                                                                                            className={`block px-4 py-2 text-sm transition-all duration-200 ${pathname === child.path
+                                                                                                    ? 'text-white bg-white/10 border-r-2 border-white'
+                                                                                                    : 'text-gray-300 hover:bg-gray-800 hover:text-white hover:translate-x-1'
+                                                                                                }`}
                                                                                         >
                                                                                             {child.title}
                                                                                         </Link>
@@ -348,7 +363,10 @@ export default function NavigationBar() {
                                                                         <Link
                                                                             href={subItem.path}
                                                                             onClick={closeAll}
-                                                                            className={`block px-4 py-2 text-sm ${pathname === subItem.path ? 'text-blue-400 bg-black' : 'text-gray-300 hover:bg-gray-800 hover:text-white'}`}
+                                                                            className={`block px-4 py-2 text-sm transition-all duration-200 ${pathname === subItem.path
+                                                                                    ? 'text-white bg-white/10 border-r-2 border-white'
+                                                                                    : 'text-gray-300 hover:bg-gray-800 hover:text-white hover:translate-x-1'
+                                                                                }`}
                                                                         >
                                                                             {subItem.title}
                                                                         </Link>
@@ -357,7 +375,10 @@ export default function NavigationBar() {
                                                                     <Link
                                                                         href={subItem.path}
                                                                         onClick={closeAll}
-                                                                        className={`block px-4 py-2 text-sm ${pathname === subItem.path ? 'text-blue-400 bg-black' : 'text-gray-300 hover:bg-gray-800 hover:text-white'}`}
+                                                                        className={`block px-4 py-2 text-sm transition-all duration-200 ${pathname === subItem.path
+                                                                                ? 'text-white bg-white/10 border-r-2 border-white'
+                                                                                : 'text-gray-300 hover:bg-gray-800 hover:text-white hover:translate-x-1'
+                                                                            }`}
                                                                     >
                                                                         {subItem.title}
                                                                     </Link>
@@ -372,7 +393,10 @@ export default function NavigationBar() {
                                         <Link
                                             href={item.path}
                                             onClick={closeAll}
-                                            className={`flex items-center px-4 py-2 rounded-md ${isActive(item.path) ? 'text-blue-400 bg-blue-950' : 'text-gray-300 hover:text-white hover:bg-gray-800'}`}
+                                            className={`flex items-center px-4 py-2 rounded-md transition-all duration-300 ease-in-out transform ${isActive(item.path)
+                                                    ? 'text-white bg-white/10 border border-white/20 scale-105'
+                                                    : 'text-gray-300 hover:text-white hover:bg-gray-800 hover:scale-105'
+                                                }`}
                                         >
                                             <span className="mr-2">{item.icon}</span>
                                             {item.title}
@@ -384,26 +408,35 @@ export default function NavigationBar() {
                                 <div className="relative">
                                     <button
                                         onClick={() => toggleMenu("Administración")}
-                                        className={`flex items-center px-4 py-2 rounded-md ${isActive("/admin") ? 'text-blue-400 bg-blue-950' : 'text-gray-300 hover:text-white hover:bg-gray-800'}`}
+                                        className={`flex items-center px-4 py-2 rounded-md transition-all duration-300 ease-in-out transform ${isActive("/admin")
+                                                ? 'text-white bg-white/10 border border-white/20 scale-105'
+                                                : 'text-gray-300 hover:text-white hover:bg-gray-800 hover:scale-105'
+                                            }`}
                                     >
                                         <span className="mr-2"><Settings className="w-4 h-4" /></span>
                                         Administración
-                                        <ChevronDown className={`ml-1 w-3 h-3 transition-transform ${openMenu === "Administración" ? 'rotate-180' : ''}`} />
+                                        <ChevronDown className={`ml-1 w-3 h-3 transition-transform duration-300 ${openMenu === "Administración" ? 'rotate-180' : ''}`} />
                                     </button>
                                     {openMenu === "Administración" && (
-                                        <div className="absolute left-0 mt-1 w-56 rounded-md bg-black shadow-lg z-20">
+                                        <div className="absolute left-0 mt-1 w-56 rounded-md bg-black shadow-lg z-20 border border-white/10 animate-in slide-in-from-top-2 fade-in duration-200">
                                             <div className="py-1">
                                                 <Link
                                                     href="/admin/areas"
                                                     onClick={closeAll}
-                                                    className={`block px-4 py-2 text-sm ${pathname === "/admin/areas" ? 'text-blue-400 bg-black' : 'text-gray-300 hover:bg-gray-800 hover:text-white'}`}
+                                                    className={`block px-4 py-2 text-sm transition-all duration-200 ${pathname === "/admin/areas"
+                                                            ? 'text-white bg-white/10 border-r-2 border-white'
+                                                            : 'text-gray-300 hover:bg-gray-800 hover:text-white hover:translate-x-1'
+                                                        }`}
                                                 >
                                                     Configuración General
                                                 </Link>
                                                 <Link
                                                     href="/admin/personal"
                                                     onClick={closeAll}
-                                                    className={`block px-4 py-2 text-sm ${pathname === "/admin/personal" ? 'text-blue-400 bg-black' : 'text-gray-300 hover:bg-gray-800 hover:text-white'}`}
+                                                    className={`block px-4 py-2 text-sm transition-all duration-200 ${pathname === "/admin/personal"
+                                                            ? 'text-white bg-white/10 border-r-2 border-white'
+                                                            : 'text-gray-300 hover:bg-gray-800 hover:text-white hover:translate-x-1'
+                                                        }`}
                                                 >
                                                     Directorio de Personal
                                                 </Link>
@@ -423,17 +456,16 @@ export default function NavigationBar() {
                             <RoleGuard roles={["superadmin", "admin"]} userRole={userData.rol}>
                                 <button
                                     onClick={() => setNotificationsOpen(true)}
-                                    className="p-2 text-gray-300 hover:text-white hover:bg-gray-800 rounded-full relative"
+                                    className="p-2 text-gray-300 hover:text-white hover:bg-gray-800 rounded-full relative transition-all duration-200 hover:scale-110"
                                     title={doNotDisturb ? "Modo No Molestar activo" : "Notificaciones"}
                                 >
                                     <Bell className="h-5 w-5" />
                                     {unreadCount > 0 && (
                                         <>
-                                            <span className={`absolute top-0 right-0 h-2 w-2 rounded-full ${
-                                                doNotDisturb ? 'bg-purple-500' : 'bg-blue-500'
-                                            }`}></span>
+                                            <span className={`absolute top-0 right-0 h-2 w-2 rounded-full ${doNotDisturb ? 'bg-purple-500' : 'bg-white'
+                                                }`}></span>
                                             {!doNotDisturb && (
-                                                <span className="absolute -top-2 -right-2 bg-blue-600 text-white text-xs font-bold rounded-full px-1.5 min-w-[18px] text-center border border-black shadow">
+                                                <span className="absolute -top-2 -right-2 bg-white text-black text-xs font-bold rounded-full px-1.5 min-w-[18px] text-center border border-black shadow">
                                                     {unreadCount}
                                                 </span>
                                             )}
@@ -449,7 +481,7 @@ export default function NavigationBar() {
                             <RoleGuard roles={["superadmin"]} userRole={userData.rol}>
                                 <Link
                                     href="/register"
-                                    className="p-2 text-gray-300 hover:text-white hover:bg-gray-800 rounded-full"
+                                    className="p-2 text-gray-300 hover:text-white hover:bg-gray-800 rounded-full transition-all duration-200 hover:scale-110"
                                     title="Añadir usuario"
                                 >
                                     <User className="h-5 w-5" />
@@ -458,7 +490,8 @@ export default function NavigationBar() {
                             <RoleGuard roles={["superadmin", "admin"]} userRole={userData.rol}>
                                 <Link
                                     href="/dashboard"
-                                    className={`p-2 text-gray-300 hover:text-white hover:bg-gray-800 rounded-full ${pathname === '/dashboard' ? 'text-blue-400 bg-blue-950' : ''}`}
+                                    className={`p-2 text-gray-300 hover:text-white hover:bg-gray-800 rounded-full transition-all duration-200 hover:scale-110 ${pathname === '/dashboard' ? 'text-white bg-white/10 border border-white/20' : ''
+                                        }`}
                                     title="Dashboard"
                                 >
                                     <Grid className="h-5 w-5" />
@@ -466,7 +499,7 @@ export default function NavigationBar() {
                             </RoleGuard>
                             <button
                                 onClick={initiateLogout}
-                                className="p-2 text-gray-300 hover:text-white hover:bg-gray-800 rounded-full"
+                                className="p-2 text-gray-300 hover:text-white hover:bg-gray-800 rounded-full transition-all duration-200 hover:scale-110"
                                 title='Cerrar sesión'
                             >
                                 <LogOut className="h-5 w-5" />
@@ -476,7 +509,7 @@ export default function NavigationBar() {
 
                     <button
                         onClick={toggleMobileMenu}
-                        className="md:hidden p-2 text-gray-300 hover:text-white hover:bg-gray-800 rounded-full transition-colors"
+                        className="md:hidden p-2 text-gray-300 hover:text-white hover:bg-gray-800 rounded-full transition-all duration-200 hover:scale-110"
                     >
                         {mobileMenuOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
                     </button>
@@ -485,27 +518,33 @@ export default function NavigationBar() {
 
             {/* Mobile Menu */}
             {mobileMenuOpen && (
-                <div className="md:hidden bg-black">
+                <div className="md:hidden bg-black animate-in slide-in-from-top-4 fade-in duration-300">
                     <div className="px-2 pt-2 pb-3 space-y-1">
                         <RoleGuard roles={["superadmin"]} userRole={userData.rol}>
                             <div>
                                 <button
                                     onClick={() => toggleMenu("Inventario")}
-                                    className={`flex justify-between w-full px-3 py-2 rounded-md ${isActive("/inventario") ? 'text-blue-400 bg-black' : 'text-gray-300 hover:text-white hover:bg-gray-800'}`}
+                                    className={`flex justify-between w-full px-3 py-2 rounded-md transition-all duration-300 ${isActive("/inventario")
+                                            ? 'text-white bg-white/10 border border-white/20'
+                                            : 'text-gray-300 hover:text-white hover:bg-gray-800'
+                                        }`}
                                 >
                                     <div className="flex items-center">
                                         <span className="mr-3"><Database className="w-4 h-4" /></span>
                                         Inventario
                                     </div>
-                                    <ChevronDown className={`w-4 h-4 transition-transform ${openMenu === "Inventario" ? 'rotate-180' : ''}`} />
+                                    <ChevronDown className={`w-4 h-4 transition-transform duration-300 ${openMenu === "Inventario" ? 'rotate-180' : ''}`} />
                                 </button>
                                 {openMenu === "Inventario" && (
-                                    <div className="pl-6 py-1">
+                                    <div className="pl-6 py-1 animate-in slide-in-from-top-2 fade-in duration-200">
                                         <RoleGuard roles={["superadmin"]} userRole={userData.rol}>
                                             <Link
                                                 href="/inventario/registro"
                                                 onClick={closeAll}
-                                                className={`block px-3 py-2 rounded-md text-sm ${pathname === "/inventario/registro" ? 'text-blue-400 bg-gray-700' : 'text-gray-400 hover:text-white hover:bg-gray-800'}`}
+                                                className={`block px-3 py-2 rounded-md text-sm transition-all duration-200 ${pathname === "/inventario/registro"
+                                                        ? 'text-white bg-white/10 border-l-2 border-white'
+                                                        : 'text-gray-400 hover:text-white hover:bg-gray-800 hover:translate-x-1'
+                                                    }`}
                                             >
                                                 Registro de nuevos bienes
                                             </Link>
@@ -518,37 +557,46 @@ export default function NavigationBar() {
                             <div key={item.title}>
                                 <button
                                     onClick={() => toggleMenu(item.title)}
-                                    className={`flex justify-between w-full px-3 py-2 rounded-md ${isActive(item.path) ? 'text-blue-400 bg-black' : 'text-gray-300 hover:text-white hover:bg-gray-800'}`}
+                                    className={`flex justify-between w-full px-3 py-2 rounded-md transition-all duration-300 ${isActive(item.path)
+                                            ? 'text-white bg-white/10 border border-white/20'
+                                            : 'text-gray-300 hover:text-white hover:bg-gray-800'
+                                        }`}
                                 >
                                     <div className="flex items-center">
                                         <span className="mr-3">{item.icon}</span>
                                         {item.title}
                                     </div>
-                                    <ChevronDown className={`w-4 h-4 transition-transform ${openMenu === item.title ? 'rotate-180' : ''}`} />
+                                    <ChevronDown className={`w-4 h-4 transition-transform duration-300 ${openMenu === item.title ? 'rotate-180' : ''}`} />
                                 </button>
 
                                 {openMenu === item.title && item.submenu && (
-                                    <div className="pl-6 py-1">
+                                    <div className="pl-6 py-1 animate-in slide-in-from-top-2 fade-in duration-200">
                                         {item.submenu.map((subItem) => (
                                             <div key={subItem.title} className="py-1">
                                                 {subItem.children ? (
                                                     <div>
                                                         <button
                                                             onClick={(e) => toggleSubmenu(`${item.title}-${subItem.title}`, e)}
-                                                            className={`flex justify-between w-full px-3 py-2 rounded-md text-sm ${isActive(subItem.path) ? 'text-blue-400 bg-black' : 'text-gray-400 hover:text-white hover:bg-gray-800'}`}
+                                                            className={`flex justify-between w-full px-3 py-2 rounded-md text-sm transition-all duration-200 ${isActive(subItem.path)
+                                                                    ? 'text-white bg-white/10 border-l-2 border-white'
+                                                                    : 'text-gray-400 hover:text-white hover:bg-gray-800 hover:translate-x-1'
+                                                                }`}
                                                         >
                                                             {subItem.title}
-                                                            <ChevronDown className={`w-4 h-4 transition-transform ${openSubmenu === `${item.title}-${subItem.title}` ? 'rotate-180' : ''}`} />
+                                                            <ChevronDown className={`w-4 h-4 transition-transform duration-300 ${openSubmenu === `${item.title}-${subItem.title}` ? 'rotate-180' : ''}`} />
                                                         </button>
 
                                                         {openSubmenu === `${item.title}-${subItem.title}` && (
-                                                            <div className="pl-3 py-1">
+                                                            <div className="pl-3 py-1 animate-in slide-in-from-top-2 fade-in duration-200">
                                                                 {subItem.children.map((child) => (
                                                                     <Link
                                                                         key={child.title}
                                                                         href={child.path}
                                                                         onClick={closeAll}
-                                                                        className={`block px-3 py-2 rounded-md text-sm ${pathname === child.path ? 'text-blue-400 bg-gray-700' : 'text-gray-400 hover:text-white hover:bg-gray-800'}`}
+                                                                        className={`block px-3 py-2 rounded-md text-sm transition-all duration-200 ${pathname === child.path
+                                                                                ? 'text-white bg-white/10 border-l-2 border-white'
+                                                                                : 'text-gray-400 hover:text-white hover:bg-gray-800 hover:translate-x-1'
+                                                                            }`}
                                                                     >
                                                                         {child.title}
                                                                     </Link>
@@ -561,7 +609,10 @@ export default function NavigationBar() {
                                                         <Link
                                                             href={subItem.path}
                                                             onClick={closeAll}
-                                                            className={`block px-3 py-2 rounded-md text-sm ${pathname === subItem.path ? 'text-blue-400 bg-gray-700' : 'text-gray-400 hover:text-white hover:bg-gray-800'}`}
+                                                            className={`block px-3 py-2 rounded-md text-sm transition-all duration-200 ${pathname === subItem.path
+                                                                    ? 'text-white bg-white/10 border-l-2 border-white'
+                                                                    : 'text-gray-400 hover:text-white hover:bg-gray-800 hover:translate-x-1'
+                                                                }`}
                                                         >
                                                             {subItem.title}
                                                         </Link>
@@ -570,7 +621,10 @@ export default function NavigationBar() {
                                                     <Link
                                                         href={subItem.path}
                                                         onClick={closeAll}
-                                                        className={`block px-3 py-2 rounded-md text-sm ${pathname === subItem.path ? 'text-blue-400 bg-gray-700' : 'text-gray-400 hover:text-white hover:bg-gray-800'}`}
+                                                        className={`block px-3 py-2 rounded-md text-sm transition-all duration-200 ${pathname === subItem.path
+                                                                ? 'text-white bg-white/10 border-l-2 border-white'
+                                                                : 'text-gray-400 hover:text-white hover:bg-gray-800 hover:translate-x-1'
+                                                            }`}
                                                     >
                                                         {subItem.title}
                                                     </Link>
@@ -585,27 +639,36 @@ export default function NavigationBar() {
                             <div>
                                 <button
                                     onClick={() => toggleMenu("Administración")}
-                                    className={`flex justify-between w-full px-3 py-2 rounded-md ${isActive("/admin") ? 'text-blue-400 bg-black' : 'text-gray-300 hover:text-white hover:bg-gray-800'}`}
+                                    className={`flex justify-between w-full px-3 py-2 rounded-md transition-all duration-300 ${isActive("/admin")
+                                            ? 'text-white bg-white/10 border border-white/20'
+                                            : 'text-gray-300 hover:text-white hover:bg-gray-800'
+                                        }`}
                                 >
                                     <div className="flex items-center">
                                         <span className="mr-3"><Settings className="w-4 h-4" /></span>
                                         Administración
                                     </div>
-                                    <ChevronDown className={`w-4 h-4 transition-transform ${openMenu === "Administración" ? 'rotate-180' : ''}`} />
+                                    <ChevronDown className={`w-4 h-4 transition-transform duration-300 ${openMenu === "Administración" ? 'rotate-180' : ''}`} />
                                 </button>
                                 {openMenu === "Administración" && (
-                                    <div className="pl-6 py-1">
+                                    <div className="pl-6 py-1 animate-in slide-in-from-top-2 fade-in duration-200">
                                         <Link
                                             href="/admin/areas"
                                             onClick={closeAll}
-                                            className={`block px-3 py-2 rounded-md text-sm ${pathname === "/admin/areas" ? 'text-blue-400 bg-gray-700' : 'text-gray-400 hover:text-white hover:bg-gray-800'}`}
+                                            className={`block px-3 py-2 rounded-md text-sm transition-all duration-200 ${pathname === "/admin/areas"
+                                                    ? 'text-white bg-white/10 border-l-2 border-white'
+                                                    : 'text-gray-400 hover:text-white hover:bg-gray-800 hover:translate-x-1'
+                                                }`}
                                         >
                                             Configuración General
                                         </Link>
                                         <Link
                                             href="/admin/personal"
                                             onClick={closeAll}
-                                            className={`block px-3 py-2 rounded-md text-sm ${pathname === "/admin/personal" ? 'text-blue-400 bg-gray-700' : 'text-gray-400 hover:text-white hover:bg-gray-800'}`}
+                                            className={`block px-3 py-2 rounded-md text-sm transition-all duration-200 ${pathname === "/admin/personal"
+                                                    ? 'text-white bg-white/10 border-l-2 border-white'
+                                                    : 'text-gray-400 hover:text-white hover:bg-gray-800 hover:translate-x-1'
+                                                }`}
                                         >
                                             Directorio de Personal
                                         </Link>
@@ -629,7 +692,7 @@ export default function NavigationBar() {
                             <div className="ml-auto flex space-x-2">
                                 <button
                                     onClick={initiateLogout}
-                                    className="p-2 text-gray-300 hover:text-white hover:bg-gray-800 rounded-full"
+                                    className="p-2 text-gray-300 hover:text-white hover:bg-gray-800 rounded-full transition-all duration-200 hover:scale-110"
                                     title='Cerrar sesión'
                                 >
                                     <LogOut className="h-5 w-5" />
@@ -643,8 +706,8 @@ export default function NavigationBar() {
             {/* Notifications Panel */}
             {notificationsOpen && (
                 <div className="fixed inset-0 z-50 overflow-hidden">
-                    <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={() => setNotificationsOpen(false)} />
-                    <div className="absolute right-0 top-0 h-full">
+                    <div className="absolute inset-0 bg-black/50 backdrop-blur-sm animate-in fade-in duration-200" onClick={() => setNotificationsOpen(false)} />
+                    <div className="absolute right-0 top-0 h-full animate-in slide-in-from-right-4 duration-300">
                         <NotificationsPanel />
                     </div>
                 </div>
@@ -653,7 +716,7 @@ export default function NavigationBar() {
             {/* Logout Confirmation Popover */}
             {showLogoutModal && (
                 <div
-                    className="fixed z-50"
+                    className="fixed z-50 animate-in fade-in zoom-in-95 duration-200"
                     style={{
                         position: 'fixed',
                         top: `${modalPosition.y}px`,
@@ -662,7 +725,7 @@ export default function NavigationBar() {
                     }}
                 >
                     <div
-                        className="bg-gray-900/95 backdrop-blur-sm rounded-lg border border-blue-500/20 overflow-visible w-64 popover-content"
+                        className="bg-gray-900/95 backdrop-blur-sm rounded-lg border border-white/20 overflow-visible w-64 popover-content shadow-xl"
                         data-position={popoverPosition}
                         style={{
                             '--arrow-x': '50%',
@@ -673,8 +736,8 @@ export default function NavigationBar() {
                     >
                         <div className="p-4">
                             <div className="flex flex-col items-center text-center gap-3">
-                                <div className="p-2 bg-blue-500/10 rounded-full">
-                                    <LogOut className="h-5 w-5 text-blue-400" />
+                                <div className="p-2 bg-white/10 rounded-full">
+                                    <LogOut className="h-5 w-5 text-white" />
                                 </div>
                                 <div>
                                     <p className="text-sm text-gray-300">
@@ -686,13 +749,13 @@ export default function NavigationBar() {
                                 <div className="flex w-full gap-2">
                                     <button
                                         onClick={() => setShowLogoutModal(false)}
-                                        className="flex-1 py-1.5 px-3 bg-gray-800/50 text-gray-300 text-xs rounded-md hover:bg-gray-800 border border-gray-700/50 transition-colors"
+                                        className="flex-1 py-1.5 px-3 bg-gray-800/50 text-gray-300 text-xs rounded-md hover:bg-gray-800 border border-gray-700/50 transition-all duration-200 hover:scale-105"
                                     >
                                         Cancelar
                                     </button>
                                     <button
                                         onClick={confirmLogout}
-                                        className="flex-1 py-1.5 px-3 bg-blue-600/20 text-blue-300 text-xs rounded-md hover:bg-blue-600/30 border border-blue-500/30 transition-colors"
+                                        className="flex-1 py-1.5 px-3 bg-white/20 text-white text-xs rounded-md hover:bg-white/30 border border-white/30 transition-all duration-200 hover:scale-105"
                                     >
                                         Confirmar
                                     </button>

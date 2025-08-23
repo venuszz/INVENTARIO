@@ -971,14 +971,14 @@ export default function ConsultasIteaGeneral() {
 
     function getTypeIcon(type: ActiveFilter['type']) {
         switch (type) {
-            case 'id': return <span className="h-4 w-4 text-blue-400 font-bold">#</span>;
-            case 'area': return <span className="h-4 w-4 text-purple-400 font-bold">A</span>;
-            case 'usufinal': return <span className="h-4 w-4 text-amber-400 font-bold">D</span>;
-            case 'resguardante': return <span className="h-4 w-4 text-cyan-400 font-bold">R</span>;
-            case 'descripcion': return <span className="h-4 w-4 text-fuchsia-400 font-bold">Desc</span>;
-            case 'rubro': return <span className="h-4 w-4 text-green-400 font-bold">Ru</span>;
-            case 'estado': return <span className="h-4 w-4 text-cyan-400 font-bold">Edo</span>;
-            case 'estatus': return <span className="h-4 w-4 text-pink-400 font-bold">Est</span>;
+            case 'id': return <span className="h-4 w-4 text-white font-bold">#</span>;
+            case 'area': return <span className="h-4 w-4 text-white font-bold">A</span>;
+            case 'usufinal': return <span className="h-4 w-4 text-white font-bold">D</span>;
+            case 'resguardante': return <span className="h-4 w-4 text-white font-bold">R</span>;
+            case 'descripcion': return <span className="h-4 w-4 text-white font-bold">Desc</span>;
+            case 'rubro': return <span className="h-4 w-4 text-white font-bold">Ru</span>;
+            case 'estado': return <span className="h-4 w-4 text-white font-bold">Edo</span>;
+            case 'estatus': return <span className="h-4 w-4 text-white font-bold">Est</span>;
             default: return null;
         }
     }
@@ -1017,7 +1017,7 @@ export default function ConsultasIteaGeneral() {
                         >
                             <span className="shrink-0">{getTypeIcon(s.type)}</span>
                             <span className="font-semibold whitespace-normal break-words w-full">{s.value}</span>
-                            <span className="ml-auto text-[10px] text-neutral-400 font-mono">{getTypeLabel(s.type)}</span>
+                            <span className="ml-auto text-[10px] text-white font-mono">{getTypeLabel(s.type)}</span>
                         </li>
                     );
                 })}
@@ -1174,7 +1174,7 @@ export default function ConsultasIteaGeneral() {
                 <div className={`fixed top-6 right-6 z-50 p-4 rounded-lg shadow-lg flex items-center gap-3 animate-fadeIn ${message.type === 'success' ? 'bg-green-900/90 border border-green-700' :
                     message.type === 'error' ? 'bg-red-900/90 border border-red-700' :
                         message.type === 'warning' ? 'bg-yellow-900/90 border border-yellow-700' :
-                            'bg-blue-900/90 border border-blue-700'}`}>
+                            'bg-gray-900/90 border border-gray-700'}`}>
                     {message.type === 'success' && <CheckCircle className="h-5 w-5 text-green-300" />}
                     {message.type === 'error' && <XCircle className="h-5 w-5 text-red-300" />}
                     {message.type === 'warning' && <AlertTriangle className="h-5 w-5 text-yellow-300" />}
@@ -1200,26 +1200,24 @@ export default function ConsultasIteaGeneral() {
                 </div>
 
                 {/* Panel de valor total mejorado */}
-                <div className="bg-gradient-to-b from-gray-900 via-black to-black p-8 border-b border-gray-800">
+                <div className="bg-black p-8 border-b border-gray-800">
                     <div className="flex flex-col lg:flex-row justify-between items-stretch gap-6">
                         {/* Panel de valor total */}
                         <div className="flex-grow">
-                            <div className="group relative overflow-hidden bg-gradient-to-br from-indigo-950/30 via-purple-900/20 to-gray-900/30 p-6 rounded-2xl border border-indigo-800/30 hover:border-indigo-700/50 transition-all duration-500 hover:shadow-lg hover:shadow-indigo-500/10">
-                                <div className="absolute inset-0 bg-gradient-to-r from-indigo-500/5 via-purple-500/5 to-pink-500/5 opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
+                            <div className="group relative overflow-hidden bg-black p-6 rounded-2xl border border-gray-800 hover:border-gray-700 transition-all duration-500 hover:shadow-lg">
                                 <div className="flex items-start gap-6">
                                     <div className="relative">
-                                        <div className="absolute inset-0 bg-gradient-to-br from-indigo-500/20 via-purple-500/20 to-pink-500/20 blur-xl"></div>
-                                        <div className="relative p-4 bg-gradient-to-br from-indigo-500/20 via-purple-500/20 to-pink-500/20 rounded-xl border border-white/10 transform group-hover:scale-110 transition-all duration-500">
-                                            <DollarSign className="h-8 w-8 text-white/90" />
+                                        <div className="relative p-4 bg-black rounded-xl border border-white/10 transform group-hover:scale-110 transition-all duration-500">
+                                            <DollarSign className="h-8 w-8 text-white" />
                                         </div>
                                     </div>
                                     <div className="flex flex-col">
-                                        <h3 className="text-sm font-medium text-gray-400 mb-1 group-hover:text-indigo-300 transition-colors">Valor Total del Inventario</h3>
+                                        <h3 className="text-sm font-medium text-gray-400 mb-1 group-hover:text-white transition-colors">Valor Total del Inventario</h3>
                                         <div className="relative">
-                                            <p className="text-4xl font-bold bg-gradient-to-r from-indigo-200 via-purple-200 to-pink-200 bg-clip-text text-transparent group-hover:from-indigo-300 group-hover:via-purple-300 group-hover:to-pink-300 transition-all duration-500">
+                                            <p className="text-4xl font-bold text-white transition-all duration-500">
                                                 ${(activeFilters.length > 0 || searchTerm ? filteredValue : allValue).toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                                             </p>
-                                            <div className="absolute -bottom-2 left-0 w-full h-px bg-gradient-to-r from-indigo-500/50 via-purple-500/50 to-pink-500/50"></div>
+                                            <div className="absolute -bottom-2 left-0 w-full h-px bg-white/50"></div>
                                         </div>
                                         <p className="text-sm text-gray-500 mt-2 group-hover:text-gray-400 transition-colors">
                                             {activeFilters.length > 0 || searchTerm ? 'Valor de artículos filtrados' : 'Valor total de todos los artículos'}
@@ -1231,12 +1229,11 @@ export default function ConsultasIteaGeneral() {
 
                         {/* Panel de conteo */}
                         <div className="flex-shrink-0">
-                            <div className="group bg-gradient-to-br from-emerald-950/30 via-teal-900/20 to-gray-900/30 p-6 rounded-2xl border border-emerald-800/30 hover:border-emerald-700/50 transition-all duration-500">
+                            <div className="group bg-black p-6 rounded-2xl border border-gray-800 hover:border-gray-700 transition-all duration-500">
                                 <div className="text-center">
-                                    <p className="text-sm text-gray-400 mb-2 group-hover:text-emerald-300 transition-colors">Artículos Registrados</p>
+                                    <p className="text-sm text-gray-400 mb-2 group-hover:text-white transition-colors">Artículos Registrados</p>
                                     <div className="relative">
-                                        <div className="absolute inset-0 bg-gradient-to-r from-emerald-500/10 via-teal-500/10 to-cyan-500/10 opacity-0 group-hover:opacity-100 transition-opacity duration-500 rounded-xl"></div>
-                                        <span className="relative text-3xl font-bold bg-gradient-to-r from-emerald-200 via-teal-200 to-cyan-200 bg-clip-text text-transparent group-hover:from-emerald-300 group-hover:via-teal-300 group-hover:to-cyan-300 transition-all duration-500 px-6 py-3">
+                                        <span className="relative text-3xl font-bold text-white transition-all duration-500 px-6 py-3">
                                             {activeFilters.length > 0 || searchTerm ? filteredMueblesOmni.length : muebles.length}
                                         </span>
                                     </div>
@@ -1251,7 +1248,7 @@ export default function ConsultasIteaGeneral() {
                     {/* Panel izquierdo: Búsqueda, filtros y tabla */}
                     <div className={`flex-1 min-w-0 flex flex-col ${selectedItem ? '' : 'w-full'}`}>
                         {/* Panel de acciones y búsqueda omnibox */}
-                        <div className="mb-6 bg-gradient-to-br from-gray-900/20 to-gray-900/40 p-4 rounded-xl border border-gray-800 shadow-inner hover:shadow-lg transition-shadow">
+                        <div className="mb-6 bg-black p-4 rounded-xl border border-gray-800 shadow-inner hover:shadow-lg transition-shadow">
                             <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-4 mb-4">
                                 <div className="flex-1 relative">
                                     <div className="flex gap-2">
@@ -1265,7 +1262,7 @@ export default function ConsultasIteaGeneral() {
                                                 onBlur={handleInputBlur}
                                                 onKeyDown={handleInputKeyDown}
                                                 placeholder="Buscar por ID, descripción, área, director, etc."
-                                                className="w-full px-4 py-2 rounded-lg bg-black border border-gray-700 text-white focus:outline-none focus:ring-2 focus:ring-blue-700"
+                                                className="w-full px-4 py-2 rounded-lg bg-black border border-gray-700 text-white focus:outline-none focus:ring-2 focus:ring-white"
                                             />
                                             <SuggestionDropdown />
                                         </div>
@@ -1273,7 +1270,7 @@ export default function ConsultasIteaGeneral() {
                                             onClick={saveCurrentFilter}
                                             disabled={!searchTerm || !searchMatchType}
                                             className={`px-4 py-2 rounded-lg border flex items-center gap-2 ${searchTerm && searchMatchType
-                                                ? 'bg-blue-600 hover:bg-blue-700 border-blue-500 text-white'
+                                                ? 'bg-gray-800 hover:bg-gray-700 border-gray-700 text-white'
                                                 : 'bg-gray-800/50 border-gray-700 text-gray-500 cursor-not-allowed'
                                                 } transition-all duration-200 hover:scale-105`}
                                             title="Agregar filtro actual a la lista de filtros activos"
@@ -1285,19 +1282,8 @@ export default function ConsultasIteaGeneral() {
                                     {activeFilters.length > 0 && (
                                         <div className="mt-3 flex flex-wrap gap-2 w-full">
                                             {activeFilters.map((filter, index) => {
-                                                // Colores por tipo de filtro
-                                                let colorClass = '';
-                                                switch (filter.type) {
-                                                    case 'id': colorClass = 'from-blue-900/80 via-blue-800/80 to-blue-700/80 border-blue-700/60 text-blue-200'; break;
-                                                    case 'area': colorClass = 'from-purple-900/80 via-purple-800/80 to-purple-700/80 border-purple-700/60 text-purple-200'; break;
-                                                    case 'usufinal': colorClass = 'from-amber-900/80 via-amber-800/80 to-amber-700/80 border-amber-700/60 text-amber-200'; break;
-                                                    case 'resguardante': colorClass = 'from-cyan-900/80 via-cyan-800/80 to-cyan-700/80 border-cyan-700/60 text-cyan-200'; break;
-                                                    case 'descripcion': colorClass = 'from-fuchsia-900/80 via-fuchsia-800/80 to-fuchsia-700/80 border-fuchsia-700/60 text-fuchsia-200'; break;
-                                                    case 'rubro': colorClass = 'from-green-900/80 via-green-800/80 to-green-700/80 border-green-700/60 text-green-200'; break;
-                                                    case 'estado': colorClass = 'from-cyan-900/80 via-cyan-800/80 to-cyan-700/80 border-cyan-700/60 text-cyan-200'; break;
-                                                    case 'estatus': colorClass = 'from-pink-900/80 via-pink-800/80 to-pink-700/80 border-pink-700/60 text-pink-200'; break;
-                                                    default: colorClass = 'from-gray-800 via-gray-700 to-gray-900 border-gray-600 text-gray-300';
-                                                }
+                                                // Todos los filtros ahora usan el mismo color blanco
+                                                const colorClass = 'from-gray-800 via-gray-700 to-gray-900 border-gray-600 text-white';
                                                 return (
                                                     <span
                                                         key={filter.term + filter.type + index}
@@ -1332,7 +1318,7 @@ export default function ConsultasIteaGeneral() {
                                 <div className="flex items-center gap-2 mt-4 md:mt-0">
                                     <button
                                         onClick={fetchMuebles}
-                                        className="px-4 py-2 rounded-lg border border-blue-700 bg-blue-900/80 text-blue-200 hover:bg-blue-800 hover:text-white transition-all duration-200 flex items-center gap-2 shadow-md"
+                                        className="px-4 py-2 rounded-lg border border-gray-700 bg-black text-white hover:bg-gray-800 transition-all duration-200 flex items-center gap-2 shadow-md"
                                         title="Actualizar datos"
                                     >
                                         <RefreshCw className="h-4 w-4 animate-spin-slow" />
@@ -1398,7 +1384,7 @@ export default function ConsultasIteaGeneral() {
                                                                 </p>
                                                                 <button
                                                                     onClick={clearAllFilters}
-                                                                    className="px-4 py-2 bg-gray-800 text-blue-400 rounded-md text-sm hover:bg-gray-700 transition-colores flex items-center gap-2"
+                                                                    className="px-4 py-2 bg-gray-800 text-white rounded-md text-sm hover:bg-gray-700 transition-colores flex items-center gap-2"
                                                                 >
                                                                     <X className="h-4 w-4" />
                                                                     Limpiar filtros
@@ -1415,10 +1401,10 @@ export default function ConsultasIteaGeneral() {
                                                 const normalizedStatus = item.estatus?.trim();
                                                 return (
                                                     <tr
-                                                        key={item.id}
-                                                        onClick={() => handleSelectItem(item)}
-                                                        className={`group transition-colors cursor-pointer ${selectedItem?.id === item.id ? 'bg-blue-900/30 border-l-4 border-blue-600' : idx % 2 === 0 ? 'bg-black' : 'bg-gray-900/30'} hover:bg-blue-900/10`}
-                                                    >
+                                            key={item.id}
+                                            onClick={() => handleSelectItem(item)}
+                                            className={`group transition-colors cursor-pointer ${selectedItem?.id === item.id ? 'bg-gray-800/30 border-l-4 border-gray-600' : idx % 2 === 0 ? 'bg-black' : 'bg-gray-900/30'} hover:bg-gray-800/10`}
+                                        >
                                                         <td className="px-4 py-3 whitespace-nowrap text-sm font-medium text-white">
                                                             {item.id_inv}
                                                         </td>
@@ -1432,7 +1418,7 @@ export default function ConsultasIteaGeneral() {
                                                             {truncateText(item.usufinal, 20)}
                                                         </td>
                                                         <td className="px-4 py-3 text-sm">
-                                                            <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium ${normalizedStatus === 'ACTIVO' ? 'bg-green-900/70 text-green-200 border border-green-700' : normalizedStatus === 'INACTIVO' ? 'bg-red-900/70 text-red-200 border border-red-700' : normalizedStatus === 'NO LOCALIZADO' ? 'bg-yellow-900/70 text-yellow-200 border-yellow-700' : normalizedStatus === 'EN PROCESO DE BAJA' ? 'bg-purple-900/70 text-purple-200 border-purple-700' : normalizedStatus?.startsWith('C.1./') || normalizedStatus?.startsWith('CIATLAX/') ? 'bg-blue-900/70 text-blue-200 border-blue-700' : 'bg-gray-700 text-gray-300 border-gray-600'}`}>
+                                                            <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium ${normalizedStatus === 'ACTIVO' ? 'bg-green-900/70 text-white border border-green-700' : normalizedStatus === 'INACTIVO' ? 'bg-red-900/70 text-white border border-red-700' : normalizedStatus === 'NO LOCALIZADO' ? 'bg-yellow-900/70 text-white border-yellow-700' : normalizedStatus === 'EN PROCESO DE BAJA' ? 'bg-gray-800/70 text-white border-gray-600' : normalizedStatus?.startsWith('C.1./') || normalizedStatus?.startsWith('CIATLAX/') ? 'bg-gray-800/70 text-white border-gray-600' : 'bg-gray-700 text-white border-gray-600'}`}>
                                                                 {normalizedStatus === 'ACTIVO' && <CheckCircle className="h-3.5 w-3.5 mr-1.5" />}
                                                                 {normalizedStatus === 'INACTIVO' && <XCircle className="h-3.5 w-3.5 mr-1.5" />}
                                                                 {normalizedStatus === 'NO LOCALIZADO' && <AlertTriangle className="h-3.5 w-3.5 mr-1.5" />}
@@ -1445,23 +1431,23 @@ export default function ConsultasIteaGeneral() {
                                                             {foliosResguardo[item.id_inv || ''] ? (
                                                                 <div className="relative">
                                                                     <button
-                                                                        className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full font-bold bg-gradient-to-r from-blue-900/60 to-blue-700/60 text-blue-200 border border-blue-700 hover:from-blue-800 hover:to-blue-600 hover:text-white shadow-sm hover:scale-105 transition-all duration-200"
-                                                                        title={`Ver resguardo ${foliosResguardo[item.id_inv || '']}`}
-                                                                        onClick={e => {
-                                                                            e.stopPropagation();
-                                                                            router.push(`/resguardos/consultar?folio=${foliosResguardo[item.id_inv || '']}`);
-                                                                        }}
-                                                                    >
-                                                                        <BadgeCheck className="h-4 w-4 mr-1 text-blue-300" />
+                                                        className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full font-bold bg-gray-800/60 text-white border border-gray-700 hover:bg-gray-700/60 hover:text-white shadow-sm hover:scale-105 transition-all duration-200"
+                                                        title={`Ver resguardo ${foliosResguardo[item.id_inv || '']}`}
+                                                        onClick={e => {
+                                                            e.stopPropagation();
+                                                            router.push(`/resguardos/consultar?folio=${foliosResguardo[item.id_inv || '']}`);
+                                                        }}
+                                                    >
+                                                        <BadgeCheck className="h-4 w-4 mr-1 text-white" />
                                                                         {foliosResguardo[item.id_inv || '']}
                                                                     </button>
                                                                 </div>
                                                             ) : (
                                                                 <div className="relative">
-                                                                    <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full font-bold bg-gradient-to-r from-gray-800/60 to-gray-700/60 text-gray-400 border border-gray-700 shadow-sm cursor-default select-none">
-                                                                        <XCircle className="h-4 w-4 mr-1 text-gray-400" />
-                                                                        Sin resguardo
-                                                                    </span>
+                                                                    <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full font-bold bg-black text-gray-400 border border-gray-700 shadow-sm cursor-default select-none">
+                                                                    <XCircle className="h-4 w-4 mr-1 text-gray-400" />
+                                                                    Sin resguardo
+                                                                </span>
                                                                 </div>
                                                             )}
                                                         </td>
@@ -1485,7 +1471,7 @@ export default function ConsultasIteaGeneral() {
                                     ) : (
                                         <div className="flex items-center gap-2">
                                             <span className="text-neutral-300">Mostrando</span>
-                                            <span className="px-2 py-0.5 rounded-lg bg-blue-900/30 text-blue-300 font-mono border border-blue-800/50">
+                                            <span className="px-2 py-0.5 rounded-lg bg-gray-800/30 text-white font-mono border border-gray-700/50">
                                                 {((currentPage - 1) * rowsPerPage) + 1}–{Math.min(currentPage * rowsPerPage, totalCount)}
                                             </span>
                                             <span className="text-neutral-300">de</span>
@@ -1500,7 +1486,7 @@ export default function ConsultasIteaGeneral() {
                                                 id="rows-per-page"
                                                 value={rowsPerPage}
                                                 onChange={e => { setRowsPerPage(Number(e.target.value)); setCurrentPage(1); }}
-                                                className="ml-1 px-2 py-1 rounded-lg bg-neutral-900 border border-neutral-700 text-blue-300 font-mono text-xs focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition"
+                                                className="ml-1 px-2 py-1 rounded-lg bg-neutral-900 border border-neutral-700 text-white font-mono text-xs focus:outline-none focus:ring-2 focus:ring-white focus:border-gray-500 transition"
                                             >
                                                 {[10, 20, 30, 50, 100].map(opt => (
                                                     <option key={opt} value={opt}>{opt}</option>
@@ -1514,7 +1500,7 @@ export default function ConsultasIteaGeneral() {
                                     <div className="flex items-center gap-2 bg-neutral-900/50 px-4 py-2 rounded-xl border border-neutral-800 shadow-inner">
                                         <span className="text-neutral-400">Página</span>
                                         <div className="flex items-center gap-1.5">
-                                            <span className="px-2.5 py-0.5 rounded-lg bg-blue-900/40 text-blue-300 font-mono font-bold border border-blue-700/50 min-w-[2rem] text-center transition-all duration-300 hover:scale-105 hover:bg-blue-900/60">
+                                            <span className="px-2.5 py-0.5 rounded-lg bg-gray-800/40 text-white font-mono font-bold border border-gray-700/50 min-w-[2rem] text-center transition-all duration-300 hover:scale-105 hover:bg-gray-800/60">
                                                 {currentPage}
                                             </span>
                                             <span className="text-neutral-500">/</span>
@@ -1571,8 +1557,8 @@ export default function ConsultasIteaGeneral() {
                                                        
                                                        
                                                         ${i === currentPage
-                                                            ? 'bg-blue-900/80 text-blue-300 border-blue-700 shadow'
-                                                            : 'bg-neutral-900 text-neutral-300 border-neutral-700 hover:bg-blue-900/40 hover:text-blue-200 hover:border-blue-600'}
+                                                            ? 'bg-gray-800/80 text-white border-gray-700 shadow'
+                                                            : 'bg-neutral-900 text-neutral-300 border-neutral-700 hover:bg-gray-800/40 hover:text-white hover:border-gray-600'}
                                                     `}
                                                     aria-current={i === currentPage ? 'page' : undefined}
                                                 >
@@ -1617,14 +1603,14 @@ export default function ConsultasIteaGeneral() {
                         >
                             <div className="sticky top-0 z-10 bg-black border-b border-gray-800 px-6 py-4 flex justify-between items-center">
                                 <h2 className="text-xl font-semibold text-white flex items-center gap-2">
-                                    <ClipboardList className="h-5 w-5 text-blue-400" />
+                                    <ClipboardList className="h-5 w-5 text-white" />
                                     Detalle del Artículo
                                 </h2>
                                 <button
                                     type="button"
                                     onClick={closeDetail}
                                     title="Cerrar detalle"
-                                    className="text-gray-400 hover:text-white rounded-full p-2 focus:outline-none focus:ring-2 focus:ring-blue-500 hover:bg-gray-800 transition-colors"
+                                    className="text-gray-400 hover:text-white rounded-full p-2 focus:outline-none focus:ring-2 focus:ring-white hover:bg-gray-800 transition-colors"
                                 >
                                     <X className="h-5 w-5" />
                                 </button>
@@ -1669,7 +1655,7 @@ export default function ConsultasIteaGeneral() {
                                                     </div>
 
                                                     <div className="flex-shrink-0 w-64 space-y-2">
-                                                        <label className="flex flex-col items-center justify-center h-32 border-2 border-dashed border-gray-700 rounded-lg cursor-pointer hover:border-blue-500 transition-colors p-4">
+                                                        <label className="flex flex-col items-center justify-center h-32 border-2 border-dashed border-gray-700 rounded-lg cursor-pointer hover:border-white transition-colors p-4">
                                                             <div className="text-center">
                                                                 <Plus className="h-6 w-6 mx-auto text-gray-400 mb-1" />
                                                                 <span className="text-xs text-gray-400">Cambiar imagen</span>
@@ -1684,7 +1670,7 @@ export default function ConsultasIteaGeneral() {
                                                         <div className="text-xs text-gray-400 p-2 bg-gray-800/50 rounded-lg">
                                                             <p>Formatos: JPG, PNG, GIF, WebP</p>
                                                             <p>Tamaño máximo: 5MB</p>
-                                                            {uploading && <p className="text-blue-400 mt-1">Subiendo imagen...</p>}
+                                                            {uploading && <p className="text-white mt-1">Subiendo imagen...</p>}
                                                         </div>
                                                     </div>
                                                 </div>
@@ -1696,7 +1682,7 @@ export default function ConsultasIteaGeneral() {
                                                     type="text"
                                                     value={editFormData?.id_inv || ''}
                                                     onChange={(e) => handleEditFormChange(e, 'id_inv')}
-                                                    className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2.5 text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                                    className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2.5 text-white focus:outline-none focus:ring-2 focus:ring-white"
                                                     placeholder="Ingrese el ID de inventario"
                                                 />
                                             </div>
@@ -1708,7 +1694,7 @@ export default function ConsultasIteaGeneral() {
                                                         id="rubro-select"
                                                         value={editFormData?.rubro || ''}
                                                         onChange={(e) => handleEditFormChange(e, 'rubro')}
-                                                        className="appearance-none w-full bg-gray-800 border border-gray-700 rounded-lg pl-4 pr-10 py-2.5 text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                                                        className="appearance-none w-full bg-gray-800 border border-gray-700 rounded-lg pl-4 pr-10 py-2.5 text-white focus:outline-none focus:ring-2 focus:ring-white focus:border-transparent transition-all"
                                                         title="Seleccionar rubro"
                                                     >
                                                         <option value="">Seleccione un rubro</option>
@@ -1725,7 +1711,7 @@ export default function ConsultasIteaGeneral() {
                                                 <textarea
                                                     value={editFormData?.descripcion || ''}
                                                     onChange={(e) => handleEditFormChange(e, 'descripcion')}
-                                                    className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2.5 text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                                                    className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2.5 text-white focus:outline-none focus:ring-2 focus:ring-white focus:border-transparent transition-all"
                                                     rows={3}
                                                     placeholder="Ingrese la descripción"
                                                 />
@@ -1739,7 +1725,7 @@ export default function ConsultasIteaGeneral() {
                                                         type="text"
                                                         value={editFormData?.valor || ''}
                                                         onChange={(e) => handleEditFormChange(e, 'valor')}
-                                                        className="w-full bg-gray-800 border border-gray-700 rounded-lg pl-8 pr-4 py-2.5 text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                                                        className="w-full bg-gray-800 border border-gray-700 rounded-lg pl-8 pr-4 py-2.5 text-white focus:outline-none focus:ring-2 focus:ring-white focus:border-transparent transition-all"
                                                         title="Ingrese el valor"
                                                         placeholder="0.00"
                                                     />
@@ -1754,7 +1740,7 @@ export default function ConsultasIteaGeneral() {
                                                         type="date"
                                                         value={editFormData?.f_adq || ''}
                                                         onChange={(e) => handleEditFormChange(e, 'f_adq')}
-                                                        className="w-full bg-gray-800 border border-gray-700 rounded-lg pl-10 pr-4 py-2.5 text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                                                        className="w-full bg-gray-800 border border-gray-700 rounded-lg pl-10 pr-4 py-2.5 text-white focus:outline-none focus:ring-2 focus:ring-white focus:border-transparent transition-all"
                                                         title="Seleccione la fecha de adquisición"
                                                     />
                                                 </div>
@@ -1767,7 +1753,7 @@ export default function ConsultasIteaGeneral() {
                                                         title='Seleccione la forma de adquisición'
                                                         value={editFormData?.formadq || ''}
                                                         onChange={(e) => handleEditFormChange(e, 'formadq')}
-                                                        className="appearance-none w-full bg-gray-800 border border-gray-700 rounded-lg pl-4 pr-10 py-2.5 text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                                                        className="appearance-none w-full bg-gray-800 border border-gray-700 rounded-lg pl-4 pr-10 py-2.5 text-white focus:outline-none focus:ring-2 focus:ring-white focus:border-transparent transition-all"
                                                     >
                                                         <option value="">Seleccione una forma</option>
                                                         {filterOptions.formasAdq.map((forma) => (
@@ -1786,7 +1772,7 @@ export default function ConsultasIteaGeneral() {
                                                         type="text"
                                                         value={editFormData?.proveedor || ''}
                                                         onChange={(e) => handleEditFormChange(e, 'proveedor')}
-                                                        className="w-full bg-gray-800 border border-gray-700 rounded-lg pl-10 pr-4 py-2.5 text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                                                        className="w-full bg-gray-800 border border-gray-700 rounded-lg pl-10 pr-4 py-2.5 text-white focus:outline-none focus:ring-2 focus:ring-white focus:border-transparent transition-all"
                                                         title="Ingrese el nombre del proveedor"
                                                         placeholder="Nombre del proveedor"
                                                     />
@@ -1805,7 +1791,7 @@ export default function ConsultasIteaGeneral() {
                                                         placeholder="Estado"
                                                         value={editFormData?.ubicacion_es || ''}
                                                         onChange={(e) => handleEditFormChange(e, 'ubicacion_es')}
-                                                        className="w-full bg-gray-800 border border-gray-700 rounded-lg pl-10 pr-4 py-2.5 text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                                                        className="w-full bg-gray-800 border border-gray-700 rounded-lg pl-10 pr-4 py-2.5 text-white focus:outline-none focus:ring-2 focus:ring-white focus:border-transparent transition-all"
                                                     />
                                                 </div>
                                             </div>
@@ -1822,7 +1808,7 @@ export default function ConsultasIteaGeneral() {
                                                         placeholder="Municipio"
                                                         value={editFormData?.ubicacion_mu || ''}
                                                         onChange={(e) => handleEditFormChange(e, 'ubicacion_mu')}
-                                                        className="w-full bg-gray-800 border border-gray-700 rounded-lg pl-10 pr-4 py-2.5 text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                                                        className="w-full bg-gray-800 border border-gray-700 rounded-lg pl-10 pr-4 py-2.5 text-white focus:outline-none focus:ring-2 focus:ring-white focus:border-transparent transition-all"
                                                     />
                                                 </div>
                                             </div>
@@ -1839,7 +1825,7 @@ export default function ConsultasIteaGeneral() {
                                                         placeholder="Nomenclatura"
                                                         value={editFormData?.ubicacion_no || ''}
                                                         onChange={(e) => handleEditFormChange(e, 'ubicacion_no')}
-                                                        className="w-full bg-gray-800 border border-gray-700 rounded-lg pl-10 pr-4 py-2.5 text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                                                        className="w-full bg-gray-800 border border-gray-700 rounded-lg pl-10 pr-4 py-2.5 text-white focus:outline-none focus:ring-2 focus:ring-white focus:border-transparent transition-all"
                                                     />
                                                 </div>
                                             </div>
@@ -1852,7 +1838,7 @@ export default function ConsultasIteaGeneral() {
                                                         title="Seleccione el estado"
                                                         value={editFormData?.estado || ''}
                                                         onChange={(e) => handleEditFormChange(e, 'estado')}
-                                                        className="appearance-none w-full bg-gray-800 border border-gray-700 rounded-lg pl-4 pr-10 py-2.5 text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                                                        className="appearance-none w-full bg-gray-800 border border-gray-700 rounded-lg pl-4 pr-10 py-2.5 text-white focus:outline-none focus:ring-2 focus:ring-white focus:border-transparent transition-all"
                                                     >
                                                         <option value="">Seleccione un estado</option>
                                                         {filterOptions.estados.map((estado) => (
@@ -1871,7 +1857,7 @@ export default function ConsultasIteaGeneral() {
                                                         title="Seleccione el estatus"
                                                         value={editFormData?.estatus || ''}
                                                         onChange={(e) => handleEditFormChange(e, 'estatus')}
-                                                        className="appearance-none w-full bg-gray-800 border border-gray-700 rounded-lg pl-4 pr-10 py-2.5 text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                                                        className="appearance-none w-full bg-gray-800 border border-gray-700 rounded-lg pl-4 pr-10 py-2.5 text-white focus:outline-none focus:ring-2 focus:ring-white focus:border-transparent transition-all"
                                                     >
                                                         <option value="">Seleccione un estatus</option>
                                                         {filterOptions.estatus.map((status) => (
@@ -1903,7 +1889,7 @@ export default function ConsultasIteaGeneral() {
                                                         name="usufinal"
                                                         value={editFormData?.usufinal || ''}
                                                         onChange={(e) => handleSelectDirector(e.target.value)}
-                                                        className="w-full bg-gray-800 border border-gray-700 rounded-lg pl-4 pr-10 py-2.5 text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all appearance-none"
+                                                        className="w-full bg-gray-800 border border-gray-700 rounded-lg pl-4 pr-10 py-2.5 text-white focus:outline-none focus:ring-2 focus:ring-white focus:border-transparent transition-all appearance-none"
                                                     >
                                                         <option value="">Seleccionar Director/Jefe</option>
                                                         {directores.map((director) => (
@@ -1922,7 +1908,7 @@ export default function ConsultasIteaGeneral() {
                                                         type="text"
                                                         value={editFormData?.resguardante || ''}
                                                         onChange={(e) => handleEditFormChange(e, 'resguardante')}
-                                                        className="w-full bg-gray-800 border border-gray-700 rounded-lg pl-10 pr-4 py-2.5 text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                                                        className="w-full bg-gray-800 border border-gray-700 rounded-lg pl-10 pr-4 py-2.5 text-white focus:outline-none focus:ring-2 focus:ring-white focus:border-transparent transition-all"
                                                         title="Ingrese el Usuario Final"
                                                         placeholder="Ingrese el Usuario Final"
                                                     />
@@ -1933,7 +1919,7 @@ export default function ConsultasIteaGeneral() {
                                         <div className="flex items-center space-x-4 pt-6 border-t border-gray-800">
                                             <button
                                                 onClick={saveChanges}
-                                                className="px-5 py-2.5 bg-blue-600 text-white rounded-lg font-medium flex items-center gap-2 hover:bg-blue-700 transition-colores focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:ring-offset-gray-900"
+                                                className="px-5 py-2.5 bg-gray-700 text-white rounded-lg font-medium flex items-center gap-2 hover:bg-gray-600 transition-colores focus:outline-none focus:ring-2 focus:ring-white focus:ring-offset-2 focus:ring-offset-gray-900"
                                             >
                                                 <Save className="h-4 w-4" />
                                                 Guardar Cambios
@@ -1961,14 +1947,14 @@ export default function ConsultasIteaGeneral() {
                                             const folio = selectedItem.id_inv ? foliosResguardo[selectedItem.id_inv] : undefined;
                                             const detalleResguardo = folio ? resguardoDetalles[folio] : undefined;
                                             return folio && detalleResguardo && (
-                                                <div className="flex flex-wrap items-center gap-2 bg-blue-950/60 border border-blue-900 rounded-lg px-4 py-2 mb-4 text-xs text-blue-200 font-mono shadow-sm overflow-hidden break-words min-w-0">
-                                                    <span className="font-bold text-blue-300">Folio:</span> <span className="truncate break-words min-w-0">{detalleResguardo.folio}</span>
-                                                    <span className="mx-2 text-blue-400">|</span>
-                                                    <span className="font-bold text-blue-300">Fecha:</span> <span className="truncate break-words min-w-0">{formatDate(detalleResguardo.f_resguardo)}</span>
-                                                    <span className="mx-2 text-blue-400">|</span>
-                                                    <span className="font-bold text-blue-300">Área:</span> <span className="truncate break-words min-w-0">{detalleResguardo.area_resguardo}</span>
-                                                    <span className="mx-2 text-blue-400">|</span>
-                                                    <span className="font-bold text-blue-300">Director:</span> <span className="truncate break-words min-w-0">{detalleResguardo.dir_area}</span>
+                                                <div className="flex flex-wrap items-center gap-2 bg-gray-800/60 border border-gray-700 rounded-lg px-4 py-2 mb-4 text-xs text-white font-mono shadow-sm overflow-hidden break-words min-w-0">
+                                                    <span className="font-bold text-white">Folio:</span> <span className="truncate break-words min-w-0">{detalleResguardo.folio}</span>
+                                                    <span className="mx-2 text-gray-400">|</span>
+                                                    <span className="font-bold text-white">Fecha:</span> <span className="truncate break-words min-w-0">{formatDate(detalleResguardo.f_resguardo)}</span>
+                                                    <span className="mx-2 text-gray-400">|</span>
+                                                    <span className="font-bold text-white">Área:</span> <span className="truncate break-words min-w-0">{detalleResguardo.area_resguardo}</span>
+                                                    <span className="mx-2 text-gray-400">|</span>
+                                                    <span className="font-bold text-white">Director:</span> <span className="truncate break-words min-w-0">{detalleResguardo.dir_area}</span>
                                                 </div>
                                             );
                                         })()}
@@ -1995,7 +1981,7 @@ export default function ConsultasIteaGeneral() {
                                             <div className="detail-card bg-gray-900/50 rounded-lg p-4 hover:bg-gray-800/80 transition-all">
                                                 <h3 className="text-xs font-medium uppercase tracking-wider text-gray-400">Fecha de Adquisición</h3>
                                                 <p className="mt-2 text-white flex items-center gap-2">
-                                                    <Calendar className="h-4 w-4 text-blue-400" />
+                                                    <Calendar className="h-4 w-4 text-white" />
                                                     {formatDate(selectedItem.f_adq) || 'No especificado'}
                                                 </p>
                                             </div>
@@ -2006,14 +1992,14 @@ export default function ConsultasIteaGeneral() {
                                             <div className="detail-card bg-gray-900/50 rounded-lg p-4 hover:bg-gray-800/80 transition-all">
                                                 <h3 className="text-xs font-medium uppercase tracking-wider text-gray-400">Proveedor</h3>
                                                 <p className="mt-2 text-white flex items-center gap-2">
-                                                    <Store className="h-4 w-4 text-blue-400" />
+                                                    <Store className="h-4 w-4 text-white" />
                                                     {selectedItem.proveedor || 'No especificado'}
                                                 </p>
                                             </div>
                                             <div className="detail-card bg-gray-900/50 rounded-lg p-4 hover:bg-gray-800/80 transition-all">
                                                 <h3 className="text-xs font-medium uppercase tracking-wider text-gray-400">Factura</h3>
                                                 <p className="mt-2 text-white flex items-center gap-2">
-                                                    <Receipt className="h-4 w-4 text-blue-400" />
+                                                    <Receipt className="h-4 w-4 text-white" />
                                                     {selectedItem.factura || 'No especificado'}
                                                 </p>
                                             </div>
@@ -2039,19 +2025,19 @@ export default function ConsultasIteaGeneral() {
                                                 <div className="mt-2 grid grid-cols-1 md:grid-cols-3 gap-3">
                                                     {selectedItem.ubicacion_es && (
                                                         <div className="flex items-center gap-2 bg-gray-800/60 p-2 rounded-md">
-                                                            <Building2 className="h-4 w-4 text-blue-400 flex-shrink-0" />
+                                                            <Building2 className="h-4 w-4 text-white flex-shrink-0" />
                                                             <span className="text-white">{selectedItem.ubicacion_es}</span>
                                                         </div>
                                                     )}
                                                     {selectedItem.ubicacion_mu && (
                                                         <div className="flex items-center gap-2 bg-gray-800/60 p-2 rounded-md">
-                                                            <Building2 className="h-4 w-4 text-blue-400 flex-shrink-0" />
+                                                            <Building2 className="h-4 w-4 text-white flex-shrink-0" />
                                                             <span className="text-white">{selectedItem.ubicacion_mu}</span>
                                                         </div>
                                                     )}
                                                     {selectedItem.ubicacion_no && (
                                                         <div className="flex items-center gap-2 bg-gray-800/60 p-2 rounded-md">
-                                                            <Building2 className="h-4 w-4 text-blue-400 flex-shrink-0" />
+                                                            <Building2 className="h-4 w-4 text-white flex-shrink-0" />
                                                             <span className="text-white">{selectedItem.ubicacion_no}</span>
                                                         </div>
                                                     )}
@@ -2067,14 +2053,14 @@ export default function ConsultasIteaGeneral() {
                                             <div className="detail-card bg-gray-900/50 rounded-lg p-4 hover:bg-gray-800/80 transition-all">
                                                 <h3 className="text-xs font-medium uppercase tracking-wider text-gray-400">Director/Jefe de Área</h3>
                                                 <p className="mt-2 text-white flex items-center gap-2">
-                                                    <User className="h-4 w-4 text-blue-400" />
+                                                    <User className="h-4 w-4 text-white" />
                                                     {selectedItem.usufinal || 'No especificado'}
                                                 </p>
                                             </div>
                                             <div className="detail-card bg-gray-900/50 rounded-lg p-4 hover:bg-gray-800/80 transition-all">
                                                 <h3 className="text-xs font-medium uppercase tracking-wider text-gray-400">Usuario Final</h3>
                                                 <p className="mt-2 text-white flex items-center gap-2">
-                                                    <Shield className="h-4 w-4 text-blue-400" />
+                                                    <Shield className="h-4 w-4 text-white" />
                                                     {selectedItem.resguardante || 'No especificado'}
                                                 </p>
                                             </div>
@@ -2101,7 +2087,7 @@ export default function ConsultasIteaGeneral() {
                                             <div className="flex items-center space-x-4 pt-6 border-t border-gray-800">
                                                 <button
                                                     onClick={handleStartEdit}
-                                                    className="px-5 py-2.5 bg-blue-600 text-white rounded-lg font-medium flex items-center gap-2 hover:bg-blue-700 transition-colores focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:ring-offset-gray-900"
+                                                    className="px-5 py-2.5 bg-gray-700 text-white rounded-lg font-medium flex items-center gap-2 hover:bg-gray-600 transition-colores focus:outline-none focus:ring-2 focus:ring-white focus:ring-offset-2 focus:ring-offset-gray-900"
                                                 >
                                                     <Edit className="h-4 w-4" />
                                                     Editar
@@ -2213,7 +2199,7 @@ export default function ConsultasIteaGeneral() {
             {showAreaSelectModal && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm">
                     <div className="bg-black border border-gray-800 rounded-2xl shadow-2xl min-w-[360px] max-w-md w-full relative animate-fadeIn overflow-hidden">
-                        <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-blue-500/60 via-blue-400 to-blue-500/60"></div>
+                        <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-gray-500/60 via-gray-400 to-gray-500/60"></div>
                         <div className="p-6 relative">
                             <button
                                 className="absolute top-3 right-3 p-1 rounded-lg text-gray-500 hover:text-gray-300 hover:bg-gray-800 transition-all duration-200"
@@ -2223,8 +2209,8 @@ export default function ConsultasIteaGeneral() {
                                 ×
                             </button>
                             <div className="flex flex-col items-center text-center mb-6">
-                                <div className="p-3 bg-blue-500/10 rounded-full border border-blue-500/30 mb-3">
-                                    <LayoutGrid className="h-8 w-8 text-blue-400" />
+                                <div className="p-3 bg-gray-700/30 rounded-full border border-gray-600/50 mb-3">
+                                    <LayoutGrid className="h-8 w-8 text-white" />
                                 </div>
                                 <h2 className="text-2xl font-bold text-white">Selecciona un área</h2>
                                 <p className="text-gray-400 mt-2">
@@ -2235,7 +2221,7 @@ export default function ConsultasIteaGeneral() {
                                 <label className="text-xs uppercase tracking-wider text-gray-400 mb-2 block">Director asignado</label>
                                 <div className="flex items-center gap-3">
                                     <div className="p-2 bg-gray-800 rounded-lg">
-                                        <User className="h-4 w-4 text-blue-400" />
+                                        <User className="h-4 w-4 text-white" />
                                     </div>
                                     <div className="flex flex-col">
                                         <span className="text-white font-medium">{incompleteDirector?.nombre}</span>
@@ -2248,7 +2234,7 @@ export default function ConsultasIteaGeneral() {
                                 {areaOptionsForDirector.map((area) => (
                                     <button
                                         key={area.id_area}
-                                        className="w-full px-4 py-2.5 rounded-lg bg-gray-900/70 border border-gray-800 text-gray-200 hover:border-blue-500 hover:bg-gray-900 hover:text-blue-300 focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 text-sm font-medium"
+                                        className="w-full px-4 py-2.5 rounded-lg bg-gray-900/70 border border-gray-800 text-gray-200 hover:border-gray-500 hover:bg-gray-900 hover:text-white focus:outline-none focus:ring-1 focus:ring-white focus:border-gray-500 transition-all duration-200 text-sm font-medium"
                                         onClick={() => {
                                             if (editFormData) {
                                                 setEditFormData(prev => ({
