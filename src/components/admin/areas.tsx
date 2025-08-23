@@ -332,11 +332,11 @@ export default function ConfigManagementComponent() {
 
     return (
         <div className="bg-black text-white min-h-screen p-2 sm:p-4 md:p-6 lg:p-8 animate-gradient-x">
-            <div className="w-full mx-auto bg-black/50 rounded-lg sm:rounded-xl shadow-2xl overflow-hidden transition-all duration-500 transform border border-gray-800/50 backdrop-blur-sm hover:border-gray-700/50">
+            <div className="w-full mx-auto bg-black rounded-lg sm:rounded-xl shadow-2xl overflow-hidden transition-all duration-500 transform border-2 border-white/10">
                 {/* Header con título y efecto glassmorphism */}
-                <div className="bg-gradient-to-r from-gray-900 via-black to-gray-900 p-4 sm:p-6 flex flex-col sm:flex-row justify-between items-start sm:items-center border-b border-gray-800/50 gap-2 sm:gap-0">
-                    <h1 className="text-xl sm:text-2xl md:text-3xl font-bold flex items-center bg-clip-text text-transparent bg-gradient-to-r from-blue-400 via-blue-200 to-blue-400 animate-text">
-                        <span className="mr-2 sm:mr-3 bg-blue-500/10 text-blue-300 p-1 sm:p-2 rounded-lg border border-blue-500/20 text-sm sm:text-base shadow-lg shadow-blue-500/5 hover:shadow-blue-500/10 transition-all">ADM</span>
+                <div className="bg-black p-4 sm:p-6 flex flex-col sm:flex-row justify-between items-start sm:items-center border-b-2 border-white/10 gap-2 sm:gap-0">
+                    <h1 className="text-xl sm:text-2xl md:text-3xl font-bold flex items-center text-white">
+                        <span className="mr-2 sm:mr-3 bg-white/5 text-white p-1 sm:p-2 rounded-lg border border-white/10 text-sm sm:text-base shadow-lg transition-all">ADM</span>
                         Gestión de Configuración
                     </h1>
                 </div>
@@ -350,12 +350,12 @@ export default function ConfigManagementComponent() {
                                 onClick={() => handleTabChange(type.id)}
                                 className={`px-3 py-2 rounded-t-lg text-sm font-medium transition-all duration-300 transform hover:scale-105 ${
                                     activeTab === type.id
-                                        ? 'bg-gradient-to-r from-blue-900/50 via-blue-800/50 to-blue-900/50 text-blue-200 border-t border-l border-r border-blue-500/30 shadow-lg shadow-blue-500/20'
-                                        : 'text-gray-400 hover:text-white hover:bg-gray-900/50 hover:shadow-md'
+                                        ? 'bg-white/5 text-white border-t border-l border-r border-white/10 shadow-lg'
+                                        : 'text-gray-400 hover:text-white hover:bg-black hover:shadow-md'
                                 }`}
                             >
                                 <div className="flex items-center">
-                                    <Layers size={16} className={`mr-1.5 ${activeTab === type.id ? 'text-blue-400 animate-pulse' : ''}`} />
+                                    <Layers size={16} className={`mr-1.5 ${activeTab === type.id ? 'text-white animate-pulse' : ''}`} />
                                     {type.label}
                                 </div>
                             </button>
@@ -393,7 +393,7 @@ export default function ConfigManagementComponent() {
                                 placeholder={`Buscar ${getActiveTabLabel().toLowerCase()}...`}
                                 value={searchTerm}
                                 onChange={(e) => setSearchTerm(e.target.value)}
-                                className="w-full sm:w-64 bg-black/50 border border-gray-700 rounded-lg p-2 pl-8 focus:border-blue-500/50 focus:ring-2 focus:ring-blue-500/20 transition-all duration-300 text-sm backdrop-blur-sm group-hover:border-gray-600"
+                                className="w-full sm:w-64 bg-black border border-white/10 rounded-lg p-2 pl-8 focus:border-white/20 focus:ring-2 focus:ring-white/10 transition-all duration-300 text-sm group-hover:border-white/20"
                             />
                             <Search size={18} className="absolute left-2 top-2.5 text-gray-500 group-hover:text-gray-400 transition-colors" />
                         </div>
@@ -402,15 +402,15 @@ export default function ConfigManagementComponent() {
                         <div className="flex gap-2">
                             <button
                                 onClick={handleAdd}
-                                className="flex items-center px-4 py-2 bg-gradient-to-r from-blue-600/20 via-blue-500/20 to-blue-600/20 hover:from-blue-600/30 hover:via-blue-500/30 hover:to-blue-600/30 border border-blue-500/30 rounded-lg transition-all duration-300 text-sm transform hover:scale-105 hover:shadow-lg hover:shadow-blue-500/20 group"
+                                className="flex items-center px-4 py-2 bg-white/5 hover:bg-white/10 border border-white/10 rounded-lg transition-all duration-300 text-sm transform hover:scale-105 hover:shadow-lg group"
                             >
-                                <Plus size={16} className="mr-1.5 text-blue-400 group-hover:rotate-90 transition-transform duration-300" />
+                                <Plus size={16} className="mr-1.5 text-white group-hover:rotate-90 transition-transform duration-300" />
                                 Agregar {getActiveTabLabel()}
                             </button>
                             <button
                                 title='Recargar'
                                 onClick={fetchConfigItems}
-                                className="p-2 bg-gradient-to-r from-gray-800 via-gray-700 to-gray-800 hover:from-gray-700 hover:via-gray-600 hover:to-gray-700 rounded-lg transition-all duration-300 transform hover:scale-105 hover:shadow-lg group"
+                                className="p-2 bg-black border border-white/10 hover:bg-white/5 rounded-lg transition-all duration-300 transform hover:scale-105 hover:shadow-lg group"
                             >
                                 <RefreshCw size={16} className="text-gray-300 group-hover:rotate-180 transition-transform duration-500" />
                             </button>
@@ -419,8 +419,8 @@ export default function ConfigManagementComponent() {
 
                     {/* Formulario con efectos de glassmorphism */}
                     {formMode === 'add' && (
-                        <div className="mb-6 bg-gradient-to-br from-gray-900/50 via-black/50 to-gray-900/50 p-4 rounded-lg border border-gray-800/50 animate-fade-in backdrop-blur-sm shadow-xl hover:shadow-2xl transition-all duration-300">
-                            <h2 className="text-lg font-semibold mb-4 pb-2 border-b border-gray-800">
+                        <div className="mb-6 bg-black p-4 rounded-lg border-2 border-white/10 animate-fade-in shadow-xl hover:shadow-2xl transition-all duration-300">
+                            <h2 className="text-lg font-semibold mb-4 pb-2 border-b border-white/10">
                                 Agregar Nuevo {getActiveTabLabel()}
                             </h2>
 
@@ -441,12 +441,7 @@ export default function ConfigManagementComponent() {
                                 </div>
                                 <div className="flex items-center gap-2 mt-2">
                                     {currentItem.concepto && currentItem.concepto.trim() !== '' ? (
-                                        <span className={`inline-block px-2 py-0.5 rounded-full text-xs font-semibold flex items-center gap-1
-                                            ${activeTab === 'estatus' ? 'bg-blue-900/40 text-blue-200 border border-blue-700' :
-                                              activeTab === 'rubro' ? 'bg-green-900/40 text-green-200 border border-green-700' :
-                                              activeTab === 'formadq' ? 'bg-purple-900/40 text-purple-200 border border-purple-700' :
-                                              'bg-gray-900/40 text-gray-200 border border-gray-700'}
-                                        `}>
+                                        <span className="flex px-2 py-0.5 rounded-full text-xs font-semibold items-center gap-1 bg-white/5 text-white border border-white/20">
                                             {currentItem.concepto}
                                         </span>
                                     ) : (
@@ -487,19 +482,19 @@ export default function ConfigManagementComponent() {
                     )}
 
                     {/* Tabla con efectos mejorados */}
-                    <div className="overflow-x-auto border border-gray-800/50 rounded-lg backdrop-blur-sm shadow-xl">
-                        <table className="min-w-full divide-y divide-gray-800/50">
-                            <thead className="bg-gradient-to-r from-gray-900 via-black to-gray-900">
+                    <div className="overflow-x-auto border-2 border-white/10 rounded-lg shadow-xl [&_::-webkit-scrollbar]:w-2 [&_::-webkit-scrollbar-track]:bg-transparent [&_::-webkit-scrollbar-thumb]:bg-white/10 [&_::-webkit-scrollbar-thumb:hover]:bg-white/20">
+                        <table className="min-w-full divide-y-2 divide-white/10">
+                            <thead className="bg-black">
                                 <tr>
                                     <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
                                         {getActiveTabLabel()}
                                     </th>
-                                    <th scope="col" className="px-4 py-3 text-right text-xs font-medium text-gray-400 uppercase tracking-wider">
+                                    <th scope="col" className="px-4 py-3 text-right text-xs font-medium text-gray-400 uppercase tracking-wider w-32">
                                         Acciones
                                     </th>
                                 </tr>
                             </thead>
-                            <tbody className="bg-black/50 divide-y divide-gray-800/30">
+                            <tbody className="bg-black divide-y divide-white/10 transition-all duration-300 overflow-y-auto max-h-[600px] scroll-smooth">
                                 {loading ? (
                                     <tr>
                                         <td colSpan={3} className="px-4 py-4 text-center text-sm">
@@ -563,12 +558,7 @@ export default function ConfigManagementComponent() {
                                                     </div>
                                                 ) : (
                                                     item.concepto && item.concepto.trim() !== '' ? (
-                                                        <span className={`inline-block px-2 py-0.5 rounded-full text-xs font-semibold flex items-center gap-1
-                                                            ${item.tipo === 'estatus' ? 'bg-blue-900/40 text-blue-200 border border-blue-700' :
-                                                              item.tipo === 'rubro' ? 'bg-green-900/40 text-green-200 border border-green-700' :
-                                                              item.tipo === 'formadq' ? 'bg-purple-900/40 text-purple-200 border border-purple-700' :
-                                                              'bg-gray-900/40 text-gray-200 border border-gray-700'}
-                                                        `}>
+                                                        <span className="inline-flex px-2 py-0.5 rounded-full text-xs font-semibold items-center gap-1 bg-white/5 text-white border border-white/20 w-fit max-w-full transition-all duration-300 hover:bg-white/10">
                                                             {item.concepto}
                                                         </span>
                                                     ) : (

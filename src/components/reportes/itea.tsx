@@ -94,57 +94,57 @@ export default function ReportesIteaDashboard() {
         }
     }
 
-    // Datos de reportes ITEA con íconos y colores específicos - Usando una nueva paleta de colores
+    // Datos de reportes ITEA con íconos coloridos y fondos sutiles en escala de grises
     const reportes = [
         {
             id: 1,
             title: 'General',
             path: '/reportes/itea/general',
             icon: <Database className="h-5 w-5" />,
-            color: 'bg-gray-900/20',
-            borderColor: 'border-gray-700',
-            hoverColor: 'hover:border-gray-600',
-            iconColor: 'text-gray-400'
+            color: 'bg-gray-900/40',
+            borderColor: 'border-gray-600/50',
+            hoverColor: 'hover:border-gray-400',
+            iconColor: 'text-blue-400'
         },
         {
             id: 2,
             title: 'Activos',
             path: '/reportes/itea/activos',
             icon: <CheckCircle className="h-5 w-5" />,
-            color: 'bg-gray-900/20',
-            borderColor: 'border-gray-700',
-            hoverColor: 'hover:border-gray-600',
-            iconColor: 'text-gray-400'
+            color: 'bg-white/5',
+            borderColor: 'border-gray-700/50',
+            hoverColor: 'hover:border-gray-500',
+            iconColor: 'text-emerald-400'
         },
         {
             id: 3,
             title: 'Inactivos',
             path: '/reportes/itea/inactivos',
             icon: <UserX className="h-5 w-5" />,
-            color: 'bg-gray-900/20',
-            borderColor: 'border-gray-700',
-            hoverColor: 'hover:border-gray-600',
-            iconColor: 'text-gray-400'
+            color: 'bg-gray-800/30',
+            borderColor: 'border-gray-600/40',
+            hoverColor: 'hover:border-gray-400',
+            iconColor: 'text-amber-400'
         },
         {
             id: 4,
             title: 'No localizados',
             path: '/reportes/itea/no-localizados',
             icon: <MapPin className="h-5 w-5" />,
-            color: 'bg-gray-900/20',
-            borderColor: 'border-gray-700',
+            color: 'bg-gray-950/50',
+            borderColor: 'border-gray-800/60',
             hoverColor: 'hover:border-gray-600',
-            iconColor: 'text-gray-400'
+            iconColor: 'text-rose-400'
         },
         {
             id: 5,
             title: 'Obsoletos',
             path: '/reportes/itea/obsoletos',
             icon: <Trash2 className="h-5 w-5" />,
-            color: 'bg-gray-900/20',
-            borderColor: 'border-gray-700',
-            hoverColor: 'hover:border-gray-600',
-            iconColor: 'text-gray-400'
+            color: 'bg-white/10',
+            borderColor: 'border-gray-700/50',
+            hoverColor: 'hover:border-gray-500',
+            iconColor: 'text-violet-400'
         },
     ];
 
@@ -541,31 +541,31 @@ export default function ReportesIteaDashboard() {
                                                         });
                                                     }
                                                 }} className="space-y-3">
-                                                    <h4 className="font-medium text-amber-500 text-sm mb-2">{firma.concepto}</h4>
+                                                    <h4 className="font-medium text-violet-400 text-sm mb-2">{firma.concepto}</h4>
                                                     <div className="space-y-3">
                                                         <div>
-                                                            <label className="block text-xs font-medium text-amber-500/70 mb-1">
+                                                            <label className="block text-xs font-medium text-violet-400/70 mb-1">
                                                                 Nombre
                                                             </label>
                                                             <input
                                                                 type="text"
                                                                 name="nombre"
                                                                 defaultValue={firma.nombre || ''}
-                                                                className="w-full px-3 py-2 bg-black border border-gray-800 focus:border-amber-700/60 rounded-lg focus:outline-none focus:ring-1 focus:ring-amber-700/30 text-white text-sm transition-all"
+                                                                className="w-full px-3 py-2 bg-black border border-gray-800 focus:border-violet-700/60 rounded-lg focus:outline-none focus:ring-1 focus:ring-violet-700/30 text-white text-sm transition-all"
                                                                 autoFocus
                                                                 title="Nombre de la persona que firma"
                                                                 placeholder="Nombre completo"
                                                             />
                                                         </div>
                                                         <div>
-                                                            <label className="block text-xs font-medium text-amber-500/70 mb-1">
+                                                            <label className="block text-xs font-medium text-violet-400/70 mb-1">
                                                                 Puesto
                                                             </label>
                                                             <input
                                                                 type="text"
                                                                 name="puesto"
                                                                 defaultValue={firma.puesto || ''}
-                                                                className="w-full px-3 py-2 bg-black border border-gray-800 focus:border-amber-700/60 rounded-lg focus:outline-none focus:ring-1 focus:ring-amber-700/30 text-white text-sm transition-all"
+                                                                className="w-full px-3 py-2 bg-black border border-gray-800 focus:border-violet-700/60 rounded-lg focus:outline-none focus:ring-1 focus:ring-violet-700/30 text-white text-sm transition-all"
                                                                 title="Puesto de la persona que firma"
                                                                 placeholder="Cargo o puesto"
                                                             />
@@ -581,7 +581,7 @@ export default function ReportesIteaDashboard() {
                                                         </button>
                                                         <button
                                                             type="submit"
-                                                            className="px-3 py-1.5 bg-gradient-to-r from-amber-800 to-amber-700 hover:from-amber-700 hover:to-amber-600 rounded-md text-white text-xs font-medium transition-all focus:outline-none"
+                                                            className="px-3 py-1.5 bg-gradient-to-r from-violet-800 to-violet-700 hover:from-violet-700 hover:to-violet-600 rounded-md text-white text-xs font-medium transition-all focus:outline-none"
                                                         >
                                                             Guardar
                                                         </button>
@@ -590,13 +590,13 @@ export default function ReportesIteaDashboard() {
                                             ) : (
                                                 <div className="flex justify-between items-start">
                                                     <div>
-                                                        <h4 className="font-medium text-amber-500 text-sm">{firma.concepto}</h4>
+                                                        <h4 className="font-medium text-violet-400 text-sm">{firma.concepto}</h4>
                                                         <p className="text-white text-sm mt-1.5">{firma.nombre || 'Sin asignar'}</p>
                                                         <p className="text-gray-500 text-xs mt-0.5">{firma.puesto || 'Sin asignar'}</p>
                                                     </div>
                                                     <button
                                                         onClick={() => setEditingFirma(firma)}
-                                                        className="p-1.5 rounded-md bg-black opacity-0 group-hover:opacity-100 text-gray-500 hover:text-amber-500 transition-all border border-gray-800 hover:border-amber-700/30 focus:outline-none"
+                                                        className="p-1.5 rounded-md bg-black opacity-0 group-hover:opacity-100 text-gray-500 hover:text-violet-400 transition-all border border-gray-800 hover:border-violet-700/30 focus:outline-none"
                                                         title="Editar firma"
                                                     >
                                                         <Pencil className="h-3.5 w-3.5" />

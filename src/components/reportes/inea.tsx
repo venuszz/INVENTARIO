@@ -119,57 +119,57 @@ export default function ReportesIneaDashboard() {
         }
     }
 
-    // Datos de reportes INEA con íconos y colores específicos - Usando una paleta de rosas
+    // Datos de reportes INEA con íconos coloridos y fondos sutiles en escala de grises
     const reportes = [
         {
             id: 1,
             title: 'General',
             path: '/reportes/inea/general',
             icon: <Database className="h-5 w-5" />,
-            color: 'bg-gray-900/20',
-            borderColor: 'border-gray-700',
-            hoverColor: 'hover:border-gray-600',
-            iconColor: 'text-gray-400'
+            color: 'bg-gray-900/40',
+            borderColor: 'border-gray-600/50',
+            hoverColor: 'hover:border-gray-400',
+            iconColor: 'text-blue-400'
         },
         {
             id: 2,
             title: 'En Uso*',
             path: '/reportes/inea/en-uso-asterisk',
             icon: <CheckCircle className="h-5 w-5" />,
-            color: 'bg-gray-900/20',
-            borderColor: 'border-gray-700',
-            hoverColor: 'hover:border-gray-600',
-            iconColor: 'text-gray-400'
+            color: 'bg-white/5',
+            borderColor: 'border-gray-700/50',
+            hoverColor: 'hover:border-gray-500',
+            iconColor: 'text-emerald-400'
         },
         {
             id: 3,
             title: 'Sin Uso e Integrado PADFBM',
             path: '/reportes/inea/integrado',
             icon: <ListChecks className="h-5 w-5" />,
-            color: 'bg-gray-900/20',
-            borderColor: 'border-gray-700',
-            hoverColor: 'hover:border-gray-600',
-            iconColor: 'text-gray-400'
+            color: 'bg-gray-800/30',
+            borderColor: 'border-gray-600/40',
+            hoverColor: 'hover:border-gray-400',
+            iconColor: 'text-amber-400'
         },
         {
             id: 4,
             title: 'Sin Uso y No Integrado PADFBM',
             path: '/reportes/inea/no-integrado',
             icon: <AlertCircle className="h-5 w-5" />,
-            color: 'bg-gray-900/20',
-            borderColor: 'border-gray-700',
+            color: 'bg-gray-950/50',
+            borderColor: 'border-gray-800/60',
             hoverColor: 'hover:border-gray-600',
-            iconColor: 'text-gray-400'
+            iconColor: 'text-rose-400'
         },
         {
             id: 5,
             title: 'En Uso',
             path: '/reportes/inea/en-uso',
             icon: <CheckCircle className="h-5 w-5" />,
-            color: 'bg-gray-900/20',
-            borderColor: 'border-gray-700',
-            hoverColor: 'hover:border-gray-600',
-            iconColor: 'text-gray-400'
+            color: 'bg-white/10',
+            borderColor: 'border-gray-700/50',
+            hoverColor: 'hover:border-gray-500',
+            iconColor: 'text-violet-400'
         }
     ];
 

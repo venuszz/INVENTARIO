@@ -379,12 +379,12 @@ export default function DirectorioManagementComponent() {
     const handleCloseMessage = () => setMessage({ type: '', text: '' });
 
     return (
-        <div className="bg-black text-white min-h-screen p-2 sm:p-4 md:p-6 lg:p-8 animate-gradient-x">
-            <div className="w-full mx-auto bg-black/50 rounded-lg sm:rounded-xl shadow-2xl overflow-hidden transition-all duration-500 transform border border-gray-800/50 backdrop-blur-sm hover:border-gray-700/50">
+        <div className="bg-black text-white min-h-screen p-2 sm:p-4 md:p-6 lg:p-8">
+            <div className="w-full mx-auto bg-black rounded-lg sm:rounded-xl shadow-2xl overflow-hidden transition-all duration-500 transform border-2 border-white/10">
                 {/* Header con título y efecto glassmorphism */}
-                <div className="bg-gradient-to-r from-gray-900 via-black to-gray-900 p-4 sm:p-6 flex flex-col sm:flex-row justify-between items-start sm:items-center border-b border-gray-800/50 gap-2 sm:gap-0">
-                    <h1 className="text-xl sm:text-2xl md:text-3xl font-bold flex items-center bg-clip-text text-transparent bg-gradient-to-r from-emerald-400 via-emerald-200 to-emerald-400 animate-text">
-                        <span className="mr-2 sm:mr-3 bg-emerald-500/10 text-emerald-300 p-1 sm:p-2 rounded-lg border border-emerald-500/20 text-sm sm:text-base shadow-lg shadow-emerald-500/5 hover:shadow-emerald-500/10 transition-all">DIR</span>
+                <div className="bg-black p-4 sm:p-6 flex flex-col sm:flex-row justify-between items-start sm:items-center border-b-2 border-white/10 gap-2 sm:gap-0">
+                    <h1 className="text-xl sm:text-2xl md:text-3xl font-bold flex items-center text-white">
+                        <span className="mr-2 sm:mr-3 bg-black p-1 sm:p-2 rounded-lg border-2 border-white/10 text-sm sm:text-base shadow-lg transition-all">DIR</span>
                         Directorio de Personal Autorizado
                     </h1>
                 </div>
@@ -419,17 +419,17 @@ export default function DirectorioManagementComponent() {
                                 placeholder="Buscar personal autorizado..."
                                 value={searchTerm}
                                 onChange={(e) => setSearchTerm(e.target.value)}
-                                className="w-full sm:w-64 bg-black/50 border border-gray-700 rounded-lg p-2 pl-8 focus:border-emerald-500/50 focus:ring-2 focus:ring-emerald-500/20 transition-all duration-300 text-sm backdrop-blur-sm group-hover:border-gray-600"
+                                className="w-full sm:w-64 bg-black border-2 border-white/10 rounded-lg p-2 pl-8 focus:border-white/20 focus:ring-2 focus:ring-white/10 transition-all duration-300 text-sm group-hover:border-white/20"
                             />
                             <Search size={18} className="absolute left-2 top-2.5 text-gray-500 group-hover:text-gray-400 transition-colors" />
                         </div>
 
-                        {/* Botones con gradientes y efectos hover */}
+                        {/* Botones con efectos hover */}
                         <div className="flex gap-2">
                             <button
                                 onClick={handleAddNew}
                                 disabled={isAddingNew}
-                                className="flex items-center px-4 py-2 bg-gradient-to-r from-emerald-600/20 via-emerald-500/20 to-emerald-600/20 hover:from-emerald-600/30 hover:via-emerald-500/30 hover:to-emerald-600/30 border border-emerald-500/30 rounded-lg transition-all duration-300 text-sm transform hover:scale-105 hover:shadow-lg hover:shadow-emerald-500/20 group disabled:opacity-50"
+                                className="flex items-center px-4 py-2 bg-black border-2 border-white/10 rounded-lg transition-all duration-300 text-sm transform hover:scale-105 hover:bg-white/5 group disabled:opacity-50"
                             >
                                 <Plus size={16} className="mr-1.5 text-emerald-400 group-hover:rotate-90 transition-transform duration-300" />
                                 Agregar Personal
@@ -437,7 +437,7 @@ export default function DirectorioManagementComponent() {
                             <button
                                 title="Recargar datos"
                                 onClick={fetchDirectorio}
-                                className="p-2 bg-gradient-to-r from-gray-800 via-gray-700 to-gray-800 hover:from-gray-700 hover:via-gray-600 hover:to-gray-700 rounded-lg transition-all duration-300 transform hover:scale-105 hover:shadow-lg group"
+                                className="p-2 bg-black border-2 border-white/10 rounded-lg transition-all duration-300 transform hover:scale-105 hover:bg-white/5 group"
                             >
                                 <RefreshCw size={16} className="text-gray-300 group-hover:rotate-180 transition-transform duration-500" />
                             </button>
@@ -445,9 +445,9 @@ export default function DirectorioManagementComponent() {
                     </div>
 
                     {/* Tabla mejorada con efectos */}
-                    <div className="overflow-x-auto border border-gray-800/50 rounded-lg backdrop-blur-sm shadow-xl">
-                        <table className="min-w-full divide-y divide-gray-800/50">
-                            <thead className="bg-gradient-to-r from-gray-900 via-black to-gray-900">
+                    <div className="overflow-x-auto border-2 border-white/10 rounded-lg shadow-xl">
+                        <table className="min-w-full divide-y-2 divide-white/10">
+                            <thead className="bg-black">
                                 <tr>
                                     {/* Eliminamos la columna ID */}
                                     <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
@@ -485,7 +485,7 @@ export default function DirectorioManagementComponent() {
                                                 {selectedAreas.map(id_area => {
                                                     const areaObj = areas.find(a => a.id_area === id_area);
                                                     return areaObj ? (
-                                                        <span key={id_area} className="inline-block bg-emerald-900/40 text-emerald-200 border border-emerald-700 rounded-full px-2 py-0.5 text-xs font-semibold flex items-center gap-1">
+                                                        <span key={id_area} className="flex items-center gap-1 bg-emerald-900/40 text-emerald-200 border border-emerald-700 rounded-full px-2 py-0.5 text-xs font-semibold">
                                                             {areaObj.nombre}
                                                             <button
                                                                 type="button"
@@ -528,7 +528,7 @@ export default function DirectorioManagementComponent() {
                                         {/* Puesto como chip azul o aviso si no hay */}
                                         <td className="px-4 py-2 text-sm">
                                             {newEmployee.puesto && newEmployee.puesto.trim() !== '' ? (
-                                                <span className="inline-block bg-blue-900/40 text-blue-200 border border-blue-700 rounded-full px-2 py-0.5 text-xs font-semibold flex items-center gap-1">
+                                                <span className="flex items-center gap-1 bg-slate-600/20 text-slate-300 border border-slate-500/50 rounded-full px-2 py-0.5 text-xs font-semibold">
                                                     {newEmployee.puesto}
                                                 </span>
                                             ) : (
@@ -603,7 +603,7 @@ export default function DirectorioManagementComponent() {
                                                             {editSelectedAreas.map(id_area => {
                                                                 const areaObj = areas.find(a => a.id_area === id_area);
                                                                 return areaObj ? (
-                                                                    <span key={id_area} className="inline-block bg-emerald-900/40 text-emerald-200 border border-emerald-700 rounded-full px-2 py-0.5 text-xs font-semibold flex items-center gap-1">
+                                                                    <span key={id_area} className="flex items-center gap-1 bg-emerald-900/40 text-emerald-200 border border-emerald-700 rounded-full px-2 py-0.5 text-xs font-semibold">
                                                                         {areaObj.nombre}
                                                                         <button
                                                                             type="button"
@@ -646,7 +646,7 @@ export default function DirectorioManagementComponent() {
                                                     {/* Puesto como chip azul o aviso si no hay */}
                                                     <td className="px-4 py-2 text-sm">
                                                         {editEmployee.puesto && editEmployee.puesto.trim() !== '' ? (
-                                                            <span className="inline-block bg-blue-900/40 text-blue-200 border border-blue-700 rounded-full px-2 py-0.5 text-xs font-semibold flex items-center gap-1">
+                                                            <span className="flex items-center gap-1 bg-slate-600/20 text-slate-300 border border-slate-500/50 rounded-full px-2 py-0.5 text-xs font-semibold">
                                                                 {editEmployee.puesto}
                                                             </span>
                                                         ) : (
@@ -734,7 +734,7 @@ export default function DirectorioManagementComponent() {
                                                     {/* Puesto como chip azul o aviso si no hay */}
                                                     <td className={`px-4 py-3 text-sm ${!employee.puesto || employee.puesto.trim() === '' ? '' : ''}`}>
                                                         {employee.puesto && employee.puesto.trim() !== '' ? (
-                                                            <span className="inline-block bg-blue-900/40 text-blue-200 border border-blue-700 rounded-full px-2 py-0.5 text-xs font-semibold flex items-center gap-1">
+                                                            <span className="flex items-center gap-1 bg-slate-600/20 text-slate-300 border border-slate-500/50 rounded-full px-2 py-0.5 text-xs font-semibold">
                                                                 {employee.puesto}
                                                             </span>
                                                         ) : (
@@ -775,14 +775,14 @@ export default function DirectorioManagementComponent() {
 
                     {/* Error message con estilo mejorado */}
                     {error && (
-                        <div className="mt-3 text-red-400 text-sm bg-gradient-to-r from-red-900/20 via-red-800/20 to-red-900/20 p-3 rounded-lg border border-red-500/30 backdrop-blur-sm animate-fade-in">
+                        <div className="mt-3 text-white text-sm bg-black p-3 rounded-lg border-2 border-white/10 animate-fade-in">
                             <AlertTriangle size={16} className="inline-block mr-2 mb-1" />
                             {error}
                         </div>
                     )}
 
                     {/* Contador de resultados con estilo mejorado */}
-                    <div className="mt-4 text-sm text-gray-400 bg-gray-900/30 p-2 rounded-lg border border-gray-800/30 backdrop-blur-sm">
+                    <div className="mt-4 text-sm text-white bg-black p-2 rounded-lg border-2 border-white/10">
                         Mostrando {filteredDirectorio.length} de {directorio.length} empleados en el directorio
                     </div>
                 </div>
@@ -842,7 +842,7 @@ function AreaChips({ areaIds, areas }: { areaIds: number[], areas: { id_area: nu
     return (
         <>
             {chips.map(area => (
-                <span key={area.id_area} className="flex bg-emerald-900/40 text-emerald-200 border border-emerald-700 rounded-full px-2 py-0.5 text-xs font-semibold items-center gap-1">
+                <span key={area.id_area} className="flex bg-white/5 text-white border border-white/20 rounded-full px-2 py-0.5 text-xs font-semibold items-center gap-1">
                     {area.nombre}
                 </span>
             ))}
