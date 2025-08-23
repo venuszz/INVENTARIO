@@ -976,13 +976,13 @@ export default function ConsultasIneaGeneral() {
     // --- OMNIBOX AUTOCOMPLETADO Y SUGERENCIAS ---
     function getTypeIcon(type: ActiveFilter['type']) {
         switch (type) {
-            case 'id': return <span className="h-4 w-4 text-blue-400 font-bold">#</span>;
-            case 'area': return <span className="h-4 w-4 text-purple-400 font-bold">A</span>;
+            case 'id': return <span className="h-4 w-4 text-white font-bold">#</span>;
+            case 'area': return <span className="h-4 w-4 text-white font-bold">A</span>;
             case 'usufinal': return <span className="h-4 w-4 text-amber-400 font-bold">D</span>;
-            case 'resguardante': return <span className="h-4 w-4 text-cyan-400 font-bold">R</span>;
+            case 'resguardante': return <span className="h-4 w-4 text-white font-bold">R</span>;
             case 'descripcion': return <span className="h-4 w-4 text-fuchsia-400 font-bold">Desc</span>;
             case 'rubro': return <span className="h-4 w-4 text-green-400 font-bold">Ru</span>;
-            case 'estado': return <span className="h-4 w-4 text-cyan-400 font-bold">Edo</span>;
+            case 'estado': return <span className="h-4 w-4 text-white font-bold">Edo</span>;
             case 'estatus': return <span className="h-4 w-4 text-pink-400 font-bold">Est</span>;
             default: return null;
         }
@@ -1245,26 +1245,26 @@ export default function ConsultasIneaGeneral() {
                 </div>
 
                 {/* Nuevo componente de valor total */}
-                <div className="bg-gradient-to-b from-gray-900 via-black to-black p-8 border-b border-gray-800">
+                <div className="bg-black p-8 border-b border-gray-800">
                     <div className="flex flex-col lg:flex-row justify-between items-stretch gap-6">
                         {/* Panel de valor total */}
                         <div className="flex-grow">
-                            <div className="group relative overflow-hidden bg-gradient-to-br from-indigo-950/30 via-purple-900/20 to-gray-900/30 p-6 rounded-2xl border border-indigo-800/30 hover:border-indigo-700/50 transition-all duration-500 hover:shadow-lg hover:shadow-indigo-500/10">
-                                <div className="absolute inset-0 bg-gradient-to-r from-indigo-500/5 via-purple-500/5 to-pink-500/5 opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
+                            <div className="group relative overflow-hidden bg-black p-6 rounded-2xl border-2 border-white/10 hover:border-white/20 transition-all duration-500">
+                                <div className="absolute inset-0 bg-white/5 opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
                                 <div className="flex items-start gap-6">
                                     <div className="relative">
-                                        <div className="absolute inset-0 bg-gradient-to-br from-indigo-500/20 via-purple-500/20 to-pink-500/20 blur-xl"></div>
-                                        <div className="relative p-4 bg-gradient-to-br from-indigo-500/20 via-purple-500/20 to-pink-500/20 rounded-xl border border-white/10 transform group-hover:scale-110 transition-all duration-500">
+                                        <div className="absolute inset-0 bg-white/10 blur-xl"></div>
+                                        <div className="relative p-4 bg-black rounded-xl border border-white/10 transform group-hover:scale-110 transition-all duration-500">
                                             <DollarSign className="h-8 w-8 text-white/90" />
                                         </div>
                                     </div>
                                     <div className="flex flex-col">
-                                        <h3 className="text-sm font-medium text-gray-400 mb-1 group-hover:text-indigo-300 transition-colors">Valor Total del Inventario</h3>
+                                        <h3 className="text-sm font-medium text-gray-400 mb-1 group-hover:text-white transition-colors">Valor Total del Inventario</h3>
                                         <div className="relative">
-                                            <p className="text-4xl font-bold bg-gradient-to-r from-indigo-200 via-purple-200 to-pink-200 bg-clip-text text-transparent group-hover:from-indigo-300 group-hover:via-purple-300 group-hover:to-pink-300 transition-all duration-500">
+                                            <p className="text-4xl font-bold text-white">
                                                 ${(activeFilters.length > 0 || searchTerm ? filteredValue : allValue).toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                                             </p>
-                                            <div className="absolute -bottom-2 left-0 w-full h-px bg-gradient-to-r from-indigo-500/50 via-purple-500/50 to-pink-500/50"></div>
+                                            <div className="absolute -bottom-2 left-0 w-full h-px bg-white/30"></div>
                                         </div>
                                         <p className="text-sm text-gray-500 mt-2 group-hover:text-gray-400 transition-colors">
                                             {activeFilters.length > 0 || searchTerm ? 'Valor de artículos filtrados' : 'Valor total de todos los artículos'}
@@ -1276,12 +1276,12 @@ export default function ConsultasIneaGeneral() {
 
                         {/* Panel de conteo */}
                         <div className="flex-shrink-0">
-                            <div className="group bg-gradient-to-br from-emerald-950/30 via-teal-900/20 to-gray-900/30 p-6 rounded-2xl border border-emerald-800/30 hover:border-emerald-700/50 transition-all duration-500">
+                            <div className="group bg-black/30 p-6 rounded-2xl border border-white/20 hover:border-white/40 transition-all duration-500">
                                 <div className="text-center">
-                                    <p className="text-sm text-gray-400 mb-2 group-hover:text-emerald-300 transition-colors">Artículos Registrados</p>
+                                    <p className="text-sm text-gray-400 mb-2 group-hover:text-white transition-colors">Artículos Registrados</p>
                                     <div className="relative">
-                                        <div className="absolute inset-0 bg-gradient-to-r from-emerald-500/10 via-teal-500/10 to-cyan-500/10 opacity-0 group-hover:opacity-100 transition-opacity duration-500 rounded-xl"></div>
-                                        <span className="relative text-3xl font-bold bg-gradient-to-r from-emerald-200 via-teal-200 to-cyan-200 bg-clip-text text-transparent group-hover:from-emerald-300 group-hover:via-teal-300 group-hover:to-cyan-300 transition-all duration-500 px-6 py-3">
+                                        <div className="absolute inset-0 bg-white/5 opacity-0 group-hover:opacity-100 transition-opacity duration-500 rounded-xl"></div>
+                                        <span className="relative text-3xl font-bold text-white/90 group-hover:text-white transition-all duration-500 px-6 py-3">
                                             {activeFilters.length > 0 || searchTerm ? filteredMueblesOmni.length : muebles.length}
                                         </span>
                                     </div>
@@ -1296,7 +1296,7 @@ export default function ConsultasIneaGeneral() {
                     {/* Panel izquierdo: Búsqueda, filtros y tabla */}
                     <div className={`flex-1 min-w-0 flex flex-col ${selectedItem ? '' : 'w-full'}`}>
                         {/* Panel de acciones y búsqueda omnibox */}
-                        <div className="mb-6 bg-gradient-to-br from-gray-900/20 to-gray-900/40 p-4 rounded-xl border border-gray-800 shadow-inner hover:shadow-lg transition-shadow">
+                        <div className="mb-6 bg-black/30 p-4 rounded-xl border border-white/20 shadow-inner hover:shadow-lg transition-shadow">
                             <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-4 mb-4">
                                 <div className="flex-1 relative">
                                     <div className="flex gap-2">
@@ -1318,7 +1318,7 @@ export default function ConsultasIneaGeneral() {
                                             onClick={saveCurrentFilter}
                                             disabled={!searchTerm || !searchMatchType}
                                             className={`px-4 py-2 rounded-lg border flex items-center gap-2 ${searchTerm && searchMatchType
-                                                    ? 'bg-blue-600 hover:bg-blue-700 border-blue-500 text-white'
+                                                    ? 'bg-white/20 hover:bg-white/30 border-white/40 text-white'
                                                     : 'bg-gray-800/50 border-gray-700 text-gray-500 cursor-not-allowed'
                                                 } transition-all duration-200 hover:scale-105`}
                                             title="Agregar filtro actual a la lista de filtros activos"
@@ -1332,7 +1332,7 @@ export default function ConsultasIneaGeneral() {
                                             {activeFilters.map((filter, index) => {
                                                 let colorClass = '';
                                                 switch (filter.type) {
-                                                    case 'id': colorClass = 'from-blue-900/80 via-blue-800/80 to-blue-700/80 border-blue-700/60 text-blue-200'; break;
+                                                    case 'id': colorClass = 'bg-white/10 border-white/30 text-white'; break;
                                                     case 'area': colorClass = 'from-purple-900/80 via-purple-800/80 to-purple-700/80 border-purple-700/60 text-purple-200'; break;
                                                     case 'usufinal': colorClass = 'from-amber-900/80 via-amber-800/80 to-amber-700/80 border-amber-700/60 text-amber-200'; break;
                                                     case 'resguardante': colorClass = 'from-cyan-900/80 via-cyan-800/80 to-cyan-700/80 border-cyan-700/60 text-cyan-200'; break;
@@ -1363,7 +1363,7 @@ export default function ConsultasIneaGeneral() {
                                             {activeFilters.length > 1 && (
                                                 <button
                                                     onClick={clearAllFilters}
-                                                    className="inline-flex items-center px-2 py-1 rounded-full bg-gradient-to-r from-gray-800 via-gray-700 to-gray-900 border border-gray-600 text-gray-300 text-xs font-semibold ml-2 hover:bg-gray-700/80 transition-all duration-200"
+                                                    className="inline-flex items-center px-2 py-1 rounded-full bg-black/30 border border-white/20 text-white/80 text-xs font-semibold ml-2 hover:bg-white/10 hover:border-white/30 transition-all duration-200"
                                                     title="Limpiar todos los filtros"
                                                 >
                                                     <X className="h-3 w-3 mr-1" /> Limpiar
@@ -1375,7 +1375,7 @@ export default function ConsultasIneaGeneral() {
                                 <div className="flex items-center gap-2 mt-4 md:mt-0">
                                     <button
                                         onClick={fetchMuebles}
-                                        className="px-4 py-2 rounded-lg border border-blue-700 bg-blue-900/80 text-blue-200 hover:bg-blue-800 hover:text-white transition-all duration-200 flex items-center gap-2 shadow-md"
+                                        className="px-4 py-2 rounded-lg border border-white/30 bg-white/10 text-white hover:bg-white/20 transition-all duration-200 flex items-center gap-2 shadow-md"
                                         title="Actualizar datos"
                                     >
                                         <RefreshCw className="h-4 w-4 animate-spin-slow" />
@@ -1471,7 +1471,7 @@ export default function ConsultasIneaGeneral() {
                                                                 </p>
                                                                 <button
                                                                     onClick={clearFilters}
-                                                                    className="px-4 py-2 bg-gray-800 text-blue-400 rounded-md text-sm hover:bg-gray-700 transition-colors flex items-center gap-2"
+                                                                    className="px-4 py-2 bg-white/10 text-white rounded-md text-sm hover:bg-white/20 transition-colors flex items-center gap-2"
                                                                 >
                                                                     <X className="h-4 w-4" />
                                                                     Limpiar filtros
@@ -1490,7 +1490,7 @@ export default function ConsultasIneaGeneral() {
                                                     <tr
                                                         key={item.id}
                                                         onClick={() => handleSelectItem(item)}
-                                                        className={`hover:bg-gray-800 cursor-pointer transition-colors ${selectedItem?.id === item.id ? 'bg-blue-900/20 border-l-4 border-blue-600' : ''}`}
+                                                        className={`hover:bg-gray-800 cursor-pointer transition-colors ${selectedItem?.id === item.id ? 'bg-blue-900/20 border-l-4 border-white' : ''}`}
                                                     >
                                                         <td className="px-4 py-3 whitespace-nowrap text-sm font-medium text-white">
                                                             {item.id_inv}
@@ -1526,20 +1526,20 @@ export default function ConsultasIneaGeneral() {
                                                             {folio ? (
                                                                 <div className="relative">
                                                                     <button
-                                                                        className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full font-bold bg-gradient-to-r from-blue-900/60 to-blue-700/60 text-blue-200 border border-blue-700 hover:from-blue-800 hover:to-blue-600 hover:text-white shadow-sm hover:scale-105 transition-all duration-200"
+                                                                        className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full font-bold bg-white/10 text-white border border-white/30 hover:bg-white/20 shadow-sm hover:scale-105 transition-all duration-200"
                                                                         title={`Ver resguardo ${folio}`}
                                                                         onClick={e => {
                                                                             e.stopPropagation();
                                                                             window.location.href = `/resguardos/consultar?folio=${folio}`;
                                                                         }}
                                                                     >
-                                                                        <BadgeCheck className="h-4 w-4 mr-1 text-blue-300" />
+                                                                        <BadgeCheck className="h-4 w-4 mr-1 text-white/80" />
                                                                         {folio}
                                                                     </button>
                                                                 </div>
                                                             ) : (
                                                                 <div className="relative">
-                                                                    <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full font-bold bg-gradient-to-r from-gray-800/60 to-gray-700/60 text-gray-400 border border-gray-700 shadow-sm cursor-default select-none">
+                                                                    <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full font-bold bg-black/30 text-white/80 border border-white/20 shadow-sm cursor-default select-none">
                                                                         <XCircle className="h-4 w-4 mr-1 text-gray-400" />
                                                                         Sin resguardo
                                                                     </span>
@@ -1566,7 +1566,7 @@ export default function ConsultasIneaGeneral() {
                                     ) : (
                                         <div className="flex items-center gap-2">
                                             <span className="text-neutral-300">Mostrando</span>
-                                            <span className="px-2 py-0.5 rounded-lg bg-blue-900/30 text-blue-300 font-mono border border-blue-800/50">
+                                            <span className="px-2 py-0.5 rounded-lg bg-white/10 text-white font-mono border border-white/30">
                                                 {((currentPage - 1) * rowsPerPage) + 1}–{Math.min(currentPage * rowsPerPage, totalCount)}
                                             </span>
                                             <span className="text-neutral-300">de</span>
@@ -1581,7 +1581,7 @@ export default function ConsultasIneaGeneral() {
                                                 id="rows-per-page"
                                                 value={rowsPerPage}
                                                 onChange={e => { setRowsPerPage(Number(e.target.value)); setCurrentPage(1); }}
-                                                className="ml-1 px-2 py-1 rounded-lg bg-neutral-900 border border-neutral-700 text-blue-300 font-mono text-xs focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition"
+                                                className="ml-1 px-2 py-1 rounded-lg bg-black/30 border border-white/20 text-white font-mono text-xs focus:outline-none focus:ring-2 focus:ring-white/50 focus:border-white/50 transition"
                                             >
                                                 {[10, 20, 30, 50, 100].map(opt => (
                                                     <option key={opt} value={opt}>{opt}</option>
@@ -1595,7 +1595,7 @@ export default function ConsultasIneaGeneral() {
                                     <div className="flex items-center gap-2 bg-neutral-900/50 px-4 py-2 rounded-xl border border-neutral-800 shadow-inner">
                                         <span className="text-neutral-400">Página</span>
                                         <div className="flex items-center gap-1.5">
-                                            <span className="px-2.5 py-0.5 rounded-lg bg-blue-900/40 text-blue-300 font-mono font-bold border border-blue-700/50 min-w-[2rem] text-center transition-all duration-300 hover:scale-105 hover:bg-blue-900/60">
+                                            <span className="px-2.5 py-0.5 rounded-lg bg-white/10 text-white font-mono font-bold border border-white/30 min-w-[2rem] text-center transition-all duration-300 hover:scale-105 hover:bg-white/20">
                                                 {currentPage}
                                             </span>
                                             <span className="text-neutral-500">/</span>
@@ -1649,8 +1649,8 @@ export default function ConsultasIneaGeneral() {
                                                     onClick={() => changePage(i)}
                                                     className={`mx-0.5 px-3 py-1.5 rounded-lg border text-sm font-semibold transition
                                                     ${i === currentPage
-                                                        ? 'bg-blue-900/80 text-blue-300 border-blue-700 shadow'
-                                                        : 'bg-neutral-900 text-neutral-300 border-neutral-700 hover:bg-blue-900/40 hover:text-blue-200 hover:border-blue-600'}
+                                                        ? 'bg-white/20 text-white border-white/40 shadow'
+                                                        : 'bg-black/30 text-white/80 border-white/20 hover:bg-white/10 hover:text-white hover:border-white/30'}
                                             `}
                                                     aria-current={i === currentPage ? 'page' : undefined}
                                                 >
@@ -1695,14 +1695,14 @@ export default function ConsultasIneaGeneral() {
                         >
                             <div className="sticky top-0 z-10 bg-black border-b border-gray-800 px-6 py-4 flex justify-between items-center">
                                 <h2 className="text-xl font-semibold text-white flex items-center gap-2">
-                                    <ClipboardList className="h-5 w-5 text-blue-400" />
+                                    <ClipboardList className="h-5 w-5 text-white/80" />
                                     Detalle del Artículo
                                 </h2>
                                 <button
                                     type="button"
                                     onClick={closeDetail}
                                     title="Cerrar detalle"
-                                    className="text-gray-400 hover:text-white rounded-full p-2 focus:outline-none focus:ring-2 focus:ring-blue-500 hover:bg-gray-800 transition-colors"
+                                    className="text-gray-400 hover:text-white rounded-full p-2 focus:outline-none focus:ring-2 focus:ring-white hover:bg-gray-800 transition-colors"
                                 >
                                     <X className="h-5 w-5" />
                                 </button>
@@ -2056,14 +2056,14 @@ export default function ConsultasIneaGeneral() {
                                             const detalleResguardo = folio ? resguardoDetalles[folio] : undefined;
                                             if (folio && detalleResguardo) {
                                                 return (
-                                                    <div className="flex flex-wrap items-center gap-2 bg-blue-950/60 border border-blue-900 rounded-lg px-4 py-2 mb-4 text-xs text-blue-200 font-mono shadow-sm overflow-hidden break-words min-w-0">
-                                                        <span className="font-bold text-blue-300">Folio:</span> <span className="truncate break-words min-w-0">{detalleResguardo.folio}</span>
-                                                        <span className="mx-2 text-blue-400">|</span>
-                                                        <span className="font-bold text-blue-300">Fecha:</span> <span className="truncate break-words min-w-0">{formatDate(detalleResguardo.f_resguardo)}</span>
-                                                        <span className="mx-2 text-blue-400">|</span>
-                                                        <span className="font-bold text-blue-300">Área:</span> <span className="truncate break-words min-w-0">{detalleResguardo.area_resguardo}</span>
-                                                        <span className="mx-2 text-blue-400">|</span>
-                                                        <span className="font-bold text-blue-300">Director:</span> <span className="truncate break-words min-w-0">{detalleResguardo.dir_area}</span>
+                                                    <div className="flex flex-wrap items-center gap-2 bg-white/10 border border-white/30 rounded-lg px-4 py-2 mb-4 text-xs text-white font-mono shadow-sm overflow-hidden break-words min-w-0">
+                                                        <span className="font-bold text-white">Folio:</span> <span className="truncate break-words min-w-0">{detalleResguardo.folio}</span>
+                                                        <span className="mx-2 text-white/60">|</span>
+                                                        <span className="font-bold text-white">Fecha:</span> <span className="truncate break-words min-w-0">{formatDate(detalleResguardo.f_resguardo)}</span>
+                                                        <span className="mx-2 text-white/60">|</span>
+                                                        <span className="font-bold text-white">Área:</span> <span className="truncate break-words min-w-0">{detalleResguardo.area_resguardo}</span>
+                                                        <span className="mx-2 text-white/60">|</span>
+                                                        <span className="font-bold text-white">Director:</span> <span className="truncate break-words min-w-0">{detalleResguardo.dir_area}</span>
                                                     </div>
                                                 );
                                             } else {
@@ -2100,7 +2100,7 @@ export default function ConsultasIneaGeneral() {
                                             <div className="detail-card bg-gray-800/50 rounded-lg p-4 hover:bg-gray-800/80 transition-all">
                                                 <h3 className="text-xs font-medium uppercase tracking-wider text-gray-400">Fecha de Adquisición</h3>
                                                 <p className="mt-2 text-white flex items-center gap-2">
-                                                    <Calendar className="h-4 w-4 text-blue-400" />
+                                                    <Calendar className="h-4 w-4 text-white" />
                                                     {formatDate(selectedItem.f_adq) || 'No especificado'}
                                                 </p>
                                             </div>
@@ -2111,14 +2111,14 @@ export default function ConsultasIneaGeneral() {
                                             <div className="detail-card bg-gray-800/50 rounded-lg p-4 hover:bg-gray-800/80 transition-all">
                                                 <h3 className="text-xs font-medium uppercase tracking-wider text-gray-400">Proveedor</h3>
                                                 <p className="mt-2 text-white flex items-center gap-2">
-                                                    <Store className="h-4 w-4 text-blue-400" />
+                                                    <Store className="h-4 w-4 text-white" />
                                                     {selectedItem.proveedor || 'No especificado'}
                                                 </p>
                                             </div>
                                             <div className="detail-card bg-gray-800/50 rounded-lg p-4 hover:bg-gray-800/80 transition-all">
                                                 <h3 className="text-xs font-medium uppercase tracking-wider text-gray-400">Factura</h3>
                                                 <p className="mt-2 text-white flex items-center gap-2">
-                                                    <Receipt className="h-4 w-4 text-blue-400" />
+                                                    <Receipt className="h-4 w-4 text-white" />
                                                     {selectedItem.factura || 'No especificado'}
                                                 </p>
                                             </div>
@@ -2156,14 +2156,14 @@ export default function ConsultasIneaGeneral() {
                                             <div className="detail-card bg-gray-800/50 rounded-lg p-4 hover:bg-gray-800/80 transition-all">
                                                 <h3 className="text-xs font-medium uppercase tracking-wider text-gray-400">Director/Jefe de Área</h3>
                                                 <p className="mt-2 text-white flex items-center gap-2">
-                                                    <User className="h-4 w-4 text-blue-400" />
+                                                    <User className="h-4 w-4 text-white" />
                                                     {selectedItem.usufinal || 'No especificado'}
                                                 </p>
                                             </div>
                                             <div className="detail-card bg-gray-800/50 rounded-lg p-4 hover:bg-gray-800/80 transition-all">
                                                 <h3 className="text-xs font-medium uppercase tracking-wider text-gray-400">Usuario Final</h3>
                                                 <p className="mt-2 text-white flex items-center gap-2">
-                                                    <Shield className="h-4 w-4 text-blue-400" />
+                                                    <Shield className="h-4 w-4 text-white" />
                                                     {selectedItem.resguardante || 'No especificado'}
                                                 </p>
                                             </div>
@@ -2222,7 +2222,7 @@ export default function ConsultasIneaGeneral() {
                     <div className="fixed inset-0 bg-black/90 flex items-center justify-center z-50 px-4 animate-fadeIn">
                         <div className="bg-black rounded-2xl shadow-2xl border border-yellow-600/30 w-full max-w-md overflow-hidden transition-all duration-300 transform">
                             <div className="relative p-6 bg-gradient-to-b from-black to-gray-900">
-                                <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-yellow-500/60 via-yellow-400 to-yellow-500/60"></div>
+                                <div className="absolute top-0 left-0 w-full h-1 bg-white/30"></div>
 
                                 <div className="flex flex-col items-center text-center mb-4">
                                     <div className="p-3 bg-yellow-500/10 rounded-full border border-yellow-500/30 mb-3">
@@ -2282,7 +2282,7 @@ export default function ConsultasIneaGeneral() {
                                     className={`px-5 py-2.5 rounded-lg text-sm flex items-center gap-2 transition-all duration-300 
                                             ${savingDirector || !directorFormData.area ?
                                             'bg-gray-900 text-gray-500 cursor-not-allowed border border-gray-800' :
-                                            'bg-gradient-to-r from-yellow-600 to-yellow-500 text-black font-medium hover:shadow-lg hover:shadow-yellow-500/20'}`}
+                                            'bg-white/20 text-white font-medium hover:bg-white/30'}`}
                                 >
                                     {savingDirector ? (
                                         <RefreshCw className="h-4 w-4 animate-spin" />
@@ -2297,7 +2297,7 @@ export default function ConsultasIneaGeneral() {
                 )}                {/* Modal de selección de área para director (minimalista, dark) */}
                 {showAreaSelectModal && (
                     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm">                    <div className="bg-black border border-gray-800 rounded-2xl shadow-2xl min-w-[360px] max-w-md w-full relative animate-fadeIn overflow-hidden">
-                            <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-blue-500/60 via-blue-400 to-blue-500/60"></div>
+                            <div className="absolute top-0 left-0 w-full h-1 bg-white/30"></div>
                             <div className="p-6 relative">
                                 <button
                                     className="absolute top-3 right-3 p-1 rounded-lg text-gray-500 hover:text-gray-300 hover:bg-gray-800 transition-all duration-200"
@@ -2365,7 +2365,7 @@ export default function ConsultasIneaGeneral() {
                     <div className="fixed inset-0 bg-black/90 flex items-center justify-center z-50 px-4 animate-fadeIn">
                         <div className="bg-black rounded-2xl shadow-2xl border border-red-600/30 w-full max-w-md overflow-hidden transition-all duration-300 transform">
                             <div className="relative p-6 bg-gradient-to-b from-black to-gray-900">
-                                <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-red-500/60 via-red-400 to-red-500/60"></div>
+                                <div className="absolute top-0 left-0 w-full h-1 bg-white/30"></div>
                                 <div className="flex flex-col items-center text-center mb-4">
                                     <div className="p-3 bg-red-500/10 rounded-full border border-red-500/30 mb-3">
                                         <AlertTriangle className="h-8 w-8 text-red-500" />
@@ -2414,7 +2414,7 @@ export default function ConsultasIneaGeneral() {
                                     className={`px-5 py-2.5 rounded-lg text-sm flex items-center gap-2 transition-all duration-300 
                                             ${!bajaCause ?
                                             'bg-gray-900 text-gray-500 cursor-not-allowed border border-gray-800' :
-                                            'bg-gradient-to-r from-red-600 to-red-500 text-white font-medium hover:shadow-lg hover:shadow-red-500/20'}`}
+                                            'bg-white/20 text-white font-medium hover:bg-white/30'}`}
                                 >
                                     <Trash2 className="h-4 w-4" />
                                     Dar de Baja

@@ -391,11 +391,10 @@ export default function DirectorioManagementComponent() {
 
                 {/* Mensajes con animación mejorada */}
                 {message.text && (
-                    <div className={`mx-2 sm:mx-4 md:mx-6 mt-4 sm:mt-6 p-3 sm:p-4 rounded-lg flex items-center justify-between transition-all duration-500 animate-slide-in-right ${
-                        message.type === 'success' 
-                            ? 'bg-gradient-to-r from-green-900/80 via-green-800/80 to-green-900/80 border-green-500/30' 
+                    <div className={`mx-2 sm:mx-4 md:mx-6 mt-4 sm:mt-6 p-3 sm:p-4 rounded-lg flex items-center justify-between transition-all duration-500 animate-slide-in-right ${message.type === 'success'
+                            ? 'bg-gradient-to-r from-green-900/80 via-green-800/80 to-green-900/80 border-green-500/30'
                             : 'bg-gradient-to-r from-red-900/80 via-red-800/80 to-red-900/80 border-red-500/30'
-                    } backdrop-blur-sm border shadow-lg`}>
+                        } backdrop-blur-sm border shadow-lg`}>
                         <div className="flex items-center">
                             {message.type === 'success' ?
                                 <CheckCircle className="mr-2 sm:mr-3" size={20} /> :
