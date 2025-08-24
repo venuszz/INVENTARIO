@@ -135,7 +135,6 @@ export default function LevantamientoUnificado() {
         }
     }, [showSuggestions, suggestions.length]);
 
-    // Componente para el dropdown flotante
     function getTypeLabel(type: ActiveFilter['type']) {
         switch (type) {
             case 'id': return 'ID';

@@ -1048,14 +1048,14 @@ export default function ConsultasIteaGeneral() {
 
     function getTypeIcon(type: ActiveFilter['type']) {
         switch (type) {
-            case 'id': return <span className="h-4 w-4 text-white font-bold">#</span>;
-            case 'area': return <span className="h-4 w-4 text-white font-bold">A</span>;
-            case 'usufinal': return <span className="h-4 w-4 text-white font-bold">D</span>;
-            case 'resguardante': return <span className="h-4 w-4 text-white font-bold">R</span>;
-            case 'descripcion': return <span className="h-4 w-4 text-white font-bold">Desc</span>;
-            case 'rubro': return <span className="h-4 w-4 text-white font-bold">Ru</span>;
-            case 'estado': return <span className="h-4 w-4 text-white font-bold">Edo</span>;
-            case 'estatus': return <span className="h-4 w-4 text-white font-bold">Est</span>;
+            case 'id': return <span className="h-4 w-4 text-white/80 font-medium">#</span>;
+            case 'area': return <span className="h-4 w-4 text-white/80 font-medium">A</span>;
+            case 'usufinal': return <span className="h-4 w-4 text-white/80 font-medium">D</span>;
+            case 'resguardante': return <span className="h-4 w-4 text-white/80 font-medium">R</span>;
+            case 'descripcion': return <span className="h-4 w-4 text-white/80 font-medium">Desc</span>;
+            case 'rubro': return <span className="h-4 w-4 text-white/80 font-medium">Ru</span>;
+            case 'estado': return <span className="h-4 w-4 text-white/80 font-medium">Edo</span>;
+            case 'estatus': return <span className="h-4 w-4 text-white/80 font-medium">Est</span>;
             default: return null;
         }
     }
@@ -1080,7 +1080,7 @@ export default function ConsultasIteaGeneral() {
                 id="omnibox-suggestions"
                 role="listbox"
                 title="Sugerencias de búsqueda"
-                className={"absolute left-0 top-full w-full mt-1 animate-fadeInUp max-h-80 overflow-y-auto rounded-2xl shadow-2xl border border-neutral-800 bg-black/95 backdrop-blur-xl ring-1 ring-inset ring-neutral-900/60 transition-all duration-200 z-50"}
+                className={"absolute left-0 top-full w-full mt-1 animate-fadeInUp max-h-80 overflow-y-auto rounded-lg shadow-sm border border-white/10 bg-black/90 backdrop-blur-xl transition-all duration-200 z-50"}
             >
                 {suggestions.map((s, i) => {
                     const isSelected = highlightedIndex === i;
@@ -1090,11 +1090,11 @@ export default function ConsultasIteaGeneral() {
                             role="option"
                             {...(isSelected && { 'aria-selected': 'true' })}
                             onMouseDown={() => handleSuggestionClick(i)}
-                            className={`flex items-center gap-2 px-3 py-2 cursor-pointer select-none text-xs whitespace-normal break-words w-full ${isSelected ? 'bg-neutral-800/80 text-white' : 'text-neutral-300'} hover:bg-neutral-800/80`}
+                            className={`flex items-center gap-1.5 px-2 py-1 cursor-pointer select-none text-xs whitespace-normal break-words w-full ${isSelected ? 'bg-white/5 text-white' : 'text-white/80'} hover:bg-white/5`}
                         >
-                            <span className="shrink-0">{getTypeIcon(s.type)}</span>
-                            <span className="font-semibold whitespace-normal break-words w-full">{s.value}</span>
-                            <span className="ml-auto text-[10px] text-white font-mono">{getTypeLabel(s.type)}</span>
+                            <span className="shrink-0 text-white/70">{getTypeIcon(s.type)}</span>
+                            <span className="font-normal whitespace-normal break-words w-full truncate">{s.value}</span>
+                            <span className="ml-auto text-[10px] text-white/60 font-mono">{getTypeLabel(s.type)}</span>
                         </li>
                     );
                 })}
@@ -1352,31 +1352,31 @@ export default function ConsultasIteaGeneral() {
                                         <button
                                             onClick={saveCurrentFilter}
                                             disabled={!searchTerm || !searchMatchType}
-                                            className={`px-4 py-2 rounded-lg border flex items-center gap-2 ${searchTerm && searchMatchType
-                                                ? 'bg-gray-800 hover:bg-gray-700 border-gray-700 text-white'
-                                                : 'bg-gray-800/50 border-gray-700 text-gray-500 cursor-not-allowed'
-                                                } transition-all duration-200 hover:scale-105`}
+                                            className={`px-2 py-1 rounded-lg border flex items-center gap-1 ${searchTerm && searchMatchType
+                                                ? 'bg-white/10 hover:bg-white/15 border-white/30 text-white/90'
+                                                : 'bg-white/5 border-white/20 text-white/40 cursor-not-allowed'
+                                                } transition-all duration-200`}
                                             title="Agregar filtro actual a la lista de filtros activos"
                                         >
-                                            <Plus className="h-4 w-4" />
+                                            <Plus className="h-3.5 w-3.5" />
                                         </button>
                                     </div>
                                     {/* Filtros guardados debajo de la barra de búsqueda */}
                                     {activeFilters.length > 0 && (
                                         <div className="mt-3 flex flex-wrap gap-2 w-full">
                                             {activeFilters.map((filter, index) => {
-                                                // Todos los filtros ahora usan el mismo color blanco
-                                                const colorClass = 'from-gray-800 via-gray-700 to-gray-900 border-gray-600 text-white';
+                                                // Usar un estilo uniforme blanco/gris para todos los tipos de filtro
+                                                const colorClass = 'bg-white/10 border-white/30 text-white/90';
                                                 return (
                                                     <span
                                                         key={filter.term + filter.type + index}
-                                                        className={`inline-flex items-center px-3 py-1 rounded-full bg-gradient-to-r ${colorClass} text-xs font-semibold shadow-md hover:shadow-lg transition-all duration-200 group`}
+                                                        className={`inline-flex items-center px-2 py-0.5 rounded-full ${colorClass} text-xs font-medium shadow-sm hover:shadow-md transition-all duration-200`}
                                                     >
-                                                        <span className="mr-2 font-bold uppercase tracking-wide text-[10px] opacity-80">{getTypeLabel(filter.type)}</span>
-                                                        <span className="truncate max-w-[160px] md:max-w-[220px] lg:max-w-[320px] group-hover:max-w-none">{filter.term}</span>
+                                                        <span className="mr-1 font-medium uppercase text-[10px] opacity-80">{getTypeLabel(filter.type)}</span>
+                                                        <span className="truncate max-w-[160px] md:max-w-[220px] lg:max-w-[320px]">{filter.term}</span>
                                                         <button
                                                             onClick={() => removeFilter(index)}
-                                                            className="ml-2 opacity-80 hover:opacity-100 focus:outline-none"
+                                                            className="ml-1 opacity-80 hover:opacity-100 focus:outline-none"
                                                             title="Eliminar filtro"
                                                             tabIndex={-1}
                                                         >
@@ -1388,7 +1388,7 @@ export default function ConsultasIteaGeneral() {
                                             {activeFilters.length > 1 && (
                                                 <button
                                                     onClick={clearAllFilters}
-                                                    className="inline-flex items-center px-2 py-1 rounded-full bg-gradient-to-r from-gray-800 via-gray-700 to-gray-900 border border-gray-600 text-gray-300 text-xs font-semibold ml-2 hover:bg-gray-700/80 transition-all duration-200"
+                                                    className="inline-flex items-center px-2 py-0.5 rounded-full bg-white/10 border border-white/30 text-white/90 text-xs font-medium ml-1 hover:bg-white/15 transition-all duration-200"
                                                     title="Limpiar todos los filtros"
                                                 >
                                                     <X className="h-3 w-3 mr-1" /> Limpiar
