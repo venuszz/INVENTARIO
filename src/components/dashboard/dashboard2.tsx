@@ -1,5 +1,5 @@
 "use client"
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import supabase from '@/app/lib/supabase/client';
 import {
@@ -19,96 +19,6 @@ import {
     Download,
 } from 'lucide-react';
 import { generateDashboardPDF } from './dashboardPDF';
-
-// Paletas de colores para cada bodega (mejoradas)
-type Warehouse = 'INEA' | 'ITEA';
-
-const COLOR_SCHEMES: { [key in Warehouse]: {
-    colors: {
-        gradient: string;
-        border: string;
-        text: string;
-        accent: string;
-        hover: string;
-    }[];
-    container: {
-        gradient: string;
-        border: string;
-    };
-}} = {
-    INEA: {
-        colors: [
-            {
-                gradient: "from-black via-emerald-950/20 to-black",
-                border: "border-emerald-500/30",
-                text: "text-emerald-300 drop-shadow-[0_1px_4px_rgba(16,185,129,0.4)]",
-                accent: "text-emerald-400",
-                hover: "hover:border-emerald-400/60"
-            },
-            {
-                gradient: "from-black via-red-950/20 to-black",
-                border: "border-red-500/30",
-                text: "text-red-300 drop-shadow-[0_1px_4px_rgba(239,68,68,0.4)]",
-                accent: "text-red-400",
-                hover: "hover:border-red-400/60"
-            },
-            {
-                gradient: "from-black via-amber-950/20 to-black",
-                border: "border-amber-500/30",
-                text: "text-amber-300 drop-shadow-[0_1px_4px_rgba(234,179,8,0.4)]",
-                accent: "text-amber-400",
-                hover: "hover:border-amber-400/60"
-            },
-            {
-                gradient: "from-black via-slate-900/20 to-black",
-                border: "border-slate-500/30",
-                text: "text-slate-300 drop-shadow-[0_1px_4px_rgba(156,163,175,0.4)]",
-                accent: "text-slate-400",
-                hover: "hover:border-slate-400/60"
-            }
-        ],
-        container: {
-            gradient: "from-black via-cyan-950/20 to-black",
-            border: "border-cyan-500/20"
-        }
-    },
-    ITEA: {
-        colors: [
-            {
-                gradient: "from-black via-emerald-950/20 to-black",
-                border: "border-emerald-500/30",
-                text: "text-emerald-300 drop-shadow-[0_1px_4px_rgba(16,185,129,0.4)]",
-                accent: "text-emerald-400",
-                hover: "hover:border-emerald-400/60"
-            },
-            {
-                gradient: "from-black via-red-950/20 to-black",
-                border: "border-red-500/30",
-                text: "text-red-300 drop-shadow-[0_1px_4px_rgba(239,68,68,0.4)]",
-                accent: "text-red-400",
-                hover: "hover:border-red-400/60"
-            },
-            {
-                gradient: "from-black via-amber-950/20 to-black",
-                border: "border-amber-500/30",
-                text: "text-amber-300 drop-shadow-[0_1px_4px_rgba(234,179,8,0.4)]",
-                accent: "text-amber-400",
-                hover: "hover:border-amber-400/60"
-            },
-            {
-                gradient: "from-black via-slate-900/20 to-black",
-                border: "border-slate-500/30",
-                text: "text-slate-300 drop-shadow-[0_1px_4px_rgba(156,163,175,0.4)]",
-                accent: "text-slate-400",
-                hover: "hover:border-slate-400/60"
-            }
-        ],
-        container: {
-            gradient: "from-black via-purple-950/20 to-black",
-            border: "border-purple-500/20"
-        }
-    }
-};
 
 // Variantes mejoradas para animación de cambio de bodega (slide lateral + fade)
 const containerVariants = {
@@ -208,33 +118,104 @@ interface EditableRubro {
     id?: string; // Para drag and drop
 }
 
-// Skeletons para loading
-const Skeleton = ({ className = "" }: { className?: string }) => (
-    <div className={`animate-pulse bg-gray-800/60 rounded ${className}`}></div>
-);
+// Componente para animar el conteo de valores
+interface AnimatedCounterProps {
+    value: number | string;
+    className?: string;
+    prefix?: string;
+    suffix?: string;
+    loading?: boolean;
+    isInteger?: boolean;
+    isCurrency?: boolean;
+}
 
-const CardSkeleton = () => (
-    <div className="flex flex-col p-7 rounded-2xl bg-gradient-to-br from-black via-gray-900/20 to-black border-2 border-gray-700/30 cursor-pointer transition-all duration-300 shadow-[0_8px_32px_0_rgba(34,211,238,0.08)] backdrop-blur-lg glassmorphism-card overflow-hidden min-h-[180px]">
-        <div className="flex justify-between items-start flex-grow w-full">
-            <div className="flex-1 min-w-0">
-                <Skeleton className="h-4 w-24 mb-2" />
-                <Skeleton className="h-10 w-32 mb-1" />
-            </div>
-            <Skeleton className="w-10 h-10 ml-4 rounded-xl" />
-        </div>
-        <Skeleton className="mt-5 h-5 w-20" />
-    </div>
+const AnimatedCounter = ({ value, className, prefix = '', suffix = '', loading = false, isInteger = false, isCurrency = false }: AnimatedCounterProps) => {
+    // Estado para el valor actual mostrado
+    const [displayValue, setDisplayValue] = useState<number>(0);
+    
+    // Referencia para el intervalo de animación
+    const intervalRef = useRef<NodeJS.Timeout | null>(null);
+    
+    // Convertir valor a número si es string
+    const numericValue = typeof value === 'string' ? 
+        parseFloat(value.replace(/[^0-9.-]+/g, '')) : value;
+    
+    // Formatear el número según sea entero, decimal o moneda
+    const formatNumber = (num: number) => {
+        if (isCurrency) {
+            return num.toLocaleString('es-MX', { style: 'currency', currency: 'MXN', minimumFractionDigits: 2 });
+        } else if (isInteger) {
+            return Math.floor(num).toLocaleString('es-MX');
+        } else {
+            return num.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        }
+    };
+    
+    // Efecto para animar el contador
+    useEffect(() => {
+        // Limpiar intervalo anterior si existe
+        if (intervalRef.current) {
+            clearInterval(intervalRef.current);
+        }
+        
+        if (loading) {
+            // Durante la carga, mostrar números aleatorios
+            intervalRef.current = setInterval(() => {
+                const randomValue = isInteger ? 
+                    Math.floor(Math.random() * 1000) : 
+                    Math.random() * 10000;
+                setDisplayValue(randomValue);
+            }, 100);
+        } else {
+            // Animación de conteo hasta el valor final
+            const duration = 1500; // duración total en ms
+            const steps = 20; // número de pasos
+            const increment = (numericValue - displayValue) / steps;
+            let currentStep = 0;
+            
+            intervalRef.current = setInterval(() => {
+                if (currentStep >= steps) {
+                    setDisplayValue(numericValue);
+                    if (intervalRef.current) clearInterval(intervalRef.current);
+                    return;
+                }
+                
+                setDisplayValue(prev => prev + increment);
+                currentStep++;
+            }, duration / steps);
+        }
+        
+        // Limpiar intervalo al desmontar
+        return () => {
+            if (intervalRef.current) {
+                clearInterval(intervalRef.current);
+            }
+        };
+    }, [numericValue, loading, isInteger, isCurrency]);
+    
+    return (
+        <span className={className}>
+            {prefix}
+            {formatNumber(displayValue)}
+            {suffix}
+        </span>
+    );
+};
+
+// Skeletons para loading (mantenemos para compatibilidad)
+const Skeleton = ({ className = "" }: { className?: string }) => (
+    <div className={`animate-pulse bg-white/10 rounded ${className}`}></div>
 );
 
 const HeaderSkeleton = () => (
-    <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center border-b border-white/10 gap-2 sm:gap-0 p-4 sm:p-6">
+    <div className="bg-black p-4 sm:p-6 flex flex-col sm:flex-row justify-between items-start sm:items-center border-b border-white/10 gap-2 sm:gap-0">
         <div className="flex items-center">
             <Skeleton className="w-12 h-12 mr-3 rounded-xl" />
-            <Skeleton className="h-8 w-40" />
+            <Skeleton className="w-48 h-8" />
         </div>
-        <div className="flex gap-2 items-center">
-            <Skeleton className="h-10 w-32 rounded-xl" />
-            <Skeleton className="h-10 w-40 rounded-xl" />
+        <div className="flex gap-2">
+            <Skeleton className="w-32 h-10 rounded-xl" />
+            <Skeleton className="w-40 h-10 rounded-xl" />
         </div>
     </div>
 );
@@ -437,19 +418,19 @@ export default function InventoryDashboard() {
     // Función para obtener el color según el estatus
     const getStatusColor = (status: string) => {
         const statusLower = status.toLowerCase();
-        if (statusLower.includes('activo')) return "text-emerald-400";
-        if (statusLower.includes('inactivo')) return "text-red-400";
-        if (statusLower.includes('no localizado')) return "text-yellow-400";
-        return "text-gray-400";
+        if (statusLower.includes('activo')) return "text-white";
+        if (statusLower.includes('inactivo')) return "text-white/90";
+        if (statusLower.includes('no localizado')) return "text-white/80";
+        return "text-white/70";
     };
 
     // Función para obtener el color de fondo según el estatus
     const getStatusBgColor = (status: string) => {
         const statusLower = status.toLowerCase();
-        if (statusLower.includes('activo')) return "bg-emerald-500/10";
-        if (statusLower.includes('inactivo')) return "bg-red-500/10";
-        if (statusLower.includes('no localizado')) return "bg-yellow-500/10";
-        return "bg-gray-500/10";
+        if (statusLower.includes('activo')) return "bg-white/5";
+        if (statusLower.includes('inactivo')) return "bg-white/4";
+        if (statusLower.includes('no localizado')) return "bg-white/3";
+        return "bg-white/2";
     };
 
     // Función para cargar datos de estatus y rubros
@@ -751,11 +732,6 @@ export default function InventoryDashboard() {
     const currentData = inventoryData[activeWarehouse];
 
     // Función para obtener un color aleatorio para cada tarjeta
-    const getRandomColor = (bodega: 'INEA' | 'ITEA', seed: number) => {
-        const colors = COLOR_SCHEMES[bodega].colors;
-        const index = seed % colors.length;
-        return colors[index];
-    };
 
     // Nuevo: obtiene el colorScheme de la tarjeta seleccionada
 
@@ -784,29 +760,43 @@ export default function InventoryDashboard() {
                     <div className="flex gap-2 items-center">
                         <motion.button
                             onClick={toggleWarehouse}
-                            whileHover={{ scale: 1.08 }}
-                            whileTap={{ scale: 0.97 }}
-                            className="flex items-center space-x-2 px-5 py-2 bg-black rounded-xl border border-white/10 shadow-lg group focus:outline-none focus:ring-2 focus:ring-white/20 transition-all"
+                            whileHover={{ scale: 1.05 }}
+                            whileTap={{ scale: 0.98 }}
+                            className="flex items-center space-x-2 px-5 py-2 bg-black rounded-xl border border-white/20 shadow-sm group focus:outline-none focus:ring-1 focus:ring-white/10 transition-all hover:border-white/40 relative overflow-hidden"
                         >
                             <motion.div
                                 animate={{ rotate: direction ? 360 : 0 }}
                                 transition={{ duration: 0.5 }}
                             >
-                                <Repeat size={20} className="text-white" />
+                                <Repeat size={16} className="text-white/90" />
                             </motion.div>
-                            <span className="text-white font-medium tracking-wide">
+                            <span className="text-white/90 font-medium tracking-wide">
                                 {activeWarehouse === 'INEA' ? 'Ver ITEA' : 'Ver INEA'}
                             </span>
+                            <motion.div 
+                                className={`absolute top-0 right-0 w-2 h-2 rounded-full ${activeWarehouse === 'INEA' ? 'bg-blue-500' : 'bg-green-500'} m-1.5`}
+                                initial={{ opacity: 0 }}
+                                animate={{ opacity: 1 }}
+                                transition={{ duration: 0.3 }}
+                            />
+                            <motion.div 
+                                className="absolute bottom-0 left-0 text-[8px] text-white/50 m-1"
+                                initial={{ opacity: 0 }}
+                                animate={{ opacity: 1 }}
+                                transition={{ duration: 0.3 }}
+                            >
+                                Actual: {activeWarehouse}
+                            </motion.div>
                         </motion.button>
                         <motion.button
                             onClick={handleExportClick}
-                            className={`flex items-center gap-2 px-4 py-2 rounded-xl border transition-all duration-300 shadow-lg focus:outline-none focus:ring-2 focus:ring-violet-500/30
-                                ${activeWarehouse === 'INEA' ? 'bg-gradient-to-br from-purple-900/80 via-purple-800/80 to-purple-900/80 border-purple-500/30 text-purple-200 hover:bg-purple-800/90' :
-                                'bg-gradient-to-br from-purple-900/80 via-purple-800/80 to-purple-900/80 border-purple-500/30 text-purple-200 hover:bg-purple-800/90'}`}
+                            className="flex items-center gap-2 px-4 py-2 rounded-xl border border-white/20 bg-black transition-all duration-300 shadow-sm focus:outline-none focus:ring-1 focus:ring-white/10 hover:border-white/40"
                             title={`Exportar PDF Totales ${activeWarehouse}`}
+                            whileHover={{ scale: 1.05 }}
+                            whileTap={{ scale: 0.98 }}
                         >
-                            <Download size={18} className="text-purple-300" />
-                            <span className="font-medium">
+                            <Download size={18} className="text-white/90" />
+                            <span className="font-medium text-white/90">
                                 Exportar PDF {activeWarehouse}
                             </span>
                         </motion.button>
@@ -828,19 +818,12 @@ export default function InventoryDashboard() {
                             <div className="p-2 rounded-xl bg-black border border-white/10 shadow-md">
                                 <BarChart3 className="text-white" size={28} />
                             </div>
-                            {loading ? (
-                                <Skeleton className="h-8 w-40" />
-                            ) : (
-                                <h2 className="text-xl font-semibold text-white tracking-wide">
-                                    {currentData.title}
-                                </h2>
-                            )}
+                            <h2 className="text-xl font-semibold text-white tracking-wide">
+                                {currentData.title}
+                            </h2>
                         </div>
                         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
-                            {loading
-                                ? Array.from({ length: 4 }).map((_, i) => <CardSkeleton key={i} />)
-                                : currentData.cards.map((card, i) => {
-                                    const colorScheme = getRandomColor(activeWarehouse as 'INEA' | 'ITEA', i);
+                            {currentData.cards.map((card, i) => {
                                     return (
                                         <motion.div
                                             key={card.id}
@@ -850,29 +833,30 @@ export default function InventoryDashboard() {
                                             animate="visible"
                                             whileHover="hover"
                                             onClick={() => openModal(card)}
-                                            className={`group relative flex flex-col p-7 rounded-2xl bg-gradient-to-br ${colorScheme.gradient} border-2 ${colorScheme.border} ${colorScheme.hover} cursor-pointer transition-all duration-300 hover:shadow-[0_8px_32px_0_rgba(34,211,238,0.15)] backdrop-blur-lg transform-gpu glassmorphism-card overflow-hidden`}
+                                            className="group relative flex flex-col p-7 rounded-2xl bg-black border border-white/20 cursor-pointer transition-all duration-300 hover:shadow-[0_8px_32px_0_rgba(255,255,255,0.03)] backdrop-blur-lg transform-gpu overflow-hidden"
                                             style={{
-                                                boxShadow: "0 4px 32px 0 rgba(34,211,238,0.08), 0 1.5px 8px 0 rgba(0,0,0,0.18)"
+                                                boxShadow: "0 2px 24px 0 rgba(255,255,255,0.02)"
                                             }}
                                         >
                                             <div className="flex justify-between items-start flex-grow w-full">
                                                 <div className="flex-1 min-w-0">
-                                                    <h3 className={`${colorScheme.text} text-xs font-semibold uppercase tracking-widest mb-2 group-hover:text-cyan-100 transition-colors truncate`}>
+                                                    <h3 className="text-white text-sm font-semibold mb-2 flex items-center gap-2 truncate">
+                                                        <span className={`w-2.5 h-2.5 rounded-full ${card.bgColor}`}></span>
                                                         {card.title}
                                                     </h3>
-                                                    <p className="text-4xl font-light bg-clip-text text-transparent bg-gradient-to-r from-cyan-100 to-white drop-shadow-[0_2px_8px_rgba(34,211,238,0.10)] truncate">
-                                                        {card.value}
+                                                    <p className="text-4xl font-light text-white truncate">
+                                                        <AnimatedCounter value={card.value} loading={false} isCurrency={true} />
                                                     </p>
                                                 </div>
                                                 <motion.div 
-                                                    className={`flex-shrink-0 ml-4 p-2.5 rounded-xl ${card.bgColor} group-hover:scale-110 transition-transform duration-300 shadow-md`}
+                                                    className="flex-shrink-0 ml-4 p-2.5 rounded-xl bg-white/5 group-hover:scale-110 transition-transform duration-300 border border-white/10"
                                                     whileHover={{ rotate: 8 }}
                                                 >
-                                                    <card.icon className={`${card.color} drop-shadow-[0_1px_4px_rgba(34,211,238,0.3)] w-5 h-5`} />
+                                                    <card.icon className="text-white/90 w-5 h-5" />
                                                 </motion.div>
                                             </div>
-                                            <div className="mt-auto pt-5 text-base text-cyan-400/80 border-t border-cyan-400/20 group-hover:text-cyan-200 transition-colors font-medium tracking-wide truncate">
-                                                {card.count} artículos
+                                            <div className="mt-auto pt-5 text-base text-white/70 border-t border-white/10 group-hover:text-white/90 transition-colors font-medium tracking-wide truncate">
+                                                <AnimatedCounter value={card.count} loading={false} isInteger={true} suffix=" artículos" />
                                             </div>
                                         </motion.div>
                                     );
@@ -901,8 +885,8 @@ export default function InventoryDashboard() {
                             initial="hidden"
                             animate="visible"
                             exit="exit"
-                            className={`w-full max-w-md bg-black border border-gray-800 rounded-2xl overflow-hidden max-h-[90vh] flex flex-col shadow-xl`}
-                            style={{ boxShadow: "0 2px 24px 0 rgba(0,0,0,0.18)" }}
+                            className={`w-full max-w-md bg-black border border-white/20 rounded-2xl overflow-hidden max-h-[90vh] flex flex-col shadow-xl`}
+                            style={{ boxShadow: "0 2px 24px 0 rgba(255,255,255,0.02)" }}
                         >
                             <div className="flex justify-between items-center px-6 py-4 border-b border-white/10 bg-black">
                                 <h3 className="text-lg font-semibold flex items-center gap-2 text-white">
@@ -926,14 +910,14 @@ export default function InventoryDashboard() {
                                     <table className="w-full text-left border-separate border-spacing-0 text-xs bg-black">
                                         <thead>
                                             <tr className="bg-black">
-                                                <th className="px-2 py-1 text-gray-400 font-semibold">Rubro</th>
-                                                <th className="px-2 py-1 text-gray-400 font-semibold text-center">Total</th>
-                                                <th className="px-2 py-1 text-gray-400 font-semibold text-right">Valor</th>
+                                                <th className="px-2 py-1 text-white/60 font-semibold">Rubro</th>
+                                                <th className="px-2 py-1 text-white/60 font-semibold text-center">Total</th>
+                                                <th className="px-2 py-1 text-white/60 font-semibold text-right">Valor</th>
                                             </tr>
                                         </thead>
                                         <tbody>
                                             {selectedCard.categories.map((category, idx) => (
-                                                <tr key={idx} className="border-t border-gray-800 hover:bg-gray-900/40 transition-colors">
+                                                <tr key={idx} className="border-t border-white/10 hover:bg-white/5 transition-colors">
                                                     <td className="px-2 py-1 text-white/90 flex items-center gap-2">
                                                         <category.icon size={14} className="text-white/60" />
                                                         {category.name}
@@ -979,8 +963,8 @@ export default function InventoryDashboard() {
                             initial="hidden"
                             animate="visible"
                             exit="exit"
-                            className="w-full max-w-4xl bg-black border border-gray-800 rounded-2xl overflow-hidden max-h-[90vh] flex flex-col shadow-xl"
-                            style={{ boxShadow: "0 2px 24px 0 rgba(0,0,0,0.18)" }}
+                            className="w-full max-w-4xl bg-black border border-white/20 rounded-2xl overflow-hidden max-h-[90vh] flex flex-col shadow-xl"
+                            style={{ boxShadow: "0 2px 24px 0 rgba(255,255,255,0.02)" }}
                         >
                             <div className="flex justify-between items-center px-6 py-4 border-b border-white/10 bg-black">
                                 <h3 className="text-lg font-semibold text-white">Editar datos para exportación</h3>
@@ -1001,7 +985,7 @@ export default function InventoryDashboard() {
                                         type="date"
                                         value={exportDate}
                                         onChange={(e) => setExportDate(e.target.value)}
-                                        className="mt-1 px-3 py-2 bg-black border border-gray-700 rounded-lg text-white focus:outline-none focus:border-purple-500"
+                                        className="mt-1 px-3 py-2 bg-black border border-white/20 rounded-lg text-white focus:outline-none focus:border-white/40"
                                     />
                                 </div>
                             </div>
@@ -1010,11 +994,11 @@ export default function InventoryDashboard() {
                                 <table className="w-full text-left border-separate border-spacing-0">
                                     <thead>
                                         <tr className="bg-black">
-                                            <th className="px-3 py-2 text-gray-400 font-semibold">No. Partida</th>
-                                            <th className="px-3 py-2 text-gray-400 font-semibold">Rubro</th>
-                                            <th className="px-3 py-2 text-gray-400 font-semibold text-center">Total</th>
-                                            <th className="px-3 py-2 text-gray-400 font-semibold text-right">Valor</th>
-                                            <th className="px-3 py-2 text-gray-400 font-semibold w-16"></th>
+                                            <th className="px-3 py-2 text-white/60 font-semibold">No. Partida</th>
+                                            <th className="px-3 py-2 text-white/60 font-semibold">Rubro</th>
+                                            <th className="px-3 py-2 text-white/60 font-semibold text-center">Total</th>
+                                            <th className="px-3 py-2 text-white/60 font-semibold text-right">Valor</th>
+                                            <th className="px-3 py-2 text-white/60 font-semibold w-16"></th>
                                         </tr>
                                     </thead>
                                     <tbody className="relative">
