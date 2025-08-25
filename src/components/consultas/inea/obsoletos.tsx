@@ -55,6 +55,83 @@ interface Message {
     text: string;
 }
 
+// Componente para animar el conteo de valores
+interface AnimatedCounterProps {
+    value: number;
+    className?: string;
+    prefix?: string;
+    suffix?: string;
+    loading?: boolean;
+    isInteger?: boolean;
+}
+
+const AnimatedCounter = ({ value, className, prefix = '', suffix = '', loading = false, isInteger = false }: AnimatedCounterProps) => {
+    // Estado para el valor actual mostrado
+    const [displayValue, setDisplayValue] = useState(0);
+    
+    // Referencia para el intervalo de animación
+    const intervalRef = useRef<NodeJS.Timeout | null>(null);
+    
+    // Formatear el número según sea entero o decimal
+    const formatNumber = (num: number) => {
+        if (isInteger) {
+            return Math.floor(num).toLocaleString('es-MX');
+        } else {
+            return num.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        }
+    };
+    
+    // Efecto para animar el contador
+    useEffect(() => {
+        // Limpiar intervalo anterior si existe
+        if (intervalRef.current) {
+            clearInterval(intervalRef.current);
+        }
+        
+        if (loading) {
+            // Durante la carga, mostrar números aleatorios
+            intervalRef.current = setInterval(() => {
+                const randomValue = isInteger ? 
+                    Math.floor(Math.random() * 1000) : 
+                    Math.random() * 10000;
+                setDisplayValue(randomValue);
+            }, 100);
+        } else {
+            // Animación de conteo hasta el valor final
+            const duration = 1500; // duración total en ms
+            const steps = 20; // número de pasos
+            const increment = (value - displayValue) / steps;
+            let currentStep = 0;
+            
+            intervalRef.current = setInterval(() => {
+                if (currentStep >= steps) {
+                    setDisplayValue(value);
+                    if (intervalRef.current) clearInterval(intervalRef.current);
+                    return;
+                }
+                
+                setDisplayValue(prev => prev + increment);
+                currentStep++;
+            }, duration / steps);
+        }
+        
+        // Limpiar intervalo al desmontar
+        return () => {
+            if (intervalRef.current) {
+                clearInterval(intervalRef.current);
+            }
+        };
+    }, [value, loading, isInteger]);
+    
+    return (
+        <div className={className}>
+            {prefix}
+            {formatNumber(displayValue)}
+            {suffix}
+        </div>
+    );
+};
+
 const ImagePreview = ({ imagePath }: { imagePath: string | null }) => {
     const [imageUrl, setImageUrl] = useState<string | null>(null);
     const [loading, setLoading] = useState(true);
@@ -969,13 +1046,13 @@ export default function ConsultasIneaBajas() {
         <div className="bg-black text-white min-h-screen p-2 sm:p-4 md:p-6 lg:p-8">
             {/* Notificación de mensaje */}
             {message && (
-                <div className={`fixed top-6 right-6 z-50 p-4 rounded-lg shadow-lg flex items-center gap-3 animate-fadeIn ${message.type === 'success' ? 'bg-green-900/90 border border-green-700' :
-                    message.type === 'error' ? 'bg-red-900/90 border border-red-700' :
-                        message.type === 'warning' ? 'bg-yellow-900/90 border border-yellow-700' :
-                            'bg-blue-900/90 border border-blue-700'}`}>
-                    {message.type === 'success' && <CheckCircle className="h-5 w-5 text-green-300" />}
-                    {message.type === 'error' && <XCircle className="h-5 w-5 text-red-300" />}
-                    {message.type === 'warning' && <AlertTriangle className="h-5 w-5 text-yellow-300" />}
+                <div className={`fixed top-6 right-6 z-50 p-4 rounded-lg shadow-lg flex items-center gap-3 animate-fadeIn ${message.type === 'success' ? 'bg-gray-800 border border-gray-600' :
+                    message.type === 'error' ? 'bg-gray-800 border border-gray-600' :
+                        message.type === 'warning' ? 'bg-gray-800 border border-gray-600' :
+                            'bg-gray-800 border border-gray-600'}`}>
+                    {message.type === 'success' && <CheckCircle className="h-5 w-5 text-green-400" />}
+                    {message.type === 'error' && <XCircle className="h-5 w-5 text-gray-400" />}
+                    {message.type === 'warning' && <AlertTriangle className="h-5 w-5 text-gray-400" />}
                     <span className="text-white">{message.text}</span>
                     <button
                         title='Cerrar mensaje'
@@ -989,35 +1066,42 @@ export default function ConsultasIneaBajas() {
 
             <div className="w-full mx-auto bg-black rounded-lg sm:rounded-xl shadow-2xl overflow-hidden transition-all duration-500 transform border border-gray-800">
                 {/* Header con título */}
-                <div className="bg-gradient-to-r from-red-900/50 to-red-900/30 p-4 sm:p-6 flex flex-col sm:flex-row justify-between items-start sm:items-center border-b border-red-800 gap-2 sm:gap-0">
+                <div className="bg-black p-4 sm:p-6 flex flex-col sm:flex-row justify-between items-start sm:items-center border-b border-gray-800 gap-2 sm:gap-0">
                     <h1 className="text-xl sm:text-2xl md:text-3xl font-bold flex items-center">
-                        <span className="mr-2 sm:mr-3 bg-red-900 text-white p-1 sm:p-2 rounded-lg border border-red-700 text-sm sm:text-base">INV</span>
-                        Artículos dados de Baja
+                        <span className="mr-2 sm:mr-3 bg-black text-red-500 p-1 sm:p-2 rounded-lg border border-red-900/50 text-sm sm:text-base">INV</span>
+                        <span className="text-white">Artículos dados de Baja<span className="text-red-700"> (INEA)</span></span>
                     </h1>
-                    <p className="text-red-300 text-sm sm:text-base">Vista de todos los bienes dados de baja en el sistema.</p>
+                    <p className="text-gray-400 text-sm sm:text-base">Vista de todos los bienes dados de baja en el sistema.</p>
                 </div>
 
                 {/* Nuevo componente de valor total */}
-                <div className="bg-gradient-to-b from-gray-900 via-black to-black p-8 border-b border-gray-800">
+                <div className="bg-black p-8 border-b border-gray-800">
                     <div className="flex flex-col lg:flex-row justify-between items-stretch gap-6">
                         {/* Panel de valor total */}
                         <div className="flex-grow">
-                            <div className="group relative overflow-hidden bg-gradient-to-br from-red-950/30 via-red-900/20 to-gray-900/30 p-6 rounded-2xl border border-red-800/30 hover:border-red-700/50 transition-all duration-500 hover:shadow-lg hover:shadow-red-500/10">
-                                <div className="absolute inset-0 bg-gradient-to-r from-red-500/5 via-red-500/5 to-pink-500/5 opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
+                            <div className="group relative overflow-hidden bg-black p-6 rounded-2xl border-2 border-white/10 hover:border-white/20 transition-all duration-500">
+                                <div className="absolute inset-0 bg-white/5 opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
                                 <div className="flex items-start gap-6">
                                     <div className="relative">
-                                        <div className="absolute inset-0 bg-gradient-to-br from-red-500/20 via-red-500/20 to-pink-500/20 blur-xl"></div>
-                                        <div className="relative p-4 bg-gradient-to-br from-red-500/20 via-red-500/20 to-pink-500/20 rounded-xl border border-white/10 transform group-hover:scale-110 transition-all duration-500">
+                                        <div className="absolute inset-0 bg-white/10 blur-xl"></div>
+                                        <div className="relative p-4 bg-black rounded-xl border border-white/10 transform group-hover:scale-110 transition-all duration-500">
                                             <DollarSign className="h-8 w-8 text-white/90" />
                                         </div>
                                     </div>
                                     <div className="flex flex-col">
-                                        <h3 className="text-sm font-medium text-gray-400 mb-1 group-hover:text-red-300 transition-colors">Valor Total de Bajas</h3>
+                                        <h3 className="text-sm font-medium text-gray-400 mb-1 group-hover:text-white transition-colors">Valor Total de Bajas</h3>
                                         <div className="relative">
-                                            <span className="text-3xl font-bold text-white">
-                                                ${new Intl.NumberFormat('es-MX').format(totalValue)}
-                                            </span>
+                                            <AnimatedCounter 
+                                                value={totalValue} 
+                                                prefix="$" 
+                                                className="text-4xl font-bold text-white" 
+                                                loading={loading}
+                                            />
+                                            <div className="absolute -bottom-2 left-0 w-full h-px bg-white/30"></div>
                                         </div>
+                                        <p className="text-sm text-gray-500 mt-2 group-hover:text-gray-400 transition-colors">
+                                            {'Valor total de artículos dados de baja'}
+                                        </p>
                                     </div>
                                 </div>
                             </div>
@@ -1025,14 +1109,17 @@ export default function ConsultasIneaBajas() {
 
                         {/* Panel de conteo */}
                         <div className="flex-shrink-0">
-                            <div className="group bg-gradient-to-br from-red-950/30 via-red-900/20 to-gray-900/30 p-6 rounded-2xl border border-red-800/30 hover:border-red-700/50 transition-all duration-500">
+                            <div className="group bg-black/30 p-6 rounded-2xl border border-white/20 hover:border-white/40 transition-all duration-500">
                                 <div className="text-center">
-                                    <p className="text-sm text-gray-400 mb-2 group-hover:text-red-300 transition-colors">Artículos dados de Baja</p>
+                                    <p className="text-sm text-gray-400 mb-2 group-hover:text-white transition-colors">Artículos dados de Baja</p>
                                     <div className="relative">
-                                        <div className="absolute inset-0 bg-gradient-to-r from-red-500/10 via-red-500/10 to-red-500/10 opacity-0 group-hover:opacity-100 transition-opacity duration-500 rounded-xl"></div>
-                                        <span className="relative text-3xl font-bold bg-gradient-to-r from-red-200 via-red-200 to-red-200 bg-clip-text text-transparent group-hover:from-red-300 group-hover:via-red-300 group-hover:to-red-300 transition-all duration-500 px-6 py-3">
-                                            {filteredCount}
-                                        </span>
+                                        <div className="absolute inset-0 bg-white/5 opacity-0 group-hover:opacity-100 transition-opacity duration-500 rounded-xl"></div>
+                                        <AnimatedCounter 
+                                            value={Object.values(filters).some(value => value !== '') || searchTerm ? filteredCount : muebles.length} 
+                                            className="relative text-3xl font-bold text-white/90 group-hover:text-white transition-all duration-500 px-6 py-3" 
+                                            loading={loading}
+                                            isInteger={true}
+                                        />
                                     </div>
                                 </div>
                             </div>
@@ -1045,18 +1132,18 @@ export default function ConsultasIneaBajas() {
                     {/* Panel izquierdo: Búsqueda, filtros y tabla */}
                     <div className={`flex-1 min-w-0 flex flex-col ${selectedItem ? '' : 'w-full'}`}>
                         {/* Panel de acciones y búsqueda */}
-                        <div className="mb-6 bg-gradient-to-br from-gray-900 via-black to-black p-6 rounded-xl border border-gray-800 shadow-lg">
+                        <div className="mb-6 bg-black/30 p-6 rounded-xl border border-white/20 shadow-inner hover:shadow-lg transition-shadow">
                             <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-4">
                                 <div className="relative flex-grow group">
                                     <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                                        <Search className="h-5 w-5 text-gray-500 group-hover:text-red-400 transition-colors duration-300" />
+                                        <Search className="h-5 w-5 text-gray-500 group-hover:text-gray-300 transition-colors duration-300" />
                                     </div>
                                     <input
                                         type="text"
                                         value={searchTerm}
                                         onChange={(e) => setSearchTerm(e.target.value)}
                                         placeholder="Buscar por ID, descripción o usuario..."
-                                        className="pl-12 pr-4 py-3 w-full bg-gradient-to-r from-gray-900 to-gray-800 border border-gray-700 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent transition-all duration-300 hover:border-gray-600"
+                                        className="pl-12 pr-4 py-3 w-full bg-black border border-gray-700 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-white/50 focus:border-transparent transition-all duration-300 hover:border-gray-600"
                                     />
                                 </div>
 
@@ -1065,17 +1152,16 @@ export default function ConsultasIneaBajas() {
                                         onClick={() => setShowFilters(!showFilters)}
                                         className={`group relative px-5 py-3 rounded-xl font-medium flex items-center gap-2 transition-all duration-300 overflow-hidden ${
                                             Object.values(filters).some(value => value !== '')
-                                                ? 'bg-gradient-to-r from-red-600/20 to-red-900/20 text-red-300 border border-red-500/50 hover:border-red-400'
-                                                : 'bg-gradient-to-r from-gray-800 to-gray-900 text-gray-300 border border-gray-700 hover:border-gray-600'
+                                                ? 'bg-black text-gray-300 border border-gray-600 hover:border-gray-500'
+                                                : 'bg-black text-gray-300 border border-gray-700 hover:border-gray-600'
                                         }`}
                                     >
-                                        <div className="absolute inset-0 bg-gradient-to-r from-red-500/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
                                         <Filter className={`h-5 w-5 transition-transform duration-300 group-hover:scale-110 ${
-                                            Object.values(filters).some(value => value !== '') ? 'text-red-400' : 'text-gray-400'
+                                            Object.values(filters).some(value => value !== '') ? 'text-gray-300' : 'text-gray-400'
                                         }`} />
                                         <span>Filtros</span>
                                         {Object.values(filters).some(value => value !== '') && (
-                                            <span className="ml-1 bg-red-500/20 text-red-300 rounded-full w-5 h-5 flex items-center justify-center text-xs animate-fadeIn">
+                                            <span className="ml-1 bg-black text-gray-300 rounded-full w-5 h-5 flex items-center justify-center text-xs animate-fadeIn border border-gray-700">
                                                 {Object.values(filters).filter(value => value !== '').length}
                                             </span>
                                         )}
@@ -1083,9 +1169,8 @@ export default function ConsultasIneaBajas() {
 
                                     <button
                                         onClick={fetchMuebles}
-                                        className="group relative px-5 py-3 bg-gradient-to-r from-gray-800 to-gray-900 text-gray-300 rounded-xl font-medium flex items-center gap-2 hover:text-white transition-all duration-300 border border-gray-700 hover:border-gray-600"
+                                        className="group relative px-5 py-3 bg-black text-gray-300 rounded-xl font-medium flex items-center gap-2 hover:text-white transition-all duration-300 border border-gray-700 hover:border-gray-600"
                                     >
-                                        <div className="absolute inset-0 bg-gradient-to-r from-gray-500/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
                                         <RefreshCw className="h-5 w-5 text-gray-400 group-hover:text-gray-300 transition-transform duration-300 group-hover:rotate-180" />
                                         <span className="hidden sm:inline">Actualizar</span>
                                     </button>
@@ -1094,15 +1179,15 @@ export default function ConsultasIneaBajas() {
 
                             {/* Panel de filtros */}
                             {showFilters && (
-                                <div className="mt-6 border border-gray-700 rounded-xl bg-black shadow-lg backdrop-blur-sm transition-all duration-300 overflow-hidden">
-                                    <div className="flex justify-between items-center px-5 py-4 border-b border-gray-700">
+                                <div className="mt-6 border border-white/20 rounded-xl bg-black shadow-lg backdrop-blur-sm transition-all duration-300 overflow-hidden">
+                                    <div className="flex justify-between items-center px-5 py-4 border-b border-gray-800">
                                         <div className="flex items-center gap-2">
                                             <Filter className="h-5 w-5 text-gray-400" />
                                             <h3 className="font-semibold text-gray-200 text-lg">Filtros avanzados</h3>
                                         </div>
                                         <button
                                             onClick={clearFilters}
-                                            className="text-sm text-gray-400 hover:text-gray-300 flex items-center gap-1.5 transition-colors duration-200 px-3 py-1.5 rounded-lg hover:bg-gray-700/70 border border-transparent hover:border-gray-600"
+                                            className="text-sm text-gray-400 hover:text-gray-300 flex items-center gap-1.5 transition-colors duration-200 px-3 py-1.5 rounded-lg hover:bg-black/70 border border-transparent hover:border-gray-600"
                                             aria-label="Limpiar todos los filtros"
                                         >
                                             <span>Limpiar filtros</span>
@@ -1124,7 +1209,7 @@ export default function ConsultasIneaBajas() {
                                                         title='Estado'
                                                         value={filters.estado}
                                                         onChange={(e) => setFilters({ ...filters, estado: e.target.value })}
-                                                        className="w-full bg-gray-700 border border-gray-600 rounded-lg px-3 py-2.5 text-white focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500 appearance-none transition-all duration-200"
+                                                        className="w-full bg-black border border-gray-700 rounded-lg px-3 py-2.5 text-white focus:outline-none focus:ring-2 focus:ring-white/50 focus:border-gray-500 appearance-none transition-all duration-200"
                                                     >
                                                         <option value="">Todos los estados</option>
                                                         {uniqueFilterOptions.estados.map((estado) => (
@@ -1149,7 +1234,7 @@ export default function ConsultasIneaBajas() {
                                                         title='Área'
                                                         value={filters.area}
                                                         onChange={(e) => setFilters({ ...filters, area: e.target.value })}
-                                                        className="w-full bg-gray-700 border border-gray-600 rounded-lg px-3 py-2.5 text-white focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500 appearance-none transition-all duration-200"
+                                                        className="w-full bg-black border border-gray-700 rounded-lg px-3 py-2.5 text-white focus:outline-none focus:ring-2 focus:ring-white/50 focus:border-gray-500 appearance-none transition-all duration-200"
                                                     >
                                                         <option value="">Todas las áreas</option>
                                                         {uniqueFilterOptions.areas.map((area) => (
@@ -1174,7 +1259,7 @@ export default function ConsultasIneaBajas() {
                                                         title='Rubro'
                                                         value={filters.rubro}
                                                         onChange={(e) => setFilters({ ...filters, rubro: e.target.value })}
-                                                        className="w-full bg-gray-700 border border-gray-600 rounded-lg px-3 py-2.5 text-white focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500 appearance-none transition-all duration-200"
+                                                        className="w-full bg-black border border-gray-700 rounded-lg px-3 py-2.5 text-white focus:outline-none focus:ring-2 focus:ring-white/50 focus:border-gray-500 appearance-none transition-all duration-200"
                                                     >
                                                         <option value="">Todos los rubros</option>
                                                         {uniqueFilterOptions.rubros.map((rubro) => (
@@ -1259,7 +1344,7 @@ export default function ConsultasIneaBajas() {
                                         ) : error ? (
                                             <tr className="h-96">
                                                 <td colSpan={5} className="px-6 py-24 text-center">
-                                                    <div className="flex flex-col items-center justify-center space-y-4 text-red-400">
+                                                    <div className="flex flex-col items-center justify-center space-y-4 text-gray-400">
                                                         <AlertCircle className="h-12 w-12" />
                                                         <p className="text-lg font-medium">Error al cargar datos</p>
                                                         <p className="text-sm text-gray-400 max-w-lg mx-auto mb-2">{error}</p>
@@ -1285,7 +1370,7 @@ export default function ConsultasIneaBajas() {
                                                                 </p>
                                                                 <button
                                                                     onClick={clearFilters}
-                                                                    className="px-4 py-2 bg-gray-800 text-red-400 rounded-md text-sm hover:bg-gray-700 transition-colors flex items-center gap-2"
+                                                                    className="px-4 py-2 bg-gray-800 text-gray-300 rounded-md text-sm hover:bg-gray-700 transition-colors flex items-center gap-2"
                                                                 >
                                                                     <X className="h-4 w-4" />
                                                                     Limpiar filtros
@@ -1302,7 +1387,7 @@ export default function ConsultasIneaBajas() {
                                                 <tr
                                                     key={item.id}
                                                     onClick={() => handleSelectItem(item)}
-                                                    className={`hover:bg-gray-800 cursor-pointer transition-colors ${selectedItem?.id === item.id ? 'bg-red-900/20 border-l-4 border-red-600' : ''}`}
+                                                    className={`hover:bg-gray-800 cursor-pointer transition-colors ${selectedItem?.id === item.id ? 'bg-gray-800 border-l-4 border-gray-600' : ''}`}
                                                 >
                                                     <td className="px-4 py-3 whitespace-nowrap text-sm font-medium text-white">
                                                         {item.id_inv}
@@ -1340,10 +1425,7 @@ export default function ConsultasIneaBajas() {
                                         <button
                                             onClick={() => changePage(1)}
                                             disabled={currentPage === 1}
-                                            className={`p-1.5 rounded-md flex items-center justify-center ${currentPage === 1
-                                                ? 'text-gray-600 cursor-not-allowed'
-                                                : 'text-gray-400 hover:bg-gray-800 hover:text-white'
-                                                }`}
+                                            className="px-2 py-1 rounded-lg border border-neutral-800 bg-neutral-900 text-neutral-400 hover:text-white hover:bg-neutral-800 transition disabled:opacity-40 disabled:cursor-not-allowed"
                                             aria-label="Primera página"
                                             title="Primera página"
                                         >
@@ -1357,10 +1439,7 @@ export default function ConsultasIneaBajas() {
                                         <button
                                             onClick={() => changePage(currentPage - 1)}
                                             disabled={currentPage === 1}
-                                            className={`p-1.5 rounded-md ${currentPage === 1
-                                                ? 'text-gray-600 cursor-not-allowed'
-                                                : 'text-gray-400 hover:bg-gray-800 hover:text-white'
-                                                }`}
+                                            className="px-2 py-1 rounded-lg border border-neutral-800 bg-neutral-900 text-neutral-400 hover:text-white hover:bg-neutral-800 transition disabled:opacity-40 disabled:cursor-not-allowed"
                                             aria-label="Página anterior"
                                             title="Página anterior"
                                         >
@@ -1370,19 +1449,21 @@ export default function ConsultasIneaBajas() {
                                         {/* Números de página */}
                                         <div className="flex items-center">
                                             {getPageNumbers().map((page, index) => (
-                                                <button
-                                                    key={index}
-                                                    onClick={() => typeof page === 'number' ? changePage(page) : null}
-                                                    disabled={page === '...'}
-                                                    className={`min-w-[32px] h-8 px-2 rounded-md text-sm font-medium flex items-center justify-center ${currentPage === page
-                                                        ? 'bg-black text-white'
-                                                        : page === '...'
-                                                            ? 'text-gray-500 cursor-default'
-                                                            : 'text-gray-400 hover:bg-gray-800 hover:text-white'
-                                                        }`}
-                                                >
-                                                    {page}
-                                                </button>
+                                                page === '...' ? (
+                                                    <span key={index} className="px-2 text-neutral-500">...</span>
+                                                ) : (
+                                                    <button
+                                                        key={index}
+                                                        onClick={() => typeof page === 'number' ? changePage(page) : null}
+                                                        className={`mx-0.5 px-3 py-1.5 rounded-lg border text-sm font-semibold transition
+                                                            ${currentPage === page
+                                                                ? 'bg-white/20 text-white border-white/40 shadow'
+                                                                : 'bg-black/30 text-white/80 border-white/20 hover:bg-white/10 hover:text-white hover:border-white/30'}`}
+                                                        aria-current={currentPage === page ? 'page' : undefined}
+                                                    >
+                                                        {page}
+                                                    </button>
+                                                )
                                             ))}
                                         </div>
 
@@ -1390,10 +1471,7 @@ export default function ConsultasIneaBajas() {
                                         <button
                                             onClick={() => changePage(currentPage + 1)}
                                             disabled={currentPage === totalPages || totalPages === 0}
-                                            className={`p-1.5 rounded-md ${currentPage === totalPages || totalPages === 0
-                                                ? 'text-gray-600 cursor-not-allowed'
-                                                : 'text-gray-400 hover:bg-gray-800 hover:text-white'
-                                                }`}
+                                            className="px-2 py-1 rounded-lg border border-neutral-800 bg-neutral-900 text-neutral-400 hover:text-white hover:bg-neutral-800 transition disabled:opacity-40 disabled:cursor-not-allowed"
                                             aria-label="Página siguiente"
                                             title="Página siguiente"
                                         >
@@ -1404,10 +1482,7 @@ export default function ConsultasIneaBajas() {
                                         <button
                                             onClick={() => changePage(totalPages)}
                                             disabled={currentPage === totalPages || totalPages === 0}
-                                            className={`p-1.5 rounded-md flex items-center justify-center ${currentPage === totalPages || totalPages === 0
-                                                ? 'text-gray-600 cursor-not-allowed'
-                                                : 'text-gray-400 hover:bg-gray-800 hover:text-white'
-                                                }`}
+                                            className="px-2 py-1 rounded-lg border border-neutral-800 bg-neutral-900 text-neutral-400 hover:text-white hover:bg-neutral-800 transition disabled:opacity-40 disabled:cursor-not-allowed"
                                             aria-label="Última página"
                                             title="Última página"
                                         >
@@ -1428,7 +1503,7 @@ export default function ConsultasIneaBajas() {
                                                 setRowsPerPage(Number(e.target.value));
                                                 setCurrentPage(1);
                                             }}
-                                            className="bg-gray-800 border border-gray-700 rounded-md px-2 py-1 text-sm text-white focus:ring-2 focus:ring-red-500 focus:border-transparent"
+                                            className="bg-gray-800 border border-gray-700 rounded-md px-2 py-1 text-sm text-white focus:ring-2 focus:ring-gray-500 focus:border-transparent"
                                         >
                                             <option value={10}>10</option>
                                             <option value={25}>25</option>
@@ -1449,14 +1524,14 @@ export default function ConsultasIneaBajas() {
                         >
                             <div className="sticky top-0 z-10 bg-black border-b border-gray-800 px-6 py-4 flex justify-between items-center">
                                 <h2 className="text-xl font-semibold text-white flex items-center gap-2">
-                                    <ClipboardList className="h-5 w-5 text-red-400" />
+                                    <ClipboardList className="h-5 w-5 text-gray-400" />
                                     Detalle del Artículo (BAJA)
                                 </h2>
                                 <button
                                     type="button"
                                     onClick={closeDetail}
                                     title="Cerrar detalle"
-                                    className="text-gray-400 hover:text-white rounded-full p-2 focus:outline-none focus:ring-2 focus:ring-red-500 hover:bg-gray-800 transition-colors"
+                                    className="text-gray-400 hover:text-white rounded-full p-2 focus:outline-none focus:ring-2 focus:ring-gray-500 hover:bg-gray-800 transition-colors"
                                 >
                                     <X className="h-5 w-5" />
                                 </button>
@@ -1502,7 +1577,7 @@ export default function ConsultasIneaBajas() {
                                                     </div>
 
                                                     <div className="flex-shrink-0 w-64 space-y-2">
-                                                        <label className="flex flex-col items-center justify-center h-32 border-2 border-dashed border-gray-700 rounded-lg cursor-pointer hover:border-red-500 transition-colors p-4">
+                                                        <label className="flex flex-col items-center justify-center h-32 border-2 border-dashed border-gray-700 rounded-lg cursor-pointer hover:border-gray-500 transition-colors p-4">
                                                             <div className="text-center">
                                                                 <Plus className="h-6 w-6 mx-auto text-gray-400 mb-1" />
                                                                 <span className="text-xs text-gray-400">Cambiar imagen</span>
@@ -1529,7 +1604,7 @@ export default function ConsultasIneaBajas() {
                                                     type="text"
                                                     value={editFormData?.id_inv || ''}
                                                     onChange={(e) => handleEditFormChange(e, 'id_inv')}
-                                                    className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2.5 text-white focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent transition-all"
+                                                    className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2.5 text-white focus:outline-none focus:ring-2 focus:ring-white/50 focus:border-transparent transition-all"
                                                     placeholder="Ingrese el ID de inventario"
                                                 />
                                             </div>
@@ -1586,7 +1661,7 @@ export default function ConsultasIneaBajas() {
                                                         type="date"
                                                         value={editFormData?.f_adq || ''}
                                                         onChange={(e) => handleEditFormChange(e, 'f_adq')}
-                                                        className="w-full bg-gray-800 border border-gray-700 rounded-lg pl-10 pr-4 py-2.5 text-white focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent transition-all"
+                                                        className="w-full bg-gray-800 border border-gray-700 rounded-lg pl-10 pr-4 py-2.5 text-white focus:outline-none focus:ring-2 focus:ring-white/50 focus:border-transparent transition-all"
                                                         title="Seleccione la fecha de adquisición"
                                                     />
                                                 </div>
@@ -1617,7 +1692,7 @@ export default function ConsultasIneaBajas() {
                                                         type="text"
                                                         value={editFormData?.proveedor || ''}
                                                         onChange={(e) => handleEditFormChange(e, 'proveedor')}
-                                                        className="w-full bg-gray-800 border border-gray-700 rounded-lg pl-10 pr-4 py-2.5 text-white focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent transition-all"
+                                                        className="w-full bg-gray-800 border border-gray-700 rounded-lg pl-10 pr-4 py-2.5 text-white focus:outline-none focus:ring-2 focus:ring-white/50 focus:border-transparent transition-all"
                                                         title="Ingrese el nombre del proveedor"
                                                         placeholder="Nombre del proveedor"
                                                     />
@@ -1760,7 +1835,7 @@ export default function ConsultasIneaBajas() {
                                         <div className="flex items-center space-x-4 pt-6 border-t border-gray-800">
                                             <button
                                                 onClick={saveChanges}
-                                                className="px-5 py-2.5 bg-red-700 text-white rounded-lg font-medium flex items-center gap-2 hover:bg-red-800 transition-colors focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 focus:ring-offset-gray-900"
+                                                className="px-5 py-2.5 bg-black border border-white/20 text-white rounded-lg font-medium flex items-center gap-2 hover:bg-white/10 transition-colors focus:outline-none focus:ring-2 focus:ring-white/50 focus:ring-offset-2 focus:ring-offset-gray-900"
                                             >
                                                 <Save className="h-4 w-4" />
                                                 Guardar Cambios
@@ -1793,14 +1868,14 @@ export default function ConsultasIneaBajas() {
                                                 <h3 className="text-xs font-medium uppercase tracking-wider text-gray-400">Rubro</h3>
                                                 <h3 className="text-xs font-medium uppercase tracking-wider text-gray-400">Proveedor</h3>
                                                 <p className="mt-2 text-white flex items-center gap-2">
-                                                    <Store className="h-4 w-4 text-red-400" />
+                                                    <Store className="h-4 w-4 text-gray-400" />
                                                     {selectedItem.proveedor || 'No especificado'}
                                                 </p>
                                             </div>
                                             <div className="detail-card bg-gray-800/50 rounded-lg p-4 hover:bg-gray-800/80 transition-all">
                                                 <h3 className="text-xs font-medium uppercase tracking-wider text-gray-400">Factura</h3>
                                                 <p className="mt-2 text-white flex items-center gap-2">
-                                                    <Receipt className="h-4 w-4 text-red-400" />
+                                                    <Receipt className="h-4 w-4 text-gray-400" />
                                                     {selectedItem.factura || 'No especificado'}
                                                 </p>
                                             </div>
@@ -1811,7 +1886,7 @@ export default function ConsultasIneaBajas() {
                                             <div className="detail-card bg-gray-800/50 rounded-lg p-4 hover:bg-gray-800/80 transition-all">
                                                 <h3 className="text-xs font-medium uppercase tracking-wider text-gray-400">Estatus</h3>
                                                 <div className="mt-2">
-                                                    <span className={`inline-flex items-center px-3 py-1 text-sm font-medium rounded-full bg-red-900/70 text-red-200 border border-red-700`}>
+                                                    <span className={`inline-flex items-center px-3 py-1 text-sm font-medium rounded-full bg-gray-700 text-gray-200 border border-gray-600`}>
                                                         <AlertCircle className="h-3.5 w-3.5 mr-1.5" />
                                                         {selectedItem.estatus || 'No especificado'}
                                                     </span>
@@ -1822,19 +1897,19 @@ export default function ConsultasIneaBajas() {
                                                 <div className="mt-2 grid grid-cols-1 md:grid-cols-3 gap-3">
                                                     {selectedItem.ubicacion_es && (
                                                         <div className="flex items-center gap-2 bg-gray-900/60 p-2 rounded-md">
-                                                            <Building2 className="h-4 w-4 text-red-400 flex-shrink-0" />
+                                                            <Building2 className="h-4 w-4 text-gray-400 flex-shrink-0" />
                                                             <span className="text-white">{selectedItem.ubicacion_es}</span>
                                                         </div>
                                                     )}
                                                     {selectedItem.ubicacion_mu && (
                                                         <div className="flex items-center gap-2 bg-gray-900/60 p-2 rounded-md">
-                                                            <Building2 className="h-4 w-4 text-red-400 flex-shrink-0" />
+                                                            <Building2 className="h-4 w-4 text-gray-400 flex-shrink-0" />
                                                             <span className="text-white">{selectedItem.ubicacion_mu}</span>
                                                         </div>
                                                     )}
                                                     {selectedItem.ubicacion_no && (
                                                         <div className="flex items-center gap-2 bg-gray-900/60 p-2 rounded-md">
-                                                            <Building2 className="h-4 w-4 text-red-400 flex-shrink-0" />
+                                                            <Building2 className="h-4 w-4 text-gray-400 flex-shrink-0" />
                                                             <span className="text-white">{selectedItem.ubicacion_no}</span>
                                                         </div>
                                                     )}
@@ -1850,35 +1925,35 @@ export default function ConsultasIneaBajas() {
                                             <div className="detail-card bg-gray-800/50 rounded-lg p-4 hover:bg-gray-800/80 transition-all">
                                                 <h3 className="text-xs font-medium uppercase tracking-wider text-gray-400">Director/Jefe de Área</h3>
                                                 <p className="mt-2 text-white flex items-center gap-2">
-                                                    <User className="h-4 w-4 text-red-400" />
+                                                    <User className="h-4 w-4 text-gray-400" />
                                                     {selectedItem.usufinal || 'No especificado'}
                                                 </p>
                                             </div>
                                             <div className="detail-card bg-gray-800/50 rounded-lg p-4 hover:bg-gray-800/80 transition-all">
                                                 <h3 className="text-xs font-medium uppercase tracking-wider text-gray-400">Usuario Final</h3>
                                                 <p className="mt-2 text-white flex items-center gap-2">
-                                                    <Shield className="h-4 w-4 text-red-400" />
+                                                    <Shield className="h-4 w-4 text-gray-400" />
                                                     {selectedItem.resguardante || 'No especificado'}
                                                 </p>
                                             </div>
-                                            <div className="detail-card bg-red-900/20 border border-red-800/50 rounded-lg p-4 col-span-2">
-                                                <h3 className="text-xs font-medium uppercase tracking-wider text-red-400 flex items-center gap-2">
+                                            <div className="detail-card bg-gray-800/50 border border-gray-700 rounded-lg p-4 col-span-2">
+                                                <h3 className="text-xs font-medium uppercase tracking-wider text-white flex items-center gap-2">
                                                     <AlertTriangle className="h-4 w-4" />
                                                     Información de Baja
                                                 </h3>
                                                 <div className="mt-2 flex flex-col sm:flex-row sm:items-center sm:gap-4">
                                                     <div className="flex items-center gap-2 text-gray-300">
-                                                        <Calendar className="h-4 w-4 text-red-400" />
+                                                        <Calendar className="h-4 w-4 text-gray-400" />
                                                         <span>Fecha: {formatDate(selectedItem.fechabaja) || 'No especificada'}</span>
                                                     </div>
                                                     <div className="flex items-center gap-2 text-gray-300">
-                                                        <Info className="h-4 w-4 text-red-400" />
+                                                        <Info className="h-4 w-4 text-gray-400" />
                                                         <span>Causa: {selectedItem.causadebaja || 'No especificada'}</span>
                                                     </div>
                                                 </div>
                                             </div>
                                             {/* NUEVO: Card de información de baja (usuario, fecha, motivo) */}
-                                            <div className="detail-card bg-red-900/60 border border-red-800 rounded-lg p-4 col-span-2 mt-2">
+                                            <div className="detail-card bg-gray-800/50 border border-gray-700 rounded-lg p-4 col-span-2 mt-2">
                                                 <h3 className="text-xs font-medium uppercase tracking-wider text-white flex items-center gap-2 mb-2">
                                                     <Info className="h-4 w-4" />
                                                     Registro de Baja
@@ -1900,7 +1975,7 @@ export default function ConsultasIneaBajas() {
                                         <div className="flex items-center space-x-4 pt-6 border-t border-gray-800">
                                             <button
                                                 onClick={handleStartEdit}
-                                                className="px-5 py-2.5 bg-red-700 text-white rounded-lg font-medium flex items-center gap-2 hover:bg-red-800 transition-colors focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 focus:ring-offset-gray-900"
+                                                className="px-5 py-2.5 bg-black border border-white/20 text-white rounded-lg font-medium flex items-center gap-2 hover:bg-white/10 transition-colors focus:outline-none focus:ring-2 focus:ring-white/50 focus:ring-offset-2 focus:ring-offset-gray-900"
                                             >
                                                 <Edit className="h-4 w-4" />
                                                 Editar
@@ -1923,13 +1998,13 @@ export default function ConsultasIneaBajas() {
                     {/* Modal para completar información del director */}
                     {showDirectorModal && (
                         <div className="fixed inset-0 bg-black/90 flex items-center justify-center z-50 px-4 animate-fadeIn">
-                            <div className="bg-black rounded-2xl shadow-2xl border border-yellow-600/30 w-full max-w-md overflow-hidden transition-all duration-300 transform">
-                                <div className="relative p-6 bg-gradient-to-b from-black to-gray-900">
-                                    <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-yellow-500/60 via-yellow-400 to-yellow-500/60"></div>
+                            <div className="bg-black rounded-2xl shadow-2xl border border-gray-700 w-full max-w-md overflow-hidden transition-all duration-300 transform">
+                                <div className="relative p-6 bg-gray-900">
+                                    <div className="absolute top-0 left-0 w-full h-1 bg-gray-700"></div>
 
                                     <div className="flex flex-col items-center text-center mb-4">
-                                        <div className="p-3 bg-yellow-500/10 rounded-full border border-yellow-500/30 mb-3">
-                                            <AlertCircle className="h-8 w-8 text-yellow-500" />
+                                        <div className="p-3 bg-gray-800 rounded-full border border-gray-700 mb-3">
+                                            <AlertCircle className="h-8 w-8 text-gray-400" />
                                         </div>
                                         <h3 className="text-2xl font-bold text-white">Información requerida</h3>
                                         <p className="text-gray-400 mt-2">
@@ -1942,7 +2017,7 @@ export default function ConsultasIneaBajas() {
                                             <label className="flex items-center gap-2 text-sm font-medium text-gray-300 mb-2">Director/Jefe seleccionado</label>
                                             <div className="flex items-center gap-3">
                                                 <div className="p-2 bg-gray-800 rounded-lg">
-                                                    <User className="h-4 w-4 text-yellow-400" />
+                                                    <User className="h-4 w-4 text-gray-400" />
                                                 </div>
                                                 <span className="text-white font-medium">{incompleteDirector?.nombre || 'Director'}</span>
                                             </div>
@@ -1958,11 +2033,11 @@ export default function ConsultasIneaBajas() {
                                                 value={directorFormData.area}
                                                 onChange={(e) => setDirectorFormData({ area: e.target.value })}
                                                 placeholder="Ej: Administración, Recursos Humanos, Contabilidad..."
-                                                className="block w-full bg-gray-900 border border-gray-700 rounded-lg py-3 px-4 text-white placeholder-gray-500 focus:outline-none focus:border-yellow-500 focus:ring-1 focus:ring-yellow-500 transition-colors"
+                                                className="block w-full bg-gray-900 border border-gray-700 rounded-lg py-3 px-4 text-white placeholder-gray-500 focus:outline-none focus:border-gray-500 focus:ring-1 focus:ring-gray-500 transition-colors"
                                                 required
                                             />
                                             {!directorFormData.area && (
-                                                <p className="text-xs text-yellow-500/80 mt-2 flex items-center gap-1">
+                                                <p className="text-xs text-gray-400 mt-2 flex items-center gap-1">
                                                     <AlertCircle className="h-3 w-3" />
                                                     Este campo es obligatorio
                                                 </p>
@@ -1985,7 +2060,7 @@ export default function ConsultasIneaBajas() {
                                         className={`px-5 py-2.5 rounded-lg text-sm flex items-center gap-2 transition-all duration-300 
                                             ${savingDirector || !directorFormData.area ?
                                                 'bg-gray-900 text-gray-500 cursor-not-allowed border border-gray-800' :
-                                                'bg-gradient-to-r from-yellow-600 to-yellow-500 text-black font-medium hover:shadow-lg hover:shadow-yellow-500/20'}`}
+                                                'bg-gray-700 text-white font-medium hover:bg-gray-600'}`}
                                     >
                                         {savingDirector ? (
                                             <RefreshCw className="h-4 w-4 animate-spin" />
