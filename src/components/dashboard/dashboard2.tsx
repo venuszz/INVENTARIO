@@ -157,7 +157,6 @@ const AnimatedCounter = ({ value, className, prefix = '', suffix = '', loading =
         if (intervalRef.current) {
             clearInterval(intervalRef.current);
         }
-        
         if (loading) {
             // Durante la carga, mostrar números aleatorios
             intervalRef.current = setInterval(() => {
@@ -771,22 +770,9 @@ export default function InventoryDashboard() {
                                 <Repeat size={16} className="text-white/90" />
                             </motion.div>
                             <span className="text-white/90 font-medium tracking-wide">
-                                {activeWarehouse === 'INEA' ? 'Ver ITEA' : 'Ver INEA'}
+                                {activeWarehouse === 'INEA' ? 'Cambiar a ITEA' : 'Cambiar a INEA'}
                             </span>
-                            <motion.div 
-                                className={`absolute top-0 right-0 w-2 h-2 rounded-full ${activeWarehouse === 'INEA' ? 'bg-blue-500' : 'bg-green-500'} m-1.5`}
-                                initial={{ opacity: 0 }}
-                                animate={{ opacity: 1 }}
-                                transition={{ duration: 0.3 }}
-                            />
-                            <motion.div 
-                                className="absolute bottom-0 left-0 text-[8px] text-white/50 m-1"
-                                initial={{ opacity: 0 }}
-                                animate={{ opacity: 1 }}
-                                transition={{ duration: 0.3 }}
-                            >
-                                Actual: {activeWarehouse}
-                            </motion.div>
+                            <div className={`w-2 h-2 rounded-full ml-2 ${activeWarehouse === 'INEA' ? 'bg-blue-500' : 'bg-green-500'}`}></div>
                         </motion.button>
                         <motion.button
                             onClick={handleExportClick}
@@ -979,7 +965,7 @@ export default function InventoryDashboard() {
 
                             <div className="flex items-center gap-4 px-6 py-4 border-b border-white/10">
                                 <div className="flex flex-col">
-                                    <label className="text-sm text-gray-400">Fecha</label>
+                                    <label className="text-sm text-white/70">Fecha</label>
                                     <input
                                         title='Fecha de exportación'
                                         type="date"
@@ -1005,7 +991,7 @@ export default function InventoryDashboard() {
                                         {editableRubros.map((rubro, index) => (
                                             <tr 
                                                 key={rubro.id}
-                                                className="border-t border-gray-800 cursor-move group"
+                                                className="border-t border-white/10 cursor-move group"
                                                 draggable={true}
                                                 onDragStart={(e) => {
                                                     e.dataTransfer.setData('text/plain', index.toString());
@@ -1050,51 +1036,51 @@ export default function InventoryDashboard() {
                                                         type="text"
                                                         value={rubro.numeroPartida}
                                                         onChange={(e) => updateRubro(index, 'numeroPartida', e.target.value)}
-                                                        className="w-full bg-black border border-gray-700 rounded px-2 py-1 text-white focus:outline-none focus:border-purple-500"
+                                                        className="w-full bg-black border border-white/20 rounded px-2 py-1 text-white focus:outline-none focus:border-white/40"
                                                     />
                                                 </td>
                                                 <td className="px-3 py-2">
                                                     {rubro.isPreFilled ? (
-                                                        <div className="w-full px-2 py-1 text-white bg-gray-800/50 rounded">
+                                                        <div className="w-full px-2 py-1 text-white bg-white/5 rounded">
                                                             {rubro.rubro}
                                                         </div>
                                                     ) : (
                                                         <input
-                                                            title='Rubro'
-                                                            type="text"
-                                                            value={rubro.rubro}
-                                                            onChange={(e) => updateRubro(index, 'rubro', e.target.value)}
-                                                            className="w-full bg-black border border-gray-700 rounded px-2 py-1 text-white focus:outline-none focus:border-purple-500"
+                                                                title='Rubro'
+                                                                type="text"
+                                                                value={rubro.rubro}
+                                                                onChange={(e) => updateRubro(index, 'rubro', e.target.value)}
+                                                                className="w-full bg-black border border-white/20 rounded px-2 py-1 text-white focus:outline-none focus:border-white/40"
                                                         />
                                                     )}
                                                 </td>
                                                 <td className="px-3 py-2">
                                                     {rubro.isPreFilled ? (
-                                                        <div className="w-full px-2 py-1 text-white bg-gray-800/50 rounded text-center">
+                                                        <div className="w-full px-2 py-1 text-white bg-white/5 rounded text-center">
                                                             {rubro.count}
                                                         </div>
                                                     ) : (
                                                         <input
-                                                            title='Total'
-                                                            type="number"
-                                                            value={rubro.count}
-                                                            onChange={(e) => updateRubro(index, 'count', parseInt(e.target.value) || 0)}
-                                                            className="w-full bg-black border border-gray-700 rounded px-2 py-1 text-white focus:outline-none focus:border-purple-500 text-center"
+                                                                title='Total'
+                                                                type="number"
+                                                                value={rubro.count}
+                                                                onChange={(e) => updateRubro(index, 'count', parseInt(e.target.value) || 0)}
+                                                                className="w-full bg-black border border-white/20 rounded px-2 py-1 text-white focus:outline-none focus:border-white/40 text-center"
                                                         />
                                                     )}
                                                 </td>
                                                 <td className="px-3 py-2">
                                                     {rubro.isPreFilled ? (
-                                                        <div className="w-full px-2 py-1 text-white bg-gray-800/50 rounded text-right">
+                                                        <div className="w-full px-2 py-1 text-white bg-white/5 rounded text-right">
                                                             ${rubro.sum.toLocaleString('es-MX', { minimumFractionDigits: 2 })}
                                                         </div>
                                                     ) : (
                                                         <input
-                                                            title='Valor'
-                                                            type="number"
-                                                            value={rubro.sum}
-                                                            onChange={(e) => updateRubro(index, 'sum', parseFloat(e.target.value) || 0)}
-                                                            className="w-full bg-black border border-gray-700 rounded px-2 py-1 text-white focus:outline-none focus:border-purple-500 text-right"
+                                                                title='Valor'
+                                                                type="number"
+                                                                value={rubro.sum}
+                                                                onChange={(e) => updateRubro(index, 'sum', parseFloat(e.target.value) || 0)}
+                                                                className="w-full bg-black border border-white/20 rounded px-2 py-1 text-white focus:outline-none focus:border-white/40 text-right"
                                                         />
                                                     )}
                                                 </td>
@@ -1109,8 +1095,8 @@ export default function InventoryDashboard() {
                                                         </button>
                                                     )}
                                                     <div className="opacity-0 group-hover:opacity-100 transition-opacity absolute right-full top-1/2 -translate-y-1/2 pr-2">
-                                                        <div className="bg-gray-800 rounded p-1">
-                                                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-gray-400">
+                                                        <div className="bg-white/5 rounded p-1">
+                                                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-white/60">
                                                                 <line x1="4" y1="12" x2="20" y2="12"></line>
                                                                 <line x1="4" y1="6" x2="20" y2="6"></line>
                                                                 <line x1="4" y1="18" x2="20" y2="18"></line>
@@ -1121,9 +1107,9 @@ export default function InventoryDashboard() {
                                             </tr>
                                         ))}
                                     </tbody>
-                                    <tfoot className="border-t border-gray-800">
+                                    <tfoot className="border-t border-white/10">
                                         <tr>
-                                            <td colSpan={2} className="px-3 py-3 text-right text-gray-400">Total:</td>
+                                            <td colSpan={2} className="px-3 py-3 text-right text-white/70">Total:</td>
                                             <td className="px-3 py-3 text-center text-white">
                                                 {editableRubros.reduce((acc, rubro) => acc + rubro.count, 0)}
                                             </td>
@@ -1139,20 +1125,20 @@ export default function InventoryDashboard() {
                             <div className="px-6 py-4 border-t border-white/10 flex justify-between items-center">
                                 <button
                                     onClick={addNewRubro}
-                                    className="px-4 py-2 bg-purple-500/20 text-purple-300 rounded-lg hover:bg-purple-500/30 transition-colors"
+                                    className="px-4 py-2 bg-white/5 text-white rounded-lg hover:bg-white/10 transition-colors"
                                 >
                                     Agregar rubro
                                 </button>
                                 <div className="flex gap-3">
                                     <button
                                         onClick={() => setShowExportModal(false)}
-                                        className="px-4 py-2 border border-gray-600 text-gray-300 rounded-lg hover:bg-white/5"
+                                        className="px-4 py-2 border border-white/20 text-white rounded-lg hover:bg-white/10"
                                     >
                                         Cancelar
                                     </button>
                                     <button
                                         onClick={handleExportPDFWithData}
-                                        className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700"
+                                        className="px-4 py-2 bg-white/10 text-white rounded-lg hover:bg-white/20"
                                     >
                                         Exportar PDF
                                     </button>
