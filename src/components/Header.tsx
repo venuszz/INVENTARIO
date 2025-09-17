@@ -1,15 +1,17 @@
 "use client";
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { usePathname } from 'next/navigation';
-import { ChevronDown, ChevronRight, User, LogOut, Database, FileText, Settings, Menu, X, Grid, Bell, Moon } from 'lucide-react';
+import { ChevronDown, ChevronRight, User, LogOut, Database, FileText, Settings, Menu, X, Grid, Bell, Moon, Sun} from 'lucide-react';
 import Cookies from 'js-cookie';
 import { useRouter } from 'next/navigation';
 import supabase from '@/app/lib/supabase/client';
-import { WelcomeMessage } from "@/components/WelcomeMessage";
 import RoleGuard from "@/components/roleGuard";
 import NotificationsPanel from './NotificationCenter';
 import { useNotifications } from '@/hooks/useNotifications';
+import { useTheme } from "@/context/ThemeContext"
+
 
 type MenuItem = {
     title: string;
@@ -53,6 +55,7 @@ export function useCerrarSesion() {
 export default function NavigationBar() {
     const pathname = usePathname();
     const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+    const { isDarkMode, toggleDarkMode } = useTheme();
     const [openMenu, setOpenMenu] = useState<string | null>(null);
     const [openSubmenu, setOpenSubmenu] = useState<string | null>(null);
     const [notificationsOpen, setNotificationsOpen] = useState(false);
@@ -258,17 +261,20 @@ export default function NavigationBar() {
     const isActive = (path: string) => pathname === path || pathname.startsWith(path + '/');
 
     return (
-        <nav className="bg-black text-white shadow-lg relative z-50">
+        <nav className={`${isDarkMode ? 'bg-black text-white' : 'bg-white text-gray-900'} shadow-lg relative z-50 transition-colors duration-300`}>
             {/* Desktop Navigation */}
             <div className="max-w-7xl mx-auto px-4">
                 <div className="flex justify-between h-16">
                     <div className="flex items-center">
                         <div className="flex-shrink-0 flex items-center">
                             <Link href="/" onClick={closeAll} className="hover:opacity-80 transition-opacity duration-300">
-                                <img
-                                    src="/images/ITEA_logo.svg"  // Ruta a tu imagen en la carpeta public
+                                <Image
+                                    src={isDarkMode ? "/images/ITEA_logo.svg" : "/images/ITEA_logo_negro.png"}
                                     alt="Logo ITEA"
-                                    className="h-10 w-auto"  // Ajusta la altura según necesites
+                                    width={40}
+                                    height={40}
+                                    className="h-10 w-auto"
+                                    priority
                                 />
                             </Link>
                         </div>
@@ -278,8 +284,8 @@ export default function NavigationBar() {
                                     <button
                                         onClick={() => toggleMenu("Inventario")}
                                         className={`flex items-center px-4 py-2 rounded-md transition-all duration-300 ease-in-out transform ${isActive("/inventario")
-                                                ? 'text-white bg-white/10 border border-white/20 scale-105'
-                                                : 'text-gray-300 hover:text-white hover:bg-gray-800 hover:scale-105'
+                                            ? isDarkMode ? 'text-white bg-white/10 border border-white/20 scale-105' : 'text-gray-900 bg-gray-100 border border-gray-300 scale-105'
+                                            : isDarkMode ? 'text-gray-300 hover:text-white hover:bg-gray-800 hover:scale-105' : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100 hover:scale-105'
                                             }`}
                                     >
                                         <span className="mr-2"><Database className="w-4 h-4" /></span>
@@ -287,15 +293,15 @@ export default function NavigationBar() {
                                         <ChevronDown className={`ml-1 w-3 h-3 transition-transform duration-300 ${openMenu === "Inventario" ? 'rotate-180' : ''}`} />
                                     </button>
                                     {openMenu === "Inventario" && (
-                                        <div className="absolute left-0 mt-1 w-56 rounded-md bg-black shadow-lg z-20 border border-white/10 animate-in slide-in-from-top-2 fade-in duration-200">
+                                        <div className={`absolute left-0 mt-1 w-56 rounded-md ${isDarkMode ? 'bg-black border-white/10' : 'bg-white border-gray-200'} shadow-lg z-20 border animate-in slide-in-from-top-2 fade-in duration-200`}>
                                             <div className="py-1">
                                                 <RoleGuard roles={["admin", "superadmin"]} userRole={userData.rol}>
                                                     <Link
                                                         href="/inventario/registro"
                                                         onClick={closeAll}
                                                         className={`block px-4 py-2 text-sm transition-all duration-200 ${pathname === "/inventario/registro"
-                                                                ? 'text-white bg-white/10 border-r-2 border-white'
-                                                                : 'text-gray-300 hover:bg-gray-800 hover:text-white hover:translate-x-1'
+                                                            ? isDarkMode ? 'text-white bg-white/10 border-r-2 border-white' : 'text-gray-900 bg-gray-100 border-r-2 border-gray-900'
+                                                            : isDarkMode ? 'text-gray-300 hover:bg-gray-800 hover:text-white hover:translate-x-1' : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900 hover:translate-x-1'
                                                             }`}
                                                     >
                                                         Registro de nuevos bienes
@@ -313,8 +319,8 @@ export default function NavigationBar() {
                                             <button
                                                 onClick={() => toggleMenu(item.title)}
                                                 className={`flex items-center px-4 py-2 rounded-md transition-all duration-300 ease-in-out transform ${isActive(item.path)
-                                                        ? 'text-white bg-white/10 border border-white/20 scale-105'
-                                                        : 'text-gray-300 hover:text-white hover:bg-gray-800 hover:scale-105'
+                                                    ? isDarkMode ? 'text-white bg-white/10 border border-white/20 scale-105' : 'text-gray-900 bg-gray-100 border border-gray-300 scale-105'
+                                                    : isDarkMode ? 'text-gray-300 hover:text-white hover:bg-gray-800 hover:scale-105' : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100 hover:scale-105'
                                                     }`}
                                             >
                                                 <span className="mr-2">{item.icon}</span>
@@ -322,7 +328,7 @@ export default function NavigationBar() {
                                                 <ChevronDown className={`ml-1 w-3 h-3 transition-transform duration-300 ${openMenu === item.title ? 'rotate-180' : ''}`} />
                                             </button>
                                             {openMenu === item.title && (
-                                                <div className="absolute left-0 mt-1 w-56 rounded-md bg-black shadow-lg z-20 border border-white/10 animate-in slide-in-from-top-2 fade-in duration-200">
+                                                <div className={`absolute left-0 mt-1 w-56 rounded-md ${isDarkMode ? 'bg-black border-white/10' : 'bg-white border-gray-200'} shadow-lg z-20 border animate-in slide-in-from-top-2 fade-in duration-200`}>
                                                     <div className="py-1">
                                                         {item.submenu.map((subItem) => (
                                                             <div key={subItem.title}>
@@ -331,15 +337,15 @@ export default function NavigationBar() {
                                                                         <button
                                                                             onClick={(e) => toggleSubmenu(`${item.title}-${subItem.title}`, e)}
                                                                             className={`flex justify-between w-full px-4 py-2 text-sm transition-all duration-200 ${isActive(subItem.path)
-                                                                                    ? 'text-white bg-white/10 border-r-2 border-white'
-                                                                                    : 'text-gray-300 hover:bg-gray-800 hover:text-white hover:translate-x-1'
+                                                                                ? isDarkMode ? 'text-white bg-white/10 border-r-2 border-white' : 'text-gray-900 bg-gray-100 border-r-2 border-gray-900'
+                                                                                : isDarkMode ? 'text-gray-300 hover:bg-gray-800 hover:text-white hover:translate-x-1' : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900 hover:translate-x-1'
                                                                                 }`}
                                                                         >
                                                                             {subItem.title}
                                                                             <ChevronRight className="w-3 h-3" />
                                                                         </button>
                                                                         {openSubmenu === `${item.title}-${subItem.title}` && (
-                                                                            <div className="absolute left-full top-0 w-56 rounded-md bg-black shadow-lg z-30 border border-white/10 animate-in slide-in-from-left-2 fade-in duration-200">
+                                                                            <div className={`absolute left-full top-0 w-56 rounded-md ${isDarkMode ? 'bg-black border-white/10' : 'bg-white border-gray-200'} shadow-lg z-30 border animate-in slide-in-from-left-2 fade-in duration-200`}>
                                                                                 <div className="py-1">
                                                                                     {subItem.children.map((child) => (
                                                                                         <Link
@@ -347,8 +353,8 @@ export default function NavigationBar() {
                                                                                             href={child.path}
                                                                                             onClick={closeAll}
                                                                                             className={`block px-4 py-2 text-sm transition-all duration-200 ${pathname === child.path
-                                                                                                    ? 'text-white bg-white/10 border-r-2 border-white'
-                                                                                                    : 'text-gray-300 hover:bg-gray-800 hover:text-white hover:translate-x-1'
+                                                                                                ? isDarkMode ? 'text-white bg-white/10 border-r-2 border-white' : 'text-gray-900 bg-gray-100 border-r-2 border-gray-900'
+                                                                                                : isDarkMode ? 'text-gray-300 hover:bg-gray-800 hover:text-white hover:translate-x-1' : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900 hover:translate-x-1'
                                                                                                 }`}
                                                                                         >
                                                                                             {child.title}
@@ -364,8 +370,8 @@ export default function NavigationBar() {
                                                                             href={subItem.path}
                                                                             onClick={closeAll}
                                                                             className={`block px-4 py-2 text-sm transition-all duration-200 ${pathname === subItem.path
-                                                                                    ? 'text-white bg-white/10 border-r-2 border-white'
-                                                                                    : 'text-gray-300 hover:bg-gray-800 hover:text-white hover:translate-x-1'
+                                                                                ? isDarkMode ? 'text-white bg-white/10 border-r-2 border-white' : 'text-gray-900 bg-gray-100 border-r-2 border-gray-900'
+                                                                                : isDarkMode ? 'text-gray-300 hover:bg-gray-800 hover:text-white hover:translate-x-1' : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900 hover:translate-x-1'
                                                                                 }`}
                                                                         >
                                                                             {subItem.title}
@@ -376,8 +382,8 @@ export default function NavigationBar() {
                                                                         href={subItem.path}
                                                                         onClick={closeAll}
                                                                         className={`block px-4 py-2 text-sm transition-all duration-200 ${pathname === subItem.path
-                                                                                ? 'text-white bg-white/10 border-r-2 border-white'
-                                                                                : 'text-gray-300 hover:bg-gray-800 hover:text-white hover:translate-x-1'
+                                                                            ? isDarkMode ? 'text-white bg-white/10 border-r-2 border-white' : 'text-gray-900 bg-gray-100 border-r-2 border-gray-900'
+                                                                            : isDarkMode ? 'text-gray-300 hover:bg-gray-800 hover:text-white hover:translate-x-1' : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900 hover:translate-x-1'
                                                                             }`}
                                                                     >
                                                                         {subItem.title}
@@ -394,8 +400,8 @@ export default function NavigationBar() {
                                             href={item.path}
                                             onClick={closeAll}
                                             className={`flex items-center px-4 py-2 rounded-md transition-all duration-300 ease-in-out transform ${isActive(item.path)
-                                                    ? 'text-white bg-white/10 border border-white/20 scale-105'
-                                                    : 'text-gray-300 hover:text-white hover:bg-gray-800 hover:scale-105'
+                                                ? 'text-white bg-white/10 border border-white/20 scale-105'
+                                                : 'text-gray-300 hover:text-white hover:bg-gray-800 hover:scale-105'
                                                 }`}
                                         >
                                             <span className="mr-2">{item.icon}</span>
@@ -409,8 +415,8 @@ export default function NavigationBar() {
                                     <button
                                         onClick={() => toggleMenu("Administración")}
                                         className={`flex items-center px-4 py-2 rounded-md transition-all duration-300 ease-in-out transform ${isActive("/admin")
-                                                ? 'text-white bg-white/10 border border-white/20 scale-105'
-                                                : 'text-gray-300 hover:text-white hover:bg-gray-800 hover:scale-105'
+                                            ? isDarkMode ? 'text-white bg-white/10 border border-white/20 scale-105' : 'text-gray-900 bg-gray-100 border border-gray-300 scale-105'
+                                            : isDarkMode ? 'text-gray-300 hover:text-white hover:bg-gray-800 hover:scale-105' : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100 hover:scale-105'
                                             }`}
                                     >
                                         <span className="mr-2"><Settings className="w-4 h-4" /></span>
@@ -418,14 +424,14 @@ export default function NavigationBar() {
                                         <ChevronDown className={`ml-1 w-3 h-3 transition-transform duration-300 ${openMenu === "Administración" ? 'rotate-180' : ''}`} />
                                     </button>
                                     {openMenu === "Administración" && (
-                                        <div className="absolute left-0 mt-1 w-56 rounded-md bg-black shadow-lg z-20 border border-white/10 animate-in slide-in-from-top-2 fade-in duration-200">
+                                        <div className={`absolute left-0 mt-1 w-56 rounded-md ${isDarkMode ? 'bg-black border-white/10' : 'bg-white border-gray-200'} shadow-lg z-20 border animate-in slide-in-from-top-2 fade-in duration-200`}>
                                             <div className="py-1">
                                                 <Link
                                                     href="/admin/areas"
                                                     onClick={closeAll}
                                                     className={`block px-4 py-2 text-sm transition-all duration-200 ${pathname === "/admin/areas"
-                                                            ? 'text-white bg-white/10 border-r-2 border-white'
-                                                            : 'text-gray-300 hover:bg-gray-800 hover:text-white hover:translate-x-1'
+                                                        ? isDarkMode ? 'text-white bg-white/10 border-r-2 border-white' : 'text-gray-900 bg-gray-100 border-r-2 border-gray-900'
+                                                        : isDarkMode ? 'text-gray-300 hover:bg-gray-800 hover:text-white hover:translate-x-1' : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900 hover:translate-x-1'
                                                         }`}
                                                 >
                                                     Configuración General
@@ -434,8 +440,8 @@ export default function NavigationBar() {
                                                     href="/admin/personal"
                                                     onClick={closeAll}
                                                     className={`block px-4 py-2 text-sm transition-all duration-200 ${pathname === "/admin/personal"
-                                                            ? 'text-white bg-white/10 border-r-2 border-white'
-                                                            : 'text-gray-300 hover:bg-gray-800 hover:text-white hover:translate-x-1'
+                                                        ? isDarkMode ? 'text-white bg-white/10 border-r-2 border-white' : 'text-gray-900 bg-gray-100 border-r-2 border-gray-900'
+                                                        : isDarkMode ? 'text-gray-300 hover:bg-gray-800 hover:text-white hover:translate-x-1' : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900 hover:translate-x-1'
                                                         }`}
                                                 >
                                                     Directorio de Personal
@@ -450,13 +456,13 @@ export default function NavigationBar() {
 
                     <div className="hidden md:flex items-center">
                         <div className="flex items-center space-x-3">
-                            <div className="text-xs text-gray-400">
-                                <WelcomeMessage />
-                            </div>
                             <RoleGuard roles={["superadmin", "admin"]} userRole={userData.rol}>
                                 <button
                                     onClick={() => setNotificationsOpen(true)}
-                                    className="p-2 text-gray-300 hover:text-white hover:bg-gray-800 rounded-full relative transition-all duration-200 hover:scale-110"
+                                    className={`p-2 rounded-full relative transition-all duration-200 hover:scale-110 ${isDarkMode
+                                        ? 'text-gray-300 hover:text-white hover:bg-gray-800'
+                                        : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
+                                    }`}
                                     title={doNotDisturb ? "Modo No Molestar activo" : "Notificaciones"}
                                 >
                                     <Bell className="h-5 w-5" />
@@ -481,7 +487,10 @@ export default function NavigationBar() {
                             <RoleGuard roles={["superadmin"]} userRole={userData.rol}>
                                 <Link
                                     href="/register"
-                                    className="p-2 text-gray-300 hover:text-white hover:bg-gray-800 rounded-full transition-all duration-200 hover:scale-110"
+                                    className={`p-2 rounded-full transition-all duration-200 hover:scale-110 ${isDarkMode
+                                        ? 'text-gray-300 hover:text-white hover:bg-gray-800'
+                                        : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
+                                    }`}
                                     title="Añadir usuario"
                                 >
                                     <User className="h-5 w-5" />
@@ -490,8 +499,11 @@ export default function NavigationBar() {
                             <RoleGuard roles={["superadmin", "admin"]} userRole={userData.rol}>
                                 <Link
                                     href="/dashboard"
-                                    className={`p-2 text-gray-300 hover:text-white hover:bg-gray-800 rounded-full transition-all duration-200 hover:scale-110 ${pathname === '/dashboard' ? 'text-white bg-white/10 border border-white/20' : ''
-                                        }`}
+                                    className={`p-2 rounded-full transition-all duration-200 hover:scale-110 ${
+                                        pathname === '/dashboard' 
+                                            ? isDarkMode ? 'text-white bg-white/10 border border-white/20' : 'text-gray-900 bg-gray-100 border border-gray-300'
+                                            : isDarkMode ? 'text-gray-300 hover:text-white hover:bg-gray-800' : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
+                                    }`}
                                     title="Dashboard"
                                 >
                                     <Grid className="h-5 w-5" />
@@ -499,17 +511,38 @@ export default function NavigationBar() {
                             </RoleGuard>
                             <button
                                 onClick={initiateLogout}
-                                className="p-2 text-gray-300 hover:text-white hover:bg-gray-800 rounded-full transition-all duration-200 hover:scale-110"
+                                className={`p-2 rounded-full transition-all duration-200 hover:scale-110 ${isDarkMode
+                                    ? 'text-gray-300 hover:text-white hover:bg-gray-800'
+                                    : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
+                                }`}
                                 title='Cerrar sesión'
                             >
                                 <LogOut className="h-5 w-5" />
+                            </button>
+                            <button
+                                onClick={toggleDarkMode}
+                                className={`p-2 rounded-full transition-all duration-200 hover:scale-110 ${isDarkMode
+                                    ? 'text-gray-300 hover:text-white hover:bg-gray-800'
+                                    : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
+                                    }`}
+                                aria-label="Cambiar modo de color"
+                                title={isDarkMode ? "Cambiar a modo claro" : "Cambiar a modo oscuro"}
+                            >
+                                {isDarkMode ? (
+                                    <Sun className="w-4 h-4" />
+                                ) : (
+                                    <Moon className="w-4 h-4" />
+                                )}
                             </button>
                         </div>
                     </div>
 
                     <button
                         onClick={toggleMobileMenu}
-                        className="md:hidden p-2 text-gray-300 hover:text-white hover:bg-gray-800 rounded-full transition-all duration-200 hover:scale-110"
+                        className={`md:hidden p-2 rounded-full transition-all duration-200 hover:scale-110 ${isDarkMode
+                            ? 'text-gray-300 hover:text-white hover:bg-gray-800'
+                            : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
+                        }`}
                     >
                         {mobileMenuOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
                     </button>
@@ -518,15 +551,15 @@ export default function NavigationBar() {
 
             {/* Mobile Menu */}
             {mobileMenuOpen && (
-                <div className="md:hidden bg-black animate-in slide-in-from-top-4 fade-in duration-300">
+                <div className={`md:hidden ${isDarkMode ? 'bg-black' : 'bg-white'} animate-in slide-in-from-top-4 fade-in duration-300`}>
                     <div className="px-2 pt-2 pb-3 space-y-1">
                         <RoleGuard roles={["superadmin"]} userRole={userData.rol}>
                             <div>
                                 <button
                                     onClick={() => toggleMenu("Inventario")}
                                     className={`flex justify-between w-full px-3 py-2 rounded-md transition-all duration-300 ${isActive("/inventario")
-                                            ? 'text-white bg-white/10 border border-white/20'
-                                            : 'text-gray-300 hover:text-white hover:bg-gray-800'
+                                        ? isDarkMode ? 'text-white bg-white/10 border border-white/20' : 'text-gray-900 bg-gray-100 border border-gray-300'
+                                        : isDarkMode ? 'text-gray-300 hover:text-white hover:bg-gray-800' : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
                                         }`}
                                 >
                                     <div className="flex items-center">
@@ -542,8 +575,8 @@ export default function NavigationBar() {
                                                 href="/inventario/registro"
                                                 onClick={closeAll}
                                                 className={`block px-3 py-2 rounded-md text-sm transition-all duration-200 ${pathname === "/inventario/registro"
-                                                        ? 'text-white bg-white/10 border-l-2 border-white'
-                                                        : 'text-gray-400 hover:text-white hover:bg-gray-800 hover:translate-x-1'
+                                                    ? 'text-white bg-white/10 border-l-2 border-white'
+                                                    : 'text-gray-400 hover:text-white hover:bg-gray-800 hover:translate-x-1'
                                                     }`}
                                             >
                                                 Registro de nuevos bienes
@@ -558,8 +591,8 @@ export default function NavigationBar() {
                                 <button
                                     onClick={() => toggleMenu(item.title)}
                                     className={`flex justify-between w-full px-3 py-2 rounded-md transition-all duration-300 ${isActive(item.path)
-                                            ? 'text-white bg-white/10 border border-white/20'
-                                            : 'text-gray-300 hover:text-white hover:bg-gray-800'
+                                        ? isDarkMode ? 'text-white bg-white/10 border border-white/20' : 'text-gray-900 bg-gray-100 border border-gray-300'
+                                        : isDarkMode ? 'text-gray-300 hover:text-white hover:bg-gray-800' : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
                                         }`}
                                 >
                                     <div className="flex items-center">
@@ -578,8 +611,8 @@ export default function NavigationBar() {
                                                         <button
                                                             onClick={(e) => toggleSubmenu(`${item.title}-${subItem.title}`, e)}
                                                             className={`flex justify-between w-full px-3 py-2 rounded-md text-sm transition-all duration-200 ${isActive(subItem.path)
-                                                                    ? 'text-white bg-white/10 border-l-2 border-white'
-                                                                    : 'text-gray-400 hover:text-white hover:bg-gray-800 hover:translate-x-1'
+                                                                ? 'text-white bg-white/10 border-l-2 border-white'
+                                                                : 'text-gray-400 hover:text-white hover:bg-gray-800 hover:translate-x-1'
                                                                 }`}
                                                         >
                                                             {subItem.title}
@@ -594,8 +627,8 @@ export default function NavigationBar() {
                                                                         href={child.path}
                                                                         onClick={closeAll}
                                                                         className={`block px-3 py-2 rounded-md text-sm transition-all duration-200 ${pathname === child.path
-                                                                                ? 'text-white bg-white/10 border-l-2 border-white'
-                                                                                : 'text-gray-400 hover:text-white hover:bg-gray-800 hover:translate-x-1'
+                                                                            ? 'text-white bg-white/10 border-l-2 border-white'
+                                                                            : 'text-gray-400 hover:text-white hover:bg-gray-800 hover:translate-x-1'
                                                                             }`}
                                                                     >
                                                                         {child.title}
@@ -610,8 +643,8 @@ export default function NavigationBar() {
                                                             href={subItem.path}
                                                             onClick={closeAll}
                                                             className={`block px-3 py-2 rounded-md text-sm transition-all duration-200 ${pathname === subItem.path
-                                                                    ? 'text-white bg-white/10 border-l-2 border-white'
-                                                                    : 'text-gray-400 hover:text-white hover:bg-gray-800 hover:translate-x-1'
+                                                                ? 'text-white bg-white/10 border-l-2 border-white'
+                                                                : 'text-gray-400 hover:text-white hover:bg-gray-800 hover:translate-x-1'
                                                                 }`}
                                                         >
                                                             {subItem.title}
@@ -622,8 +655,8 @@ export default function NavigationBar() {
                                                         href={subItem.path}
                                                         onClick={closeAll}
                                                         className={`block px-3 py-2 rounded-md text-sm transition-all duration-200 ${pathname === subItem.path
-                                                                ? 'text-white bg-white/10 border-l-2 border-white'
-                                                                : 'text-gray-400 hover:text-white hover:bg-gray-800 hover:translate-x-1'
+                                                            ? 'text-white bg-white/10 border-l-2 border-white'
+                                                            : 'text-gray-400 hover:text-white hover:bg-gray-800 hover:translate-x-1'
                                                             }`}
                                                     >
                                                         {subItem.title}
@@ -640,8 +673,8 @@ export default function NavigationBar() {
                                 <button
                                     onClick={() => toggleMenu("Administración")}
                                     className={`flex justify-between w-full px-3 py-2 rounded-md transition-all duration-300 ${isActive("/admin")
-                                            ? 'text-white bg-white/10 border border-white/20'
-                                            : 'text-gray-300 hover:text-white hover:bg-gray-800'
+                                        ? isDarkMode ? 'text-white bg-white/10 border border-white/20' : 'text-gray-900 bg-gray-100 border border-gray-300'
+                                        : isDarkMode ? 'text-gray-300 hover:text-white hover:bg-gray-800' : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
                                         }`}
                                 >
                                     <div className="flex items-center">
@@ -656,8 +689,8 @@ export default function NavigationBar() {
                                             href="/admin/areas"
                                             onClick={closeAll}
                                             className={`block px-3 py-2 rounded-md text-sm transition-all duration-200 ${pathname === "/admin/areas"
-                                                    ? 'text-white bg-white/10 border-l-2 border-white'
-                                                    : 'text-gray-400 hover:text-white hover:bg-gray-800 hover:translate-x-1'
+                                                ? 'text-white bg-white/10 border-l-2 border-white'
+                                                : 'text-gray-400 hover:text-white hover:bg-gray-800 hover:translate-x-1'
                                                 }`}
                                         >
                                             Configuración General
@@ -666,8 +699,8 @@ export default function NavigationBar() {
                                             href="/admin/personal"
                                             onClick={closeAll}
                                             className={`block px-3 py-2 rounded-md text-sm transition-all duration-200 ${pathname === "/admin/personal"
-                                                    ? 'text-white bg-white/10 border-l-2 border-white'
-                                                    : 'text-gray-400 hover:text-white hover:bg-gray-800 hover:translate-x-1'
+                                                ? 'text-white bg-white/10 border-l-2 border-white'
+                                                : 'text-gray-400 hover:text-white hover:bg-gray-800 hover:translate-x-1'
                                                 }`}
                                         >
                                             Directorio de Personal
@@ -725,7 +758,7 @@ export default function NavigationBar() {
                     }}
                 >
                     <div
-                        className="bg-gray-900/95 backdrop-blur-sm rounded-lg border border-white/20 overflow-visible w-64 popover-content shadow-xl"
+                        className={`${isDarkMode ? 'bg-gray-900/95 border-white/20' : 'bg-white/95 border-gray-200'} backdrop-blur-sm rounded-lg border overflow-visible w-64 popover-content shadow-xl transition-colors duration-300`}
                         data-position={popoverPosition}
                         style={{
                             '--arrow-x': '50%',
@@ -736,26 +769,38 @@ export default function NavigationBar() {
                     >
                         <div className="p-4">
                             <div className="flex flex-col items-center text-center gap-3">
-                                <div className="p-2 bg-white/10 rounded-full">
-                                    <LogOut className="h-5 w-5 text-white" />
+                                <div className={`p-2 ${isDarkMode ? 'bg-white/10' : 'bg-gray-100'} rounded-full`}>
+                                    <User className={`h-5 w-5 ${isDarkMode ? 'text-white' : 'text-gray-700'}`} />
                                 </div>
-                                <div>
-                                    <p className="text-sm text-gray-300">
-                                        {userData.firstName
-                                            ? `¿Cerrar sesión, ${userData.firstName}?`
-                                            : "¿Cerrar sesión?"}
+                                <div className="space-y-1">
+                                    <p className={`text-sm font-medium ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
+                                        {userData.firstName ? `${userData.firstName}${userData.lastName ? ' ' + userData.lastName : ''}` : userData.username || 'Usuario'}
+                                    </p>
+                                    {userData.rol && (
+                                        <p className={`text-xs ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                                            {userData.rol}
+                                        </p>
+                                    )}
+                                    <p className={`text-sm ${isDarkMode ? 'text-gray-300' : 'text-gray-600'} mt-2`}>
+                                        ¿Cerrar sesión?
                                     </p>
                                 </div>
                                 <div className="flex w-full gap-2">
                                     <button
                                         onClick={() => setShowLogoutModal(false)}
-                                        className="flex-1 py-1.5 px-3 bg-gray-800/50 text-gray-300 text-xs rounded-md hover:bg-gray-800 border border-gray-700/50 transition-all duration-200 hover:scale-105"
+                                        className={`flex-1 py-1.5 px-3 text-xs rounded-md border transition-all duration-200 hover:scale-105 ${isDarkMode 
+                                            ? 'bg-gray-800/50 text-gray-300 hover:bg-gray-800 border-gray-700/50'
+                                            : 'bg-gray-100 text-gray-600 hover:bg-gray-200 border-gray-300'
+                                        }`}
                                     >
                                         Cancelar
                                     </button>
                                     <button
                                         onClick={confirmLogout}
-                                        className="flex-1 py-1.5 px-3 bg-white/20 text-white text-xs rounded-md hover:bg-white/30 border border-white/30 transition-all duration-200 hover:scale-105"
+                                        className={`flex-1 py-1.5 px-3 text-xs rounded-md border transition-all duration-200 hover:scale-105 ${isDarkMode
+                                            ? 'bg-white/20 text-white hover:bg-white/30 border-white/30'
+                                            : 'bg-gray-900 text-white hover:bg-gray-800 border-gray-900'
+                                        }`}
                                     >
                                         Confirmar
                                     </button>

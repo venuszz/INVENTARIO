@@ -3,6 +3,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import HeaderContainer from "@/components/HeaderContainer";
 import { SpeedInsights } from '@vercel/speed-insights/next';
+import { ThemeProvider } from "@/context/ThemeContext";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -34,13 +35,15 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased flex flex-col h-screen`}
       >
-        <div>
-          <HeaderContainer />
-        </div>
-        <main className="flex-1 overflow-hidden">
-          {children}
-          <SpeedInsights />
-        </main>
+        <ThemeProvider>
+          <div>
+            <HeaderContainer />
+          </div>
+          <main className="flex-1 overflow-hidden">
+            {children}
+            <SpeedInsights />
+          </main>
+        </ThemeProvider>
       </body>
     </html>
   );
