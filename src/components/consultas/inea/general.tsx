@@ -9,6 +9,7 @@ import Cookies from 'js-cookie';
 import { useUserRole } from "@/hooks/useUserRole";
 import RoleGuard from "@/components/roleGuard";
 import { useNotifications } from '@/hooks/useNotifications';
+import { useTheme } from '@/context/ThemeContext';
 
 interface Mueble {
     id: number;
@@ -73,10 +74,10 @@ interface AnimatedCounterProps {
 const AnimatedCounter = ({ value, className, prefix = '', suffix = '', loading = false, isInteger = false }: AnimatedCounterProps) => {
     // Estado para el valor actual mostrado
     const [displayValue, setDisplayValue] = useState(0);
-    
+
     // Referencia para el intervalo de animación
     const intervalRef = useRef<NodeJS.Timeout | null>(null);
-    
+
     // Formatear el número según sea entero o decimal
     const formatNumber = (num: number) => {
         if (isInteger) {
@@ -85,19 +86,19 @@ const AnimatedCounter = ({ value, className, prefix = '', suffix = '', loading =
             return num.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
         }
     };
-    
+
     // Efecto para animar el contador
     useEffect(() => {
         // Limpiar intervalo anterior si existe
         if (intervalRef.current) {
             clearInterval(intervalRef.current);
         }
-        
+
         if (loading) {
             // Durante la carga, mostrar números aleatorios
             intervalRef.current = setInterval(() => {
-                const randomValue = isInteger ? 
-                    Math.floor(Math.random() * 1000) : 
+                const randomValue = isInteger ?
+                    Math.floor(Math.random() * 1000) :
                     Math.random() * 10000;
                 setDisplayValue(randomValue);
             }, 100);
@@ -107,19 +108,19 @@ const AnimatedCounter = ({ value, className, prefix = '', suffix = '', loading =
             const steps = 20; // número de pasos
             const increment = (value - displayValue) / steps;
             let currentStep = 0;
-            
+
             intervalRef.current = setInterval(() => {
                 if (currentStep >= steps) {
                     setDisplayValue(value);
                     if (intervalRef.current) clearInterval(intervalRef.current);
                     return;
                 }
-                
+
                 setDisplayValue(prev => prev + increment);
                 currentStep++;
             }, duration / steps);
         }
-        
+
         // Limpiar intervalo al desmontar
         return () => {
             if (intervalRef.current) {
@@ -127,7 +128,7 @@ const AnimatedCounter = ({ value, className, prefix = '', suffix = '', loading =
             }
         };
     }, [value, loading, isInteger]);
-    
+
     return (
         <div className={className}>
             {prefix}
@@ -319,6 +320,7 @@ export default function ConsultasIneaGeneral() {
     const detailRef = useRef<HTMLDivElement>(null);
 
     const { createNotification } = useNotifications();
+    const { isDarkMode } = useTheme();
 
     // Estados para áreas y relaciones N:M
     const [areas, setAreas] = useState<{ id_area: number; nombre: string }[]>([]);
@@ -1084,7 +1086,10 @@ export default function ConsultasIneaGeneral() {
                 id="omnibox-suggestions"
                 role="listbox"
                 title="Sugerencias de búsqueda"
-                className={"absolute left-0 top-full w-full mt-1 animate-fadeInUp max-h-80 overflow-y-auto rounded-lg shadow-sm border border-white/10 bg-black/90 backdrop-blur-xl transition-all duration-200 z-50"}
+                className={`absolute left-0 top-full w-full mt-1 animate-fadeInUp max-h-80 overflow-y-auto rounded-lg shadow-sm border backdrop-blur-xl transition-all duration-200 z-50 ${isDarkMode
+                    ? 'border-white/10 bg-black/90'
+                    : 'border-gray-200 bg-white/95'
+                    }`}
             >
                 {suggestions.map((s, i) => {
                     const isSelected = highlightedIndex === i;
@@ -1094,11 +1099,16 @@ export default function ConsultasIneaGeneral() {
                             role="option"
                             {...(isSelected && { 'aria-selected': 'true' })}
                             onMouseDown={() => handleSuggestionClick(i)}
-                            className={`flex items-center gap-1.5 px-2 py-1 cursor-pointer select-none text-xs whitespace-normal break-words w-full ${isSelected ? 'bg-white/5 text-white' : 'text-white/80'} hover:bg-white/5`}
+                            className={`flex items-center gap-1.5 px-2 py-1 cursor-pointer select-none text-xs whitespace-normal break-words w-full transition-colors ${isSelected
+                                ? (isDarkMode ? 'bg-white/5 text-white' : 'bg-blue-50 text-blue-900')
+                                : (isDarkMode ? 'text-white/80 hover:bg-white/5' : 'text-gray-700 hover:bg-gray-50')
+                                }`}
                         >
-                            <span className="shrink-0 text-white/70">{getTypeIcon(s.type)}</span>
+                            <span className={`shrink-0 ${isDarkMode ? 'text-white/70' : 'text-gray-600'
+                                }`}>{getTypeIcon(s.type)}</span>
                             <span className="font-normal whitespace-normal break-words w-full truncate">{s.value}</span>
-                            <span className="ml-auto text-[10px] text-white/60 font-mono">{getTypeLabel(s.type)}</span>
+                            <span className={`ml-auto text-[10px] font-mono ${isDarkMode ? 'text-white/60' : 'text-gray-500'
+                                }`}>{getTypeLabel(s.type)}</span>
                         </li>
                     );
                 })}
@@ -1292,16 +1302,23 @@ export default function ConsultasIneaGeneral() {
     // Skeleton para la tabla de inventario
     const TableSkeleton = () => (
         <tr>
-            <td colSpan={6} className="px-6 py-24 text-center text-gray-400">
+            <td colSpan={6} className={`px-6 py-24 text-center ${isDarkMode ? 'text-gray-400' : 'text-gray-600'
+                }`}>
                 <div className="flex flex-col items-center justify-center space-y-4 animate-pulse">
                     {[...Array(8)].map((_, i) => (
                         <div key={i} className="flex gap-4 w-full max-w-3xl mx-auto">
-                            <div className="h-6 w-24 bg-gray-800/60 rounded" />
-                            <div className="h-6 w-40 bg-gray-800/60 rounded" />
-                            <div className="h-6 w-32 bg-gray-800/60 rounded" />
-                            <div className="h-6 w-32 bg-gray-800/60 rounded" />
-                            <div className="h-6 w-28 bg-gray-800/60 rounded" />
-                            <div className="h-6 w-32 bg-gray-800/60 rounded" />
+                            <div className={`h-6 w-24 rounded ${isDarkMode ? 'bg-gray-800/60' : 'bg-gray-200'
+                                }`} />
+                            <div className={`h-6 w-40 rounded ${isDarkMode ? 'bg-gray-800/60' : 'bg-gray-200'
+                                }`} />
+                            <div className={`h-6 w-32 rounded ${isDarkMode ? 'bg-gray-800/60' : 'bg-gray-200'
+                                }`} />
+                            <div className={`h-6 w-32 rounded ${isDarkMode ? 'bg-gray-800/60' : 'bg-gray-200'
+                                }`} />
+                            <div className={`h-6 w-28 rounded ${isDarkMode ? 'bg-gray-800/60' : 'bg-gray-200'
+                                }`} />
+                            <div className={`h-6 w-32 rounded ${isDarkMode ? 'bg-gray-800/60' : 'bg-gray-200'
+                                }`} />
                         </div>
                     ))}
                 </div>
@@ -1310,43 +1327,80 @@ export default function ConsultasIneaGeneral() {
     );
 
     return (
-        <div className="bg-black text-white min-h-screen p-2 sm:p-4 md:p-6 lg:p-8">
+        <div className={`min-h-screen p-2 sm:p-4 md:p-6 lg:p-8 transition-colors duration-500 ${isDarkMode
+            ? 'bg-black text-white'
+            : 'bg-gradient-to-br from-gray-50 via-white to-gray-100 text-gray-900'
+            }`}>
             {/* Header con título */}
-            <div className="w-full mx-auto bg-black rounded-lg sm:rounded-xl shadow-2xl overflow-hidden transition-all duration-500 transform border border-gray-800">
-                <div className="bg-black p-4 sm:p-6 flex flex-col sm:flex-row justify-between items-start sm:items-center border-b border-gray-800 gap-2 sm:gap-0">
+            <div className={`w-full mx-auto rounded-lg sm:rounded-xl shadow-2xl overflow-hidden transition-all duration-500 transform border ${isDarkMode
+                ? 'bg-black border-gray-800'
+                : 'bg-white border-gray-200'
+                }`}>
+                <div className={`p-4 sm:p-6 flex flex-col sm:flex-row justify-between items-start sm:items-center border-b gap-2 sm:gap-0 ${isDarkMode
+                    ? 'bg-gray-900/30 border-gray-800'
+                    : 'bg-gray-50/50 border-gray-200'
+                    }`}>
                     <h1 className="text-xl sm:text-2xl md:text-3xl font-bold flex items-center">
-                        <span className="mr-2 sm:mr-3 bg-gray-900 text-white p-1 sm:p-2 rounded-lg border border-gray-700 text-sm sm:text-base">INV</span>
-                        Consulta de Inventario INEA
+                        <span className={`mr-2 sm:mr-3 p-1 sm:p-2 rounded-lg border text-sm sm:text-base shadow-lg ${isDarkMode
+                            ? 'bg-white text-black border-white'
+                            : 'bg-gray-900 text-white border-gray-900'
+                            }`}>INV</span>
+                        <span className={isDarkMode ? 'text-white' : 'text-gray-900'}>
+                            Consulta de Inventario INEA
+                        </span>
                     </h1>
-                    <p className="text-gray-400 text-sm sm:text-base">Vista general de todos los bienes registrados en el sistema.</p>
+                    <p className={`text-sm sm:text-base ${isDarkMode ? 'text-gray-400' : 'text-gray-600'
+                        }`}>Vista general de todos los bienes registrados en el sistema.</p>
                 </div>
 
                 {/* Nuevo componente de valor total */}
-                <div className="bg-black p-8 border-b border-gray-800">
+                <div className={`p-8 border-b ${isDarkMode
+                    ? 'bg-black border-gray-800'
+                    : 'bg-gray-50/30 border-gray-200'
+                    }`}>
                     <div className="flex flex-col lg:flex-row justify-between items-stretch gap-6">
                         {/* Panel de valor total */}
                         <div className="flex-grow">
-                            <div className="group relative overflow-hidden bg-black p-6 rounded-2xl border-2 border-white/10 hover:border-white/20 transition-all duration-500">
-                                <div className="absolute inset-0 bg-white/5 opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
+                            <div className={`group relative overflow-hidden p-6 rounded-2xl border-2 transition-all duration-500 ${isDarkMode
+                                ? 'bg-black border-white/10 hover:border-white/20'
+                                : 'bg-white border-gray-200 hover:border-gray-300'
+                                }`}>
+                                <div className={`absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500 ${isDarkMode
+                                    ? 'bg-white/5'
+                                    : 'bg-gray-50'
+                                    }`}></div>
                                 <div className="flex items-start gap-6">
                                     <div className="relative">
-                                        <div className="absolute inset-0 bg-white/10 blur-xl"></div>
-                                        <div className="relative p-4 bg-black rounded-xl border border-white/10 transform group-hover:scale-110 transition-all duration-500">
-                                            <DollarSign className="h-8 w-8 text-white/90" />
+                                        <div className={`absolute inset-0 blur-xl ${isDarkMode ? 'bg-white/10' : 'bg-gray-300/50'
+                                            }`}></div>
+                                        <div className={`relative p-4 rounded-xl border transform group-hover:scale-110 transition-all duration-500 ${isDarkMode
+                                            ? 'bg-black border-white/10'
+                                            : 'bg-gray-50 border-gray-200'
+                                            }`}>
+                                            <DollarSign className={`h-8 w-8 ${isDarkMode ? 'text-white/90' : 'text-gray-700'
+                                                }`} />
                                         </div>
                                     </div>
                                     <div className="flex flex-col">
-                                        <h3 className="text-sm font-medium text-gray-400 mb-1 group-hover:text-white transition-colors">Valor Total del Inventario</h3>
+                                        <h3 className={`text-sm font-medium mb-1 transition-colors ${isDarkMode
+                                            ? 'text-gray-400 group-hover:text-white'
+                                            : 'text-gray-600 group-hover:text-gray-900'
+                                            }`}>Valor Total del Inventario</h3>
                                         <div className="relative">
-                                            <AnimatedCounter 
-                                                value={(activeFilters.length > 0 || searchTerm ? filteredValue : allValue)} 
-                                                prefix="$" 
-                                                className="text-4xl font-bold text-white" 
+                                            <AnimatedCounter
+                                                value={(activeFilters.length > 0 || searchTerm ? filteredValue : allValue)}
+                                                prefix="$"
+                                                className={`text-4xl font-bold ${isDarkMode ? 'text-white' : 'text-gray-900'
+                                                    }`}
                                                 loading={loading}
                                             />
-                                            <div className="absolute -bottom-2 left-0 w-full h-px bg-white/30"></div>
+                                            <div className={`absolute -bottom-2 left-0 w-full h-px ${isDarkMode ? 'bg-white/30' : 'bg-gray-300'
+                                                }`}></div>
                                         </div>
-                                        <p className="text-sm text-gray-500 mt-2 group-hover:text-gray-400 transition-colors">
+                                        <p className={`text-sm mt-2 transition-colors ${isDarkMode
+                                            ? 'text-gray-500 group-hover:text-gray-400'
+                                            : 'text-gray-600 group-hover:text-gray-700'
+                                            }`}>
                                             {activeFilters.length > 0 || searchTerm ? 'Valor de artículos filtrados' : 'Valor total de todos los artículos'}
                                         </p>
                                     </div>
@@ -1356,14 +1410,26 @@ export default function ConsultasIneaGeneral() {
 
                         {/* Panel de conteo */}
                         <div className="flex-shrink-0">
-                            <div className="group bg-black/30 p-6 rounded-2xl border border-white/20 hover:border-white/40 transition-all duration-500">
+                            <div className={`group p-6 rounded-2xl border transition-all duration-500 ${isDarkMode
+                                ? 'bg-black/30 border-white/20 hover:border-white/40'
+                                : 'bg-gray-50 border-gray-200 hover:border-gray-300'
+                                }`}>
                                 <div className="text-center">
-                                    <p className="text-sm text-gray-400 mb-2 group-hover:text-white transition-colors">Artículos Registrados</p>
+                                    <p className={`text-sm mb-2 transition-colors ${isDarkMode
+                                        ? 'text-gray-400 group-hover:text-white'
+                                        : 'text-gray-600 group-hover:text-gray-900'
+                                        }`}>Artículos Registrados</p>
                                     <div className="relative">
-                                        <div className="absolute inset-0 bg-white/5 opacity-0 group-hover:opacity-100 transition-opacity duration-500 rounded-xl"></div>
-                                        <AnimatedCounter 
-                                            value={activeFilters.length > 0 || searchTerm ? filteredMueblesOmni.length : muebles.length} 
-                                            className="relative text-3xl font-bold text-white/90 group-hover:text-white transition-all duration-500 px-6 py-3" 
+                                        <div className={`absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500 rounded-xl ${isDarkMode
+                                            ? 'bg-white/5'
+                                            : 'bg-gray-100'
+                                            }`}></div>
+                                        <AnimatedCounter
+                                            value={activeFilters.length > 0 || searchTerm ? filteredMueblesOmni.length : muebles.length}
+                                            className={`relative text-3xl font-bold transition-all duration-500 px-6 py-3 ${isDarkMode
+                                                ? 'text-white/90 group-hover:text-white'
+                                                : 'text-gray-800 group-hover:text-gray-900'
+                                                }`}
                                             loading={loading}
                                             isInteger={true}
                                         />
@@ -1379,7 +1445,10 @@ export default function ConsultasIneaGeneral() {
                     {/* Panel izquierdo: Búsqueda, filtros y tabla */}
                     <div className={`flex-1 min-w-0 flex flex-col ${selectedItem ? '' : 'w-full'}`}>
                         {/* Panel de acciones y búsqueda omnibox */}
-                        <div className="mb-6 bg-black/30 p-4 rounded-xl border border-white/20 shadow-inner hover:shadow-lg transition-shadow">
+                        <div className={`mb-6 p-4 rounded-xl border shadow-inner hover:shadow-lg transition-shadow ${isDarkMode
+                            ? 'bg-gradient-to-br from-gray-900/50 to-blue-900/10 border-gray-800'
+                            : 'bg-gradient-to-br from-gray-50 to-blue-50/30 border-gray-200'
+                            }`}>
                             <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-4 mb-4">
                                 <div className="flex-1 relative">
                                     <div className="flex gap-2">
@@ -1393,17 +1462,26 @@ export default function ConsultasIneaGeneral() {
                                                 onBlur={handleInputBlur}
                                                 onKeyDown={handleInputKeyDown}
                                                 placeholder="Buscar por ID, descripción, área, director, etc."
-                                                className="w-full px-4 py-2 rounded-lg bg-black border border-gray-700 text-white focus:outline-none focus:ring-2 focus:ring-white/50"
+                                                className={`w-full px-4 py-2 rounded-lg border focus:outline-none focus:ring-2 focus:border-transparent transition-all duration-300 ${isDarkMode
+                                                    ? 'bg-black border-gray-800 text-white placeholder-gray-500 focus:ring-white hover:border-white/50'
+                                                    : 'bg-white border-gray-300 text-gray-900 placeholder-gray-400 focus:ring-blue-500 hover:border-blue-400'
+                                                    }`}
                                             />
                                             <SuggestionDropdown />
                                         </div>
                                         <button
                                             onClick={saveCurrentFilter}
                                             disabled={!searchTerm || !searchMatchType}
-                                            className={`px-4 py-2 rounded-lg border flex items-center gap-2 ${searchTerm && searchMatchType
+                                            className={`px-4 py-2 rounded-lg border flex items-center gap-2 transition-all duration-200 hover:scale-105 ${searchTerm && searchMatchType
+                                                ? (isDarkMode
                                                     ? 'bg-white/20 hover:bg-white/30 border-white/40 text-white'
-                                                    : 'bg-gray-800/50 border-gray-700 text-gray-500 cursor-not-allowed'
-                                                } transition-all duration-200 hover:scale-105`}
+                                                    : 'bg-blue-50 hover:bg-blue-100 border-blue-300 text-blue-600'
+                                                )
+                                                : (isDarkMode
+                                                    ? 'bg-gray-800/50 border-gray-700 text-gray-500 cursor-not-allowed'
+                                                    : 'bg-gray-100 border-gray-300 text-gray-500 cursor-not-allowed'
+                                                )
+                                                }`}
                                             title="Agregar filtro actual a la lista de filtros activos"
                                         >
                                             <Plus className="h-4 w-4" />
@@ -1413,15 +1491,18 @@ export default function ConsultasIneaGeneral() {
                                     {activeFilters.length > 0 && (
                                         <div className="mt-3 flex flex-wrap gap-2 w-full">
                                             {activeFilters.map((filter, index) => {
-                                                // Usar un estilo uniforme blanco/gris para todos los tipos de filtro
-                                                const colorClass = 'bg-white/10 border-white/30 text-white/90';
-                                                
+                                                // Usar un estilo uniforme para todos los tipos de filtro
+                                                const colorClass = isDarkMode
+                                                    ? 'bg-white/10 border-white/30 text-white/90'
+                                                    : 'bg-blue-50 border-blue-200 text-blue-800';
+
                                                 return (
                                                     <span
                                                         key={filter.term + filter.type + index}
                                                         className={`inline-flex items-center px-2 py-0.5 rounded-full ${colorClass} text-xs font-medium shadow-sm hover:shadow-md transition-all duration-200`}
                                                     >
-                                                        <span className="mr-1 font-medium uppercase tracking-wide text-[10px] opacity-80">{getTypeLabel(filter.type)}</span>
+                                                        <span className={`mr-1 font-medium uppercase tracking-wide text-[10px] opacity-80 ${isDarkMode ? 'text-white/70' : 'text-blue-600'
+                                                            }`}>{getTypeLabel(filter.type)}</span>
                                                         <span className="truncate max-w-[160px] md:max-w-[220px] lg:max-w-[320px]">{filter.term}</span>
                                                         <button
                                                             onClick={() => removeFilter(index)}
@@ -1437,7 +1518,10 @@ export default function ConsultasIneaGeneral() {
                                             {activeFilters.length > 1 && (
                                                 <button
                                                     onClick={clearAllFilters}
-                                                    className="inline-flex items-center px-2 py-0.5 rounded-full bg-white/10 border border-white/30 text-white/90 text-xs font-medium ml-1 hover:bg-white/15 transition-all duration-200"
+                                                    className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ml-1 transition-all duration-200 border ${isDarkMode
+                                                        ? 'bg-white/10 border-white/30 text-white/90 hover:bg-white/15'
+                                                        : 'bg-gray-100 border-gray-300 text-gray-700 hover:bg-gray-200'
+                                                        }`}
                                                     title="Limpiar todos los filtros"
                                                 >
                                                     <X className="h-3 w-3 mr-1" /> Limpiar
@@ -1449,7 +1533,10 @@ export default function ConsultasIneaGeneral() {
                                 <div className="flex items-center gap-2 mt-4 md:mt-0">
                                     <button
                                         onClick={fetchMuebles}
-                                        className="px-4 py-2 rounded-lg border border-white/30 bg-white/10 text-white hover:bg-white/20 transition-all duration-200 flex items-center gap-2 shadow-md"
+                                        className={`px-4 py-2 rounded-lg border transition-all duration-200 flex items-center gap-2 shadow-md ${isDarkMode
+                                            ? 'border-white/30 bg-white/10 text-white hover:bg-white/20'
+                                            : 'border-gray-300 bg-gray-50 text-gray-700 hover:bg-gray-100'
+                                            }`}
                                         title="Actualizar datos"
                                     >
                                         <RefreshCw className="h-4 w-4 animate-spin-slow" />
@@ -1460,14 +1547,22 @@ export default function ConsultasIneaGeneral() {
                         </div>
 
                         {/* Tabla */}
-                        <div className="bg-black rounded-lg border border-gray-800 overflow-x-auto overflow-y-auto mb-6 flex flex-col flex-grow max-h-[70vh]">
+                        <div className={`rounded-lg border overflow-x-auto overflow-y-auto mb-6 flex flex-col flex-grow max-h-[70vh] ${isDarkMode
+                            ? 'bg-black border-gray-800'
+                            : 'bg-white border-gray-200'
+                            }`}>
                             <div className="flex-grow min-w-[800px]">
-                                <table className="min-w-full divide-y divide-gray-800">
-                                    <thead className="bg-black sticky top-0 z-10">
+                                <table className={`min-w-full divide-y ${isDarkMode ? 'divide-gray-800' : 'divide-gray-200'
+                                    }`}>
+                                    <thead className={`sticky top-0 z-10 ${isDarkMode ? 'bg-black' : 'bg-gray-50'
+                                        }`}>
                                         <tr>
                                             <th
                                                 onClick={() => handleSort('id_inv')}
-                                                className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider cursor-pointer hover:bg-gray-700"
+                                                className={`px-4 py-3 text-left text-xs font-medium uppercase tracking-wider cursor-pointer transition-colors ${isDarkMode
+                                                    ? 'text-gray-400 hover:bg-gray-700'
+                                                    : 'text-gray-600 hover:bg-gray-100'
+                                                    }`}
                                             >
                                                 <div className="flex items-center gap-1">
                                                     ID Inventario
@@ -1476,7 +1571,10 @@ export default function ConsultasIneaGeneral() {
                                             </th>
                                             <th
                                                 onClick={() => handleSort('descripcion')}
-                                                className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider cursor-pointer hover:bg-gray-700"
+                                                className={`px-4 py-3 text-left text-xs font-medium uppercase tracking-wider cursor-pointer transition-colors ${isDarkMode
+                                                    ? 'text-gray-400 hover:bg-gray-700'
+                                                    : 'text-gray-600 hover:bg-gray-100'
+                                                    }`}
                                             >
                                                 <div className="flex items-center gap-1">
                                                     Descripción
@@ -1485,7 +1583,10 @@ export default function ConsultasIneaGeneral() {
                                             </th>
                                             <th
                                                 onClick={() => handleSort('area')}
-                                                className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider cursor-pointer hover:bg-gray-700"
+                                                className={`px-4 py-3 text-left text-xs font-medium uppercase tracking-wider cursor-pointer transition-colors ${isDarkMode
+                                                    ? 'text-gray-400 hover:bg-gray-700'
+                                                    : 'text-gray-600 hover:bg-gray-100'
+                                                    }`}
                                             >
                                                 <div className="flex items-center gap-1">
                                                     Área
@@ -1494,7 +1595,10 @@ export default function ConsultasIneaGeneral() {
                                             </th>
                                             <th
                                                 onClick={() => handleSort('usufinal')}
-                                                className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider cursor-pointer hover:bg-gray-700"
+                                                className={`px-4 py-3 text-left text-xs font-medium uppercase tracking-wider cursor-pointer transition-colors ${isDarkMode
+                                                    ? 'text-gray-400 hover:bg-gray-700'
+                                                    : 'text-gray-600 hover:bg-gray-100'
+                                                    }`}
                                             >
                                                 <div className="flex items-center gap-1">
                                                     Director/Jefe de Área
@@ -1503,29 +1607,41 @@ export default function ConsultasIneaGeneral() {
                                             </th>
                                             <th
                                                 onClick={() => handleSort('estatus')}
-                                                className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider cursor-pointer hover:bg-gray-700"
+                                                className={`px-4 py-3 text-left text-xs font-medium uppercase tracking-wider cursor-pointer transition-colors ${isDarkMode
+                                                    ? 'text-gray-400 hover:bg-gray-700'
+                                                    : 'text-gray-600 hover:bg-gray-100'
+                                                    }`}
                                             >
                                                 <div className="flex items-center gap-1">
                                                     Estado
                                                     <ArrowUpDown className="h-3 w-3" />
                                                 </div>
                                             </th>
-                                            <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Folio Resguardo</th>
+                                            <th className={`px-4 py-3 text-left text-xs font-medium uppercase tracking-wider ${isDarkMode ? 'text-gray-400' : 'text-gray-600'
+                                                }`}>Folio Resguardo</th>
                                         </tr>
                                     </thead>
-                                    <tbody className="bg-black divide-y divide-gray-800">
+                                    <tbody className={`divide-y ${isDarkMode
+                                        ? 'bg-black divide-gray-800'
+                                        : 'bg-white divide-gray-200'
+                                        }`}>
                                         {loading ? (
                                             <TableSkeleton />
                                         ) : error ? (
                                             <tr className="h-96">
                                                 <td colSpan={5} className="px-6 py-24 text-center">
-                                                    <div className="flex flex-col items-center justify-center space-y-4 text-red-400">
+                                                    <div className={`flex flex-col items-center justify-center space-y-4 ${isDarkMode ? 'text-red-400' : 'text-red-600'
+                                                        }`}>
                                                         <AlertCircle className="h-12 w-12" />
                                                         <p className="text-lg font-medium">Error al cargar datos</p>
-                                                        <p className="text-sm text-gray-400 max-w-lg mx-auto mb-2">{error}</p>
+                                                        <p className={`text-sm max-w-lg mx-auto mb-2 ${isDarkMode ? 'text-gray-400' : 'text-gray-600'
+                                                            }`}>{error}</p>
                                                         <button
                                                             onClick={fetchMuebles}
-                                                            className="px-4 py-2 bg-gray-800 text-gray-300 rounded-md text-sm hover:bg-gray-700 transition-colors"
+                                                            className={`px-4 py-2 rounded-md text-sm transition-colors ${isDarkMode
+                                                                ? 'bg-gray-800 text-gray-300 hover:bg-gray-700'
+                                                                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                                                                }`}
                                                         >
                                                             Intentar nuevamente
                                                         </button>
@@ -1534,25 +1650,32 @@ export default function ConsultasIneaGeneral() {
                                             </tr>
                                         ) : muebles.length === 0 ? (
                                             <tr className="h-96">
-                                                <td colSpan={5} className="px-6 py-24 text-center text-gray-400">
+                                                <td colSpan={5} className={`px-6 py-24 text-center ${isDarkMode ? 'text-gray-400' : 'text-gray-600'
+                                                    }`}>
                                                     <div className="flex flex-col items-center justify-center space-y-4">
-                                                        <Search className="h-12 w-12 text-gray-500" />
+                                                        <Search className={`h-12 w-12 ${isDarkMode ? 'text-gray-500' : 'text-gray-400'
+                                                            }`} />
                                                         <p className="text-lg font-medium">No se encontraron resultados</p>
                                                         {(searchTerm || Object.values(filters).some(value => value !== '')) ? (
                                                             <>
-                                                                <p className="text-sm text-gray-500 max-w-lg mx-auto">
+                                                                <p className={`text-sm max-w-lg mx-auto ${isDarkMode ? 'text-gray-500' : 'text-gray-600'
+                                                                    }`}>
                                                                     No hay elementos que coincidan con los criterios de búsqueda actuales
                                                                 </p>
                                                                 <button
                                                                     onClick={clearFilters}
-                                                                    className="px-4 py-2 bg-white/10 text-white rounded-md text-sm hover:bg-white/20 transition-colors flex items-center gap-2"
+                                                                    className={`px-4 py-2 rounded-md text-sm transition-colors flex items-center gap-2 ${isDarkMode
+                                                                        ? 'bg-white/10 text-white hover:bg-white/20'
+                                                                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                                                                        }`}
                                                                 >
                                                                     <X className="h-4 w-4" />
                                                                     Limpiar filtros
                                                                 </button>
                                                             </>
                                                         ) : (
-                                                            <p className="text-sm text-gray-500">No hay registros disponibles en el inventario</p>
+                                                            <p className={`text-sm ${isDarkMode ? 'text-gray-500' : 'text-gray-600'
+                                                                }`}>No hay registros disponibles en el inventario</p>
                                                         )}
                                                     </div>
                                                 </td>
@@ -1564,18 +1687,31 @@ export default function ConsultasIneaGeneral() {
                                                     <tr
                                                         key={item.id}
                                                         onClick={() => handleSelectItem(item)}
-                                                        className={`hover:bg-gray-800 cursor-pointer transition-colors ${selectedItem?.id === item.id ? 'bg-blue-900/20 border-l-4 border-white' : ''}`}
+                                                        className={`cursor-pointer transition-colors ${selectedItem?.id === item.id
+                                                            ? (isDarkMode
+                                                                ? 'bg-blue-900/20 border-l-4 border-white'
+                                                                : 'bg-blue-50 border-l-4 border-blue-500'
+                                                            )
+                                                            : (isDarkMode
+                                                                ? 'hover:bg-gray-800'
+                                                                : 'hover:bg-gray-50'
+                                                            )
+                                                            }`}
                                                     >
-                                                        <td className="px-4 py-3 whitespace-nowrap text-sm font-medium text-white">
+                                                        <td className={`px-4 py-3 whitespace-nowrap text-sm font-medium ${isDarkMode ? 'text-white' : 'text-gray-900'
+                                                            }`}>
                                                             {item.id_inv}
                                                         </td>
-                                                        <td className="px-4 py-3 text-sm text-gray-300">
+                                                        <td className={`px-4 py-3 text-sm ${isDarkMode ? 'text-gray-300' : 'text-gray-700'
+                                                            }`}>
                                                             {truncateText(item.descripcion, 40)}
                                                         </td>
-                                                        <td className="px-4 py-3 text-sm text-gray-300">
+                                                        <td className={`px-4 py-3 text-sm ${isDarkMode ? 'text-gray-300' : 'text-gray-700'
+                                                            }`}>
                                                             {truncateText(item.area, 20)}
                                                         </td>
-                                                        <td className="px-4 py-3 text-sm text-gray-300">
+                                                        <td className={`px-4 py-3 text-sm ${isDarkMode ? 'text-gray-300' : 'text-gray-700'
+                                                            }`}>
                                                             {truncateText(item.usufinal, 20)}
                                                         </td>
                                                         <td className="px-4 py-3 text-sm">
@@ -1596,25 +1732,34 @@ export default function ConsultasIneaGeneral() {
                                                                 );
                                                             })()}
                                                         </td>
-                                                        <td className="px-4 py-3 text-sm text-gray-300">
+                                                        <td className={`px-4 py-3 text-sm ${isDarkMode ? 'text-gray-300' : 'text-gray-700'
+                                                            }`}>
                                                             {folio ? (
                                                                 <div className="relative">
                                                                     <button
-                                                                        className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full font-bold bg-white/10 text-white border border-white/30 hover:bg-white/20 shadow-sm hover:scale-105 transition-all duration-200"
+                                                                        className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full font-bold border shadow-sm hover:scale-105 transition-all duration-200 ${isDarkMode
+                                                                            ? 'bg-white/10 text-white border-white/30 hover:bg-white/20'
+                                                                            : 'bg-blue-50 text-blue-700 border-blue-200 hover:bg-blue-100'
+                                                                            }`}
                                                                         title={`Ver resguardo ${folio}`}
                                                                         onClick={e => {
                                                                             e.stopPropagation();
                                                                             window.location.href = `/resguardos/consultar?folio=${folio}`;
                                                                         }}
                                                                     >
-                                                                        <BadgeCheck className="h-4 w-4 mr-1 text-white/80" />
+                                                                        <BadgeCheck className={`h-4 w-4 mr-1 ${isDarkMode ? 'text-white/80' : 'text-blue-600'
+                                                                            }`} />
                                                                         {folio}
                                                                     </button>
                                                                 </div>
                                                             ) : (
                                                                 <div className="relative">
-                                                                    <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full font-bold bg-black/30 text-white/80 border border-white/20 shadow-sm cursor-default select-none">
-                                                                        <XCircle className="h-4 w-4 mr-1 text-gray-400" />
+                                                                    <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full font-bold border shadow-sm cursor-default select-none ${isDarkMode
+                                                                        ? 'bg-black/30 text-white/80 border-white/20'
+                                                                        : 'bg-gray-100 text-gray-600 border-gray-300'
+                                                                        }`}>
+                                                                        <XCircle className={`h-4 w-4 mr-1 ${isDarkMode ? 'text-gray-400' : 'text-gray-500'
+                                                                            }`} />
                                                                         Sin resguardo
                                                                     </span>
                                                                 </div>
@@ -1631,31 +1776,46 @@ export default function ConsultasIneaGeneral() {
                             {/* Paginación */}
                             <div className="flex flex-col sm:flex-row gap-3 items-center justify-between mt-4 mb-3 px-2">
                                 {/* Contador de registros con diseño mejorado */}
-                                <div className="flex items-center gap-2 bg-neutral-900/50 px-4 py-2 rounded-xl border border-neutral-800 shadow-inner">
+                                <div className={`flex items-center gap-2 px-4 py-2 rounded-xl border shadow-inner ${isDarkMode
+                                    ? 'bg-neutral-900/50 border-neutral-800'
+                                    : 'bg-gray-50 border-gray-200'
+                                    }`}>
                                     {totalCount === 0 ? (
-                                        <span className="text-neutral-400 flex items-center gap-2">
-                                            <AlertCircle className="h-4 w-4 text-neutral-500" />
+                                        <span className={`flex items-center gap-2 ${isDarkMode ? 'text-neutral-400' : 'text-gray-600'
+                                            }`}>
+                                            <AlertCircle className={`h-4 w-4 ${isDarkMode ? 'text-neutral-500' : 'text-gray-500'
+                                                }`} />
                                             No hay registros para mostrar
                                         </span>
                                     ) : (
                                         <div className="flex items-center gap-2">
-                                            <span className="text-neutral-300">Mostrando</span>
-                                            <span className="px-2 py-0.5 rounded-lg bg-white/10 text-white font-mono border border-white/30">
+                                            <span className={isDarkMode ? 'text-neutral-300' : 'text-gray-700'}>Mostrando</span>
+                                            <span className={`px-2 py-0.5 rounded-lg font-mono border ${isDarkMode
+                                                ? 'bg-white/10 text-white border-white/30'
+                                                : 'bg-blue-50 text-blue-800 border-blue-200'
+                                                }`}>
                                                 {((currentPage - 1) * rowsPerPage) + 1}–{Math.min(currentPage * rowsPerPage, totalCount)}
                                             </span>
-                                            <span className="text-neutral-300">de</span>
-                                            <span className="px-2 py-0.5 rounded-lg bg-neutral-900 text-neutral-300 font-mono border border-neutral-800">
+                                            <span className={isDarkMode ? 'text-neutral-300' : 'text-gray-700'}>de</span>
+                                            <span className={`px-2 py-0.5 rounded-lg font-mono border ${isDarkMode
+                                                ? 'bg-neutral-900 text-neutral-300 border-neutral-800'
+                                                : 'bg-gray-100 text-gray-700 border-gray-300'
+                                                }`}>
                                                 {totalCount}
                                             </span>
-                                            <span className="text-neutral-400">registros</span>
+                                            <span className={isDarkMode ? 'text-neutral-400' : 'text-gray-600'}>registros</span>
                                             {/* Selector de filas por página */}
-                                            <span className="ml-4 text-neutral-400">|</span>
-                                            <label htmlFor="rows-per-page" className="ml-2 text-xs text-neutral-400">Filas por página:</label>
+                                            <span className={`ml-4 ${isDarkMode ? 'text-neutral-400' : 'text-gray-500'}`}>|</span>
+                                            <label htmlFor="rows-per-page" className={`ml-2 text-xs ${isDarkMode ? 'text-neutral-400' : 'text-gray-600'
+                                                }`}>Filas por página:</label>
                                             <select
                                                 id="rows-per-page"
                                                 value={rowsPerPage}
                                                 onChange={e => { setRowsPerPage(Number(e.target.value)); setCurrentPage(1); }}
-                                                className="ml-1 px-2 py-1 rounded-lg bg-black/30 border border-white/20 text-white font-mono text-xs focus:outline-none focus:ring-2 focus:ring-white/50 focus:border-white/50 transition"
+                                                className={`ml-1 px-2 py-1 rounded-lg border font-mono text-xs focus:outline-none focus:ring-2 transition ${isDarkMode
+                                                    ? 'bg-black/30 border-white/20 text-white focus:ring-white/50 focus:border-white/50'
+                                                    : 'bg-white border-gray-300 text-gray-900 focus:ring-blue-500 focus:border-blue-500'
+                                                    }`}
                                             >
                                                 {[10, 20, 30, 50, 100].map(opt => (
                                                     <option key={opt} value={opt}>{opt}</option>
@@ -1666,14 +1826,23 @@ export default function ConsultasIneaGeneral() {
                                 </div>
                                 {/* Indicador de página actual con animación */}
                                 {totalPages > 1 && (
-                                    <div className="flex items-center gap-2 bg-neutral-900/50 px-4 py-2 rounded-xl border border-neutral-800 shadow-inner">
-                                        <span className="text-neutral-400">Página</span>
+                                    <div className={`flex items-center gap-2 px-4 py-2 rounded-xl border shadow-inner ${isDarkMode
+                                        ? 'bg-neutral-900/50 border-neutral-800'
+                                        : 'bg-gray-50 border-gray-200'
+                                        }`}>
+                                        <span className={isDarkMode ? 'text-neutral-400' : 'text-gray-600'}>Página</span>
                                         <div className="flex items-center gap-1.5">
-                                            <span className="px-2.5 py-0.5 rounded-lg bg-white/10 text-white font-mono font-bold border border-white/30 min-w-[2rem] text-center transition-all duration-300 hover:scale-105 hover:bg-white/20">
+                                            <span className={`px-2.5 py-0.5 rounded-lg font-mono font-bold border min-w-[2rem] text-center transition-all duration-300 hover:scale-105 ${isDarkMode
+                                                ? 'bg-white/10 text-white border-white/30 hover:bg-white/20'
+                                                : 'bg-blue-50 text-blue-800 border-blue-200 hover:bg-blue-100'
+                                                }`}>
                                                 {currentPage}
                                             </span>
-                                            <span className="text-neutral-500">/</span>
-                                            <span className="px-2.5 py-0.5 rounded-lg bg-neutral-900 text-neutral-400 font-mono min-w-[2rem] text-center border border-neutral-800">
+                                            <span className={isDarkMode ? 'text-neutral-500' : 'text-gray-500'}>/</span>
+                                            <span className={`px-2.5 py-0.5 rounded-lg font-mono min-w-[2rem] text-center border ${isDarkMode
+                                                ? 'bg-neutral-900 text-neutral-400 border-neutral-800'
+                                                : 'bg-gray-100 text-gray-700 border-gray-300'
+                                                }`}>
                                                 {totalPages}
                                             </span>
                                         </div>
@@ -1686,7 +1855,10 @@ export default function ConsultasIneaGeneral() {
                                     <button
                                         onClick={() => changePage(1)}
                                         disabled={currentPage === 1}
-                                        className="px-2 py-1 rounded-lg border border-neutral-800 bg-neutral-900 text-neutral-400 hover:text-white hover:bg-neutral-800 transition disabled:opacity-40 disabled:cursor-not-allowed"
+                                        className={`px-2 py-1 rounded-lg border transition disabled:opacity-40 disabled:cursor-not-allowed ${isDarkMode
+                                            ? 'border-neutral-800 bg-neutral-900 text-neutral-400 hover:text-white hover:bg-neutral-800'
+                                            : 'border-gray-300 bg-gray-100 text-gray-600 hover:text-gray-900 hover:bg-gray-200'
+                                            }`}
                                         title="Primera página"
                                     >
                                         <ChevronLeft className="inline h-4 w-4 -mr-1" />
@@ -1695,7 +1867,10 @@ export default function ConsultasIneaGeneral() {
                                     <button
                                         onClick={() => changePage(currentPage - 1)}
                                         disabled={currentPage === 1}
-                                        className="px-2 py-1 rounded-lg border border-neutral-800 bg-neutral-900 text-neutral-400 hover:text-white hover:bg-neutral-800 transition disabled:opacity-40 disabled:cursor-not-allowed"
+                                        className={`px-2 py-1 rounded-lg border transition disabled:opacity-40 disabled:cursor-not-allowed ${isDarkMode
+                                            ? 'border-neutral-800 bg-neutral-900 text-neutral-400 hover:text-white hover:bg-neutral-800'
+                                            : 'border-gray-300 bg-gray-100 text-gray-600 hover:text-gray-900 hover:bg-gray-200'
+                                            }`}
                                         title="Página anterior"
                                     >
                                         <ChevronLeft className="h-4 w-4" />
@@ -1713,7 +1888,8 @@ export default function ConsultasIneaGeneral() {
                                         }
                                         if (start > 1) {
                                             pageButtons.push(
-                                                <span key="start-ellipsis" className="px-2 text-neutral-500">...</span>
+                                                <span key="start-ellipsis" className={`px-2 ${isDarkMode ? 'text-neutral-500' : 'text-gray-500'
+                                                    }`}>...</span>
                                             );
                                         }
                                         for (let i = start; i <= end; i++) {
@@ -1721,11 +1897,16 @@ export default function ConsultasIneaGeneral() {
                                                 <button
                                                     key={i}
                                                     onClick={() => changePage(i)}
-                                                    className={`mx-0.5 px-3 py-1.5 rounded-lg border text-sm font-semibold transition
-                                                    ${i === currentPage
-                                                        ? 'bg-white/20 text-white border-white/40 shadow'
-                                                        : 'bg-black/30 text-white/80 border-white/20 hover:bg-white/10 hover:text-white hover:border-white/30'}
-                                            `}
+                                                    className={`mx-0.5 px-3 py-1.5 rounded-lg border text-sm font-semibold transition ${i === currentPage
+                                                        ? (isDarkMode
+                                                            ? 'bg-white/20 text-white border-white/40 shadow'
+                                                            : 'bg-blue-500 text-white border-blue-600 shadow'
+                                                        )
+                                                        : (isDarkMode
+                                                            ? 'bg-black/30 text-white/80 border-white/20 hover:bg-white/10 hover:text-white hover:border-white/30'
+                                                            : 'bg-gray-100 text-gray-700 border-gray-300 hover:bg-gray-200 hover:text-gray-900 hover:border-gray-400'
+                                                        )
+                                                        }`}
                                                     aria-current={i === currentPage ? 'page' : undefined}
                                                 >
                                                     {i}
@@ -1734,7 +1915,8 @@ export default function ConsultasIneaGeneral() {
                                         }
                                         if (end < totalPages) {
                                             pageButtons.push(
-                                                <span key="end-ellipsis" className="px-2 text-neutral-500">...</span>
+                                                <span key="end-ellipsis" className={`px-2 ${isDarkMode ? 'text-neutral-500' : 'text-gray-500'
+                                                    }`}>...</span>
                                             );
                                         }
                                         return pageButtons;
@@ -1742,7 +1924,10 @@ export default function ConsultasIneaGeneral() {
                                     <button
                                         onClick={() => changePage(currentPage + 1)}
                                         disabled={currentPage === totalPages}
-                                        className="px-2 py-1 rounded-lg border border-neutral-800 bg-neutral-900 text-neutral-400 hover:text-white hover:bg-neutral-800 transition disabled:opacity-40 disabled:cursor-not-allowed"
+                                        className={`px-2 py-1 rounded-lg border transition disabled:opacity-40 disabled:cursor-not-allowed ${isDarkMode
+                                            ? 'border-neutral-800 bg-neutral-900 text-neutral-400 hover:text-white hover:bg-neutral-800'
+                                            : 'border-gray-300 bg-gray-100 text-gray-600 hover:text-gray-900 hover:bg-gray-200'
+                                            }`}
                                         title="Página siguiente"
                                     >
                                         <ChevronRight className="h-4 w-4" />
@@ -1750,7 +1935,10 @@ export default function ConsultasIneaGeneral() {
                                     <button
                                         onClick={() => changePage(totalPages)}
                                         disabled={currentPage === totalPages}
-                                        className="px-2 py-1 rounded-lg border border-neutral-800 bg-neutral-900 text-neutral-400 hover:text-white hover:bg-neutral-800 transition disabled:opacity-40 disabled:cursor-not-allowed"
+                                        className={`px-2 py-1 rounded-lg border transition disabled:opacity-40 disabled:cursor-not-allowed ${isDarkMode
+                                            ? 'border-neutral-800 bg-neutral-900 text-neutral-400 hover:text-white hover:bg-neutral-800'
+                                            : 'border-gray-300 bg-gray-100 text-gray-600 hover:text-gray-900 hover:bg-gray-200'
+                                            }`}
                                         title="Última página"
                                     >
                                         <ChevronRight className="inline h-4 w-4 -mr-2" />
@@ -1765,18 +1953,29 @@ export default function ConsultasIneaGeneral() {
                     {selectedItem && (
                         <div
                             ref={detailRef}
-                            className="bg-black border border-gray-800 rounded-lg shadow-xl overflow-visible flex flex-col flex-shrink-0 lg:w-[600px] min-w-full max-h-[85vh]"
+                            className={`border rounded-lg shadow-xl overflow-visible flex flex-col flex-shrink-0 lg:w-[600px] min-w-full max-h-[85vh] ${isDarkMode
+                                ? 'bg-black border-gray-800'
+                                : 'bg-white border-gray-200'
+                                }`}
                         >
-                            <div className="sticky top-0 z-10 bg-black border-b border-gray-800 px-6 py-4 flex justify-between items-center">
-                                <h2 className="text-xl font-semibold text-white flex items-center gap-2">
-                                    <ClipboardList className="h-5 w-5 text-white/80" />
+                            <div className={`sticky top-0 z-10 border-b px-6 py-4 flex justify-between items-center ${isDarkMode
+                                ? 'bg-black border-gray-800'
+                                : 'bg-white border-gray-200'
+                                }`}>
+                                <h2 className={`text-xl font-semibold flex items-center gap-2 ${isDarkMode ? 'text-white' : 'text-gray-900'
+                                    }`}>
+                                    <ClipboardList className={`h-5 w-5 ${isDarkMode ? 'text-white/80' : 'text-gray-700'
+                                        }`} />
                                     Detalle del Artículo
                                 </h2>
                                 <button
                                     type="button"
                                     onClick={closeDetail}
                                     title="Cerrar detalle"
-                                    className="text-gray-400 hover:text-white rounded-full p-2 focus:outline-none focus:ring-2 focus:ring-white hover:bg-gray-800 transition-colors"
+                                    className={`rounded-full p-2 focus:outline-none focus:ring-2 transition-colors ${isDarkMode
+                                        ? 'text-gray-400 hover:text-white focus:ring-white hover:bg-gray-800'
+                                        : 'text-gray-500 hover:text-gray-700 focus:ring-blue-500 hover:bg-gray-100'
+                                        }`}
                                 >
                                     <X className="h-5 w-5" />
                                 </button>
@@ -1788,7 +1987,8 @@ export default function ConsultasIneaGeneral() {
                                         <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                                             {/* Sección de imagen en edición */}
                                             <div className="form-group col-span-2">
-                                                <label className="flex items-center gap-2 text-sm font-medium text-gray-300 mb-2">
+                                                <label className={`flex items-center gap-2 text-sm font-medium mb-2 ${isDarkMode ? 'text-gray-300' : 'text-gray-700'
+                                                    }`}>
                                                     Imagen del Bien
                                                 </label>
 
@@ -1799,11 +1999,17 @@ export default function ConsultasIneaGeneral() {
                                                                 <img
                                                                     src={imagePreview}
                                                                     alt="Vista previa"
-                                                                    className="w-full h-64 object-contain rounded-lg border border-gray-700"
+                                                                    className={`w-full h-64 object-contain rounded-lg border ${isDarkMode ? 'border-gray-700' : 'border-gray-300'
+                                                                        }`}
                                                                 />
-                                                                <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 flex items-center justify-center rounded-lg transition-opacity">
-                                                                    <label className="cursor-pointer p-2 bg-gray-800/50 rounded-full hover:bg-gray-700">
-                                                                        <Edit className="h-4 w-4 text-white" />
+                                                                <div className={`absolute inset-0 opacity-0 group-hover:opacity-100 flex items-center justify-center rounded-lg transition-opacity ${isDarkMode ? 'bg-black/50' : 'bg-white/80'
+                                                                    }`}>
+                                                                    <label className={`cursor-pointer p-2 rounded-full transition-colors ${isDarkMode
+                                                                        ? 'bg-gray-800/50 hover:bg-gray-700'
+                                                                        : 'bg-gray-200/80 hover:bg-gray-300'
+                                                                        }`}>
+                                                                        <Edit className={`h-4 w-4 ${isDarkMode ? 'text-white' : 'text-gray-700'
+                                                                            }`} />
                                                                         <input
                                                                             type="file"
                                                                             onChange={handleImageChange}
@@ -1822,10 +2028,15 @@ export default function ConsultasIneaGeneral() {
                                                     </div>
 
                                                     <div className="flex-shrink-0 w-64 space-y-2">
-                                                        <label className="flex flex-col items-center justify-center h-32 border-2 border-dashed border-gray-700 rounded-lg cursor-pointer hover:border-blue-500 transition-colors p-4">
+                                                        <label className={`flex flex-col items-center justify-center h-32 border-2 border-dashed border-gray-700 rounded-lg cursor-pointer hover:border-blue-500 transition-colors p-4 ${isDarkMode
+                                                            ? 'border-gray-700'
+                                                            : 'border-gray-300'
+                                                            }`}>
                                                             <div className="text-center">
-                                                                <Plus className="h-6 w-6 mx-auto text-gray-400 mb-1" />
-                                                                <span className="text-xs text-gray-400">Cambiar imagen</span>
+                                                                <Plus className={`h-6 w-6 mx-auto mb-1 ${isDarkMode ? 'text-gray-400' : 'text-gray-500'
+                                                                    }`} />
+                                                                <span className={`text-xs ${isDarkMode ? 'text-gray-400' : 'text-gray-600'
+                                                                    }`}>Cambiar imagen</span>
                                                             </div>
                                                             <input
                                                                 type="file"
@@ -1834,7 +2045,10 @@ export default function ConsultasIneaGeneral() {
                                                                 accept="image/*"
                                                             />
                                                         </label>
-                                                        <div className="text-xs text-gray-400 p-2 bg-gray-800/50 rounded-lg">
+                                                        <div className={`text-xs p-2 rounded-lg ${isDarkMode
+                                                            ? 'text-gray-400 bg-gray-800/50'
+                                                            : 'text-gray-600 bg-gray-100'
+                                                            }`}>
                                                             <p>Formatos: JPG, PNG, GIF, WebP</p>
                                                             <p>Tamaño máximo: 5MB</p>
                                                             {uploading && <p className="text-blue-400 mt-1">Subiendo imagen...</p>}
@@ -1844,24 +2058,32 @@ export default function ConsultasIneaGeneral() {
                                             </div>
 
                                             <div className="form-group">
-                                                <label className="flex items-center gap-2 text-sm font-medium text-gray-300 mb-2">ID Inventario</label>
+                                                <label className={`flex items-center gap-2 text-sm font-medium mb-2 ${isDarkMode ? 'text-gray-300' : 'text-gray-700'
+                                                    }`}>ID Inventario</label>
                                                 <input
                                                     type="text"
                                                     value={editFormData?.id_inv || ''}
                                                     onChange={(e) => handleEditFormChange(e, 'id_inv')}
-                                                    className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2.5 text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                                                    className={`w-full border rounded-lg px-4 py-2.5 focus:outline-none focus:ring-2 focus:border-transparent transition-all ${isDarkMode
+                                                        ? 'bg-gray-800 border-gray-700 text-white placeholder-gray-500 focus:ring-blue-500'
+                                                        : 'bg-white border-gray-300 text-gray-900 placeholder-gray-400 focus:ring-blue-500'
+                                                        }`}
                                                     placeholder="Ingrese el ID de inventario"
                                                 />
                                             </div>
 
                                             <div className="form-group">
-                                                <label className="flex items-center gap-2 text-sm font-medium text-gray-300 mb-2">Rubro</label>
+                                                <label className={`flex items-center gap-2 text-sm font-medium mb-2 ${isDarkMode ? 'text-gray-300' : 'text-gray-700'
+                                                    }`}>Rubro</label>
                                                 <div className="relative">
                                                     <select
                                                         title='Seleccione el rubro'
                                                         value={editFormData?.rubro || ''}
                                                         onChange={(e) => handleEditFormChange(e, 'rubro')}
-                                                        className="appearance-none w-full bg-gray-800 border border-gray-700 rounded-lg pl-4 pr-10 py-2.5 text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                                                        className={`appearance-none w-full border rounded-lg pl-4 pr-10 py-2.5 focus:outline-none focus:ring-2 focus:border-transparent transition-all ${isDarkMode
+                                                            ? 'bg-gray-800 border-gray-700 text-white focus:ring-blue-500'
+                                                            : 'bg-white border-gray-300 text-gray-900 focus:ring-blue-500'
+                                                            }`}
                                                     >
                                                         {(filterOptions.rubros ?? []).map((rubro) => (
                                                             <option key={rubro} value={rubro}>{rubro}</option>
@@ -1872,25 +2094,33 @@ export default function ConsultasIneaGeneral() {
                                             </div>
 
                                             <div className="form-group col-span-2">
-                                                <label className="flex items-center gap-2 text-sm font-medium text-gray-300 mb-2">Descripción</label>
+                                                <label className={`flex items-center gap-2 text-sm font-medium mb-2 ${isDarkMode ? 'text-gray-300' : 'text-gray-700'
+                                                    }`}>Descripción</label>
                                                 <textarea
                                                     value={editFormData?.descripcion || ''}
                                                     onChange={(e) => handleEditFormChange(e, 'descripcion')}
-                                                    className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2.5 text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                                                    className={`w-full border rounded-lg px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all ${isDarkMode
+                                                        ? 'bg-gray-800 border-gray-700 text-white placeholder-gray-500'
+                                                        : 'bg-white border-gray-300 text-gray-900 placeholder-gray-400'
+                                                        }`}
                                                     rows={3}
                                                     placeholder="Ingrese la descripción"
                                                 />
                                             </div>
 
                                             <div className="form-group">
-                                                <label className="block text-sm font-medium text-gray-400 mb-2">Estado</label>
+                                                <label className={`block text-sm font-medium mb-2 ${isDarkMode ? 'text-gray-300' : 'text-gray-700'
+                                                    }`}>Estado</label>
                                                 <div className="relative">
                                                     <select
                                                         id="estado-select"
                                                         title="Seleccione el estado"
                                                         value={editFormData?.estado || ''}
                                                         onChange={(e) => handleEditFormChange(e, 'estado')}
-                                                        className="appearance-none w-full bg-gray-800 border border-gray-700 rounded-lg pl-4 pr-10 py-2.5 text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                                                        className={`appearance-none w-full border rounded-lg pl-4 pr-10 py-2.5 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all ${isDarkMode
+                                                            ? 'bg-gray-800 border-gray-700 text-white'
+                                                            : 'bg-white border-gray-300 text-gray-900'
+                                                            }`}
                                                     >
                                                         <option value="">Seleccione un estado</option>
                                                         {filterOptions.estados.map((estado) => (
@@ -1902,7 +2132,8 @@ export default function ConsultasIneaGeneral() {
                                             </div>
 
                                             <div className="form-group">
-                                                <label className="flex items-center gap-2 text-sm font-medium text-gray-300 mb-2">
+                                                <label className={`flex items-center gap-2 text-sm font-medium mb-2 ${isDarkMode ? 'text-gray-300' : 'text-gray-700'
+                                                    }`}>
                                                     <DollarSign className="h-4 w-4 text-green-400" />
                                                     Valor
                                                 </label>
@@ -1914,40 +2145,54 @@ export default function ConsultasIneaGeneral() {
                                                         type="number"
                                                         value={editFormData?.valor || 0}
                                                         onChange={(e) => handleEditFormChange(e, 'valor')}
-                                                        className="w-full bg-gray-800 border border-gray-700 rounded-lg pl-8 pr-4 py-2.5 text-white focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all duration-300 group-hover:bg-gray-700"
+                                                        className={`w-full border rounded-lg pl-8 pr-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all duration-300 ${isDarkMode
+                                                            ? 'bg-gray-800 border-gray-700 text-white group-hover:bg-gray-700'
+                                                            : 'bg-white border-gray-300 text-gray-900 group-hover:bg-gray-50'
+                                                            }`}
                                                         title="Ingrese el valor"
                                                         placeholder="0.00"
                                                         step="0.01"
                                                         min="0"
                                                     />
                                                     <div className="absolute inset-y-0 right-0 flex items-center pr-3">
-                                                        <span className="text-gray-500 text-sm">MXN</span>
+                                                        <span className={`text-sm ${isDarkMode ? 'text-gray-500' : 'text-gray-600'
+                                                            }`}>MXN</span>
                                                     </div>
                                                 </div>
-                                                <p className="mt-1 text-xs text-gray-500">Ingrese el valor en pesos mexicanos</p>
+                                                <p className={`mt-1 text-xs ${isDarkMode ? 'text-gray-500' : 'text-gray-600'
+                                                    }`}>Ingrese el valor en pesos mexicanos</p>
                                             </div>
 
                                             <div className="form-group">
-                                                <label className="flex items-center gap-2 text-sm font-medium text-gray-300 mb-2">Fecha de Adquisición</label>
+                                                <label className={`flex items-center gap-2 text-sm font-medium mb-2 ${isDarkMode ? 'text-gray-300' : 'text-gray-700'
+                                                    }`}>Fecha de Adquisición</label>
                                                 <div className="relative">
-                                                    <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500 pointer-events-none" />
+                                                    <Calendar className={`absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 pointer-events-none ${isDarkMode ? 'text-gray-500' : 'text-gray-400'
+                                                        }`} />
                                                     <input
                                                         type="date"
                                                         value={editFormData?.f_adq || ''}
                                                         onChange={(e) => handleEditFormChange(e, 'f_adq')}
-                                                        className="w-full bg-gray-800 border border-gray-700 rounded-lg pl-10 pr-4 py-2.5 text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                                                        className={`w-full border rounded-lg pl-10 pr-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all ${isDarkMode
+                                                            ? 'bg-gray-800 border-gray-700 text-white'
+                                                            : 'bg-white border-gray-300 text-gray-900'
+                                                            }`}
                                                         title="Seleccione la fecha de adquisición"
                                                     />
                                                 </div>
                                             </div>
 
                                             <div className="form-group">
-                                                <label className="flex items-center gap-2 text-sm font-medium text-gray-300 mb-2">Forma de Adquisición</label>
+                                                <label className={`flex items-center gap-2 text-sm font-medium mb-2 ${isDarkMode ? 'text-gray-300' : 'text-gray-700'
+                                                    }`}>Forma de Adquisición</label>
                                                 <div className="relative">
                                                     <select
                                                         value={editFormData?.formadq || ''}
                                                         onChange={(e) => handleEditFormChange(e, 'formadq')}
-                                                        className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2.5 text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                                                        className={`w-full border rounded-lg px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all ${isDarkMode
+                                                            ? 'bg-gray-800 border-gray-700 text-white'
+                                                            : 'bg-white border-gray-300 text-gray-900'
+                                                            }`}
                                                         title="Ingrese la forma de adquisición"
                                                     >
                                                         <option value="">Seleccionar forma de adquisición</option>
@@ -1959,14 +2204,19 @@ export default function ConsultasIneaGeneral() {
                                             </div>
 
                                             <div className="form-group">
-                                                <label className="flex items-center gap-2 text-sm font-medium text-gray-300 mb-2">Proveedor</label>
+                                                <label className={`flex items-center gap-2 text-sm font-medium mb-2 ${isDarkMode ? 'text-gray-300' : 'text-gray-700'
+                                                    }`}>Proveedor</label>
                                                 <div className="relative">
-                                                    <Store className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500 pointer-events-none" />
+                                                    <Store className={`absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 pointer-events-none ${isDarkMode ? 'text-gray-500' : 'text-gray-400'
+                                                        }`} />
                                                     <input
                                                         type="text"
                                                         value={editFormData?.proveedor || ''}
                                                         onChange={(e) => handleEditFormChange(e, 'proveedor')}
-                                                        className="w-full bg-gray-800 border border-gray-700 rounded-lg pl-10 pr-4 py-2.5 text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                                                        className={`w-full border rounded-lg pl-10 pr-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all ${isDarkMode
+                                                            ? 'bg-gray-800 border-gray-700 text-white placeholder-gray-500'
+                                                            : 'bg-white border-gray-300 text-gray-900 placeholder-gray-400'
+                                                            }`}
                                                         title="Ingrese el nombre del proveedor"
                                                         placeholder="Nombre del proveedor"
                                                     />
@@ -1974,14 +2224,19 @@ export default function ConsultasIneaGeneral() {
                                             </div>
 
                                             <div className="form-group">
-                                                <label className="flex items-center gap-2 text-sm font-medium text-gray-300 mb-2">Factura</label>
+                                                <label className={`flex items-center gap-2 text-sm font-medium mb-2 ${isDarkMode ? 'text-gray-300' : 'text-gray-700'
+                                                    }`}>Factura</label>
                                                 <div className="relative">
-                                                    <Receipt className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500 pointer-events-none" />
+                                                    <Receipt className={`absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 pointer-events-none ${isDarkMode ? 'text-gray-500' : 'text-gray-400'
+                                                        }`} />
                                                     <input
                                                         type="text"
                                                         value={editFormData?.factura || ''}
                                                         onChange={(e) => handleEditFormChange(e, 'factura')}
-                                                        className="w-full bg-gray-800 border border-gray-700 rounded-lg pl-10 pr-4 py-2.5 text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                                                        className={`w-full border rounded-lg pl-10 pr-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all ${isDarkMode
+                                                            ? 'bg-gray-800 border-gray-700 text-white placeholder-gray-500'
+                                                            : 'bg-white border-gray-300 text-gray-900 placeholder-gray-400'
+                                                            }`}
                                                         title="Ingrese el número de factura"
                                                         placeholder="Número de factura"
                                                     />
@@ -1989,58 +2244,77 @@ export default function ConsultasIneaGeneral() {
                                             </div>
 
                                             <div className="form-group">
-                                                <label className="flex items-center gap-2 text-sm font-medium text-gray-300 mb-2">Estado</label>
+                                                <label className={`flex items-center gap-2 text-sm font-medium mb-2 ${isDarkMode ? 'text-gray-300' : 'text-gray-700'
+                                                    }`}>Estado</label>
                                                 <div className="relative">
-                                                    <Building2 className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500 pointer-events-none" />
+                                                    <Building2 className={`absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 pointer-events-none ${isDarkMode ? 'text-gray-500' : 'text-gray-400'
+                                                        }`} />
                                                     <input
                                                         type="text"
                                                         title="Estado"
                                                         placeholder="Estado"
                                                         value={editFormData?.ubicacion_es || ''}
                                                         onChange={(e) => handleEditFormChange(e, 'ubicacion_es')}
-                                                        className="w-full bg-gray-800 border border-gray-700 rounded-lg pl-10 pr-4 py-2.5 text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                                                        className={`w-full border rounded-lg pl-10 pr-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all ${isDarkMode
+                                                            ? 'bg-gray-800 border-gray-700 text-white placeholder-gray-500'
+                                                            : 'bg-white border-gray-300 text-gray-900 placeholder-gray-400'
+                                                            }`}
                                                     />
                                                 </div>
                                             </div>
 
                                             <div className="form-group">
-                                                <label className="flex items-center gap-2 text-sm font-medium text-gray-300 mb-2">Municipio</label>
+                                                <label className={`flex items-center gap-2 text-sm font-medium mb-2 ${isDarkMode ? 'text-gray-300' : 'text-gray-700'
+                                                    }`}>Municipio</label>
                                                 <div className="relative">
-                                                    <Building2 className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500 pointer-events-none" />
+                                                    <Building2 className={`absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 pointer-events-none ${isDarkMode ? 'text-gray-500' : 'text-gray-400'
+                                                        }`} />
                                                     <input
                                                         type="text"
                                                         title="Municipio"
                                                         placeholder="Municipio"
                                                         value={editFormData?.ubicacion_mu || ''}
                                                         onChange={(e) => handleEditFormChange(e, 'ubicacion_mu')}
-                                                        className="w-full bg-gray-800 border border-gray-700 rounded-lg pl-10 pr-4 py-2.5 text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                                                        className={`w-full border rounded-lg pl-10 pr-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all ${isDarkMode
+                                                            ? 'bg-gray-800 border-gray-700 text-white placeholder-gray-500'
+                                                            : 'bg-white border-gray-300 text-gray-900 placeholder-gray-400'
+                                                            }`}
                                                     />
                                                 </div>
                                             </div>
 
                                             <div className="form-group">
-                                                <label className="flex items-center gap-2 text-sm font-medium text-gray-300 mb-2">Nomenclatura</label>
+                                                <label className={`flex items-center gap-2 text-sm font-medium mb-2 ${isDarkMode ? 'text-gray-300' : 'text-gray-700'
+                                                    }`}>Nomenclatura</label>
                                                 <div className="relative">
-                                                    <Building2 className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500 pointer-events-none" />
+                                                    <Building2 className={`absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 pointer-events-none ${isDarkMode ? 'text-gray-500' : 'text-gray-400'
+                                                        }`} />
                                                     <input
                                                         type="text"
                                                         title="Nomenclatura"
                                                         placeholder="Nomenclatura"
                                                         value={editFormData?.ubicacion_no || ''}
                                                         onChange={(e) => handleEditFormChange(e, 'ubicacion_no')}
-                                                        className="w-full bg-gray-800 border border-gray-700 rounded-lg pl-10 pr-4 py-2.5 text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                                                        className={`w-full border rounded-lg pl-10 pr-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all ${isDarkMode
+                                                            ? 'bg-gray-800 border-gray-700 text-white placeholder-gray-500'
+                                                            : 'bg-white border-gray-300 text-gray-900 placeholder-gray-400'
+                                                            }`}
                                                     />
                                                 </div>
                                             </div>
 
                                             <div className="form-group">
-                                                <label className="flex items-center gap-2 text-sm font-medium text-gray-300 mb-2">Estatus</label>
+                                                <label className={`flex items-center gap-2 text-sm font-medium mb-2 ${isDarkMode ? 'text-gray-300' : 'text-gray-700'
+                                                    }`}>Estatus</label>
                                                 <div className="relative">
                                                     <select
                                                         title="Seleccione el estatus"
                                                         value={editFormData?.estatus || ''}
                                                         onChange={(e) => handleEditFormChange(e, 'estatus')}
-                                                        className="appearance-none w-full bg-gray-800 border border-gray-700 rounded-lg pl-4 pr-10 py-2.5 text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                                                        className={`appearance-none w-full border rounded-lg pl-4 pr-10 py-2.5 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all ${isDarkMode
+                                                            ? 'bg-gray-800 border-gray-700 text-white'
+                                                            : 'bg-white border-gray-300 text-gray-900'
+                                                            }`}
                                                     >
                                                         {filterOptions.estatus.map((status) => (
                                                             <option key={status} value={status}>{status}</option>
@@ -2051,46 +2325,60 @@ export default function ConsultasIneaGeneral() {
                                             </div>
 
                                             <div className="form-group">
-                                                <label className="flex items-center gap-2 text-sm font-medium text-gray-300 mb-2">Área</label>
+                                                <label className={`flex items-center gap-2 text-sm font-medium mb-2 ${isDarkMode ? 'text-gray-300' : 'text-gray-700'
+                                                    }`}>Área</label>
                                                 <div className="relative">
                                                     <input
                                                         type="text"
                                                         value={editFormData?.area || ''}
                                                         readOnly
-                                                        className="w-full bg-gray-700 border border-gray-600 rounded-lg pl-4 pr-10 py-2.5 text-white cursor-not-allowed"
+                                                        className={`w-full border rounded-lg pl-4 pr-10 py-2.5 cursor-not-allowed ${isDarkMode
+                                                            ? 'bg-gray-700 border-gray-600 text-white'
+                                                            : 'bg-gray-100 border-gray-300 text-gray-700'
+                                                            }`}
                                                         aria-label="Área (se autocompleta al seleccionar un director/jefe)"
                                                     />
                                                 </div>
                                             </div>
 
                                             <div className="form-group">
-                                                <label className="flex items-center gap-2 text-sm font-medium text-gray-300 mb-2">Director/Jefe de Área</label>
+                                                <label className={`flex items-center gap-2 text-sm font-medium mb-2 ${isDarkMode ? 'text-gray-300' : 'text-gray-700'
+                                                    }`}>Director/Jefe de Área</label>
                                                 <div className="relative">
                                                     <select
                                                         title='Seleccione el Director/Jefe de Área'
                                                         name="usufinal"
                                                         value={editFormData?.usufinal || ''}
                                                         onChange={(e) => handleSelectDirector(e.target.value)}
-                                                        className="w-full bg-gray-800 border border-gray-700 rounded-lg pl-4 pr-10 py-2.5 text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all appearance-none"
+                                                        className={`w-full border rounded-lg pl-4 pr-10 py-2.5 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all appearance-none ${isDarkMode
+                                                            ? 'bg-gray-800 border-gray-700 text-white'
+                                                            : 'bg-white border-gray-300 text-gray-900'
+                                                            }`}
                                                     >
                                                         <option value="">Seleccionar Director/Jefe</option>
                                                         {filterOptions.directores.map((director, index) => (
                                                             <option key={index} value={director.nombre}>{director.nombre}</option>
                                                         ))}
                                                     </select>
-                                                    <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />
+                                                    <ChevronDown className={`absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 pointer-events-none ${isDarkMode ? 'text-gray-400' : 'text-gray-500'
+                                                        }`} />
                                                 </div>
                                             </div>
 
                                             <div className="form-group">
-                                                <label className="flex items-center gap-2 text-sm font-medium text-gray-300 mb-2">Usuario Final</label>
+                                                <label className={`flex items-center gap-2 text-sm font-medium mb-2 ${isDarkMode ? 'text-gray-300' : 'text-gray-700'
+                                                    }`}>Usuario Final</label>
                                                 <div className="relative">
-                                                    <Shield className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500 pointer-events-none" />
+                                                    <Shield className={`absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 pointer-events-none ${isDarkMode ? 'text-gray-500' : 'text-gray-400'
+                                                        }`} />
                                                     <input
                                                         type="text"
                                                         value={editFormData?.resguardante || ''}
                                                         onChange={(e) => handleEditFormChange(e, 'resguardante')}
-                                                        className="w-full bg-gray-800 border border-gray-700 rounded-lg pl-10 pr-4 py-2.5 text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                                                        className={`w-full border rounded-lg pl-10 pr-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all ${isDarkMode
+                                                            ? 'bg-gray-800 border-gray-700 text-white placeholder-gray-500'
+                                                            : 'bg-white border-gray-300 text-gray-900 placeholder-gray-400'
+                                                            }`}
                                                         title="Ingrese el Usuario Final"
                                                         placeholder="Ingrese el Usuario Final"
                                                     />
@@ -2118,8 +2406,12 @@ export default function ConsultasIneaGeneral() {
                                 ) : (
                                     <div className="space-y-6">
                                         {/* Sección de imagen en vista de detalles */}
-                                        <div className="detail-card bg-gray-800/50 rounded-lg p-4 hover:bg-gray-800/80 transition-all col-span-2">
-                                            <h3 className="text-xs font-medium uppercase tracking-wider text-gray-400 mb-2">
+                                        <div className={`detail-card rounded-lg p-4 transition-all col-span-2 ${isDarkMode
+                                            ? 'bg-gray-800/50 hover:bg-gray-800/80'
+                                            : 'bg-gray-50 hover:bg-gray-100 border border-gray-200'
+                                            }`}>
+                                            <h3 className={`text-xs font-medium uppercase tracking-wider mb-2 ${isDarkMode ? 'text-gray-400' : 'text-gray-600'
+                                                }`}>
                                                 Fotografía del Bien
                                             </h3>
                                             <ImagePreview imagePath={selectedItem.image_path} />
@@ -2133,17 +2425,21 @@ export default function ConsultasIneaGeneral() {
                                                     <div className="flex flex-wrap items-center gap-2 bg-white/10 border border-white/30 rounded-lg px-4 py-2 mb-4 text-xs text-white font-mono shadow-sm overflow-hidden break-words min-w-0">
                                                         <span className="font-bold text-white">Folio:</span> <span className="truncate break-words min-w-0">{detalleResguardo.folio}</span>
                                                         <span className="mx-2 text-white/60">|</span>
-                                                        <span className="font-bold text-white">Fecha:</span> <span className="truncate break-words min-w-0">{formatDate(detalleResguardo.f_resguardo)}</span>
-                                                        <span className="mx-2 text-white/60">|</span>
-                                                        <span className="font-bold text-white">Área:</span> <span className="truncate break-words min-w-0">{detalleResguardo.area_resguardo}</span>
-                                                        <span className="mx-2 text-white/60">|</span>
-                                                        <span className="font-bold text-white">Director:</span> <span className="truncate break-words min-w-0">{detalleResguardo.dir_area}</span>
+                                                        <span className={`font-bold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>Fecha:</span> <span className="truncate break-words min-w-0">{formatDate(detalleResguardo.f_resguardo)}</span>
+                                                        <span className={`mx-2 ${isDarkMode ? 'text-white/60' : 'text-gray-500'}`}>|</span>
+                                                        <span className={`font-bold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>Área:</span> <span className="truncate break-words min-w-0">{detalleResguardo.area_resguardo}</span>
+                                                        <span className={`mx-2 ${isDarkMode ? 'text-white/60' : 'text-gray-500'}`}>|</span>
+                                                        <span className={`font-bold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>Director:</span> <span className="truncate break-words min-w-0">{detalleResguardo.dir_area}</span>
                                                     </div>
                                                 );
                                             } else {
                                                 return (
-                                                    <div className="flex flex-wrap items-center gap-2 bg-gray-800/60 border border-gray-700 rounded-lg px-4 py-2 mb-4 text-xs text-gray-400 font-mono shadow-sm overflow-hidden break-words min-w-0">
-                                                        <XCircle className="h-4 w-4 mr-1 text-gray-400" />
+                                                    <div className={`flex flex-wrap items-center gap-2 border rounded-lg px-4 py-2 mb-4 text-xs font-mono shadow-sm overflow-hidden break-words min-w-0 ${isDarkMode
+                                                        ? 'bg-gray-800/60 border-gray-700 text-gray-400'
+                                                        : 'bg-gray-100 border-gray-300 text-gray-600'
+                                                        }`}>
+                                                        <XCircle className={`h-4 w-4 mr-1 ${isDarkMode ? 'text-gray-400' : 'text-gray-500'
+                                                            }`} />
                                                         Sin resguardo asignado
                                                     </div>
                                                 );
@@ -2151,95 +2447,146 @@ export default function ConsultasIneaGeneral() {
                                         })()}
                                         {/* Sección de detalles del artículo */}
                                         <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
-                                            <div className="detail-card bg-gray-800/50 rounded-lg p-4 hover:bg-gray-800/80 transition-all">
-                                                <h3 className="text-xs font-medium uppercase tracking-wider text-gray-400">ID Inventario</h3>
-                                                <p className="mt-2 text-white font-medium">{selectedItem.id_inv}</p>
+                                            <div className={`detail-card rounded-lg p-4 transition-all ${isDarkMode
+                                                ? 'bg-gray-800/50 hover:bg-gray-800/80'
+                                                : 'bg-gray-50 hover:bg-gray-100 border border-gray-200'
+                                                }`}>
+                                                <h3 className={`text-xs font-medium uppercase tracking-wider ${isDarkMode ? 'text-gray-400' : 'text-gray-600'
+                                                    }`}>ID Inventario</h3>
+                                                <p className={`mt-2 font-medium ${isDarkMode ? 'text-white' : 'text-gray-900'
+                                                    }`}>{selectedItem.id_inv}</p>
                                             </div>
-                                            <div className="detail-card bg-gray-800/50 rounded-lg p-4 hover:bg-gray-800/80 transition-all">
-                                                <h3 className="text-xs font-medium uppercase tracking-wider text-gray-400">Rubro</h3>
-                                                <p className="mt-2 text-white font-medium">{selectedItem.rubro || 'No especificado'}</p>
+                                            <div className={`detail-card rounded-lg p-4 transition-all ${isDarkMode
+                                                ? 'bg-gray-800/50 hover:bg-gray-800/80'
+                                                : 'bg-gray-50 hover:bg-gray-100 border border-gray-200'
+                                                }`}>
+                                                <h3 className={`text-xs font-medium uppercase tracking-wider ${isDarkMode ? 'text-gray-400' : 'text-gray-600'
+                                                    }`}>Rubro</h3>
+                                                <p className={`mt-2 font-medium ${isDarkMode ? 'text-white' : 'text-gray-900'
+                                                    }`}>{selectedItem.rubro || 'No especificado'}</p>
                                             </div>
-                                            <div className="detail-card bg-gray-800/50 rounded-lg p-4 hover:bg-gray-800/80 transition-all col-span-2">
-                                                <h3 className="text-xs font-medium uppercase tracking-wider text-gray-400">Descripción</h3>
-                                                <p className="mt-2 text-white">{selectedItem.descripcion || 'No especificado'}</p>
+                                            <div className={`detail-card rounded-lg p-4 transition-all col-span-2 ${isDarkMode
+                                                ? 'bg-gray-800/50 hover:bg-gray-800/80'
+                                                : 'bg-gray-50 hover:bg-gray-100 border border-gray-200'
+                                                }`}>
+                                                <h3 className={`text-xs font-medium uppercase tracking-wider ${isDarkMode ? 'text-gray-400' : 'text-gray-600'
+                                                    }`}>Descripción</h3>
+                                                <p className={`mt-2 font-medium ${isDarkMode ? 'text-white' : 'text-gray-900'
+                                                    }`}>{selectedItem.descripcion || 'No especificado'}</p>
                                             </div>
-                                            <div className="detail-card bg-gray-800/50 rounded-lg p-4 hover:bg-gray-800/80 transition-all">
-                                                <h3 className="text-xs font-medium uppercase tracking-wider text-gray-400">Valor</h3>
-                                                <p className="mt-2 text-white font-medium">
+                                            <div className={`detail-card rounded-lg p-4 transition-all ${isDarkMode
+                                                ? 'bg-gray-800/50 hover:bg-gray-800/80'
+                                                : 'bg-gray-50 hover:bg-gray-100 border border-gray-200'
+                                                }`}>
+                                                <h3 className={`text-xs font-medium uppercase tracking-wider ${isDarkMode ? 'text-gray-400' : 'text-gray-600'
+                                                    }`}>Valor</h3>
+                                                <p className={`mt-2 font-medium ${isDarkMode ? 'text-white' : 'text-gray-900'
+                                                    }`}>
                                                     {selectedItem.valor ?
                                                         `$${selectedItem.valor.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` :
                                                         '$0.00'}
                                                 </p>
                                             </div>
-                                            <div className="detail-card bg-gray-800/50 rounded-lg p-4 hover:bg-gray-800/80 transition-all">
-                                                <h3 className="text-xs font-medium uppercase tracking-wider text-gray-400">Fecha de Adquisición</h3>
-                                                <p className="mt-2 text-white flex items-center gap-2">
-                                                    <Calendar className="h-4 w-4 text-white" />
-                                                    {formatDate(selectedItem.f_adq) || 'No especificado'}
-                                                </p>
+                                            <div className={`detail-card rounded-lg p-4 transition-all ${isDarkMode
+                                                ? 'bg-gray-800/50 hover:bg-gray-800/80'
+                                                : 'bg-gray-50 hover:bg-gray-100 border border-gray-200'
+                                                }`}>
+                                                <h3 className={`text-xs font-medium uppercase tracking-wider ${isDarkMode ? 'text-gray-400' : 'text-gray-600'
+                                                    }`}>Fecha de Adquisición</h3>
+                                                <p className={`mt-2 font-medium ${isDarkMode ? 'text-white' : 'text-gray-900'
+                                                    }`}>{formatDate(selectedItem.f_adq) || 'No especificado'}</p>
                                             </div>
-                                            <div className="detail-card bg-gray-800/50 rounded-lg p-4 hover:bg-gray-800/80 transition-all">
-                                                <h3 className="text-xs font-medium uppercase tracking-wider text-gray-400">Forma de Adquisición</h3>
-                                                <p className="mt-2 text-white">{selectedItem.formadq || 'No especificado'}</p>
+                                            <div className={`detail-card rounded-lg p-4 transition-all ${isDarkMode
+                                                ? 'bg-gray-800/50 hover:bg-gray-800/80'
+                                                : 'bg-gray-50 hover:bg-gray-100 border border-gray-200'
+                                                }`}>
+                                                <h3 className={`text-xs font-medium uppercase tracking-wider ${isDarkMode ? 'text-gray-400' : 'text-gray-600'
+                                                    }`}>Forma de Adquisición</h3>
+                                                <p className={`mt-2 font-medium ${isDarkMode ? 'text-white' : 'text-gray-900'
+                                                    }`}>{selectedItem.formadq || 'No especificado'}</p>
                                             </div>
-                                            <div className="detail-card bg-gray-800/50 rounded-lg p-4 hover:bg-gray-800/80 transition-all">
-                                                <h3 className="text-xs font-medium uppercase tracking-wider text-gray-400">Proveedor</h3>
-                                                <p className="mt-2 text-white flex items-center gap-2">
-                                                    <Store className="h-4 w-4 text-white" />
-                                                    {selectedItem.proveedor || 'No especificado'}
-                                                </p>
+                                            <div className={`detail-card rounded-lg p-4 transition-all ${isDarkMode
+                                                ? 'bg-gray-800/50 hover:bg-gray-800/80'
+                                                : 'bg-gray-50 hover:bg-gray-100 border border-gray-200'
+                                                }`}>
+                                                <h3 className={`text-xs font-medium uppercase tracking-wider ${isDarkMode ? 'text-gray-400' : 'text-gray-600'
+                                                    }`}>Proveedor</h3>
+                                                <p className={`mt-2 font-medium ${isDarkMode ? 'text-white' : 'text-gray-900'
+                                                    }`}>{selectedItem.proveedor || 'No especificado'}</p>
                                             </div>
-                                            <div className="detail-card bg-gray-800/50 rounded-lg p-4 hover:bg-gray-800/80 transition-all">
-                                                <h3 className="text-xs font-medium uppercase tracking-wider text-gray-400">Factura</h3>
-                                                <p className="mt-2 text-white flex items-center gap-2">
-                                                    <Receipt className="h-4 w-4 text-white" />
-                                                    {selectedItem.factura || 'No especificado'}
-                                                </p>
+                                            <div className={`detail-card rounded-lg p-4 transition-all ${isDarkMode
+                                                ? 'bg-gray-800/50 hover:bg-gray-800/80'
+                                                : 'bg-gray-50 hover:bg-gray-100 border border-gray-200'
+                                                }`}>
+                                                <h3 className={`text-xs font-medium uppercase tracking-wider ${isDarkMode ? 'text-gray-400' : 'text-gray-600'
+                                                    }`}>Factura</h3>
+                                                <p className={`mt-2 font-medium ${isDarkMode ? 'text-white' : 'text-gray-900'
+                                                    }`}>{selectedItem.factura || 'No especificado'}</p>
                                             </div>
-                                            <div className="detail-card bg-gray-800/50 rounded-lg p-4 hover:bg-gray-800/80 transition-all">
-                                                <h3 className="text-xs font-medium uppercase tracking-wider text-gray-400">Estado</h3>
-                                                <p className="mt-2 text-white">{selectedItem.estado || 'No especificado'}</p>
+                                            <div className={`detail-card rounded-lg p-4 transition-all ${isDarkMode
+                                                ? 'bg-gray-800/50 hover:bg-gray-800/80'
+                                                : 'bg-gray-50 hover:bg-gray-100 border border-gray-200'
+                                                }`}>
+                                                <h3 className={`text-xs font-medium uppercase tracking-wider ${isDarkMode ? 'text-gray-400' : 'text-gray-600'
+                                                    }`}>Estado</h3>
+                                                <p className={`mt-2 font-medium ${isDarkMode ? 'text-white' : 'text-gray-900'
+                                                    }`}>{selectedItem.estado || 'No especificado'}</p>
                                             </div>
-                                            <div className="detail-card bg-gray-800/50 rounded-lg p-4 hover:bg-gray-800/80 transition-all">
-                                                <h4 className="text-sm font-medium text-gray-400 mb-2 flex items-center gap-2">
-                                                    <Building2 className="h-4 w-4" />
-                                                    Estado
-                                                </h4>
-                                                <p className="text-white">{selectedItem.ubicacion_es || 'No especificado'}</p>
+                                            <div className={`detail-card rounded-lg p-4 transition-all ${isDarkMode
+                                                ? 'bg-gray-800/50 hover:bg-gray-800/80'
+                                                : 'bg-gray-50 hover:bg-gray-100 border border-gray-200'
+                                                }`}>
+                                                <h3 className={`text-xs font-medium uppercase tracking-wider ${isDarkMode ? 'text-gray-400' : 'text-gray-600'
+                                                    }`}>Estado</h3>
+                                                <p className={`mt-2 font-medium ${isDarkMode ? 'text-white' : 'text-gray-900'
+                                                    }`}>{selectedItem.ubicacion_es || 'No especificado'}</p>
                                             </div>
 
-                                            <div className="detail-card bg-gray-800/50 rounded-lg p-4 hover:bg-gray-800/80 transition-all">
-                                                <h4 className="text-sm font-medium text-gray-400 mb-2 flex items-center gap-2">
-                                                    <Building2 className="h-4 w-4" />
-                                                    Municipio
-                                                </h4>
-                                                <p className="text-white">{selectedItem.ubicacion_mu || 'No especificado'}</p>
+                                            <div className={`detail-card rounded-lg p-4 transition-all ${isDarkMode
+                                                ? 'bg-gray-800/50 hover:bg-gray-800/80'
+                                                : 'bg-gray-50 hover:bg-gray-100 border border-gray-200'
+                                                }`}>
+                                                <h3 className={`text-xs font-medium uppercase tracking-wider ${isDarkMode ? 'text-gray-400' : 'text-gray-600'
+                                                    }`}>Municipio</h3>
+                                                <p className={`mt-2 font-medium ${isDarkMode ? 'text-white' : 'text-gray-900'
+                                                    }`}>{selectedItem.ubicacion_mu || 'No especificado'}</p>
                                             </div>
 
-                                            <div className="detail-card bg-gray-800/50 rounded-lg p-4 hover:bg-gray-800/80 transition-all">
-                                                <h4 className="text-sm font-medium text-gray-400 mb-2 flex items-center gap-2">
-                                                    <Building2 className="h-4 w-4" />
-                                                    Nomenclatura
-                                                </h4>
-                                                <p className="text-white">{selectedItem.ubicacion_no || 'No especificado'}</p>
+                                            <div className={`detail-card rounded-lg p-4 transition-all ${isDarkMode
+                                                ? 'bg-gray-800/50 hover:bg-gray-800/80'
+                                                : 'bg-gray-50 hover:bg-gray-100 border border-gray-200'
+                                                }`}>
+                                                <h3 className={`text-xs font-medium uppercase tracking-wider ${isDarkMode ? 'text-gray-400' : 'text-gray-600'
+                                                    }`}>Nomenclatura</h3>
+                                                <p className={`mt-2 font-medium ${isDarkMode ? 'text-white' : 'text-gray-900'
+                                                    }`}>{selectedItem.ubicacion_no || 'No especificado'}</p>
                                             </div>
-                                            <div className="detail-card bg-gray-800/50 rounded-lg p-4 hover:bg-gray-800/80 transition-all">
-                                                <h3 className="text-xs font-medium uppercase tracking-wider text-gray-400">Área</h3>
-                                                <p className="mt-2 text-white">{selectedItem.area || 'No especificado'}</p>
+                                            <div className={`detail-card rounded-lg p-4 transition-all ${isDarkMode
+                                                ? 'bg-gray-800/50 hover:bg-gray-800/80'
+                                                : 'bg-gray-50 hover:bg-gray-100 border border-gray-200'
+                                                }`}>
+                                                <h3 className={`text-xs font-medium uppercase tracking-wider ${isDarkMode ? 'text-gray-400' : 'text-gray-600'
+                                                    }`}>Área</h3>
+                                                <p className={`mt-2 font-medium ${isDarkMode ? 'text-white' : 'text-gray-900'
+                                                    }`}>{selectedItem.area || 'No especificado'}</p>
                                             </div>
-                                            <div className="detail-card bg-gray-800/50 rounded-lg p-4 hover:bg-gray-800/80 transition-all">
-                                                <h3 className="text-xs font-medium uppercase tracking-wider text-gray-400">Director/Jefe de Área</h3>
-                                                <p className="mt-2 text-white flex items-center gap-2">
-                                                    <User className="h-4 w-4 text-white" />
-                                                    {selectedItem.usufinal || 'No especificado'}
-                                                </p>
+                                            <div className={`detail-card rounded-lg p-4 transition-all ${isDarkMode
+                                                ? 'bg-gray-800/50 hover:bg-gray-800/80'
+                                                : 'bg-gray-50 hover:bg-gray-100 border border-gray-200'
+                                                }`}>
+                                                <h3 className={`text-xs font-medium uppercase tracking-wider ${isDarkMode ? 'text-gray-400' : 'text-gray-600'
+                                                    }`}>Director/Jefe de Área</h3>
+                                                <p className={`mt-2 font-medium ${isDarkMode ? 'text-white' : 'text-gray-900'
+                                                    }`}>{selectedItem.usufinal || 'No especificado'}</p>
                                             </div>
-                                            <div className="detail-card bg-gray-800/50 rounded-lg p-4 hover:bg-gray-800/80 transition-all">
-                                                <h3 className="text-xs font-medium uppercase tracking-wider text-gray-400">Usuario Final</h3>
-                                                <p className="mt-2 text-white flex items-center gap-2">
-                                                    <Shield className="h-4 w-4 text-white" />
-                                                    {selectedItem.resguardante || 'No especificado'}
-                                                </p>
+                                            <div className={`detail-card rounded-lg p-4 transition-all ${isDarkMode
+                                                ? 'bg-gray-800/50 hover:bg-gray-800/80'
+                                                : 'bg-gray-50 hover:bg-gray-100 border border-gray-200'
+                                                }`}>
+                                                <h3 className={`text-xs font-medium uppercase tracking-wider ${isDarkMode ? 'text-gray-400' : 'text-gray-600'
+                                                    }`}>Usuario Final</h3>
+                                                <p className={`mt-2 font-medium ${isDarkMode ? 'text-white' : 'text-gray-900'
+                                                    }`}>{selectedItem.resguardante || 'No especificado'}</p>
                                             </div>
                                             {selectedItem.fechabaja && (
                                                 <div className="detail-card bg-red-900/20 border border-red-800/50 rounded-lg p-4 col-span-2">
@@ -2261,116 +2608,116 @@ export default function ConsultasIneaGeneral() {
                                             )}
                                         </div>
                                         <RoleGuard roles={["admin", "superadmin"]} userRole={userRole}>
-                                        <div className="flex items-center space-x-4 pt-6 border-t border-gray-800">
-                                            <button
-                                                onClick={handleStartEdit}
-                                                className="px-5 py-2.5 bg-blue-600 text-white rounded-lg font-medium flex items-center gap-2 hover:bg-blue-700 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:ring-offset-gray-900"
-                                            >
-                                                <Edit className="h-4 w-4" />
-                                                Editar
-                                            </button>
-                                            <button
-                                                onClick={markAsInactive}
-                                                className="px-5 py-2.5 bg-yellow-500 text-black rounded-lg font-medium flex items-center gap-2 hover:bg-yellow-400 transition-colors focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:ring-offset-2 focus:ring-offset-gray-900"
-                                            >
-                                                <AlertTriangle className="h-4 w-4" />
-                                                Marcar como Inactivo
-                                            </button>
-                                            <button
-                                                onClick={markAsBaja}
-                                                className="px-5 py-2.5 bg-red-900 text-red-200 rounded-lg font-medium flex items-center gap-2 hover:bg-red-800 transition-colors focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 focus:ring-offset-gray-900"
-                                            >
-                                                <Trash2 className="h-4 w-4" />
-                                                Dar de Baja
-                                            </button>
-                                        </div>
-                                    </RoleGuard>
+                                            <div className="flex items-center space-x-4 pt-6 border-t border-gray-800">
+                                                <button
+                                                    onClick={handleStartEdit}
+                                                    className="px-5 py-2.5 bg-blue-600 text-white rounded-lg font-medium flex items-center gap-2 hover:bg-blue-700 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:ring-offset-gray-900"
+                                                >
+                                                    <Edit className="h-4 w-4" />
+                                                    Editar
+                                                </button>
+                                                <button
+                                                    onClick={markAsInactive}
+                                                    className="px-5 py-2.5 bg-yellow-500 text-black rounded-lg font-medium flex items-center gap-2 hover:bg-yellow-400 transition-colors focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:ring-offset-2 focus:ring-offset-gray-900"
+                                                >
+                                                    <AlertTriangle className="h-4 w-4" />
+                                                    Marcar como Inactivo
+                                                </button>
+                                                <button
+                                                    onClick={markAsBaja}
+                                                    className="px-5 py-2.5 bg-red-900 text-red-200 rounded-lg font-medium flex items-center gap-2 hover:bg-red-800 transition-colors focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 focus:ring-offset-gray-900"
+                                                >
+                                                    <Trash2 className="h-4 w-4" />
+                                                    Dar de Baja
+                                                </button>
+                                            </div>
+                                        </RoleGuard>
                                     </div>
                                 )}
-                        </div>
+                            </div>
                         </div>
                     )}
 
-                {/* Modal para completar información del director */}
-                {showDirectorModal && (
-                    <div className="fixed inset-0 bg-black/90 flex items-center justify-center z-50 px-4 animate-fadeIn">
-                        <div className="bg-black rounded-2xl shadow-2xl border border-yellow-600/30 w-full max-w-md overflow-hidden transition-all duration-300 transform">
-                            <div className="relative p-6 bg-gradient-to-b from-black to-gray-900">
-                                <div className="absolute top-0 left-0 w-full h-1 bg-white/30"></div>
+                    {/* Modal para completar información del director */}
+                    {showDirectorModal && (
+                        <div className="fixed inset-0 bg-black/90 flex items-center justify-center z-50 px-4 animate-fadeIn">
+                            <div className="bg-black rounded-2xl shadow-2xl border border-yellow-600/30 w-full max-w-md overflow-hidden transition-all duration-300 transform">
+                                <div className="relative p-6 bg-gradient-to-b from-black to-gray-900">
+                                    <div className="absolute top-0 left-0 w-full h-1 bg-white/30"></div>
 
-                                <div className="flex flex-col items-center text-center mb-4">
-                                    <div className="p-3 bg-yellow-500/10 rounded-full border border-yellow-500/30 mb-3">
-                                        <AlertCircle className="h-8 w-8 text-yellow-500" />
+                                    <div className="flex flex-col items-center text-center mb-4">
+                                        <div className="p-3 bg-yellow-500/10 rounded-full border border-yellow-500/30 mb-3">
+                                            <AlertCircle className="h-8 w-8 text-yellow-500" />
+                                        </div>
+                                        <h3 className="text-2xl font-bold text-white">Información requerida</h3>
+                                        <p className="text-gray-400 mt-2">
+                                            Por favor complete el área del director/jefe de área seleccionado
+                                        </p>
                                     </div>
-                                    <h3 className="text-2xl font-bold text-white">Información requerida</h3>
-                                    <p className="text-gray-400 mt-2">
-                                        Por favor complete el área del director/jefe de área seleccionado
-                                    </p>
-                                </div>
 
-                                <div className="space-y-5 mt-6">
-                                    <div className="rounded-lg border border-gray-800 bg-gray-900/50 p-4">
-                                        <label className="flex items-center gap-2 text-sm font-medium text-gray-300 mb-2">Director/Jefe seleccionado</label>
-                                        <div className="flex items-center gap-3">
-                                            <div className="p-2 bg-gray-800 rounded-lg">
-                                                <User className="h-4 w-4 text-yellow-400" />
+                                    <div className="space-y-5 mt-6">
+                                        <div className="rounded-lg border border-gray-800 bg-gray-900/50 p-4">
+                                            <label className="flex items-center gap-2 text-sm font-medium text-gray-300 mb-2">Director/Jefe seleccionado</label>
+                                            <div className="flex items-center gap-3">
+                                                <div className="p-2 bg-gray-800 rounded-lg">
+                                                    <User className="h-4 w-4 text-yellow-400" />
+                                                </div>
+                                                <span className="text-white font-medium">{incompleteDirector?.nombre || 'Director'}</span>
                                             </div>
-                                            <span className="text-white font-medium">{incompleteDirector?.nombre || 'Director'}</span>
+                                        </div>
+
+                                        <div>
+                                            <label className="flex items-center gap-2 text-sm font-medium text-gray-300 mb-2">
+                                                <LayoutGrid className="h-4 w-4 text-gray-400" />
+                                                Área
+                                            </label>
+                                            <input
+                                                type="text"
+                                                value={directorFormData.area}
+                                                onChange={(e) => setDirectorFormData({ area: e.target.value })}
+                                                placeholder="Ej: Administración, Recursos Humanos, Contabilidad..."
+                                                className="block w-full bg-gray-900 border border-gray-700 rounded-lg py-3 px-4 text-white placeholder-gray-500 focus:outline-none focus:border-yellow-500 focus:ring-1 focus:ring-yellow-500 transition-colors"
+                                                required
+                                            />
+                                            {!directorFormData.area && (
+                                                <p className="text-xs text-yellow-500/80 mt-2 flex items-center gap-1">
+                                                    <AlertCircle className="h-3 w-3" />
+                                                    Este campo es obligatorio
+                                                </p>
+                                            )}
                                         </div>
                                     </div>
+                                </div>
 
-                                    <div>
-                                        <label className="flex items-center gap-2 text-sm font-medium text-gray-300 mb-2">
-                                            <LayoutGrid className="h-4 w-4 text-gray-400" />
-                                            Área
-                                        </label>
-                                        <input
-                                            type="text"
-                                            value={directorFormData.area}
-                                            onChange={(e) => setDirectorFormData({ area: e.target.value })}
-                                            placeholder="Ej: Administración, Recursos Humanos, Contabilidad..."
-                                            className="block w-full bg-gray-900 border border-gray-700 rounded-lg py-3 px-4 text-white placeholder-gray-500 focus:outline-none focus:border-yellow-500 focus:ring-1 focus:ring-yellow-500 transition-colors"
-                                            required
-                                        />
-                                        {!directorFormData.area && (
-                                            <p className="text-xs text-yellow-500/80 mt-2 flex items-center gap-1">
-                                                <AlertCircle className="h-3 w-3" />
-                                                Este campo es obligatorio
-                                            </p>
+                                <div className="p-5 bg-black border-t border-gray-800 flex justify-end gap-3">
+                                    <button
+                                        onClick={() => setShowDirectorModal(false)}
+                                        className="px-5 py-2.5 bg-gray-900 text-white rounded-lg text-sm hover:bg-gray-800 border border-gray-800 transition-colors flex items-center gap-2"
+                                    >
+                                        <X className="h-4 w-4" />
+                                        Cancelar
+                                    </button>
+                                    <button
+                                        onClick={saveDirectorInfo}
+                                        disabled={savingDirector || !directorFormData.area}
+                                        className={`px-5 py-2.5 rounded-lg text-sm flex items-center gap-2 transition-all duration-300 
+                                            ${savingDirector || !directorFormData.area ?
+                                                'bg-gray-900 text-gray-500 cursor-not-allowed border border-gray-800' :
+                                                'bg-white/20 text-white font-medium hover:bg-white/30'}`}
+                                    >
+                                        {savingDirector ? (
+                                            <RefreshCw className="h-4 w-4 animate-spin" />
+                                        ) : (
+                                            <Save className="h-4 w-4" />
                                         )}
-                                    </div>
+                                        {savingDirector ? 'Guardando...' : 'Guardar y Continuar'}
+                                    </button>
                                 </div>
                             </div>
-
-                            <div className="p-5 bg-black border-t border-gray-800 flex justify-end gap-3">
-                                <button
-                                    onClick={() => setShowDirectorModal(false)}
-                                    className="px-5 py-2.5 bg-gray-900 text-white rounded-lg text-sm hover:bg-gray-800 border border-gray-800 transition-colors flex items-center gap-2"
-                                >
-                                    <X className="h-4 w-4" />
-                                    Cancelar
-                                </button>
-                                <button
-                                    onClick={saveDirectorInfo}
-                                    disabled={savingDirector || !directorFormData.area}
-                                    className={`px-5 py-2.5 rounded-lg text-sm flex items-center gap-2 transition-all duration-300 
-                                            ${savingDirector || !directorFormData.area ?
-                                            'bg-gray-900 text-gray-500 cursor-not-allowed border border-gray-800' :
-                                            'bg-white/20 text-white font-medium hover:bg-white/30'}`}
-                                >
-                                    {savingDirector ? (
-                                        <RefreshCw className="h-4 w-4 animate-spin" />
-                                    ) : (
-                                        <Save className="h-4 w-4" />
-                                    )}
-                                    {savingDirector ? 'Guardando...' : 'Guardar y Continuar'}
-                                </button>
-                            </div>
                         </div>
-                    </div>
-                )}                {/* Modal de selección de área para director (minimalista, dark) */}
-                {showAreaSelectModal && (
-                    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm">                    <div className="bg-black border border-gray-800 rounded-2xl shadow-2xl min-w-[360px] max-w-md w-full relative animate-fadeIn overflow-hidden">
+                    )}                {/* Modal de selección de área para director (minimalista, dark) */}
+                    {showAreaSelectModal && (
+                        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm">                    <div className="bg-black border border-gray-800 rounded-2xl shadow-2xl min-w-[360px] max-w-md w-full relative animate-fadeIn overflow-hidden">
                             <div className="absolute top-0 left-0 w-full h-1 bg-white/30"></div>
                             <div className="p-6 relative">
                                 <button
@@ -2380,7 +2727,7 @@ export default function ConsultasIneaGeneral() {
                                 >
                                     ×
                                 </button>
-                                
+
                                 <div className="flex flex-col items-center text-center mb-6">
                                     <div className="p-3 bg-blue-500/10 rounded-full border border-blue-500/30 mb-3">
                                         <LayoutGrid className="h-8 w-8 text-blue-400" />
@@ -2426,79 +2773,79 @@ export default function ConsultasIneaGeneral() {
                                             }}
                                         >
                                             {area.nombre}
-                                    </button>
-                                ))}
+                                        </button>
+                                    ))}
+                                </div>
                             </div>
                         </div>
-                    </div>
-                </div>
-                )}
+                        </div>
+                    )}
 
-                {/* Modal de confirmación de baja */}
-                {showBajaModal && selectedItem && (
-                    <div className="fixed inset-0 bg-black/90 flex items-center justify-center z-50 px-4 animate-fadeIn">
-                        <div className="bg-black rounded-2xl shadow-2xl border border-red-600/30 w-full max-w-md overflow-hidden transition-all duration-300 transform">
-                            <div className="relative p-6 bg-gradient-to-b from-black to-gray-900">
-                                <div className="absolute top-0 left-0 w-full h-1 bg-white/30"></div>
-                                <div className="flex flex-col items-center text-center mb-4">
-                                    <div className="p-3 bg-red-500/10 rounded-full border border-red-500/30 mb-3">
-                                        <AlertTriangle className="h-8 w-8 text-red-500" />
+                    {/* Modal de confirmación de baja */}
+                    {showBajaModal && selectedItem && (
+                        <div className="fixed inset-0 bg-black/90 flex items-center justify-center z-50 px-4 animate-fadeIn">
+                            <div className="bg-black rounded-2xl shadow-2xl border border-red-600/30 w-full max-w-md overflow-hidden transition-all duration-300 transform">
+                                <div className="relative p-6 bg-gradient-to-b from-black to-gray-900">
+                                    <div className="absolute top-0 left-0 w-full h-1 bg-white/30"></div>
+                                    <div className="flex flex-col items-center text-center mb-4">
+                                        <div className="p-3 bg-red-500/10 rounded-full border border-red-500/30 mb-3">
+                                            <AlertTriangle className="h-8 w-8 text-red-500" />
+                                        </div>
+                                        <h3 className="text-2xl font-bold text-white">¿Dar de baja este artículo?</h3>
                                     </div>
-                                    <h3 className="text-2xl font-bold text-white">¿Dar de baja este artículo?</h3>
-                                </div>
-                                <div className="rounded-lg border border-gray-800 bg-gray-900/50 p-4 mb-4">
-                                    <div className="text-left text-sm text-gray-300">
-                                        <div><span className="font-bold text-white">ID:</span> {selectedItem.id_inv}</div>
-                                        <div><span className="font-bold text-white">Descripción:</span> {selectedItem.descripcion}</div>
-                                        <div><span className="font-bold text-white">Área:</span> {selectedItem.area}</div>
+                                    <div className="rounded-lg border border-gray-800 bg-gray-900/50 p-4 mb-4">
+                                        <div className="text-left text-sm text-gray-300">
+                                            <div><span className="font-bold text-white">ID:</span> {selectedItem.id_inv}</div>
+                                            <div><span className="font-bold text-white">Descripción:</span> {selectedItem.descripcion}</div>
+                                            <div><span className="font-bold text-white">Área:</span> {selectedItem.area}</div>
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <label className="flex items-center gap-2 text-sm font-medium text-gray-300 mb-2">
+                                            <Info className="h-4 w-4 text-gray-400" />
+                                            Causa de Baja
+                                        </label>
+                                        <textarea
+                                            value={bajaCause}
+                                            onChange={(e) => setBajaCause(e.target.value)}
+                                            placeholder="Ingrese la causa de baja"
+                                            className="block w-full bg-gray-900 border border-gray-700 rounded-lg py-3 px-4 text-white placeholder-gray-500 focus:outline-none focus:border-red-500 focus:ring-1 focus:ring-red-500 transition-colors"
+                                            rows={3}
+                                            required
+                                        />
+                                        {!bajaCause && (
+                                            <p className="text-xs text-red-500/80 mt-2 flex items-center gap-1">
+                                                <AlertCircle className="h-3 w-3" />
+                                                Este campo es obligatorio
+                                            </p>
+                                        )}
                                     </div>
                                 </div>
-                                <div>
-                                    <label className="flex items-center gap-2 text-sm font-medium text-gray-300 mb-2">
-                                        <Info className="h-4 w-4 text-gray-400" />
-                                        Causa de Baja
-                                    </label>
-                                    <textarea
-                                        value={bajaCause}
-                                        onChange={(e) => setBajaCause(e.target.value)}
-                                        placeholder="Ingrese la causa de baja"
-                                        className="block w-full bg-gray-900 border border-gray-700 rounded-lg py-3 px-4 text-white placeholder-gray-500 focus:outline-none focus:border-red-500 focus:ring-1 focus:ring-red-500 transition-colors"
-                                        rows={3}
-                                        required
-                                    />
-                                    {!bajaCause && (
-                                        <p className="text-xs text-red-500/80 mt-2 flex items-center gap-1">
-                                            <AlertCircle className="h-3 w-3" />
-                                            Este campo es obligatorio
-                                        </p>
-                                    )}
-                                </div>
-                            </div>
-                            <div className="p-5 bg-black border-t border-gray-800 flex justify-end gap-3">
-                                <button
-                                    onClick={() => setShowBajaModal(false)}
-                                    className="px-5 py-2.5 bg-gray-900 text-white rounded-lg text-sm hover:bg-gray-800 border border-gray-800 transition-colors flex items-center gap-2"
-                                >
-                                    <X className="h-4 w-4" />
-                                    Cancelar
-                                </button>
-                                <button
-                                    onClick={confirmBaja}
-                                    disabled={!bajaCause}
-                                    className={`px-5 py-2.5 rounded-lg text-sm flex items-center gap-2 transition-all duration-300 
+                                <div className="p-5 bg-black border-t border-gray-800 flex justify-end gap-3">
+                                    <button
+                                        onClick={() => setShowBajaModal(false)}
+                                        className="px-5 py-2.5 bg-gray-900 text-white rounded-lg text-sm hover:bg-gray-800 border border-gray-800 transition-colors flex items-center gap-2"
+                                    >
+                                        <X className="h-4 w-4" />
+                                        Cancelar
+                                    </button>
+                                    <button
+                                        onClick={confirmBaja}
+                                        disabled={!bajaCause}
+                                        className={`px-5 py-2.5 rounded-lg text-sm flex items-center gap-2 transition-all duration-300 
                                             ${!bajaCause ?
-                                            'bg-gray-900 text-gray-500 cursor-not-allowed border border-gray-800' :
-                                            'bg-white/20 text-white font-medium hover:bg-white/30'}`}
-                                >
-                                    <Trash2 className="h-4 w-4" />
-                                    Dar de Baja
-                                </button>
+                                                'bg-gray-900 text-gray-500 cursor-not-allowed border border-gray-800' :
+                                                'bg-white/20 text-white font-medium hover:bg-white/30'}`}
+                                    >
+                                        <Trash2 className="h-4 w-4" />
+                                        Dar de Baja
+                                    </button>
+                                </div>
                             </div>
                         </div>
-                    </div>
-                )}
+                    )}
+                </div>
             </div>
-        </div>
         </div >
     );
 }
