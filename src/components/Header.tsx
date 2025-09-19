@@ -579,7 +579,7 @@ export default function NavigationBar() {
                                                     : 'text-gray-400 hover:text-white hover:bg-gray-800 hover:translate-x-1'
                                                     }`}
                                             >
-                                                Registro de nuevos bienes
+                                                Añadir nuevos bienes
                                             </Link>
                                         </RoleGuard>
                                     </div>
