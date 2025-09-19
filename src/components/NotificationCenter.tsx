@@ -1,8 +1,10 @@
 import { useState, useEffect } from 'react';
 import { Bell, Check, AlertCircle, Info, X, ChevronRight, AlertTriangle, ArrowLeft, Clock, Moon } from 'lucide-react';
 import { useNotifications, Notification } from '@/hooks/useNotifications';
+import { useTheme } from '@/context/ThemeContext';
 
 export default function NotificationsPanel({ onClose }: { onClose?: () => void }) {
+    const { isDarkMode } = useTheme();
     const [activeFilter, setActiveFilter] = useState('all');
     const [modalOpen, setModalOpen] = useState(false);
     const [selectedNotification, setSelectedNotification] = useState<Notification | null>(null);
@@ -85,23 +87,25 @@ export default function NotificationsPanel({ onClose }: { onClose?: () => void }
 
     // Obtener color del texto según el tipo
     const getTypeTextColor = (type: string) => {
-        switch (type) {
-            case 'info': return 'text-blue-400';
-            case 'success': return 'text-green-400';
-            case 'warning': return 'text-yellow-400';
-            case 'danger': return 'text-red-400';
-            default: return 'text-gray-400';
-        }
+        const baseColors = {
+            info: isDarkMode ? 'text-blue-400' : 'text-blue-600',
+            success: isDarkMode ? 'text-green-400' : 'text-green-600',
+            warning: isDarkMode ? 'text-yellow-400' : 'text-yellow-600',
+            danger: isDarkMode ? 'text-red-400' : 'text-red-600',
+            default: isDarkMode ? 'text-gray-400' : 'text-gray-600'
+        };
+        return baseColors[type as keyof typeof baseColors] || baseColors.default;
     };
 
     // Icono según el tipo
     const getIcon = (type: string, size = 16) => {
+        const iconClass = getTypeTextColor(type);
         switch (type) {
-            case 'info': return <Info className="text-blue-400" size={size} />;
-            case 'success': return <Check className="text-green-400" size={size} />;
-            case 'warning': return <AlertTriangle className="text-yellow-400" size={size} />;
-            case 'danger': return <AlertCircle className="text-red-400" size={size} />;
-            default: return <Bell size={size} />;
+            case 'info': return <Info className={iconClass} size={size} />;
+            case 'success': return <Check className={iconClass} size={size} />;
+            case 'warning': return <AlertTriangle className={iconClass} size={size} />;
+            case 'danger': return <AlertCircle className={iconClass} size={size} />;
+            default: return <Bell className={isDarkMode ? 'text-gray-400' : 'text-gray-600'} size={size} />;
         }
     };
 
@@ -119,8 +123,10 @@ export default function NotificationsPanel({ onClose }: { onClose?: () => void }
             >
                 {/* Panel lateral */}
                 <div
-                    className={`w-96 bg-black border-l border-gray-800 h-full flex flex-col shadow-xl transition-all duration-300 ${modalAnimate ? 'translate-x-0 opacity-100' : 'translate-x-8 opacity-0'
-                        }`}
+                    className={`w-96 h-full flex flex-col shadow-xl transition-all duration-300 ${isDarkMode
+                            ? 'bg-black border-l border-gray-800'
+                            : 'bg-white border-l border-gray-200'
+                        } ${modalAnimate ? 'translate-x-0 opacity-100' : 'translate-x-8 opacity-0'}`}
                 >
                     {/* Indicador de tipo en la parte superior */}
                     <div className={`h-1 w-full ${typeBgColor}`} />
@@ -130,7 +136,10 @@ export default function NotificationsPanel({ onClose }: { onClose?: () => void }
                         <div className="flex items-center justify-between mb-6">
                             <button
                                 onClick={() => setModalOpen(false)}
-                                className="flex items-center gap-2 text-gray-500 hover:text-white transition-colors"
+                                className={`flex items-center gap-2 transition-colors ${isDarkMode
+                                        ? 'text-gray-500 hover:text-white'
+                                        : 'text-gray-500 hover:text-gray-800'
+                                    }`}
                             >
                                 <ArrowLeft size={18} />
                                 <span className="text-xs">Volver</span>
@@ -142,9 +151,11 @@ export default function NotificationsPanel({ onClose }: { onClose?: () => void }
                             </div>
                         </div>
 
-                        <h2 className="text-lg font-medium text-white mb-1">{selectedNotification.title}</h2>
+                        <h2 className={`text-lg font-medium mb-1 ${isDarkMode ? 'text-white' : 'text-gray-900'
+                            }`}>{selectedNotification.title}</h2>
 
-                        <div className="flex items-center gap-4 text-xs text-gray-500 mt-2">
+                        <div className={`flex items-center gap-4 text-xs mt-2 ${isDarkMode ? 'text-gray-500' : 'text-gray-600'
+                            }`}>
                             <span>{selectedNotification.creator_name}</span>
                             <span className="flex items-center gap-1">
                                 <Clock size={12} />
@@ -159,15 +170,18 @@ export default function NotificationsPanel({ onClose }: { onClose?: () => void }
                     </div>
 
                     {/* Separador sutil */}
-                    <div className="h-px bg-gray-900 w-full" />
+                    <div className={`h-px w-full ${isDarkMode ? 'bg-gray-900' : 'bg-gray-200'
+                        }`} />
 
                     {/* Contenido con scroll */}
                     <div className="px-6 py-6 overflow-y-auto flex-grow">
                         {/* Badges informativos */}
                         <div className="flex flex-wrap gap-2 mb-6">
-                            <div className={`inline-flex px-2 py-1 rounded-md text-xs font-medium bg-opacity-10 ${selectedNotification.importance === 'high' ? 'bg-red-900 text-red-400' :
-                                    selectedNotification.importance === 'medium' ? 'bg-yellow-900 text-yellow-400' :
-                                        'bg-blue-900 text-blue-400'
+                            <div className={`inline-flex px-2 py-1 rounded-md text-xs font-medium bg-opacity-10 ${selectedNotification.importance === 'high'
+                                    ? isDarkMode ? 'bg-red-900 text-red-400' : 'bg-red-100 text-red-700'
+                                    : selectedNotification.importance === 'medium'
+                                        ? isDarkMode ? 'bg-yellow-900 text-yellow-400' : 'bg-yellow-100 text-yellow-700'
+                                        : isDarkMode ? 'bg-blue-900 text-blue-400' : 'bg-blue-100 text-blue-700'
                                 }`}>
                                 {selectedNotification.importance}
                             </div>
@@ -176,22 +190,29 @@ export default function NotificationsPanel({ onClose }: { onClose?: () => void }
 
                         {/* Descripción */}
                         <div className="mb-8">
-                            <p className="text-sm leading-relaxed text-gray-300">{selectedNotification.description}</p>
+                            <p className={`text-sm leading-relaxed ${isDarkMode ? 'text-gray-300' : 'text-gray-700'
+                                }`}>{selectedNotification.description}</p>
                         </div>
 
                         {/* Información adicional */}
                         {selectedNotification.data && Object.keys(selectedNotification.data).length > 0 && (
                             <div className="mt-6">
-                                <h4 className="text-xs uppercase tracking-wider text-gray-500 mb-3 font-medium">Detalles</h4>
-                                <div className="bg-gray-900/30 rounded-md">
+                                <h4 className={`text-xs uppercase tracking-wider mb-3 font-medium ${isDarkMode ? 'text-gray-500' : 'text-gray-600'
+                                    }`}>Detalles</h4>
+                                <div className={`rounded-md ${isDarkMode ? 'bg-gray-900/30' : 'bg-gray-50'
+                                    }`}>
                                     {Object.entries(selectedNotification.data ?? {}).map(([key, value], index) => (
                                         <div
                                             key={key}
-                                            className={`py-3 px-4 flex items-center justify-between ${index !== Object.entries(selectedNotification.data ?? {}).length - 1 ? 'border-b border-gray-800/50' : ''
+                                            className={`py-3 px-4 flex items-center justify-between ${index !== Object.entries(selectedNotification.data ?? {}).length - 1
+                                                    ? isDarkMode ? 'border-b border-gray-800/50' : 'border-b border-gray-200/50'
+                                                    : ''
                                                 }`}
                                         >
-                                            <span className="text-xs text-gray-500 capitalize">{key.replace(/_/g, ' ')}</span>
-                                            <span className="text-xs text-white font-medium">
+                                            <span className={`text-xs capitalize ${isDarkMode ? 'text-gray-500' : 'text-gray-600'
+                                                }`}>{key.replace(/_/g, ' ')}</span>
+                                            <span className={`text-xs font-medium ${isDarkMode ? 'text-white' : 'text-gray-900'
+                                                }`}>
                                                 {Array.isArray(value) ? value.join(', ') : value.toString()}
                                             </span>
                                         </div>
@@ -202,7 +223,10 @@ export default function NotificationsPanel({ onClose }: { onClose?: () => void }
                     </div>
 
                     {/* Footer con acciones */}
-                    <div className="px-6 py-4 bg-black border-t border-gray-900 flex items-center justify-end">
+                    <div className={`px-6 py-4 border-t flex items-center justify-end ${isDarkMode
+                            ? 'bg-black border-gray-900'
+                            : 'bg-white border-gray-200'
+                        }`}>
                     </div>
                 </div>
             </div>
@@ -211,8 +235,10 @@ export default function NotificationsPanel({ onClose }: { onClose?: () => void }
 
     return (
         <>
-            <div className={`flex flex-col w-full max-w-sm ml-auto rounded-lg overflow-hidden bg-black text-white shadow-xl border border-gray-900 transition-all duration-500 transform ${animateIn ? 'translate-y-0 opacity-100' : 'translate-y-4 opacity-0'
-                }`}>
+            <div className={`flex flex-col w-full max-w-sm ml-auto rounded-lg overflow-hidden shadow-xl border transition-all duration-500 transform ${isDarkMode
+                    ? 'bg-black text-white border-gray-900'
+                    : 'bg-white text-gray-900 border-gray-200'
+                } ${animateIn ? 'translate-y-0 opacity-100' : 'translate-y-4 opacity-0'}`}>
                 {/* Barra superior minimalista */}
                 <div className="flex items-center justify-between px-5 pt-5 pb-4">
                     <h1 className="text-base font-medium">Notificaciones</h1>
@@ -220,11 +246,14 @@ export default function NotificationsPanel({ onClose }: { onClose?: () => void }
                         <button
                             onClick={() => setDoNotDisturb(!doNotDisturb)}
                             title={doNotDisturb ? 'Desactivar modo No Molestar' : 'Activar modo No Molestar'}
-                            className={`p-2 rounded-full transition-colors ${
-                                doNotDisturb 
-                                ? 'bg-purple-900/30 text-purple-400' 
-                                : 'hover:bg-gray-800 text-gray-400 hover:text-gray-300'
-                            }`}
+                            className={`p-2 rounded-full transition-colors ${doNotDisturb
+                                    ? isDarkMode
+                                        ? 'bg-purple-900/30 text-purple-400'
+                                        : 'bg-purple-100 text-purple-600'
+                                    : isDarkMode
+                                        ? 'hover:bg-gray-800 text-gray-400 hover:text-gray-300'
+                                        : 'hover:bg-gray-100 text-gray-500 hover:text-gray-700'
+                                }`}
                         >
                             <Moon size={16} />
                         </button>
@@ -232,7 +261,10 @@ export default function NotificationsPanel({ onClose }: { onClose?: () => void }
                             <button
                                 title='Cerrar panel'
                                 onClick={onClose}
-                                className="p-2 rounded-full hover:bg-gray-800 text-gray-400 hover:text-gray-300 transition-colors"
+                                className={`p-2 rounded-full transition-colors ${isDarkMode
+                                        ? 'hover:bg-gray-800 text-gray-400 hover:text-gray-300'
+                                        : 'hover:bg-gray-100 text-gray-500 hover:text-gray-700'
+                                    }`}
                             >
                                 <X size={14} />
                             </button>
@@ -246,7 +278,9 @@ export default function NotificationsPanel({ onClose }: { onClose?: () => void }
                         {['all', 'unread', 'security', 'system'].map((filter) => (
                             <button
                                 key={filter}
-                                className={`py-2 text-xs font-medium transition-colors ${activeFilter === filter ? 'text-white' : 'text-gray-600 hover:text-gray-400'
+                                className={`py-2 text-xs font-medium transition-colors ${activeFilter === filter
+                                        ? isDarkMode ? 'text-white' : 'text-gray-900'
+                                        : isDarkMode ? 'text-gray-600 hover:text-gray-400' : 'text-gray-500 hover:text-gray-700'
                                     }`}
                                 onClick={() => setActiveFilter(filter)}
                             >
@@ -255,12 +289,14 @@ export default function NotificationsPanel({ onClose }: { onClose?: () => void }
                                         filter === 'security' ? 'Seguridad' : 'Sistema'}
 
                                 {activeFilter === filter && (
-                                    <span className="absolute bottom-0 left-0 w-full h-0.5 bg-white rounded-full" />
+                                    <span className={`absolute bottom-0 left-0 w-full h-0.5 rounded-full ${isDarkMode ? 'bg-white' : 'bg-gray-900'
+                                        }`} />
                                 )}
                             </button>
                         ))}
                     </div>
-                    <div className="absolute bottom-0 left-0 right-0 h-px bg-gray-900" />
+                    <div className={`absolute bottom-0 left-0 right-0 h-px ${isDarkMode ? 'bg-gray-900' : 'bg-gray-200'
+                        }`} />
                 </div>
 
                 {/* Lista de notificaciones */}
@@ -268,17 +304,23 @@ export default function NotificationsPanel({ onClose }: { onClose?: () => void }
                     {loading ? (
                         <div className="flex items-center justify-center h-64">
                             <div className="relative w-8 h-8">
-                                <div className="absolute top-0 left-0 w-full h-full border-2 border-gray-900 rounded-full"></div>
-                                <div className="absolute top-0 left-0 w-full h-full border-2 border-t-gray-400 border-r-transparent border-b-transparent border-l-transparent rounded-full animate-spin"></div>
+                                <div className={`absolute top-0 left-0 w-full h-full border-2 rounded-full ${isDarkMode ? 'border-gray-900' : 'border-gray-200'
+                                    }`}></div>
+                                <div className={`absolute top-0 left-0 w-full h-full border-2 border-r-transparent border-b-transparent border-l-transparent rounded-full animate-spin ${isDarkMode ? 'border-t-gray-400' : 'border-t-gray-600'
+                                    }`}></div>
                             </div>
                         </div>
                     ) : (
                         <>
                             {/* No leídas */}
                             {unreadNotifications.length === 0 && readNotifications.length === 0 && (
-                                <div className="flex flex-col items-center justify-center py-16 text-gray-700">
-                                    <div className="w-12 h-12 rounded-full bg-gray-900 flex items-center justify-center mb-4">
-                                        <Bell size={20} strokeWidth={1.5} className="text-gray-600" />
+                                <div className={`flex flex-col items-center justify-center py-16 ${isDarkMode ? 'text-gray-700' : 'text-gray-500'
+                                    }`}>
+                                    <div className={`w-12 h-12 rounded-full flex items-center justify-center mb-4 ${isDarkMode ? 'bg-gray-900' : 'bg-gray-100'
+                                        }`}>
+                                        <Bell size={20} strokeWidth={1.5} className={
+                                            isDarkMode ? 'text-gray-600' : 'text-gray-400'
+                                        } />
                                     </div>
                                     <p className="text-xs">No hay notificaciones</p>
                                 </div>
@@ -286,23 +328,37 @@ export default function NotificationsPanel({ onClose }: { onClose?: () => void }
                             {unreadNotifications.map((notification, idx) => (
                                 <div
                                     key={notification.id ?? `notification-${idx}`}
-                                    className={`notification-item px-5 py-4 cursor-pointer transition-colors bg-gray-900/20 hover:bg-gray-900/40`}
+                                    className={`notification-item px-5 py-4 cursor-pointer transition-colors ${isDarkMode
+                                            ? 'bg-gray-900/20 hover:bg-gray-900/40'
+                                            : 'bg-gray-50/50 hover:bg-gray-100/70'
+                                        }`}
                                     onClick={() => openModal(notification)}
                                 >
                                     <div className="flex items-start space-x-3">
                                         <div className={`flex-shrink-0 mt-1 w-2 h-2 rounded-full ${getTypeColor(notification.type)}`} />
                                         <div className="flex-1 min-w-0">
                                             <div className="flex items-start justify-between">
-                                                <p className="text-xs font-medium text-white">{notification.title}</p>
-                                                <p className="ml-2 text-xs text-gray-700">{formatRelativeTime(notification.created_at)}</p>
+                                                <p className={`text-xs font-medium ${isDarkMode ? 'text-white' : 'text-gray-900'
+                                                    }`}>{notification.title}</p>
+                                                <p className={`ml-2 text-xs ${isDarkMode ? 'text-gray-700' : 'text-gray-500'
+                                                    }`}>{formatRelativeTime(notification.created_at)}</p>
                                             </div>
-                                            <p className="text-xs text-gray-600 mt-1 line-clamp-1">{notification.description}</p>
+                                            <p className={`text-xs mt-1 line-clamp-1 ${isDarkMode ? 'text-gray-600' : 'text-gray-600'
+                                                }`}>{notification.description}</p>
                                             <div className="flex mt-2 items-center justify-between">
                                                 <div className="flex items-center space-x-2">
-                                                    <span className={`inline-flex px-1.5 py-0.5 rounded text-xs ${notification.importance === 'high' ? 'bg-red-900/20 text-red-400' : notification.importance === 'medium' ? 'bg-yellow-900/20 text-yellow-400' : 'bg-blue-900/20 text-blue-400'}`}>{notification.importance}</span>
+                                                    <span className={`inline-flex px-1.5 py-0.5 rounded text-xs ${notification.importance === 'high'
+                                                            ? isDarkMode ? 'bg-red-900/20 text-red-400' : 'bg-red-100 text-red-700'
+                                                            : notification.importance === 'medium'
+                                                                ? isDarkMode ? 'bg-yellow-900/20 text-yellow-400' : 'bg-yellow-100 text-yellow-700'
+                                                                : isDarkMode ? 'bg-blue-900/20 text-blue-400' : 'bg-blue-100 text-blue-700'
+                                                        }`}>{notification.importance}</span>
                                                 </div>
                                                 <button
-                                                    className="p-1 rounded-full hover:bg-gray-800 transition-colors text-red-400 hover:text-white"
+                                                    className={`p-1 rounded-full transition-colors ${isDarkMode
+                                                            ? 'hover:bg-gray-800 text-red-400 hover:text-white'
+                                                            : 'hover:bg-gray-200 text-red-500 hover:text-red-700'
+                                                        }`}
                                                     title="Borrar notificación"
                                                     onClick={async (e) => {
                                                         e.stopPropagation();
@@ -318,7 +374,8 @@ export default function NotificationsPanel({ onClose }: { onClose?: () => void }
                                                 </button>
                                             </div>
                                         </div>
-                                        <ChevronRight size={14} className="text-gray-700 mt-1 flex-shrink-0" />
+                                        <ChevronRight size={14} className={`mt-1 flex-shrink-0 ${isDarkMode ? 'text-gray-700' : 'text-gray-400'
+                                            }`} />
                                     </div>
                                 </div>
                             ))}
@@ -326,27 +383,39 @@ export default function NotificationsPanel({ onClose }: { onClose?: () => void }
                             {readNotifications.length > 0 && (
                                 <div className="mt-2">
                                     <button
-                                        className="w-full flex items-center justify-between px-4 py-2 text-xs bg-black/60 hover:bg-gray-900 border border-gray-800 rounded transition-colors mb-1"
+                                        className={`w-full flex items-center justify-between px-4 py-2 text-xs border rounded transition-colors mb-1 ${isDarkMode
+                                                ? 'bg-black/60 hover:bg-gray-900 border-gray-800'
+                                                : 'bg-gray-50 hover:bg-gray-100 border-gray-200'
+                                            }`}
                                         onClick={() => setShowRead(v => !v)}
                                     >
                                         <span className="font-medium">{showRead ? 'Ocultar' : 'Mostrar'} notificaciones leídas</span>
                                         <ChevronRight size={14} className={`transition-transform ${showRead ? 'rotate-90' : ''}`} />
-                                        <span className="ml-2 text-gray-400">({readNotifications.length})</span>
+                                        <span className={`ml-2 ${isDarkMode ? 'text-gray-400' : 'text-gray-500'
+                                            }`}>({readNotifications.length})</span>
                                     </button>
                                     {showRead && (
                                         <div className="space-y-1">
                                             {readNotifications.map((notification, idx) => (
                                                 <div
                                                     key={notification.id ?? `notification-read-${idx}`}
-                                                    className="notification-item px-3 py-1 cursor-pointer transition-colors bg-black/40 hover:bg-gray-900/40 rounded flex items-center min-h-[28px]"
+                                                    className={`notification-item px-3 py-1 cursor-pointer transition-colors rounded flex items-center min-h-[28px] ${isDarkMode
+                                                            ? 'bg-black/40 hover:bg-gray-900/40'
+                                                            : 'bg-gray-50/60 hover:bg-gray-100/80'
+                                                        }`}
                                                     style={{ fontSize: '11px', lineHeight: '1.1' }}
                                                     onClick={() => openModal(notification)}
                                                 >
                                                     <div className={`w-1.5 h-1.5 rounded-full mr-2 ${getTypeColor(notification.type)}`} />
-                                                    <span className="truncate flex-1 text-gray-500">{notification.title}</span>
-                                                    <span className="ml-2 text-gray-700">{formatRelativeTime(notification.created_at)}</span>
+                                                    <span className={`truncate flex-1 ${isDarkMode ? 'text-gray-500' : 'text-gray-600'
+                                                        }`}>{notification.title}</span>
+                                                    <span className={`ml-2 ${isDarkMode ? 'text-gray-700' : 'text-gray-500'
+                                                        }`}>{formatRelativeTime(notification.created_at)}</span>
                                                     <button
-                                                        className="ml-2 p-1 rounded-full hover:bg-gray-800 text-red-400 hover:text-white"
+                                                        className={`ml-2 p-1 rounded-full transition-colors ${isDarkMode
+                                                                ? 'hover:bg-gray-800 text-red-400 hover:text-white'
+                                                                : 'hover:bg-gray-200 text-red-500 hover:text-red-700'
+                                                            }`}
                                                         title="Borrar notificación"
                                                         onClick={async (e) => {
                                                             e.stopPropagation();
