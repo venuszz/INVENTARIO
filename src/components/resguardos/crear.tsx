@@ -14,6 +14,7 @@ import Cookies from 'js-cookie';
 import { generateResguardoPDF } from './ResguardoPDFReport';
 import { useUserRole } from "@/hooks/useUserRole";
 import { useNotifications } from '@/hooks/useNotifications';
+import { useTheme } from '@/context/ThemeContext';
 
 interface Mueble {
     id: number;
@@ -152,6 +153,7 @@ export default function CrearResguardos() {
     const role = useUserRole();
     const isUsuario = role === "usuario";
     const { createNotification } = useNotifications();
+    const { isDarkMode } = useTheme();
 
     // NUEVO: Estado para áreas y relaciones N:M
     const [areas, setAreas] = useState<{ id_area: number; nombre: string }[]>([]);
@@ -926,7 +928,10 @@ export default function CrearResguardos() {
         if (!showDirectorSuggestions || filteredDirectorOptions.length === 0) return null;
         return (
             <ul
-                className="absolute left-0 top-full w-full mt-1 animate-fadeInUp max-h-80 overflow-y-auto rounded-lg shadow-2xl border border-gray-800 bg-black/95 backdrop-blur-xl ring-1 ring-inset ring-gray-900/60 transition-all duration-200 z-50"
+                className={`absolute left-0 top-full w-full mt-1 animate-fadeInUp max-h-80 overflow-y-auto rounded-lg shadow-2xl border backdrop-blur-xl ring-1 ring-inset transition-all duration-200 z-50 ${isDarkMode
+                    ? 'border-gray-800 bg-black/95 ring-gray-900/60'
+                    : 'border-gray-300 bg-white/95 ring-gray-200/60'
+                    }`}
             >
                 {filteredDirectorOptions.map((opt, i) => {
                     const isSelected = highlightedDirectorIndex === i;
@@ -938,16 +943,18 @@ export default function CrearResguardos() {
                             {...(isSelected && { 'aria-selected': 'true' })}
                             onMouseDown={() => handleDirectorSuggestionClick(opt)}
                             onMouseEnter={() => setHighlightedDirectorIndex(i)}
-                            className={`flex flex-col px-3 py-2 cursor-pointer select-none text-xs whitespace-normal break-words w-full border-b border-gray-800 last:border-b-0
-        ${isSelected ? 'bg-gray-800/80 text-white' : 'text-gray-300'}
-        ${isSugerido ? 'font-bold text-white' : ''}
-        hover:bg-gray-800/80`}
+                            className={`flex flex-col px-3 py-2 cursor-pointer select-none text-xs whitespace-normal break-words w-full border-b last:border-b-0 transition-colors ${isDarkMode
+                                ? `border-gray-800 ${isSelected ? 'bg-gray-800/80 text-white' : 'text-gray-300'} hover:bg-gray-800/80`
+                                : `border-gray-200 ${isSelected ? 'bg-gray-100 text-gray-900' : 'text-gray-700'} hover:bg-gray-100`
+                                } ${isSugerido ? (isDarkMode ? 'font-bold text-white' : 'font-bold text-gray-900') : ''
+                                }`}
                         >
                             <span className="flex items-center gap-2">
                                 <span className="font-semibold">{opt.nombre}</span>
                                 {isSugerido && <span className="ml-2 px-2 py-0.5 rounded-full bg-gray-700/60 text-xs text-white">Sugerido</span>}
                             </span>
-                            <span className="text-[10px] text-gray-400">{opt.puesto || <span className="italic text-yellow-400">Sin puesto</span>}</span>
+                            <span className={`text-[10px] ${isDarkMode ? 'text-gray-400' : 'text-gray-500'
+                                }`}>{opt.puesto || <span className="italic text-yellow-400">Sin puesto</span>}</span>
                         </li>
                     );
                 })}
@@ -1084,7 +1091,10 @@ export default function CrearResguardos() {
                 id="omnibox-suggestions"
                 role="listbox"
                 title="Sugerencias de búsqueda"
-                className="absolute left-0 top-full w-full mt-1 animate-fadeInUp max-h-80 overflow-y-auto rounded-lg shadow-2xl border border-gray-800 bg-black/95 backdrop-blur-xl ring-1 ring-inset ring-gray-900/60 transition-all duration-200 z-50"
+                className={`absolute left-0 top-full w-full mt-1 animate-fadeInUp max-h-80 overflow-y-auto rounded-lg shadow-2xl border backdrop-blur-xl ring-1 ring-inset transition-all duration-200 z-50 ${isDarkMode
+                    ? 'border-gray-800 bg-black/95 ring-gray-900/60'
+                    : 'border-gray-300 bg-white/95 ring-gray-200/60'
+                    }`}
             >
                 {suggestions.map((s, i) => {
                     const isSelected = highlightedIndex === i;
@@ -1095,11 +1105,15 @@ export default function CrearResguardos() {
                             {...(isSelected && { 'aria-selected': 'true' })}
                             onMouseDown={() => handleSuggestionClick(i)}
                             onMouseEnter={() => setHighlightedIndex(i)}
-                            className={`flex items-center gap-2 px-3 py-2 cursor-pointer select-none text-xs whitespace-normal break-words w-full border-b border-gray-800 last:border-b-0 ${isSelected ? 'bg-gray-800/80 text-white' : 'text-gray-300'} hover:bg-gray-800/80`}
+                            className={`flex items-center gap-2 px-3 py-2 cursor-pointer select-none text-xs whitespace-normal break-words w-full border-b last:border-b-0 transition-colors ${isDarkMode
+                                ? `border-gray-800 ${isSelected ? 'bg-gray-800/80 text-white' : 'text-gray-300'} hover:bg-gray-800/80`
+                                : `border-gray-200 ${isSelected ? 'bg-gray-100 text-gray-900' : 'text-gray-700'} hover:bg-gray-100`
+                                }`}
                         >
                             <span className="shrink-0">{getTypeIcon(s.type)}</span>
                             <span className="font-semibold whitespace-normal break-words w-full">{s.value}</span>
-                            <span className="ml-auto text-[10px] text-gray-400 font-mono">{getTypeLabel(s.type)}</span>
+                            <span className={`ml-auto text-[10px] font-mono ${isDarkMode ? 'text-gray-400' : 'text-gray-500'
+                                }`}>{getTypeLabel(s.type)}</span>
                         </li>
                     );
                 })}
@@ -1110,16 +1124,23 @@ export default function CrearResguardos() {
     // Skeleton para la tabla de muebles
     const TableSkeleton = () => (
         <tr>
-            <td colSpan={6} className="px-6 py-24 text-center text-gray-400">
+            <td colSpan={6} className={`px-6 py-24 text-center ${isDarkMode ? 'text-gray-400' : 'text-gray-600'
+                }`}>
                 <div className="flex flex-col items-center justify-center space-y-4 animate-pulse">
                     {[...Array(8)].map((_, i) => (
                         <div key={i} className="flex gap-4 w-full max-w-3xl mx-auto">
-                            <div className="h-6 w-10 bg-gray-800/60 rounded" />
-                            <div className="h-6 w-32 bg-gray-800/60 rounded" />
-                            <div className="h-6 w-40 bg-gray-800/60 rounded" />
-                            <div className="h-6 w-28 bg-gray-800/60 rounded" />
-                            <div className="h-6 w-28 bg-gray-800/60 rounded" />
-                            <div className="h-6 w-16 bg-gray-800/60 rounded" />
+                            <div className={`h-6 w-10 rounded ${isDarkMode ? 'bg-gray-800/60' : 'bg-gray-200'
+                                }`} />
+                            <div className={`h-6 w-32 rounded ${isDarkMode ? 'bg-gray-800/60' : 'bg-gray-200'
+                                }`} />
+                            <div className={`h-6 w-40 rounded ${isDarkMode ? 'bg-gray-800/60' : 'bg-gray-200'
+                                }`} />
+                            <div className={`h-6 w-28 rounded ${isDarkMode ? 'bg-gray-800/60' : 'bg-gray-200'
+                                }`} />
+                            <div className={`h-6 w-28 rounded ${isDarkMode ? 'bg-gray-800/60' : 'bg-gray-200'
+                                }`} />
+                            <div className={`h-6 w-16 rounded ${isDarkMode ? 'bg-gray-800/60' : 'bg-gray-200'
+                                }`} />
                         </div>
                     ))}
                 </div>
@@ -1142,31 +1163,52 @@ export default function CrearResguardos() {
     }
 
     return (
-        <div className="bg-black text-white min-h-screen p-2 sm:p-4 md:p-6 lg:p-8">
+        <div className={`min-h-screen p-2 sm:p-4 md:p-6 lg:p-8 transition-colors duration-500 ${isDarkMode
+            ? 'bg-black text-white'
+            : 'bg-gradient-to-br from-gray-50 via-white to-gray-100 text-gray-900'
+            }`}>
             {/* Success message toast */}
             {successMessage && (
-                <div className="fixed top-4 right-4 z-50 flex items-center gap-2 bg-green-900/80 text-green-100 px-4 py-2 rounded-lg shadow-lg border border-green-700 backdrop-blur-sm animate-fade-in">
-                    <CheckCircle className="h-5 w-5 text-green-400 animate-pulse" />
+                <div className={`fixed top-4 right-4 z-50 flex items-center gap-2 px-4 py-2 rounded-lg shadow-lg border backdrop-blur-sm animate-fade-in ${isDarkMode
+                    ? 'bg-green-900/80 text-green-100 border-green-700'
+                    : 'bg-green-50 text-green-800 border-green-200'
+                    }`}>
+                    <CheckCircle className={`h-5 w-5 animate-pulse ${isDarkMode ? 'text-green-400' : 'text-green-600'
+                        }`} />
                     <span className="animate-bounce">{successMessage}</span>
                 </div>
             )}
 
-            <div className="w-full mx-auto bg-black rounded-lg sm:rounded-xl shadow-2xl overflow-hidden transition-all duration-500 transform border border-gray-800 hover:border-gray-700">
+            <div className={`w-full mx-auto rounded-lg sm:rounded-xl shadow-2xl overflow-hidden transition-all duration-500 transform border ${isDarkMode
+                ? 'bg-black border-gray-800 hover:border-gray-700'
+                : 'bg-white border-gray-200'
+                }`}>
                 {/* Header */}
-                <div className="bg-black p-4 sm:p-6 flex flex-col sm:flex-row justify-between items-start sm:items-center border-b border-gray-800 gap-2 sm:gap-0">
+                <div className={`p-4 sm:p-6 flex flex-col sm:flex-row justify-between items-start sm:items-center border-b gap-2 sm:gap-0 ${isDarkMode
+                    ? 'bg-black border-gray-800'
+                    : 'bg-gray-50/50 border-gray-200'
+                    }`}>
                     <h1 className="text-xl sm:text-2xl md:text-3xl font-bold flex items-center">
-                        <span className="mr-2 sm:mr-3 bg-gray-800 text-white p-1 sm:p-2 rounded-lg border border-white text-sm sm:text-base shadow-lg">RES</span>
-                        <span className="text-white">
+                        <span className={`mr-2 sm:mr-3 p-1 sm:p-2 rounded-lg border text-sm sm:text-base shadow-lg ${isDarkMode
+                            ? 'bg-gray-800 text-white border-white'
+                            : 'bg-gray-900 text-white border-gray-900'
+                            }`}>RES</span>
+                        <span className={isDarkMode ? 'text-white' : 'text-gray-900'}>
                             Creación de Resguardos
                         </span>
                     </h1>
                     <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-4">
-                        <p className="text-gray-400 text-sm sm:text-base flex items-center gap-2">
-                            <ListChecks className="h-4 w-4 text-white animate-pulse" />
-                            <span className="font-medium text-white">{selectedMuebles.length}</span> artículos seleccionados
+                        <p className={`text-sm sm:text-base flex items-center gap-2 ${isDarkMode ? 'text-gray-400' : 'text-gray-600'
+                            }`}>
+                            <ListChecks className={`h-4 w-4 animate-pulse ${isDarkMode ? 'text-white' : 'text-gray-900'
+                                }`} />
+                            <span className={`font-medium ${isDarkMode ? 'text-white' : 'text-gray-900'
+                                }`}>{selectedMuebles.length}</span> artículos seleccionados
                         </p>
-                        <p className="text-gray-400 text-sm sm:text-base flex items-center gap-2">
-                            <Info className="h-4 w-4 text-white animate-pulse" />
+                        <p className={`text-sm sm:text-base flex items-center gap-2 ${isDarkMode ? 'text-gray-400' : 'text-gray-600'
+                            }`}>
+                            <Info className={`h-4 w-4 animate-pulse ${isDarkMode ? 'text-white' : 'text-gray-900'
+                                }`} />
                             Seleccione artículos para el resguardo
                         </p>
                     </div>
@@ -1177,30 +1219,48 @@ export default function CrearResguardos() {
                     {/* Left panel - Muebles table */}
                     <div className="flex-1 min-w-0 flex flex-col p-4 lg:col-span-3">
                         {/* Folio and director information */}
-                        <div className="mb-6 bg-gray-900/30 p-4 rounded-xl border border-gray-800 shadow-inner hover:shadow-lg transition-shadow">
+                        <div className={`mb-6 p-4 rounded-xl border shadow-inner hover:shadow-lg transition-shadow ${isDarkMode
+                            ? 'bg-gray-900/30 border-gray-800'
+                            : 'bg-gray-50/50 border-gray-200'
+                            }`}>
                             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                                <div className="bg-black p-3 rounded-lg border border-gray-800 flex flex-col hover:border-white transition-colors">
+                                <div className={`p-3 rounded-lg border flex flex-col transition-colors ${isDarkMode
+                                    ? 'bg-black border-gray-800 hover:border-white'
+                                    : 'bg-white border-gray-200 hover:border-blue-400'
+                                    }`}>
                                     <div className="flex justify-between items-center mb-1">
-                                        <span className="text-xs uppercase text-gray-500 font-medium">Folio</span>
+                                        <span className={`text-xs uppercase font-medium ${isDarkMode ? 'text-gray-500' : 'text-gray-600'
+                                            }`}>Folio</span>
                                         <button
                                             onClick={resetFolio}
-                                            className="text-xs bg-gray-900/20 hover:bg-gray-900/30 text-white hover:text-gray-300 flex items-center gap-1 px-2 py-1 rounded border border-white/50 transition-all"
+                                            className={`text-xs flex items-center gap-1 px-2 py-1 rounded border transition-all ${isDarkMode
+                                                ? 'bg-gray-900/20 hover:bg-gray-900/30 text-white hover:text-gray-300 border-white/50'
+                                                : 'bg-gray-100 hover:bg-gray-200 text-gray-700 hover:text-gray-900 border-gray-300'
+                                                }`}
                                         >
                                             <RefreshCw className="h-3 w-3" />
                                             Nuevo
                                         </button>
                                     </div>
                                     <div className="flex items-center">
-                                        <FileDigit className="h-4 w-4 text-white mr-2 animate-pulse" />
-                                        <span className="text-sm font-medium text-white">{formData.folio || 'Generando...'}</span>
+                                        <FileDigit className={`h-4 w-4 mr-2 animate-pulse ${isDarkMode ? 'text-white' : 'text-gray-900'
+                                            }`} />
+                                        <span className={`text-sm font-medium ${isDarkMode ? 'text-white' : 'text-gray-900'
+                                            }`}>{formData.folio || 'Generando...'}</span>
                                     </div>
                                 </div>
 
-                                <div className="bg-black p-3 rounded-lg border border-gray-800 flex flex-col hover:border-white transition-colors">
-                                    <span className="text-xs uppercase text-gray-500 font-medium mb-1">Director de Área</span>
+                                <div className={`p-3 rounded-lg border flex flex-col transition-colors ${isDarkMode
+                                    ? 'bg-black border-gray-800 hover:border-white'
+                                    : 'bg-white border-gray-200 hover:border-blue-400'
+                                    }`}>
+                                    <span className={`text-xs uppercase font-medium mb-1 ${isDarkMode ? 'text-gray-500' : 'text-gray-600'
+                                        }`}>Director de Área</span>
                                     <div className="flex items-center">
-                                        <Building2 className="h-4 w-4 text-white mr-2 animate-pulse" />
-                                        <span className="text-sm text-white">
+                                        <Building2 className={`h-4 w-4 mr-2 animate-pulse ${isDarkMode ? 'text-white' : 'text-gray-900'
+                                            }`} />
+                                        <span className={`text-sm ${isDarkMode ? 'text-white' : 'text-gray-900'
+                                            }`}>
                                             {formData.directorId ?
                                                 directorio.find(d => d.id_directorio.toString() === formData.directorId)?.nombre || 'Seleccionar' :
                                                 'Seleccionar'}
@@ -1208,118 +1268,156 @@ export default function CrearResguardos() {
                                     </div>
                                 </div>
 
-                                <div className="bg-black p-3 rounded-lg border border-gray-800 flex flex-col hover:border-white transition-colors">
-                                    <span className="text-xs uppercase text-gray-500 font-medium mb-1">Fecha</span>
+                                <div className={`p-3 rounded-lg border flex flex-col transition-colors ${isDarkMode
+                                    ? 'bg-black border-gray-800 hover:border-white'
+                                    : 'bg-white border-gray-200 hover:border-blue-400'
+                                    }`}>
+                                    <span className={`text-xs uppercase font-medium mb-1 ${isDarkMode ? 'text-gray-500' : 'text-gray-600'
+                                        }`}>Fecha</span>
                                     <div className="flex items-center">
-                                        <Calendar className="h-4 w-4 text-white mr-2 animate-pulse" />
-                                        <span className="text-sm text-white">{new Date().toLocaleDateString()}</span>
+                                        <Calendar className={`h-4 w-4 mr-2 animate-pulse ${isDarkMode ? 'text-white' : 'text-gray-900'
+                                            }`} />
+                                        <span className={`text-sm ${isDarkMode ? 'text-white' : 'text-gray-900'
+                                            }`}>{new Date().toLocaleDateString()}</span>
                                     </div>
                                 </div>
                             </div>
                         </div>
 
                         {/* Search and filters */}
-                        <div className="mb-6 bg-gray-900/30 p-4 rounded-xl border border-gray-800 shadow-inner hover:shadow-lg transition-shadow">                            <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-4 mb-4">
-                            <div className="relative flex-1">
-                                <div className="flex gap-2">
-                                    <div className="relative flex-1">
-                                        <input
-                                            ref={inputRef}
-                                            type="text"
-                                            value={searchTerm}
-                                            onChange={e => { setSearchTerm(e.target.value); setShowSuggestions(true); }}
-                                            onKeyDown={handleInputKeyDown}
-                                            onBlur={handleInputBlur}
-                                            placeholder="Buscar por cualquier campo..."
-                                            className="w-full px-4 py-2 bg-black/50 border border-gray-800 rounded-lg focus:outline-none focus:ring-2 focus:ring-white focus:border-transparent text-white placeholder-gray-500"
-                                            aria-autocomplete="list"
-                                            aria-controls="omnibox-suggestions"
-                                            {...(highlightedIndex >= 0 && { 'aria-activedescendant': `omnibox-suggestion-${highlightedIndex}` })}
-                                            autoComplete="off"
-                                        />
-                                        <SuggestionDropdown />
-                                    </div>
-                                    <button
-                                        onClick={saveCurrentFilter}
-                                        disabled={!searchTerm || !searchMatchType}
-                                        className={`px-4 py-2 rounded-lg border flex items-center gap-2 ${searchTerm && searchMatchType
-                                            ? 'bg-gray-600 hover:bg-gray-700 border-white text-white'
-                                            : 'bg-gray-800/50 border-gray-700 text-gray-500 cursor-not-allowed'
-                                            } transition-all duration-200 hover:scale-105`}
-                                        title="Agregar filtro actual a la lista de filtros activos"
-                                    >
-                                        <Plus className="h-4 w-4" />
-                                        <span>Agregar Filtro</span>
-                                    </button>
-                                </div>                                    {/* Filtros activos */}
-                                {activeFilters.length > 0 && (
-                                    <div className="mt-2 flex flex-wrap gap-1">
-                                        {activeFilters.map((filter, index) => (
-                                            <div
-                                                key={index}
-                                                className={`flex items-center gap-1 px-2 py-0.5 rounded-full text-xs border font-medium transition-colors
-                                                        ${filter.type === 'id' ? 'border-white text-white' :
-                                                        filter.type === 'descripcion' ? 'border-purple-500 text-purple-200' :
-                                                            filter.type === 'rubro' ? 'border-green-500 text-green-200' :
-                                                                filter.type === 'estado' ? 'border-yellow-500 text-yellow-200' :
-                                                                    filter.type === 'estatus' ? 'border-teal-500 text-teal-200' :
-                                                                        filter.type === 'area' ? 'border-red-500 text-red-200' :
-                                                                            filter.type === 'usufinal' || filter.type === 'resguardante' ? 'border-orange-500 text-orange-200' :
-                                                                                'border-gray-600 text-gray-300'}
-                                                        bg-transparent hover:bg-gray-900/40`}
-                                            >
-                                                <span className="uppercase font-semibold opacity-70">{
-                                                    filter.type === 'id' ? 'ID' :
-                                                        filter.type === 'descripcion' ? 'Desc' :
-                                                            filter.type === 'rubro' ? 'Rubro' :
-                                                                filter.type === 'estado' ? 'Estado' :
-                                                                    filter.type === 'estatus' ? 'Estatus' :
-                                                                        filter.type === 'area' ? 'Área' :
-                                                                            filter.type === 'usufinal' ? 'Usuario' :
-                                                                                filter.type === 'resguardante' ? 'Resg.' :
-                                                                                    filter.type
-                                                }</span>
-                                                <span className="truncate max-w-[80px]">{filter.term}</span>
-                                                <button
-                                                    onClick={() => removeFilter(index)}
-                                                    className="ml-1 p-0.5 rounded-full text-xs text-gray-400 hover:text-red-400 focus:outline-none focus:ring-1 focus:ring-red-500"
-                                                    title="Eliminar filtro"
-                                                    tabIndex={0}
+                        <div className={`mb-6 p-4 rounded-xl border shadow-inner hover:shadow-lg transition-shadow ${isDarkMode
+                            ? 'bg-gray-900/30 border-gray-800'
+                            : 'bg-gray-50/50 border-gray-200'
+                            }`}>
+                            <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-4 mb-4">
+                                <div className="relative flex-1">
+                                    <div className="flex gap-2">
+                                        <div className="relative flex-1">
+                                            <input
+                                                ref={inputRef}
+                                                type="text"
+                                                value={searchTerm}
+                                                onChange={e => { setSearchTerm(e.target.value); setShowSuggestions(true); }}
+                                                onKeyDown={handleInputKeyDown}
+                                                onBlur={handleInputBlur}
+                                                placeholder="Buscar por cualquier campo..."
+                                                className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:border-transparent transition-all duration-300 ${isDarkMode
+                                                    ? 'bg-black/50 border-gray-800 text-white placeholder-gray-500 focus:ring-white hover:border-white/50'
+                                                    : 'bg-white border-gray-300 text-gray-900 placeholder-gray-400 focus:ring-blue-500 hover:border-blue-400'
+                                                    }`}
+                                                aria-autocomplete="list"
+                                                aria-controls="omnibox-suggestions"
+                                                {...(highlightedIndex >= 0 && { 'aria-activedescendant': `omnibox-suggestion-${highlightedIndex}` })}
+                                                autoComplete="off"
+                                            />
+                                            <SuggestionDropdown />
+                                        </div>
+                                        <button
+                                            onClick={saveCurrentFilter}
+                                            disabled={!searchTerm || !searchMatchType}
+                                            className={`px-4 py-2 rounded-lg border flex items-center gap-2 transition-all duration-200 hover:scale-105 ${searchTerm && searchMatchType
+                                                ? (isDarkMode
+                                                    ? 'bg-gray-600 hover:bg-gray-700 border-white text-white'
+                                                    : 'bg-blue-600 hover:bg-blue-700 border-blue-600 text-white'
+                                                )
+                                                : (isDarkMode
+                                                    ? 'bg-gray-800/50 border-gray-700 text-gray-500 cursor-not-allowed'
+                                                    : 'bg-gray-200 border-gray-300 text-gray-400 cursor-not-allowed'
+                                                )
+                                                }`}
+                                            title="Agregar filtro actual a la lista de filtros activos"
+                                        >
+                                            <Plus className="h-4 w-4" />
+                                            <span>Agregar Filtro</span>
+                                        </button>
+                                    </div>                                    {/* Filtros activos */}
+                                    {activeFilters.length > 0 && (
+                                        <div className="mt-2 flex flex-wrap gap-1">
+                                            {activeFilters.map((filter, index) => (
+                                                <div
+                                                    key={index}
+                                                    className={`flex items-center gap-1 px-2 py-0.5 rounded-full text-xs border font-medium transition-colors bg-transparent
+                                                        ${filter.type === 'id' ? (isDarkMode ? 'border-white text-white hover:bg-gray-900/40' : 'border-gray-600 text-gray-700 hover:bg-gray-100') :
+                                                            filter.type === 'descripcion' ? (isDarkMode ? 'border-purple-500 text-purple-200 hover:bg-gray-900/40' : 'border-purple-400 text-purple-700 hover:bg-purple-50') :
+                                                                filter.type === 'rubro' ? (isDarkMode ? 'border-green-500 text-green-200 hover:bg-gray-900/40' : 'border-green-400 text-green-700 hover:bg-green-50') :
+                                                                    filter.type === 'estado' ? (isDarkMode ? 'border-yellow-500 text-yellow-200 hover:bg-gray-900/40' : 'border-yellow-400 text-yellow-700 hover:bg-yellow-50') :
+                                                                        filter.type === 'estatus' ? (isDarkMode ? 'border-teal-500 text-teal-200 hover:bg-gray-900/40' : 'border-teal-400 text-teal-700 hover:bg-teal-50') :
+                                                                            filter.type === 'area' ? (isDarkMode ? 'border-red-500 text-red-200 hover:bg-gray-900/40' : 'border-red-400 text-red-700 hover:bg-red-50') :
+                                                                                filter.type === 'usufinal' || filter.type === 'resguardante' ? (isDarkMode ? 'border-orange-500 text-orange-200 hover:bg-gray-900/40' : 'border-orange-400 text-orange-700 hover:bg-orange-50') :
+                                                                                    (isDarkMode ? 'border-gray-600 text-gray-300 hover:bg-gray-900/40' : 'border-gray-400 text-gray-600 hover:bg-gray-100')}`}
                                                 >
-                                                    <svg width="10" height="10" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                                        <path d="M6 6L14 14M14 6L6 14" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-                                                    </svg>
+                                                    <span className="uppercase font-semibold opacity-70">{
+                                                        filter.type === 'id' ? 'ID' :
+                                                            filter.type === 'descripcion' ? 'Desc' :
+                                                                filter.type === 'rubro' ? 'Rubro' :
+                                                                    filter.type === 'estado' ? 'Estado' :
+                                                                        filter.type === 'estatus' ? 'Estatus' :
+                                                                            filter.type === 'area' ? 'Área' :
+                                                                                filter.type === 'usufinal' ? 'Usuario' :
+                                                                                    filter.type === 'resguardante' ? 'Resg.' :
+                                                                                        filter.type
+                                                    }</span>
+                                                    <span className="truncate max-w-[80px]">{filter.term}</span>
+                                                    <button
+                                                        onClick={() => removeFilter(index)}
+                                                        className={`ml-1 p-0.5 rounded-full text-xs focus:outline-none focus:ring-1 focus:ring-red-500 transition-colors ${isDarkMode
+                                                            ? 'text-gray-400 hover:text-red-400'
+                                                            : 'text-gray-500 hover:text-red-600'
+                                                            }`}
+                                                        title="Eliminar filtro"
+                                                        tabIndex={0}
+                                                    >
+                                                        <svg width="10" height="10" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                                            <path d="M6 6L14 14M14 6L6 14" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+                                                        </svg>
+                                                    </button>
+                                                </div>
+                                            ))}
+                                            {activeFilters.length > 1 && (
+                                                <button
+                                                    onClick={() => setActiveFilters([])}
+                                                    className={`ml-2 px-2 py-0.5 rounded-full border text-xs bg-transparent transition-colors ${isDarkMode
+                                                        ? 'border-gray-700 text-gray-400 hover:text-red-400 hover:border-red-500'
+                                                        : 'border-gray-300 text-gray-600 hover:text-red-600 hover:border-red-400'
+                                                        }`}
+                                                    title="Limpiar todos los filtros"
+                                                >
+                                                    Limpiar filtros
                                                 </button>
-                                            </div>
-                                        ))}
-                                        {activeFilters.length > 1 && (
-                                            <button
-                                                onClick={() => setActiveFilters([])}
-                                                className="ml-2 px-2 py-0.5 rounded-full border border-gray-700 text-xs text-gray-400 hover:text-red-400 hover:border-red-500 bg-transparent transition-colors"
-                                                title="Limpiar todos los filtros"
-                                            >
-                                                Limpiar filtros
-                                            </button>
-                                        )}
-                                    </div>
-                                )}
+                                            )}
+                                        </div>
+                                    )}
+                                </div>
                             </div>
-                        </div>
-                            <div className="flex items-center gap-2 text-sm text-gray-400">
+                            <div className={`flex items-center gap-2 text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-600'
+                                }`}>
                                 <RefreshCw
-                                    className={`h-4 w-4 text-white cursor-pointer hover:text-gray-300 ${loading ? 'animate-spin' : ''}`}
+                                    className={`h-4 w-4 cursor-pointer transition-colors ${loading ? 'animate-spin' : ''} ${isDarkMode
+                                        ? 'text-white hover:text-gray-300'
+                                        : 'text-gray-900 hover:text-gray-700'
+                                        }`}
                                     onClick={() => fetchData(sortField, sortDirection)}
                                 />
-                                <span>Total: <span className="text-white">{totalCount}</span> registros</span>
+                                <span>Total: <span className={isDarkMode ? 'text-white' : 'text-gray-900'
+                                }>{totalCount}</span> registros</span>
                             </div>
                         </div>
 
                         {/* Table */}
-                        <div className="bg-gray-900/30 rounded-xl border border-gray-800 overflow-hidden mb-6 flex flex-col flex-grow max-h-[60vh] shadow-lg hover:shadow-xl transition-all duration-300 transform hover:border-gray-700">
-                            <div className="flex-grow min-w-[800px] overflow-x-auto overflow-y-auto scrollbar-thin scrollbar-track-gray-900 scrollbar-thumb-gray-800 hover:scrollbar-thumb-gray-700">
-                                <table className="min-w-full divide-y divide-gray-800/50">
-                                    <thead className="bg-black/90 backdrop-blur-sm sticky top-0 z-10">
-                                        <tr className="divide-x divide-gray-800/30">
+                        <div className={`rounded-xl border overflow-hidden mb-6 flex flex-col flex-grow max-h-[60vh] shadow-lg hover:shadow-xl transition-all duration-300 transform ${isDarkMode
+                            ? 'bg-gray-900/30 border-gray-800 hover:border-gray-700'
+                            : 'bg-white border-gray-200'
+                            }`}>
+                            <div className={`flex-grow min-w-[800px] overflow-x-auto overflow-y-auto scrollbar-thin ${isDarkMode
+                                ? 'scrollbar-track-gray-900 scrollbar-thumb-gray-800 hover:scrollbar-thumb-gray-700'
+                                : 'scrollbar-track-gray-100 scrollbar-thumb-gray-300 hover:scrollbar-thumb-gray-400'
+                                }`}>
+                                <table className={`min-w-full divide-y ${isDarkMode ? 'divide-gray-800/50' : 'divide-gray-200'
+                                    }`}>
+                                    <thead className={`backdrop-blur-sm sticky top-0 z-10 ${isDarkMode ? 'bg-black/90' : 'bg-gray-50/90'
+                                        }`}>
+                                        <tr className={`divide-x ${isDarkMode ? 'divide-gray-800/30' : 'divide-gray-200/30'
+                                            }`}>
                                             <th className="px-2 py-3 w-10">
                                                 <div className="flex justify-center">
                                                     {/* Select All Checkbox - Custom visual, fondo negro, checkmark azul, sin estilo nativo */}
@@ -1330,24 +1428,25 @@ export default function CrearResguardos() {
                                                             checked={areAllPageSelected}
                                                             onChange={handleSelectAllPage}
                                                             disabled={paginatedMuebles.length === 0 || !canSelectAllPage()}
-                                                            className={
-                                                                `appearance-none h-6 w-6 rounded-md border-2 border-white bg-black transition-all duration-200
-                                                                focus:ring-2 focus:ring-white focus:border-white
-                                                                hover:border-white hover:shadow-white/30
-                                                                disabled:opacity-40 disabled:cursor-not-allowed
-                                                                cursor-pointer shadow-md`
-                                                            }
+                                                            className={`appearance-none h-6 w-6 rounded-md border-2 transition-all duration-200 focus:ring-2 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer shadow-md ${isDarkMode
+                                                                ? 'border-white bg-black focus:ring-white focus:border-white hover:border-white hover:shadow-white/30'
+                                                                : 'border-gray-400 bg-white focus:ring-blue-500 focus:border-blue-500 hover:border-blue-500 hover:shadow-blue-500/30'
+                                                                }`}
                                                             aria-label="Seleccionar todos los artículos de la página"
                                                         />
                                                         {/* Custom checkmark icon overlay, solo visible si checked */}
                                                         {areAllPageSelected && (
                                                             <span className="pointer-events-none absolute left-0 top-0 h-6 w-6 flex items-center justify-center">
-                                                                <CheckCircle className="h-5 w-5 text-white drop-shadow-lg animate-pulse" />
+                                                                <CheckCircle className={`h-5 w-5 drop-shadow-lg animate-pulse ${isDarkMode ? 'text-white' : 'text-blue-600'
+                                                                    }`} />
                                                             </span>
                                                         )}
                                                         {/* Tooltip visual mejorado */}
                                                         <span
-                                                            className="absolute left-0 top-8 z-40 px-3 py-1.5 rounded-lg bg-black text-white text-xs font-semibold shadow-xl border border-white opacity-0 group-hover:opacity-100 group-hover:translate-y-1 transition-all pointer-events-none whitespace-nowrap"
+                                                            className={`absolute left-0 top-8 z-40 px-3 py-1.5 rounded-lg text-xs font-semibold shadow-xl border opacity-0 group-hover:opacity-100 group-hover:translate-y-1 transition-all pointer-events-none whitespace-nowrap ${isDarkMode
+                                                                ? 'bg-black text-white border-white'
+                                                                : 'bg-white text-gray-900 border-gray-300'
+                                                                }`}
                                                             style={{
                                                                 width: 'auto',
                                                                 minWidth: '180px',
@@ -1368,23 +1467,29 @@ export default function CrearResguardos() {
                                                 <th
                                                     key={field}
                                                     onClick={() => handleSort(field as keyof Mueble)}
-                                                    className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider cursor-pointer hover:bg-gray-900/50 transition-all duration-200 group relative"
+                                                    className={`px-4 py-3 text-left text-xs font-medium uppercase tracking-wider cursor-pointer transition-all duration-200 group relative ${isDarkMode
+                                                        ? 'text-gray-400 hover:bg-gray-900/50'
+                                                        : 'text-gray-600 hover:bg-gray-100'
+                                                        }`}
                                                 >
                                                     <div className="flex items-center gap-2">
                                                         {label}
-                                                        <ArrowUpDown className={`h-3.5 w-3.5 transition-all duration-200 transform
-                                                            ${sortField === field ? 'text-white scale-110' : 'text-gray-600 group-hover:text-gray-400'}
-                                                            ${sortField === field && 'animate-pulse'}`}
+                                                        <ArrowUpDown className={`h-3.5 w-3.5 transition-all duration-200 transform ${sortField === field
+                                                            ? (isDarkMode ? 'text-white scale-110 animate-pulse' : 'text-gray-900 scale-110 animate-pulse')
+                                                            : (isDarkMode ? 'text-gray-600 group-hover:text-gray-400' : 'text-gray-400 group-hover:text-gray-600')
+                                                            }`}
                                                         />
                                                     </div>
                                                     {sortField === field && (
-                                                        <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-white/50 animate-pulse" />
+                                                        <div className={`absolute bottom-0 left-0 right-0 h-0.5 animate-pulse ${isDarkMode ? 'bg-white/50' : 'bg-gray-900/50'
+                                                            }`} />
                                                     )}
                                                 </th>
                                             ))}
                                         </tr>
                                     </thead>
-                                    <tbody className="bg-transparent divide-y divide-gray-800/30">
+                                    <tbody className={`bg-transparent divide-y ${isDarkMode ? 'divide-gray-800/30' : 'divide-gray-200/30'
+                                        }`}>
                                         {loading && !isLoadingMore ? (
                                             <TableSkeleton />
                                         ) : error ? (
@@ -1396,10 +1501,14 @@ export default function CrearResguardos() {
                                                             <div className="absolute inset-0 w-16 h-16 border-4 border-red-500/20 rounded-full animate-ping" />
                                                         </div>
                                                         <p className="text-lg font-medium text-red-400">Error al cargar datos</p>
-                                                        <p className="text-sm text-gray-400">{error}</p>
+                                                        <p className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-600'
+                                                            }`}>{error}</p>
                                                         <button
                                                             onClick={() => fetchData(sortField, sortDirection)}
-                                                            className="px-4 py-2 bg-black text-white rounded-lg text-sm hover:bg-gray-900 transition-all duration-300 border border-gray-800 hover:border-white hover:scale-105 transform"
+                                                            className={`px-4 py-2 rounded-lg text-sm transition-all duration-300 border hover:scale-105 transform ${isDarkMode
+                                                                ? 'bg-black text-white hover:bg-gray-900 border-gray-800 hover:border-white'
+                                                                : 'bg-white text-gray-900 hover:bg-gray-50 border-gray-300 hover:border-blue-400'
+                                                                }`}
                                                         >
                                                             Intentar nuevamente
                                                         </button>
@@ -1408,17 +1517,23 @@ export default function CrearResguardos() {
                                             </tr>
                                         ) : paginatedMuebles.length === 0 ? (
                                             <tr className="h-96">
-                                                <td colSpan={6} className="px-6 py-24 text-center text-gray-400">
+                                                <td colSpan={6} className={`px-6 py-24 text-center ${isDarkMode ? 'text-gray-400' : 'text-gray-600'
+                                                    }`}>
                                                     <div className="flex flex-col items-center justify-center space-y-4 animate-fadeIn">
                                                         <div className="relative">
-                                                            <Search className="h-16 w-16 text-gray-500" />
-                                                            <div className="absolute inset-0 w-16 h-16 border-4 border-gray-800 rounded-full animate-ping opacity-20" />
+                                                            <Search className={`h-16 w-16 ${isDarkMode ? 'text-gray-500' : 'text-gray-400'
+                                                                }`} />
+                                                            <div className={`absolute inset-0 w-16 h-16 border-4 rounded-full animate-ping opacity-20 ${isDarkMode ? 'border-gray-800' : 'border-gray-300'
+                                                                }`} />
                                                         </div>
                                                         <p className="text-lg font-medium">No se encontraron resultados</p>
                                                         {searchTerm && (
                                                             <button
                                                                 onClick={() => setSearchTerm('')}
-                                                                className="px-4 py-2 bg-black text-white rounded-lg text-sm hover:bg-gray-900 transition-all duration-300 flex items-center gap-2 border border-gray-800 hover:border-white hover:scale-105 transform group"
+                                                                className={`px-4 py-2 rounded-lg text-sm transition-all duration-300 flex items-center gap-2 border hover:scale-105 transform group ${isDarkMode
+                                                                    ? 'bg-black text-white hover:bg-gray-900 border-gray-800 hover:border-white'
+                                                                    : 'bg-white text-gray-900 hover:bg-gray-50 border-gray-300 hover:border-blue-400'
+                                                                    }`}
                                                             >
                                                                 <X className="h-4 w-4 group-hover:rotate-90 transition-transform duration-300" />
                                                                 Limpiar búsqueda
@@ -1433,31 +1548,51 @@ export default function CrearResguardos() {
                                                 return (
                                                     <tr
                                                         key={`${mueble.id}`}
-                                                        className={`group transition-all duration-200 animate-fadeIn
-                                                            ${isSelected ? 'bg-gray-900/10 hover:bg-gray-900/20' : 'hover:bg-gray-900/40'}
-                                                            ${isSelected ? 'border-l-2 border-white' : 'border-l-2 border-transparent hover:border-gray-700'}
-                                                        `}
+                                                        className={`group transition-all duration-200 animate-fadeIn border-l-2 ${isSelected
+                                                            ? (isDarkMode
+                                                                ? 'bg-gray-900/10 hover:bg-gray-900/20 border-white'
+                                                                : 'bg-blue-50 hover:bg-blue-100 border-blue-500'
+                                                            )
+                                                            : (isDarkMode
+                                                                ? 'hover:bg-gray-900/40 border-transparent hover:border-gray-700'
+                                                                : 'hover:bg-gray-50 border-transparent hover:border-gray-300'
+                                                            )
+                                                            }`}
                                                         onClick={() => toggleMuebleSelection(mueble)}
                                                         style={{ animationDelay: `${index * 50}ms` }}
                                                     >
                                                         <td className="px-2 py-4">
                                                             <div className="flex justify-center">
-                                                                <div className={`h-5 w-5 rounded-md border transform transition-all duration-300
-                                                                    ${isSelected ? 'bg-white border-gray-300 scale-110' : 'border-gray-700 group-hover:border-white'}
-                                                                    flex items-center justify-center`}
+                                                                <div className={`h-5 w-5 rounded-md border transform transition-all duration-300 flex items-center justify-center ${isSelected
+                                                                    ? (isDarkMode
+                                                                        ? 'bg-white border-gray-300 scale-110'
+                                                                        : 'bg-blue-600 border-blue-600 scale-110'
+                                                                    )
+                                                                    : (isDarkMode
+                                                                        ? 'border-gray-700 group-hover:border-white'
+                                                                        : 'border-gray-300 group-hover:border-blue-500'
+                                                                    )
+                                                                    }`}
                                                                 >
                                                                     {isSelected && (
-                                                                        <CheckCircle className="h-4 w-4 text-white animate-scale-check" />
+                                                                        <CheckCircle className={`h-4 w-4 animate-scale-check ${isDarkMode ? 'text-black' : 'text-white'
+                                                                            }`} />
                                                                     )}
                                                                 </div>
                                                             </div>
                                                         </td>
                                                         <td className="px-4 py-4">
                                                             <div className="flex flex-col space-y-1">
-                                                                <div className="text-sm font-medium text-white group-hover:text-gray-300 transition-colors">
+                                                                <div className={`text-sm font-medium transition-colors ${isDarkMode
+                                                                    ? 'text-white group-hover:text-gray-300'
+                                                                    : 'text-gray-900 group-hover:text-gray-700'
+                                                                    }`}>
                                                                     {mueble.id_inv}
                                                                 </div>
-                                                                <div className="text-xs text-gray-500 group-hover:text-gray-400 transition-colors">
+                                                                <div className={`text-xs transition-colors ${isDarkMode
+                                                                    ? 'text-gray-500 group-hover:text-gray-400'
+                                                                    : 'text-gray-600 group-hover:text-gray-500'
+                                                                    }`}>
                                                                     {mueble.rubro}
                                                                 </div>
                                                                 <div className={`text-[10px] font-mono px-2 py-0.5 rounded-full border inline-block w-fit transition-all duration-300
@@ -1470,7 +1605,10 @@ export default function CrearResguardos() {
                                                             </div>
                                                         </td>
                                                         <td className="px-4 py-4">
-                                                            <div className="text-sm text-white group-hover:text-gray-300 transition-colors line-clamp-2">
+                                                            <div className={`text-sm transition-colors line-clamp-2 ${isDarkMode
+                                                                ? 'text-white group-hover:text-gray-300'
+                                                                : 'text-gray-900 group-hover:text-gray-700'
+                                                                }`}>
                                                                 {mueble.descripcion}
                                                             </div>
                                                         </td>
@@ -1504,9 +1642,11 @@ export default function CrearResguardos() {
                                         )}
                                         {isLoadingMore && (
                                             <tr>
-                                                <td colSpan={6} className="px-6 py-4 text-center text-gray-400">
+                                                <td colSpan={6} className={`px-6 py-4 text-center ${isDarkMode ? 'text-gray-400' : 'text-gray-600'
+                                                    }`}>
                                                     <div className="flex justify-center items-center space-x-2">
-                                                        <RefreshCw className="h-5 w-5 animate-spin text-white" />
+                                                        <RefreshCw className={`h-5 w-5 animate-spin ${isDarkMode ? 'text-white' : 'text-gray-900'
+                                                            }`} />
                                                         <span>Cargando más resultados...</span>
                                                     </div>
                                                 </td>
@@ -1519,10 +1659,16 @@ export default function CrearResguardos() {
 
                         {/* Pagination */}
                         {paginatedMuebles.length > 0 && (
-                            <div className="flex items-center justify-between bg-gray-900/30 p-4 rounded-xl border border-gray-800 shadow-inner mb-4 hover:shadow-lg transition-shadow">
+                            <div className={`flex items-center justify-between p-4 rounded-xl border shadow-inner mb-4 hover:shadow-lg transition-shadow ${isDarkMode
+                                ? 'bg-gray-900/30 border-gray-800'
+                                : 'bg-gray-50/50 border-gray-200'
+                                }`}>
                                 <div className="flex items-center space-x-4">
-                                    <span className="text-sm text-gray-400">
-                                        Página <span className="text-white">{currentPage}</span> de <span className="text-white">{totalPages}</span>
+                                    <span className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-600'
+                                        }`}>
+                                        Página <span className={isDarkMode ? 'text-white' : 'text-gray-900'
+                                        }>{currentPage}</span> de <span className={isDarkMode ? 'text-white' : 'text-gray-900'
+                                        }>{totalPages}</span>
                                     </span>
                                     <select
                                         title='Artículos por página'
@@ -1531,7 +1677,10 @@ export default function CrearResguardos() {
                                             setRowsPerPage(Number(e.target.value));
                                             setCurrentPage(1);
                                         }}
-                                        className="bg-black border border-gray-800 rounded-lg text-white text-sm py-1.5 px-3 focus:outline-none focus:ring-2 focus:ring-white hover:border-white transition-colors"
+                                        className={`border rounded-lg text-sm py-1.5 px-3 focus:outline-none focus:ring-2 transition-colors ${isDarkMode
+                                            ? 'bg-black border-gray-800 text-white focus:ring-white hover:border-white'
+                                            : 'bg-white border-gray-300 text-gray-900 focus:ring-blue-500 hover:border-blue-400'
+                                            }`}
                                     >
                                         <option value={10}>10 por página</option>
                                         <option value={25}>25 por página</option>
@@ -1544,7 +1693,16 @@ export default function CrearResguardos() {
                                         title='Anterior'
                                         onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
                                         disabled={currentPage === 1}
-                                        className={`p-2 rounded-lg ${currentPage === 1 ? 'text-gray-600 bg-black cursor-not-allowed' : 'text-white bg-black hover:bg-gray-900 border border-gray-800 hover:border-white'} transition-colors`}
+                                        className={`p-2 rounded-lg transition-colors ${currentPage === 1
+                                            ? (isDarkMode
+                                                ? 'text-gray-600 bg-black cursor-not-allowed'
+                                                : 'text-gray-400 bg-gray-100 cursor-not-allowed'
+                                            )
+                                            : (isDarkMode
+                                                ? 'text-white bg-black hover:bg-gray-900 border border-gray-800 hover:border-white'
+                                                : 'text-gray-900 bg-white hover:bg-gray-50 border border-gray-300 hover:border-blue-400'
+                                            )
+                                            }`}
                                     >
                                         <ChevronLeft className="h-5 w-5" />
                                     </button>
@@ -1552,7 +1710,16 @@ export default function CrearResguardos() {
                                         title='Siguiente'
                                         onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
                                         disabled={currentPage >= totalPages}
-                                        className={`p-2 rounded-lg ${currentPage >= totalPages ? 'text-gray-600 bg-black cursor-not-allowed' : 'text-white bg-black hover:bg-gray-900 border border-gray-800 hover:border-white'} transition-colors`}
+                                        className={`p-2 rounded-lg transition-colors ${currentPage >= totalPages
+                                            ? (isDarkMode
+                                                ? 'text-gray-600 bg-black cursor-not-allowed'
+                                                : 'text-gray-400 bg-gray-100 cursor-not-allowed'
+                                            )
+                                            : (isDarkMode
+                                                ? 'text-white bg-black hover:bg-gray-900 border border-gray-800 hover:border-white'
+                                                : 'text-gray-900 bg-white hover:bg-gray-50 border border-gray-300 hover:border-blue-400'
+                                            )
+                                            }`}
                                     >
                                         <ChevronRight className="h-5 w-5" />
                                     </button>
@@ -1562,18 +1729,27 @@ export default function CrearResguardos() {
                     </div>
 
                     {/* Right panel - Details */}
-                    <div ref={detailRef} className="flex-1 bg-black p-4 border-t lg:border-t-0 lg:border-l border-gray-800 flex flex-col lg:col-span-2">
-                        <div className="bg-gray-900/30 rounded-xl border border-gray-800 p-4 mb-4 shadow-inner hover:shadow-lg transition-shadow">
-                            <h2 className="text-lg font-medium text-gray-100 mb-4 flex items-center gap-2">
-                                <ActivitySquare className="h-5 w-5 text-white animate-pulse" />
-                                <span className="text-white">
+                    <div ref={detailRef} className={`flex-1 p-4 border-t lg:border-t-0 lg:border-l flex flex-col lg:col-span-2 ${isDarkMode
+                        ? 'bg-black border-gray-800'
+                        : 'bg-gray-50/30 border-gray-200'
+                        }`}>
+                        <div className={`rounded-xl border p-4 mb-4 shadow-inner hover:shadow-lg transition-shadow ${isDarkMode
+                            ? 'bg-gray-900/30 border-gray-800'
+                            : 'bg-white border-gray-200'
+                            }`}>
+                            <h2 className={`text-lg font-medium mb-4 flex items-center gap-2 ${isDarkMode ? 'text-gray-100' : 'text-gray-900'
+                                }`}>
+                                <ActivitySquare className={`h-5 w-5 animate-pulse ${isDarkMode ? 'text-white' : 'text-gray-900'
+                                    }`} />
+                                <span className={isDarkMode ? 'text-white' : 'text-gray-900'}>
                                     Información del Resguardo
                                 </span>
                             </h2>
 
                             {/* Director selection */}
                             <div className="mb-4">
-                                <label className="text-sm font-medium text-gray-400 mb-1">Director de Área</label>
+                                <label className={`text-sm font-medium mb-1 ${isDarkMode ? 'text-gray-400' : 'text-gray-600'
+                                    }`}>Director de Área</label>
                                 <div className="relative">
                                     <input
                                         ref={directorInputRef}
@@ -1588,7 +1764,10 @@ export default function CrearResguardos() {
                                         onKeyDown={handleDirectorInputKeyDown}
                                         onBlur={handleDirectorInputBlur}
                                         placeholder={initialDirectorSuggestion ? `Buscar director...` : 'Buscar director por nombre...'}
-                                        className="w-full bg-black border border-gray-800 rounded-lg py-2.5 px-4 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 hover:border-blue-500 transition-colors"
+                                        className={`w-full border rounded-lg py-2.5 px-4 focus:outline-none focus:ring-2 transition-colors ${isDarkMode
+                                            ? 'bg-black border-gray-800 text-white placeholder-gray-500 focus:ring-blue-500 hover:border-blue-500'
+                                            : 'bg-white border-gray-300 text-gray-900 placeholder-gray-400 focus:ring-blue-500 hover:border-blue-400'
+                                            }`}
                                         disabled={inputsDisabled || directorInputDisabled}
                                         autoComplete="off"
                                     />
@@ -1600,7 +1779,10 @@ export default function CrearResguardos() {
                                         <button
                                             type="button"
                                             onMouseDown={e => { e.preventDefault(); handleDirectorSuggestionClick(directorSugerido); }}
-                                            className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-900/30 text-blue-200 border border-blue-700 hover:bg-blue-900/50 hover:text-white font-semibold text-xs shadow transition-all"
+                                            className={`inline-flex items-center gap-2 px-3 py-1 rounded-full border font-semibold text-xs shadow transition-all ${isDarkMode
+                                                ? 'bg-blue-900/30 text-blue-200 border-blue-700 hover:bg-blue-900/50 hover:text-white'
+                                                : 'bg-blue-50 text-blue-700 border-blue-300 hover:bg-blue-100 hover:text-blue-800'
+                                                }`}
                                             title={`Usar sugerencia: ${directorSugerido.nombre}`}
                                         >
                                             <span className="font-bold">Sugerido:</span> {directorSugerido.nombre}
@@ -1612,7 +1794,10 @@ export default function CrearResguardos() {
                                     <div className="mt-2">
                                         <button
                                             type="button"
-                                            className="px-4 py-1.5 rounded-lg bg-gray-900 text-gray-200 border border-gray-700 hover:bg-gray-900/30 hover:text-white text-xs font-semibold shadow transition-all"
+                                            className={`px-4 py-1.5 rounded-lg border text-xs font-semibold shadow transition-all ${isDarkMode
+                                                ? 'bg-gray-900 text-gray-200 border-gray-700 hover:bg-gray-900/30 hover:text-white'
+                                                : 'bg-gray-100 text-gray-700 border-gray-300 hover:bg-gray-200 hover:text-gray-900'
+                                                }`}
                                             onMouseDown={e => { e.preventDefault(); setShowDirectorSuggestions(true); setForceShowAllDirectors(true); setHighlightedDirectorIndex(-1); }}
                                         >
                                             Ver todo el directorio
@@ -1622,24 +1807,32 @@ export default function CrearResguardos() {
                             </div>
                             <div className="mb-4 flex gap-4">
                                 <div className="flex-1">
-                                    <label className="text-sm font-medium text-gray-400 mb-1">Puesto</label>
+                                    <label className={`text-sm font-medium mb-1 ${isDarkMode ? 'text-gray-400' : 'text-gray-600'
+                                        }`}>Puesto</label>
                                     <input
                                         type="text"
                                         value={formData.puesto}
                                         onChange={e => setFormData(prev => ({ ...prev, puesto: e.target.value }))}
                                         placeholder="Puesto del director"
-                                        className="w-full bg-black border border-gray-800 rounded-lg py-2.5 px-4 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 hover:border-blue-500 transition-colors"
+                                        className={`w-full border rounded-lg py-2.5 px-4 focus:outline-none focus:ring-2 transition-colors ${isDarkMode
+                                            ? 'bg-black border-gray-800 text-white placeholder-gray-500 focus:ring-blue-500 hover:border-blue-500'
+                                            : 'bg-white border-gray-300 text-gray-900 placeholder-gray-400 focus:ring-blue-500 hover:border-blue-400'
+                                            }`}
                                         disabled={inputsDisabled}
                                     />
                                 </div>
                                 <div className="flex-1">
-                                    <label className="text-sm font-medium text-gray-400 mb-1">Área</label>
+                                    <label className={`text-sm font-medium mb-1 ${isDarkMode ? 'text-gray-400' : 'text-gray-600'
+                                        }`}>Área</label>
                                     <select
                                         title="Selecciona un área"
                                         value={formData.area}
                                         onChange={e => setFormData(prev => ({ ...prev, area: e.target.value }))}
                                         disabled={!formData.directorId}
-                                        className="w-full bg-black border border-gray-800 rounded-lg py-2.5 px-4 text-white focus:outline-none focus:ring-2 focus:ring-blue-500 hover:border-blue-500 transition-colors"
+                                        className={`w-full border rounded-lg py-2.5 px-4 focus:outline-none focus:ring-2 transition-colors ${isDarkMode
+                                            ? 'bg-black border-gray-800 text-white focus:ring-blue-500 hover:border-blue-500'
+                                            : 'bg-white border-gray-300 text-gray-900 focus:ring-blue-500 hover:border-blue-400'
+                                            }`}
                                     >
                                         <option value="">Selecciona un área</option>
                                         {getAreasForDirector(formData.directorId).map(a => (
@@ -1652,7 +1845,10 @@ export default function CrearResguardos() {
                                             <button
                                                 type="button"
                                                 onMouseDown={e => { e.preventDefault(); setFormData(prev => ({ ...prev, area: areaSuggestion })); }}
-                                                className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-900/30 text-blue-200 border border-blue-700 hover:bg-blue-900/50 hover:text-white font-semibold text-xs shadow transition-all"
+                                                className={`inline-flex items-center gap-2 px-3 py-1 rounded-full border font-semibold text-xs shadow transition-all ${isDarkMode
+                                                    ? 'bg-blue-900/30 text-blue-200 border-blue-700 hover:bg-blue-900/50 hover:text-white'
+                                                    : 'bg-blue-50 text-blue-700 border-blue-300 hover:bg-blue-100 hover:text-blue-800'
+                                                    }`}
                                                 title={`Usar sugerencia: ${areaSuggestion}`}
                                             >
                                                 <span className="font-bold">Sugerido:</span> {areaSuggestion}
@@ -1664,23 +1860,32 @@ export default function CrearResguardos() {
 
                             {/* Resguardante */}
                             <div className="mb-4">
-                                <label className="text-sm font-medium text-gray-400 mb-1">Resguardante</label>
+                                <label className={`text-sm font-medium mb-1 ${isDarkMode ? 'text-gray-400' : 'text-gray-600'
+                                    }`}>Resguardante</label>
                                 <input
                                     type="text"
                                     value={formData.resguardante}
                                     onChange={(e) => setFormData({ ...formData, resguardante: e.target.value })}
                                     placeholder="Nombre del resguardante"
-                                    className="block w-full bg-black border border-gray-800 rounded-lg py-2.5 px-4 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 hover:border-blue-500 transition-colors"
+                                    className={`block w-full border rounded-lg py-2.5 px-4 focus:outline-none focus:ring-2 transition-colors ${isDarkMode
+                                        ? 'bg-black border-gray-800 text-white placeholder-gray-500 focus:ring-blue-500 hover:border-blue-500'
+                                        : 'bg-white border-gray-300 text-gray-900 placeholder-gray-400 focus:ring-blue-500 hover:border-blue-400'
+                                        }`}
                                     disabled={inputsDisabled}
                                 />
                             </div>
                         </div>
 
                         {/* Selected Items */}
-                        <div className="bg-gray-900/30 rounded-xl border border-gray-800 p-4 flex-grow overflow-y-hidden shadow-inner relative max-h-[70vh] hover:shadow-lg transition-shadow">
-                            <div className="flex items-center gap-2 mb-2 sticky top-0 z-30 bg-black/80 p-2 -m-2 backdrop-blur-md">
-                                <LayoutGrid className="h-5 w-5 text-white animate-pulse" />
-                                <span className="text-white">
+                        <div className={`rounded-xl border p-4 flex-grow overflow-y-hidden shadow-inner relative max-h-[70vh] hover:shadow-lg transition-shadow ${isDarkMode
+                            ? 'bg-gray-900/30 border-gray-800'
+                            : 'bg-white border-gray-200'
+                            }`}>
+                            <div className={`flex items-center gap-2 mb-2 sticky top-0 z-30 p-2 -m-2 backdrop-blur-md ${isDarkMode ? 'bg-black/80' : 'bg-white/80'
+                                }`}>
+                                <LayoutGrid className={`h-5 w-5 animate-pulse ${isDarkMode ? 'text-white' : 'text-gray-900'
+                                    }`} />
+                                <span className={isDarkMode ? 'text-white' : 'text-gray-900'}>
                                     Artículos Seleccionados ({selectedMuebles.length})
                                 </span>
                                 {/* Eliminar todos button */}
@@ -1697,7 +1902,10 @@ export default function CrearResguardos() {
                                             }));
                                             setDirectorInputDisabled(false);
                                         }}
-                                        className="ml-2 px-3 py-1 rounded bg-red-700/80 text-white text-xs font-semibold hover:bg-red-600 transition-colors border border-red-900 flex items-center gap-1"
+                                        className={`ml-2 px-3 py-1 rounded text-xs font-semibold transition-colors border flex items-center gap-1 ${isDarkMode
+                                            ? 'bg-red-700/80 text-white hover:bg-red-600 border-red-900'
+                                            : 'bg-red-600 text-white hover:bg-red-700 border-red-700'
+                                            }`}
                                         title="Eliminar todos los artículos seleccionados"
                                     >
                                         <Trash2 className="h-3 w-3" /> Eliminar todos
@@ -1705,18 +1913,24 @@ export default function CrearResguardos() {
                                 )}
                             </div>
                             {selectedMuebles.length === 0 ? (
-                                <div className="flex flex-col items-center justify-center h-full min-h-[200px] text-gray-500">
-                                    <TagIcon className="h-12 w-12 mb-2 text-gray-600" />
+                                <div className={`flex flex-col items-center justify-center h-full min-h-[200px] ${isDarkMode ? 'text-gray-500' : 'text-gray-600'
+                                    }`}>
+                                    <TagIcon className={`h-12 w-12 mb-2 ${isDarkMode ? 'text-gray-600' : 'text-gray-400'
+                                        }`} />
                                     <p className="text-sm">No hay artículos seleccionados</p>
                                     <p className="text-xs mt-1">Haga clic en un artículo para agregarlo</p>
                                 </div>
                             ) : (
                                 <div className="space-y-3 mt-2 max-h-[60vh] overflow-y-auto pr-1">
                                     {selectedMuebles.map((mueble) => (
-                                        <div key={`selected-${mueble.id}`} className="bg-black rounded-lg p-3 flex justify-between items-start border border-gray-800 shadow-sm hover:shadow-md transition-all hover:border-blue-500">
+                                        <div key={`selected-${mueble.id}`} className={`rounded-lg p-3 flex justify-between items-start border shadow-sm hover:shadow-md transition-all ${isDarkMode
+                                            ? 'bg-black border-gray-800 hover:border-blue-500'
+                                            : 'bg-gray-50 border-gray-200 hover:border-blue-400'
+                                            }`}>
                                             <div className="flex-1 min-w-0">
                                                 <div className="flex items-center gap-2">
-                                                    <div className="text-sm font-medium text-white truncate">
+                                                    <div className={`text-sm font-medium truncate ${isDarkMode ? 'text-white' : 'text-gray-900'
+                                                        }`}>
                                                         {mueble.id_inv}
                                                     </div>
                                                     <div className={`inline-flex items-center px-1.5 py-0.5 rounded-full text-xs font-medium 
@@ -1728,10 +1942,12 @@ export default function CrearResguardos() {
                                                         {mueble.estado}
                                                     </div>
                                                 </div>
-                                                <p className="text-sm text-gray-300 mt-1 truncate">
+                                                <p className={`text-sm mt-1 truncate ${isDarkMode ? 'text-gray-300' : 'text-gray-700'
+                                                    }`}>
                                                     {mueble.descripcion}
                                                 </p>
-                                                <div className="text-xs text-gray-500 mt-1 flex items-center gap-1">
+                                                <div className={`text-xs mt-1 flex items-center gap-1 ${isDarkMode ? 'text-gray-500' : 'text-gray-600'
+                                                    }`}>
                                                     <Briefcase className="h-3 w-3" />
                                                     {mueble.rubro}
                                                 </div>
@@ -1755,7 +1971,10 @@ export default function CrearResguardos() {
                                                             setSelectedMuebles(newSelectedMuebles);
                                                         }}
                                                         placeholder="Resguardante individual (opcional)"
-                                                        className="block w-full bg-gray-900/50 border border-gray-800 rounded-lg py-1.5 px-3 text-white placeholder-gray-500 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 hover:border-blue-500 transition-colors"
+                                                        className={`block w-full border rounded-lg py-1.5 px-3 text-sm focus:outline-none focus:ring-1 focus:border-blue-500 transition-colors ${isDarkMode
+                                                            ? 'bg-gray-900/50 border-gray-800 text-white placeholder-gray-500 focus:ring-blue-500 hover:border-blue-500'
+                                                            : 'bg-white border-gray-300 text-gray-900 placeholder-gray-400 focus:ring-blue-500 hover:border-blue-400'
+                                                            }`}
                                                     />
                                                 </div>
                                             </div>
@@ -1765,7 +1984,10 @@ export default function CrearResguardos() {
                                                     e.stopPropagation();
                                                     removeSelectedMueble(mueble);
                                                 }}
-                                                className="ml-2 p-1 text-gray-400 hover:text-red-400 rounded-full hover:bg-gray-900/50 transition-colors"
+                                                className={`ml-2 p-1 rounded-full transition-colors ${isDarkMode
+                                                    ? 'text-gray-400 hover:text-red-400 hover:bg-gray-900/50'
+                                                    : 'text-gray-500 hover:text-red-600 hover:bg-gray-100'
+                                                    }`}
                                             >
                                                 <Trash2 className="h-4 w-4" />
                                             </button>
@@ -1790,8 +2012,16 @@ export default function CrearResguardos() {
                                     setDirectorInputDisabled(false);
                                 }}
                                 disabled={selectedMuebles.length === 0 || loading}
-                                className={`px-4 py-2 rounded-lg text-sm flex items-center justify-center gap-2 transition-all
-                                    ${selectedMuebles.length === 0 ? 'bg-black text-gray-600 border border-gray-800 cursor-not-allowed' : 'bg-black text-gray-300 border border-gray-700 hover:bg-gray-900 hover:border-blue-500 hover:text-blue-300'}`}
+                                className={`px-4 py-2 rounded-lg text-sm flex items-center justify-center gap-2 transition-all border ${selectedMuebles.length === 0 || loading
+                                    ? (isDarkMode
+                                        ? 'bg-black text-gray-600 border-gray-800 cursor-not-allowed'
+                                        : 'bg-gray-100 text-gray-400 border-gray-300 cursor-not-allowed'
+                                    )
+                                    : (isDarkMode
+                                        ? 'bg-black text-gray-300 border-gray-700 hover:bg-gray-900 hover:border-blue-500 hover:text-blue-300'
+                                        : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50 hover:border-blue-400 hover:text-blue-600'
+                                    )
+                                    }`}
                             >
                                 <X className="h-4 w-4" />
                                 Limpiar Selección
@@ -1799,10 +2029,13 @@ export default function CrearResguardos() {
                             <button
                                 onClick={handleSubmit}
                                 disabled={!isFormValid || loading}
-                                className={`px-4 py-2 rounded-lg text-sm flex items-center justify-center gap-2 flex-grow sm:flex-grow-0 transition-all transform hover:scale-[1.02]
-                                    ${!isFormValid || loading ?
-                                        'bg-blue-900/10 text-blue-300/50 border border-blue-900/20 cursor-not-allowed' :
-                                        'bg-blue-600 text-white hover:bg-blue-500 shadow-lg hover:shadow-blue-500/30'}`}
+                                className={`px-4 py-2 rounded-lg text-sm flex items-center justify-center gap-2 flex-grow sm:flex-grow-0 transition-all transform hover:scale-[1.02] ${!isFormValid || loading
+                                    ? (isDarkMode
+                                        ? 'bg-blue-900/10 text-blue-300/50 border border-blue-900/20 cursor-not-allowed'
+                                        : 'bg-blue-100 text-blue-400 border border-blue-200 cursor-not-allowed'
+                                    )
+                                    : 'bg-blue-600 text-white hover:bg-blue-500 shadow-lg hover:shadow-blue-500/30'
+                                    }`}
                             >
                                 {loading ? (
                                     <RefreshCw className="h-4 w-4 animate-spin" />
@@ -1818,16 +2051,23 @@ export default function CrearResguardos() {
 
             {/* Error Alert */}
             {error && (
-                <div className="fixed bottom-4 left-4 right-4 md:left-auto md:right-4 md:w-96 bg-red-900/80 text-red-100 px-4 py-3 rounded-lg shadow-lg border border-red-800 z-50 backdrop-blur-sm animate-fade-in">
+                <div className={`fixed bottom-4 left-4 right-4 md:left-auto md:right-4 md:w-96 px-4 py-3 rounded-lg shadow-lg border z-50 backdrop-blur-sm animate-fade-in ${isDarkMode
+                    ? 'bg-red-900/80 text-red-100 border-red-800'
+                    : 'bg-red-50 text-red-900 border-red-200'
+                    }`}>
                     <div className="flex items-center">
-                        <AlertTriangle className="h-5 w-5 text-red-400 mr-3 flex-shrink-0 animate-pulse" />
+                        <AlertTriangle className={`h-5 w-5 mr-3 flex-shrink-0 animate-pulse ${isDarkMode ? 'text-red-400' : 'text-red-600'
+                            }`} />
                         <div className="flex-1 min-w-0">
                             <p className="text-sm font-medium">{error}</p>
                         </div>
                         <button
                             title='Cerrar alerta'
                             onClick={() => setError(null)}
-                            className="ml-4 flex-shrink-0 p-1 rounded-full text-red-200 hover:text-white hover:bg-red-800 transition-colors"
+                            className={`ml-4 flex-shrink-0 p-1 rounded-full transition-colors ${isDarkMode
+                                ? 'text-red-200 hover:text-white hover:bg-red-800'
+                                : 'text-red-600 hover:text-red-800 hover:bg-red-100'
+                                }`}
                         >
                             <X className="h-4 w-4" />
                         </button>
@@ -1837,12 +2077,19 @@ export default function CrearResguardos() {
 
             {/* Missing Director Data Error Alert */}
             {showMissingDirectorDataError && (
-                <div className="fixed top-20 left-1/2 transform -translate-x-1/2 z-50 bg-yellow-900/90 text-yellow-100 px-6 py-4 rounded-lg shadow-lg border border-yellow-700 flex items-center gap-4 animate-fade-in">
-                    <AlertTriangle className="h-5 w-5 text-yellow-400 animate-pulse" />
+                <div className={`fixed top-20 left-1/2 transform -translate-x-1/2 z-50 px-6 py-4 rounded-lg shadow-lg border flex items-center gap-4 animate-fade-in ${isDarkMode
+                    ? 'bg-yellow-900/90 text-yellow-100 border-yellow-700'
+                    : 'bg-yellow-50 text-yellow-800 border-yellow-200'
+                    }`}>
+                    <AlertTriangle className={`h-5 w-5 animate-pulse ${isDarkMode ? 'text-yellow-400' : 'text-yellow-600'
+                        }`} />
                     <span className="font-medium">Faltan datos del director. Debes completar el área y el puesto para continuar.</span>
                     <button
                         onClick={() => setShowDirectorModal(true)}
-                        className="ml-4 px-3 py-1 rounded bg-yellow-600 text-black font-semibold hover:bg-yellow-500 transition-colors"
+                        className={`ml-4 px-3 py-1 rounded font-semibold transition-colors ${isDarkMode
+                            ? 'bg-yellow-600 text-black hover:bg-yellow-500'
+                            : 'bg-yellow-600 text-white hover:bg-yellow-700'
+                            }`}
                     >
                         Completar datos
                     </button>
@@ -1851,35 +2098,50 @@ export default function CrearResguardos() {
 
             {/* Director Modal */}
             {showDirectorModal && (
-                <div className="fixed inset-0 bg-black/90 flex items-center justify-center z-50 px-4 animate-fadeIn">
-                    <div className="bg-black rounded-2xl shadow-2xl border border-yellow-600/30 w-full max-w-md overflow-hidden transition-all duration-300 transform hover:border-yellow-500/50">
-                        <div className="relative p-6 bg-black">
+                <div className={`fixed inset-0 flex items-center justify-center z-50 px-4 animate-fadeIn ${isDarkMode ? 'bg-black/90' : 'bg-gray-900/50'
+                    }`}>
+                    <div className={`rounded-2xl shadow-2xl border w-full max-w-md overflow-hidden transition-all duration-300 transform ${isDarkMode
+                        ? 'bg-black border-yellow-600/30 hover:border-yellow-500/50'
+                        : 'bg-white border-yellow-300'
+                        }`}>
+                        <div className={`relative p-6 ${isDarkMode ? 'bg-black' : 'bg-white'
+                            }`}>
                             <div className="absolute top-0 left-0 w-full h-1 bg-yellow-500/40 animate-pulse"></div>
 
                             <div className="flex flex-col items-center text-center mb-4">
                                 <div className="p-3 bg-yellow-500/10 rounded-full border border-yellow-500/30 mb-3 animate-pulse">
                                     <AlertTriangle className="h-8 w-8 text-yellow-500" />
                                 </div>
-                                <h3 className="text-2xl font-bold text-white">¡Ups! Falta información</h3>
-                                <p className="text-gray-400 mt-2">
+                                <h3 className={`text-2xl font-bold ${isDarkMode ? 'text-white' : 'text-gray-900'
+                                    }`}>¡Ups! Falta información</h3>
+                                <p className={`mt-2 ${isDarkMode ? 'text-gray-400' : 'text-gray-600'
+                                    }`}>
                                     Necesitamos algunos datos adicionales del director seleccionado para Continuar
                                 </p>
                             </div>
 
                             <div className="space-y-5 mt-6">
-                                <div className="rounded-lg border border-gray-800 bg-gray-900/50 p-4 hover:border-yellow-500 transition-colors">
-                                    <label className="block text-xs uppercase tracking-wider text-gray-500 mb-1">Director seleccionado</label>
+                                <div className={`rounded-lg border p-4 transition-colors ${isDarkMode
+                                    ? 'border-gray-800 bg-gray-900/50 hover:border-yellow-500'
+                                    : 'border-gray-200 bg-gray-50 hover:border-yellow-400'
+                                    }`}>
+                                    <label className={`block text-xs uppercase tracking-wider mb-1 ${isDarkMode ? 'text-gray-500' : 'text-gray-600'
+                                        }`}>Director seleccionado</label>
                                     <div className="flex items-center gap-3">
-                                        <div className="p-2 bg-gray-800 rounded-lg">
+                                        <div className={`p-2 rounded-lg ${isDarkMode ? 'bg-gray-800' : 'bg-gray-200'
+                                            }`}>
                                             <UserCheck className="h-4 w-4 text-yellow-400 animate-pulse" />
                                         </div>
-                                        <span className="text-white font-medium">{incompleteDirector?.nombre || 'Director'}</span>
+                                        <span className={`font-medium ${isDarkMode ? 'text-white' : 'text-gray-900'
+                                            }`}>{incompleteDirector?.nombre || 'Director'}</span>
                                     </div>
                                 </div>
 
                                 <div>
-                                    <label className="text-sm font-medium text-gray-300 mb-2 flex items-center gap-2">
-                                        <Briefcase className="h-4 w-4 text-gray-400" />
+                                    <label className={`text-sm font-medium mb-2 flex items-center gap-2 ${isDarkMode ? 'text-gray-300' : 'text-gray-700'
+                                        }`}>
+                                        <Briefcase className={`h-4 w-4 ${isDarkMode ? 'text-gray-400' : 'text-gray-500'
+                                            }`} />
                                         Área
                                     </label>
                                     <input
@@ -1887,13 +2149,18 @@ export default function CrearResguardos() {
                                         value={directorFormData.area}
                                         onChange={e => setDirectorFormData(prev => ({ ...prev, area: e.target.value }))}
                                         placeholder="Escribe el área asignada al director"
-                                        className="block w-full bg-gray-900 border border-gray-700 rounded-lg py-3 px-4 text-white placeholder-gray-500 focus:outline-none focus:border-yellow-500 focus:ring-1 focus:ring-yellow-500 transition-colors"
+                                        className={`block w-full border rounded-lg py-3 px-4 focus:outline-none focus:ring-1 transition-colors ${isDarkMode
+                                            ? 'bg-gray-900 border-gray-700 text-white placeholder-gray-500 focus:border-yellow-500 focus:ring-yellow-500'
+                                            : 'bg-white border-gray-300 text-gray-900 placeholder-gray-400 focus:border-yellow-500 focus:ring-yellow-500'
+                                            }`}
                                     />
                                 </div>
 
                                 <div>
-                                    <label className="text-sm font-medium text-gray-300 mb-2 flex items-center gap-2">
-                                        <Users className="h-4 w-4 text-gray-400" />
+                                    <label className={`text-sm font-medium mb-2 flex items-center gap-2 ${isDarkMode ? 'text-gray-300' : 'text-gray-700'
+                                        }`}>
+                                        <Users className={`h-4 w-4 ${isDarkMode ? 'text-gray-400' : 'text-gray-500'
+                                            }`} />
                                         Puesto
                                     </label>
                                     <input
@@ -1901,7 +2168,10 @@ export default function CrearResguardos() {
                                         value={directorFormData.puesto}
                                         onChange={(e) => setDirectorFormData({ ...directorFormData, puesto: e.target.value })}
                                         placeholder="Ej: Director General, Gerente, Supervisor..."
-                                        className="block w-full bg-gray-900 border border-gray-700 rounded-lg py-3 px-4 text-white placeholder-gray-500 focus:outline-none focus:border-yellow-500 focus:ring-1 focus:ring-yellow-500 transition-colors"
+                                        className={`block w-full border rounded-lg py-3 px-4 focus:outline-none focus:ring-1 transition-colors ${isDarkMode
+                                            ? 'bg-gray-900 border-gray-700 text-white placeholder-gray-500 focus:border-yellow-500 focus:ring-yellow-500'
+                                            : 'bg-white border-gray-300 text-gray-900 placeholder-gray-400 focus:border-yellow-500 focus:ring-yellow-500'
+                                            }`}
                                         disabled={isUsuario}
                                     />
                                     {isUsuario && (
@@ -1917,10 +2187,16 @@ export default function CrearResguardos() {
                             </div>
                         </div>
 
-                        <div className="p-5 bg-black border-t border-gray-800 flex justify-end gap-3">
+                        <div className={`p-5 border-t flex justify-end gap-3 ${isDarkMode
+                            ? 'bg-black border-gray-800'
+                            : 'bg-gray-50 border-gray-200'
+                            }`}>
                             <button
                                 onClick={handleCloseDirectorModal}
-                                className="px-5 py-2.5 bg-gray-900 text-white rounded-lg text-sm hover:bg-gray-800 border border-gray-800 transition-colors flex items-center gap-2 hover:border-yellow-500"
+                                className={`px-5 py-2.5 rounded-lg text-sm border transition-colors flex items-center gap-2 ${isDarkMode
+                                    ? 'bg-gray-900 text-white hover:bg-gray-800 border-gray-800 hover:border-yellow-500'
+                                    : 'bg-white text-gray-700 hover:bg-gray-50 border-gray-300 hover:border-yellow-400'
+                                    }`}
                             >
                                 <X className="h-4 w-4" />
                                 Cancelar
@@ -1928,10 +2204,13 @@ export default function CrearResguardos() {
                             <button
                                 onClick={saveDirectorInfo}
                                 disabled={savingDirector || !directorFormData.area || !directorFormData.puesto || isUsuario}
-                                className={`px-5 py-2.5 rounded-lg text-sm flex items-center gap-2 transition-all duration-300 transform hover:scale-[1.02]
-                                    ${savingDirector || !directorFormData.area || !directorFormData.puesto || isUsuario ?
-                                        'bg-gray-900 text-gray-500 cursor-not-allowed border border-gray-800' :
-                                        'bg-yellow-600 text-black font-medium hover:shadow-lg hover:shadow-yellow-500/20'}`}
+                                className={`px-5 py-2.5 rounded-lg text-sm flex items-center gap-2 transition-all duration-300 transform hover:scale-[1.02] ${savingDirector || !directorFormData.area || !directorFormData.puesto || isUsuario
+                                    ? (isDarkMode
+                                        ? 'bg-gray-900 text-gray-500 cursor-not-allowed border border-gray-800'
+                                        : 'bg-gray-200 text-gray-400 cursor-not-allowed border border-gray-300'
+                                    )
+                                    : 'bg-yellow-600 text-black font-medium hover:shadow-lg hover:shadow-yellow-500/20'
+                                    }`}
                             >
                                 {savingDirector ? (
                                     <RefreshCw className="h-4 w-4 animate-spin" />
@@ -1947,28 +2226,43 @@ export default function CrearResguardos() {
 
             {/* Modal de advertencia por usufinal diferente */}
             {showUsufinalModal && (
-                <div className="fixed inset-0 bg-black/90 flex items-center justify-center z-50 px-4 animate-fadeIn">
-                    <div className="bg-black rounded-2xl shadow-2xl border border-red-600/30 w-full max-w-md overflow-hidden transition-all duration-300 transform hover:border-red-500/50">
-                        <div className="relative p-6 bg-black">
+                <div className={`fixed inset-0 flex items-center justify-center z-50 px-4 animate-fadeIn ${isDarkMode ? 'bg-black/90' : 'bg-gray-900/50'
+                    }`}>
+                    <div className={`rounded-2xl shadow-2xl border w-full max-w-md overflow-hidden transition-all duration-300 transform ${isDarkMode
+                        ? 'bg-black border-red-600/30 hover:border-red-500/50'
+                        : 'bg-white border-red-300'
+                        }`}>
+                        <div className={`relative p-6 ${isDarkMode ? 'bg-black' : 'bg-white'
+                            }`}>
                             <div className="absolute top-0 left-0 w-full h-1 bg-red-500/40 animate-pulse"></div>
                             <div className="flex flex-col items-center text-center mb-4">
                                 <div className="p-3 bg-red-500/10 rounded-full border border-red-500/30 mb-3 animate-pulse">
                                     <AlertTriangle className="h-8 w-8 text-red-500" />
                                 </div>
-                                <h3 className="text-2xl font-bold text-white">No se puede agregar</h3>
-                                <p className="text-gray-400 mt-2">
+                                <h3 className={`text-2xl font-bold ${isDarkMode ? 'text-white' : 'text-gray-900'
+                                    }`}>No se puede agregar</h3>
+                                <p className={`mt-2 ${isDarkMode ? 'text-gray-400' : 'text-gray-600'
+                                    }`}>
                                     Solo puedes seleccionar bienes que pertenezcan al mismo responsable.
                                 </p>
-                                <p className="text-red-300 mt-2 text-sm">
+                                <p className={`mt-2 text-sm ${isDarkMode ? 'text-red-300' : 'text-red-600'
+                                    }`}>
                                     El bien que intentas agregar actualmente pertenece a: <span className="font-semibold">{conflictUsufinal}</span>
                                 </p>
-                                <p className='text-gray-700 text-xs italic pt-3'>Te sugerimos editar las características del bien.</p>
+                                <p className={`text-xs italic pt-3 ${isDarkMode ? 'text-gray-700' : 'text-gray-500'
+                                    }`}>Te sugerimos editar las características del bien.</p>
                             </div>
                         </div>
-                        <div className="p-5 bg-black border-t border-gray-800 flex justify-end gap-3">
+                        <div className={`p-5 border-t flex justify-end gap-3 ${isDarkMode
+                            ? 'bg-black border-gray-800'
+                            : 'bg-gray-50 border-gray-200'
+                            }`}>
                             <button
                                 onClick={() => setShowUsufinalModal(false)}
-                                className="px-5 py-2.5 bg-gray-900 text-white rounded-lg text-sm hover:bg-gray-800 border border-gray-800 transition-colors flex items-center gap-2 hover:border-red-500"
+                                className={`px-5 py-2.5 rounded-lg text-sm border transition-colors flex items-center gap-2 ${isDarkMode
+                                    ? 'bg-gray-900 text-white hover:bg-gray-800 border-gray-800 hover:border-red-500'
+                                    : 'bg-white text-gray-700 hover:bg-gray-50 border-gray-300 hover:border-red-400'
+                                    }`}
                             >
                                 <X className="h-4 w-4" />
                                 Cerrar
@@ -1980,36 +2274,55 @@ export default function CrearResguardos() {
 
             {/* Modal de conflicto de área */}
             {showAreaConflictModal && (
-                <div className="fixed inset-0 bg-black/90 flex items-center justify-center z-50 px-4 animate-fadeIn">
-                    <div className="bg-black rounded-2xl shadow-2xl border border-blue-600/30 w-full max-w-md overflow-hidden transition-all duration-300 transform hover:border-blue-500/50">
-                        <div className="relative p-6 bg-black">
+                <div className={`fixed inset-0 flex items-center justify-center z-50 px-4 animate-fadeIn ${isDarkMode ? 'bg-black/90' : 'bg-gray-900/50'
+                    }`}>
+                    <div className={`rounded-2xl shadow-2xl border w-full max-w-md overflow-hidden transition-all duration-300 transform ${isDarkMode
+                        ? 'bg-black border-blue-600/30 hover:border-blue-500/50'
+                        : 'bg-white border-blue-300'
+                        }`}>
+                        <div className={`relative p-6 ${isDarkMode ? 'bg-black' : 'bg-white'
+                            }`}>
                             <div className="absolute top-0 left-0 w-full h-1 bg-blue-500/40 animate-pulse"></div>
 
                             <div className="flex flex-col items-center text-center mb-4">
                                 <div className="p-3 bg-blue-500/10 rounded-full border border-blue-500/30 mb-3 animate-pulse">
                                     <AlertTriangle className="h-8 w-8 text-blue-500" />
                                 </div>
-                                <h3 className="text-2xl font-bold text-white">Conflicto de Área</h3>
-                                <p className="text-gray-400 mt-2">
+                                <h3 className={`text-2xl font-bold ${isDarkMode ? 'text-white' : 'text-gray-900'
+                                    }`}>Conflicto de Área</h3>
+                                <p className={`mt-2 ${isDarkMode ? 'text-gray-400' : 'text-gray-600'
+                                    }`}>
                                     No es posible agregar artículos de diferentes áreas en un mismo resguardo
                                 </p>
                             </div>
 
                             <div className="space-y-5 mt-6">
-                                <div className="rounded-lg border border-gray-800 bg-gray-900/50 p-4 hover:border-blue-500 transition-colors">
-                                    <label className="block text-xs uppercase tracking-wider text-gray-500 mb-1">Área en Conflicto</label>
+                                <div className={`rounded-lg border p-4 transition-colors ${isDarkMode
+                                    ? 'border-gray-800 bg-gray-900/50 hover:border-blue-500'
+                                    : 'border-gray-200 bg-gray-50 hover:border-blue-400'
+                                    }`}>
+                                    <label className={`block text-xs uppercase tracking-wider mb-1 ${isDarkMode ? 'text-gray-500' : 'text-gray-600'
+                                        }`}>Área en Conflicto</label>
                                     <div className="flex items-center gap-3">
-                                        <div className="p-2 bg-gray-800 rounded-lg">
-                                            <Building2 className="h-4 w-4 text-white animate-pulse" />
+                                        <div className={`p-2 rounded-lg ${isDarkMode ? 'bg-gray-800' : 'bg-gray-200'
+                                            }`}>
+                                            <Building2 className={`h-4 w-4 animate-pulse ${isDarkMode ? 'text-white' : 'text-gray-900'
+                                                }`} />
                                         </div>
-                                        <span className="text-white font-medium">{conflictArea || 'Sin especificar'}</span>
+                                        <span className={`font-medium ${isDarkMode ? 'text-white' : 'text-gray-900'
+                                            }`}>{conflictArea || 'Sin especificar'}</span>
                                     </div>
                                 </div>
 
-                                <div className="bg-blue-950/30 border border-blue-900/50 rounded-lg p-4">
+                                <div className={`border rounded-lg p-4 ${isDarkMode
+                                    ? 'bg-blue-950/30 border-blue-900/50'
+                                    : 'bg-blue-50 border-blue-200'
+                                    }`}>
                                     <div className="flex items-start gap-3">
-                                        <Info className="h-5 w-5 text-white mt-0.5" />
-                                        <p className="text-sm text-blue-200">
+                                        <Info className={`h-5 w-5 mt-0.5 ${isDarkMode ? 'text-white' : 'text-blue-600'
+                                            }`} />
+                                        <p className={`text-sm ${isDarkMode ? 'text-blue-200' : 'text-blue-700'
+                                            }`}>
                                             Los artículos en un resguardo deben pertenecer a la misma área para mantener la organización y trazabilidad.
                                         </p>
                                     </div>
@@ -2017,7 +2330,10 @@ export default function CrearResguardos() {
                             </div>
                         </div>
 
-                        <div className="p-5 bg-black border-t border-gray-800 flex justify-end gap-3">
+                        <div className={`p-5 border-t flex justify-end gap-3 ${isDarkMode
+                            ? 'bg-black border-gray-800'
+                            : 'bg-gray-50 border-gray-200'
+                            }`}>
                             <button
                                 onClick={() => setShowAreaConflictModal(false)}
                                 className="px-5 py-2.5 rounded-lg text-sm flex items-center gap-2 bg-blue-600 text-white hover:bg-blue-500 font-medium transition-all duration-300 transform hover:scale-[1.02] shadow-lg hover:shadow-blue-500/30"
@@ -2033,7 +2349,8 @@ export default function CrearResguardos() {
             {/* Modal para descargar PDF tras guardar */}
             {showPDFButton && pdfData && (
                 <div
-                    className="fixed inset-0 bg-black/90 flex items-center justify-center z-50 px-4 animate-fadeIn"
+                    className={`fixed inset-0 flex items-center justify-center z-50 px-4 animate-fadeIn ${isDarkMode ? 'bg-black/90' : 'bg-gray-900/50'
+                        }`}
                     tabIndex={-1}
                     onKeyDown={e => {
                         if (e.key === 'Escape') {
@@ -2044,10 +2361,14 @@ export default function CrearResguardos() {
                     onClick={e => e.stopPropagation()}
                 >
                     <div
-                        className="bg-black rounded-2xl shadow-2xl border border-green-600/30 w-full max-w-md overflow-hidden transition-all duration-300 transform hover:border-green-500/50"
+                        className={`rounded-2xl shadow-2xl border w-full max-w-md overflow-hidden transition-all duration-300 transform ${isDarkMode
+                            ? 'bg-black border-green-600/30 hover:border-green-500/50'
+                            : 'bg-white border-green-300'
+                            }`}
                         onClick={e => e.stopPropagation()}
                     >
-                        <div className="relative p-6 bg-black">
+                        <div className={`relative p-6 ${isDarkMode ? 'bg-black' : 'bg-white'
+                            }`}>
                             <div className="absolute top-0 left-0 w-full h-1 bg-green-500/40 animate-pulse"></div>
 
                             <button
@@ -2059,7 +2380,10 @@ export default function CrearResguardos() {
                                         setShowPDFButton(false);
                                     }
                                 }}
-                                className="absolute top-3 right-3 p-2 rounded-full bg-black/60 hover:bg-gray-900 text-green-400 hover:text-green-500 border border-green-500/30 transition-colors"
+                                className={`absolute top-3 right-3 p-2 rounded-full border transition-colors ${isDarkMode
+                                    ? 'bg-black/60 hover:bg-gray-900 text-green-400 hover:text-green-500 border-green-500/30'
+                                    : 'bg-gray-100 hover:bg-gray-200 text-green-600 hover:text-green-700 border-green-300'
+                                    }`}
                                 title="Cerrar"
                             >
                                 <X className="h-4 w-4" />
@@ -2069,20 +2393,28 @@ export default function CrearResguardos() {
                                 <div className="p-3 bg-green-500/10 rounded-full border border-green-500/30 mb-3 animate-pulse">
                                     <FileDigit className="h-8 w-8 text-green-500" />
                                 </div>
-                                <h3 className="text-2xl font-bold text-white">Resguardo generado</h3>
-                                <p className="text-gray-400 mt-2">
+                                <h3 className={`text-2xl font-bold ${isDarkMode ? 'text-white' : 'text-gray-900'
+                                    }`}>Resguardo generado</h3>
+                                <p className={`mt-2 ${isDarkMode ? 'text-gray-400' : 'text-gray-600'
+                                    }`}>
                                     Descarga el PDF del resguardo para imprimir o compartir
                                 </p>
                             </div>
 
                             <div className="space-y-5 mt-6">
-                                <div className="rounded-lg border border-gray-800 bg-gray-900/50 p-4 hover:border-green-500 transition-colors">
-                                    <label className="block text-xs uppercase tracking-wider text-gray-500 mb-1">Documento generado</label>
+                                <div className={`rounded-lg border p-4 transition-colors ${isDarkMode
+                                    ? 'border-gray-800 bg-gray-900/50 hover:border-green-500'
+                                    : 'border-gray-200 bg-gray-50 hover:border-green-400'
+                                    }`}>
+                                    <label className={`block text-xs uppercase tracking-wider mb-1 ${isDarkMode ? 'text-gray-500' : 'text-gray-600'
+                                        }`}>Documento generado</label>
                                     <div className="flex items-center gap-3">
-                                        <div className="p-2 bg-gray-800 rounded-lg">
+                                        <div className={`p-2 rounded-lg ${isDarkMode ? 'bg-gray-800' : 'bg-gray-200'
+                                            }`}>
                                             <FileText className="h-4 w-4 text-green-400 animate-pulse" />
                                         </div>
-                                        <span className="text-white font-medium">Resguardo {pdfData.folio}</span>
+                                        <span className={`font-medium ${isDarkMode ? 'text-white' : 'text-gray-900'
+                                            }`}>Resguardo {pdfData.folio}</span>
                                     </div>
                                 </div>
                                 <button
@@ -2101,16 +2433,22 @@ export default function CrearResguardos() {
 
             {/* Modal de advertencia personalizado */}
             {showWarningModal && (
-                <div className="fixed inset-0 bg-black/95 flex items-center justify-center z-[60] px-4 animate-fadeIn">
-                    <div className="bg-gray-900 rounded-xl shadow-2xl border border-red-500/30 w-full max-w-sm p-6 hover:border-red-500/50 transition-colors">
+                <div className={`fixed inset-0 flex items-center justify-center z-[60] px-4 animate-fadeIn ${isDarkMode ? 'bg-black/95' : 'bg-gray-900/50'
+                    }`}>
+                    <div className={`rounded-xl shadow-2xl border w-full max-w-sm p-6 transition-colors ${isDarkMode
+                        ? 'bg-gray-900 border-red-500/30 hover:border-red-500/50'
+                        : 'bg-white border-red-300'
+                        }`}>
                         <div className="flex flex-col items-center text-center gap-4">
                             <div className="p-3 bg-red-500/10 rounded-full border border-red-500/30 animate-pulse">
                                 <AlertTriangle className="h-7 w-7 text-red-500" />
                             </div>
 
                             <div>
-                                <h3 className="text-xl font-bold text-white mb-2">¿Cerrar sin descargar?</h3>
-                                <p className="text-gray-400 text-sm">
+                                <h3 className={`text-xl font-bold mb-2 ${isDarkMode ? 'text-white' : 'text-gray-900'
+                                    }`}>¿Cerrar sin descargar?</h3>
+                                <p className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-600'
+                                    }`}>
                                     No has descargado el PDF. Si cierras esta ventana, no podrás volver a generar este documento por ahora.
                                 </p>
                             </div>
@@ -2118,7 +2456,10 @@ export default function CrearResguardos() {
                             <div className="flex gap-3 w-full mt-2">
                                 <button
                                     onClick={() => setShowWarningModal(false)}
-                                    className="flex-1 py-2 px-4 border border-gray-700 text-gray-300 hover:bg-gray-800 rounded-lg transition-colors hover:border-blue-500"
+                                    className={`flex-1 py-2 px-4 border rounded-lg transition-colors ${isDarkMode
+                                        ? 'border-gray-700 text-gray-300 hover:bg-gray-800 hover:border-blue-500'
+                                        : 'border-gray-300 text-gray-700 hover:bg-gray-50 hover:border-blue-400'
+                                        }`}
                                 >
                                     Cancelar
                                 </button>
@@ -2139,17 +2480,27 @@ export default function CrearResguardos() {
 
             {/* MODAL DE ERROR SELECT-ALL */}
             {showSelectAllErrorModal && (
-                <div className="fixed inset-0 bg-black/90 flex items-center justify-center z-[100] px-4 animate-fadeIn">
-                    <div className="bg-black rounded-2xl shadow-2xl border-2 border-blue-700/40 w-full max-w-md overflow-hidden transition-all duration-300 hover:border-blue-500/60">
-                        <div className="relative p-7 flex flex-col items-center text-center bg-black">
+                <div className={`fixed inset-0 flex items-center justify-center z-[100] px-4 animate-fadeIn ${isDarkMode ? 'bg-black/90' : 'bg-gray-900/50'
+                    }`}>
+                    <div className={`rounded-2xl shadow-2xl border-2 w-full max-w-md overflow-hidden transition-all duration-300 ${isDarkMode
+                        ? 'bg-black border-blue-700/40 hover:border-blue-500/60'
+                        : 'bg-white border-blue-300'
+                        }`}>
+                        <div className={`relative p-7 flex flex-col items-center text-center ${isDarkMode ? 'bg-black' : 'bg-white'
+                            }`}>
                             <div className="p-3 bg-blue-500/10 rounded-full border border-blue-500/30 mb-3 animate-pulse">
                                 <ListChecks className="h-8 w-8 text-blue-400 animate-pulse" />
                             </div>
-                            <h3 className="text-2xl font-bold text-blue-200 mb-2 tracking-tight">No se puede seleccionar todo</h3>
-                            <p className="text-blue-100 text-base mb-6 max-w-xs">{selectAllErrorMsg}</p>
+                            <h3 className={`text-2xl font-bold mb-2 tracking-tight ${isDarkMode ? 'text-blue-200' : 'text-blue-800'
+                                }`}>No se puede seleccionar todo</h3>
+                            <p className={`text-base mb-6 max-w-xs ${isDarkMode ? 'text-blue-100' : 'text-blue-700'
+                                }`}>{selectAllErrorMsg}</p>
                             <button
                                 onClick={() => setShowSelectAllErrorModal(false)}
-                                className="mt-2 px-6 py-2.5 rounded-lg bg-blue-600 hover:bg-blue-500 text-white font-semibold shadow-lg border border-blue-700 transition-all flex items-center gap-2"
+                                className={`mt-2 px-6 py-2.5 rounded-lg font-semibold shadow-lg border transition-all flex items-center gap-2 ${isDarkMode
+                                    ? 'bg-blue-600 hover:bg-blue-500 text-white border-blue-700'
+                                    : 'bg-blue-600 hover:bg-blue-700 text-white border-blue-600'
+                                    }`}
                             >
                                 <X className="h-4 w-4" />
                                 Cerrar

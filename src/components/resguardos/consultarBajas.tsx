@@ -11,6 +11,7 @@ import { generateBajaPDF } from './BajaPDFReport';
 import { useUserRole } from "@/hooks/useUserRole";
 import RoleGuard from "@/components/roleGuard";
 import { useNotifications } from '@/hooks/useNotifications';
+import { useTheme } from '@/context/ThemeContext';
 
 interface ResguardoBaja {
     id: number;
@@ -100,6 +101,7 @@ const ConsultarBajasResguardos = () => {
         singleArticulo?: ResguardoBajaArticulo;
     } | null>(null);
     const { createNotification } = useNotifications();
+    const { isDarkMode } = useTheme();
 
     const fetchBajas = useCallback(async () => {
         setLoading(true);
@@ -551,16 +553,34 @@ const ConsultarBajasResguardos = () => {
     const userRole = useUserRole();
 
     return (
-        <div className="bg-black text-white min-h-screen p-2 sm:p-4 md:p-6 lg:p-8">
-            <div className="w-full mx-auto bg-black rounded-lg sm:rounded-xl shadow-2xl overflow-hidden transition-all duration-500 transform border-2 border-white/10">
+        <div className={`min-h-screen p-2 sm:p-4 md:p-6 lg:p-8 transition-colors duration-500 ${isDarkMode
+            ? 'bg-black text-white'
+            : 'bg-gradient-to-br from-gray-50 via-white to-gray-100 text-gray-900'
+            }`}>
+            <div className={`w-full mx-auto rounded-lg sm:rounded-xl shadow-2xl overflow-hidden transition-all duration-500 transform border ${isDarkMode
+                ? 'bg-black border-gray-800'
+                : 'bg-white border-gray-200'
+                }`}>
                 {/* Header */}
-                <div className="bg-black p-4 sm:p-6 flex flex-col sm:flex-row justify-between items-start sm:items-center border-b-2 border-white/10 gap-2 sm:gap-0">
-                    <h1 className="text-xl sm:text-2xl md:text-3xl font-bold flex items-center text-red-500">
-                        <span className="mr-2 sm:mr-3 bg-red-800 text-white p-1 sm:p-2 rounded-lg border border-red-700/50 text-sm sm:text-base shadow-md">BAJ</span>
-                        Consulta de Resguardos Dados de Baja
+                <div className={`p-4 sm:p-6 flex flex-col sm:flex-row justify-between items-start sm:items-center border-b gap-2 sm:gap-0 ${isDarkMode
+                    ? 'bg-gray-900/30 border-gray-800'
+                    : 'bg-gray-50/50 border-gray-200'
+                    }`}>
+                    <h1 className="text-xl sm:text-2xl md:text-3xl font-bold flex items-center">
+                        <span className={`mr-2 sm:mr-3 p-1 sm:p-2 rounded-lg border text-sm sm:text-base shadow-lg ${isDarkMode
+                            ? 'bg-red-800 text-white border-red-700/50'
+                            : 'bg-red-600 text-white border-red-600'
+                            }`}>BAJ</span>
+                        <span className={isDarkMode ? 'text-red-500' : 'text-gray-900'}>
+                            Consulta de Resguardos Dados de Baja
+                        </span>
                     </h1>
-                    <div className="flex items-center gap-2 text-sm text-gray-400 bg-gray-900/50 px-3 py-1.5 rounded-full border border-gray-800/50">
-                        <ListChecks className="h-4 w-4 text-red-400" />
+                    <div className={`flex items-center gap-2 text-sm px-3 py-1.5 rounded-full border ${isDarkMode
+                        ? 'text-gray-400 bg-gray-900/50 border-gray-800/50'
+                        : 'text-gray-600 bg-gray-100 border-gray-300'
+                        }`}>
+                        <ListChecks className={`h-4 w-4 ${isDarkMode ? 'text-red-400' : 'text-red-600'
+                            }`} />
                         <span>{totalCount} resguardos dados de baja</span>
                     </div>
                 </div>
@@ -570,18 +590,25 @@ const ConsultarBajasResguardos = () => {
                     {/* Left panel - Bajas table */}
                     <div className="flex-1 min-w-0 flex flex-col p-4 lg:col-span-3">
                         {/* Search */}
-                        <div className="mb-6 bg-black p-4 rounded-xl border-2 border-white/10 shadow-inner shadow-red-900/20">
+                        <div className={`mb-6 p-4 rounded-xl border shadow-inner ${isDarkMode
+                            ? 'bg-gradient-to-br from-gray-900/50 to-red-900/10 border-gray-800'
+                            : 'bg-gradient-to-br from-gray-50 to-red-50/30 border-gray-200'
+                            }`}>
                             <div className="flex flex-col gap-4">
                                 <div className="relative flex-grow">
                                     <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                                        <Search className="h-5 w-5 text-red-400/80" />
+                                        <Search className={`h-5 w-5 ${isDarkMode ? 'text-red-400/80' : 'text-gray-500'
+                                            }`} />
                                     </div>
                                     <input
                                         type="text"
                                         value={searchTerm}
                                         onChange={(e) => setSearchTerm(e.target.value)}
                                         placeholder="Buscar por folio de resguardo o baja..."
-                                        className="pl-10 pr-4 py-3 w-full bg-black/50 border border-gray-800/50 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-red-500/70 focus:border-transparent shadow-inner transition-all duration-300 hover:border-gray-700"
+                                        className={`pl-10 pr-4 py-3 w-full border rounded-xl focus:outline-none focus:ring-2 focus:border-transparent transition-all duration-300 ${isDarkMode
+                                            ? 'bg-black border-gray-800 text-white placeholder-gray-500 focus:ring-red-500 hover:border-gray-700'
+                                            : 'bg-white border-gray-300 text-gray-900 placeholder-gray-400 focus:ring-red-500 hover:border-red-400'
+                                            }`}
                                     />
                                 </div>
 
@@ -590,7 +617,13 @@ const ConsultarBajasResguardos = () => {
                                         <button
                                             onClick={resetSearch}
                                             disabled={!searchTerm}
-                                            className={`px-4 py-2 bg-black/50 border border-gray-800/50 text-gray-400 rounded-lg hover:bg-gray-900/70 transition-all duration-300 flex items-center gap-2 text-sm ${!searchTerm ? 'opacity-50 cursor-not-allowed' : 'hover:border-gray-700 hover:text-gray-300'}`}
+                                            className={`px-4 py-2 border rounded-lg transition-colors flex items-center gap-2 text-sm ${!searchTerm
+                                                ? 'opacity-50 cursor-not-allowed'
+                                                : isDarkMode
+                                                    ? 'bg-black border-gray-800 text-gray-400 hover:bg-gray-900 hover:border-gray-700 hover:text-gray-300'
+                                                    : 'bg-white border-gray-300 text-gray-600 hover:bg-gray-50 hover:border-red-400 hover:text-red-600'
+                                                } ${!searchTerm && (isDarkMode ? 'bg-black border-gray-800 text-gray-400' : 'bg-white border-gray-300 text-gray-600')
+                                                }`}
                                         >
                                             <X className="h-4 w-4" />
                                             Limpiar búsqueda
@@ -602,7 +635,10 @@ const ConsultarBajasResguardos = () => {
                                             setPdfBajaData(null);
                                             fetchBajas();
                                         }}
-                                        className="px-4 py-2 bg-gray-900/40 border border-gray-800/50 text-gray-300 rounded-lg hover:bg-gray-800/60 transition-all duration-300 flex items-center gap-2 text-sm hover:border-gray-700 hover:text-white"
+                                        className={`px-4 py-2 border rounded-lg transition-colors flex items-center gap-2 text-sm ${isDarkMode
+                                            ? 'bg-gray-900/20 border-gray-700 text-gray-300 hover:bg-gray-800 hover:border-gray-600 hover:text-white'
+                                            : 'bg-gray-50 border-gray-300 text-gray-600 hover:bg-gray-100 hover:border-red-400 hover:text-red-600'
+                                            }`}
                                     >
                                         <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
                                         Actualizar
@@ -612,10 +648,14 @@ const ConsultarBajasResguardos = () => {
                         </div>
 
                         {/* Filtro avanzado */}
-                        <div className="mb-6 bg-black p-4 rounded-xl border-2 border-white/10 shadow-inner shadow-red-900/20">
+                        <div className={`mb-6 p-4 rounded-xl border shadow-inner ${isDarkMode
+                            ? 'bg-gray-900/30 border-gray-800'
+                            : 'bg-gray-50/50 border-gray-200'
+                            }`}>
                             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                                 <div>
-                                    <label className="block text-xs uppercase tracking-wider text-gray-500 mb-1">Filtrar por fecha</label>
+                                    <label className={`block text-xs uppercase tracking-wider mb-1 ${isDarkMode ? 'text-gray-500' : 'text-gray-600'
+                                        }`}>Filtrar por fecha</label>
                                     <input
                                         title='Fecha de resguardo'
                                         type="date"
@@ -625,11 +665,15 @@ const ConsultarBajasResguardos = () => {
                                             setCurrentPage(1);
                                             setFilterDate(e.target.value);
                                         }}
-                                        className="w-full bg-black/50 border border-gray-800/50 rounded-lg text-white py-2 px-3 focus:outline-none focus:ring-2 focus:ring-red-500/70 hover:border-gray-700 transition-all duration-300"
+                                        className={`w-full border rounded-lg py-2 px-3 focus:outline-none focus:ring-2 transition-all duration-300 ${isDarkMode
+                                            ? 'bg-black border-gray-800 text-white focus:ring-red-500 hover:border-gray-700'
+                                            : 'bg-white border-gray-300 text-gray-900 focus:ring-red-500 hover:border-red-400'
+                                            }`}
                                     />
                                 </div>
                                 <div>
-                                    <label className="block text-xs uppercase tracking-wider text-gray-500 mb-1">Filtrar por director</label>
+                                    <label className={`block text-xs uppercase tracking-wider mb-1 ${isDarkMode ? 'text-gray-500' : 'text-gray-600'
+                                        }`}>Filtrar por director</label>
                                     <input
                                         type="text"
                                         placeholder="Nombre del director..."
@@ -638,11 +682,15 @@ const ConsultarBajasResguardos = () => {
                                             setCurrentPage(1);
                                             setFilterDirector(e.target.value);
                                         }}
-                                        className="w-full bg-black/50 border border-gray-800/50 rounded-lg text-white py-2 px-3 focus:outline-none focus:ring-2 focus:ring-red-500/70 hover:border-gray-700 transition-all duration-300"
+                                        className={`w-full border rounded-lg py-2 px-3 focus:outline-none focus:ring-2 transition-all duration-300 ${isDarkMode
+                                            ? 'bg-black border-gray-800 text-white placeholder-gray-500 focus:ring-red-500 hover:border-gray-700'
+                                            : 'bg-white border-gray-300 text-gray-900 placeholder-gray-400 focus:ring-red-500 hover:border-red-400'
+                                            }`}
                                     />
                                 </div>
                                 <div>
-                                    <label className="block text-xs uppercase tracking-wider text-gray-500 mb-1">Filtrar por resguardante</label>
+                                    <label className={`block text-xs uppercase tracking-wider mb-1 ${isDarkMode ? 'text-gray-500' : 'text-gray-600'
+                                        }`}>Filtrar por resguardante</label>
                                     <input
                                         type="text"
                                         placeholder="Nombre del resguardante..."
@@ -651,7 +699,10 @@ const ConsultarBajasResguardos = () => {
                                             setCurrentPage(1);
                                             setFilterResguardante(e.target.value);
                                         }}
-                                        className="w-full bg-black/50 border border-gray-800/50 rounded-lg text-white py-2 px-3 focus:outline-none focus:ring-2 focus:ring-red-500/70 hover:border-gray-700 transition-all duration-300"
+                                        className={`w-full border rounded-lg py-2 px-3 focus:outline-none focus:ring-2 transition-all duration-300 ${isDarkMode
+                                            ? 'bg-black border-gray-800 text-white placeholder-gray-500 focus:ring-red-500 hover:border-gray-700'
+                                            : 'bg-white border-gray-300 text-gray-900 placeholder-gray-400 focus:ring-red-500 hover:border-red-400'
+                                            }`}
                                     />
                                 </div>
                             </div>
@@ -663,7 +714,10 @@ const ConsultarBajasResguardos = () => {
                                         setFilterResguardante('');
                                         setCurrentPage(1);
                                     }}
-                                    className="px-4 py-2 bg-black/50 border border-gray-800/50 text-gray-400 rounded-lg hover:bg-gray-900/70 transition-all duration-300 flex items-center gap-2 text-sm hover:border-gray-700 hover:text-gray-300"
+                                    className={`px-4 py-2 border rounded-lg transition-colors flex items-center gap-2 text-sm ${isDarkMode
+                                        ? 'bg-black border-gray-800 text-gray-400 hover:bg-gray-900 hover:border-gray-700 hover:text-gray-300'
+                                        : 'bg-white border-gray-300 text-gray-600 hover:bg-gray-50 hover:border-red-400 hover:text-red-600'
+                                        }`}
                                 >
                                     <X className="h-4 w-4" />
                                     Limpiar filtros
@@ -672,52 +726,80 @@ const ConsultarBajasResguardos = () => {
                         </div>
 
                         {/* Table */}
-                        <div className="bg-black rounded-xl border-2 border-white/10 overflow-x-auto overflow-y-auto mb-6 flex flex-col flex-grow shadow-lg h-[40vh] max-h-[78vh]">
+                        <div className={`rounded-xl border overflow-x-auto overflow-y-auto mb-6 flex flex-col flex-grow shadow-lg h-[40vh] max-h-[78vh] ${isDarkMode
+                            ? 'bg-gray-900/30 border-gray-800'
+                            : 'bg-white border-gray-200'
+                            }`}>
                             <div className="flex-grow min-w-[800px]">
-                                <table className="min-w-full divide-y-2 divide-white/10">
-                                    <thead className="bg-black sticky top-0 z-10 backdrop-blur-sm">
+                                <table className={`min-w-full divide-y ${isDarkMode ? 'divide-gray-800' : 'divide-gray-200'
+                                    }`}>
+                                    <thead className={`sticky top-0 z-10 ${isDarkMode ? 'bg-black' : 'bg-gray-50'
+                                        }`}>
                                         <tr>
                                             <th
                                                 onClick={() => handleSort('folio_resguardo')}
-                                                className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider cursor-pointer hover:bg-gray-900/70 transition-colors group"
+                                                className={`px-4 py-3 text-left text-xs font-medium uppercase tracking-wider cursor-pointer transition-colors group ${isDarkMode
+                                                    ? 'text-gray-400 hover:bg-gray-900'
+                                                    : 'text-gray-600 hover:bg-gray-100'
+                                                    }`}
                                             >
                                                 <div className="flex items-center gap-1">
                                                     Folio Resguardo
-                                                    <ArrowUpDown className={`h-3.5 w-3.5 transition-all duration-300 ${sortField === 'folio_resguardo' ? 'text-red-400 scale-110' : 'text-gray-500 group-hover:text-gray-300'}`} />
+                                                    <ArrowUpDown className={`h-3.5 w-3.5 ${sortField === 'folio_resguardo'
+                                                        ? (isDarkMode ? 'text-red-400 animate-bounce' : 'text-red-600 animate-bounce')
+                                                        : (isDarkMode ? 'text-gray-500 group-hover:text-gray-300' : 'text-gray-400 group-hover:text-gray-900')
+                                                        }`} />
                                                 </div>
                                             </th>
-                                            <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
+                                            <th className={`px-4 py-3 text-left text-xs font-medium uppercase tracking-wider ${isDarkMode ? 'text-gray-400' : 'text-gray-600'
+                                                }`}>
                                                 Folio Baja
                                             </th>
                                             <th
                                                 onClick={() => handleSort('f_resguardo')}
-                                                className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider cursor-pointer hover:bg-gray-900/70 transition-colors group"
+                                                className={`px-4 py-3 text-left text-xs font-medium uppercase tracking-wider cursor-pointer transition-colors group ${isDarkMode
+                                                    ? 'text-gray-400 hover:bg-gray-900'
+                                                    : 'text-gray-600 hover:bg-gray-100'
+                                                    }`}
                                             >
                                                 <div className="flex items-center gap-1">
                                                     Fecha
-                                                    <ArrowUpDown className={`h-3.5 w-3.5 transition-all duration-300 ${sortField === 'f_resguardo' ? 'text-red-400 scale-110' : 'text-gray-500 group-hover:text-gray-300'}`} />
+                                                    <ArrowUpDown className={`h-3.5 w-3.5 ${sortField === 'f_resguardo'
+                                                        ? (isDarkMode ? 'text-red-400 animate-bounce' : 'text-red-600 animate-bounce')
+                                                        : (isDarkMode ? 'text-gray-500 group-hover:text-gray-300' : 'text-gray-400 group-hover:text-gray-900')
+                                                        }`} />
                                                 </div>
                                             </th>
                                             <th
                                                 onClick={() => handleSort('dir_area')}
-                                                className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider cursor-pointer hover:bg-gray-900/70 transition-colors group"
+                                                className={`px-4 py-3 text-left text-xs font-medium uppercase tracking-wider cursor-pointer transition-colors group ${isDarkMode
+                                                    ? 'text-gray-400 hover:bg-gray-900'
+                                                    : 'text-gray-600 hover:bg-gray-100'
+                                                    }`}
                                             >
                                                 <div className="flex items-center gap-1">
                                                     Director
-                                                    <ArrowUpDown className={`h-3.5 w-3.5 transition-all duration-300 ${sortField === 'dir_area' ? 'text-red-400 scale-110' : 'text-gray-500 group-hover:text-gray-300'}`} />
+                                                    <ArrowUpDown className={`h-3.5 w-3.5 ${sortField === 'dir_area'
+                                                        ? (isDarkMode ? 'text-red-400 animate-bounce' : 'text-red-600 animate-bounce')
+                                                        : (isDarkMode ? 'text-gray-500 group-hover:text-gray-300' : 'text-gray-400 group-hover:text-gray-900')
+                                                        }`} />
                                                 </div>
                                             </th>
-                                            <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
+                                            <th className={`px-4 py-3 text-left text-xs font-medium uppercase tracking-wider ${isDarkMode ? 'text-gray-400' : 'text-gray-600'
+                                                }`}>
                                                 Artículos
                                             </th>
                                         </tr>
                                     </thead>
-                                    <tbody className="bg-transparent divide-y divide-gray-800/30">
+                                    <tbody className={`bg-transparent divide-y ${isDarkMode ? 'divide-gray-800/50' : 'divide-gray-200/50'
+                                        }`}>
                                         {loading ? (
                                             <tr className="h-96">
-                                                <td colSpan={5} className="px-6 py-24 text-center text-gray-400">
+                                                <td colSpan={5} className={`px-6 py-24 text-center ${isDarkMode ? 'text-gray-400' : 'text-gray-600'
+                                                    }`}>
                                                     <div className="flex flex-col items-center justify-center space-y-4">
-                                                        <RefreshCw className="h-12 w-12 animate-spin text-red-500" />
+                                                        <RefreshCw className={`h-12 w-12 animate-spin ${isDarkMode ? 'text-red-500' : 'text-red-600'
+                                                            }`} />
                                                         <p className="text-lg font-medium">Cargando resguardos dados de baja...</p>
                                                     </div>
                                                 </td>
@@ -728,10 +810,14 @@ const ConsultarBajasResguardos = () => {
                                                     <div className="flex flex-col items-center justify-center space-y-4 text-red-400">
                                                         <AlertCircle className="h-12 w-12" />
                                                         <p className="text-lg font-medium">Error al cargar resguardos dados de baja</p>
-                                                        <p className="text-sm text-gray-400">{error}</p>
+                                                        <p className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-600'
+                                                            }`}>{error}</p>
                                                         <button
                                                             onClick={fetchBajas}
-                                                            className="px-4 py-2 bg-black/50 text-red-300 rounded-lg text-sm hover:bg-gray-900/70 transition-colors border border-gray-800/50 hover:border-gray-700"
+                                                            className={`px-4 py-2 rounded-lg text-sm transition-colors border ${isDarkMode
+                                                                ? 'bg-black text-red-300 hover:bg-gray-900 border-gray-800 hover:border-gray-700'
+                                                                : 'bg-white text-red-600 hover:bg-gray-50 border-gray-300 hover:border-red-400'
+                                                                }`}
                                                         >
                                                             Intentar nuevamente
                                                         </button>
@@ -740,14 +826,19 @@ const ConsultarBajasResguardos = () => {
                                             </tr>
                                         ) : bajas.length === 0 ? (
                                             <tr className="h-96">
-                                                <td colSpan={5} className="px-6 py-24 text-center text-gray-400">
+                                                <td colSpan={5} className={`px-6 py-24 text-center ${isDarkMode ? 'text-gray-400' : 'text-gray-600'
+                                                    }`}>
                                                     <div className="flex flex-col items-center justify-center space-y-4">
-                                                        <Search className="h-12 w-12 text-gray-500" />
+                                                        <Search className={`h-12 w-12 ${isDarkMode ? 'text-gray-500' : 'text-gray-400'
+                                                            }`} />
                                                         <p className="text-lg font-medium">No se encontraron resguardos dados de baja</p>
                                                         {searchTerm && (
                                                             <button
                                                                 onClick={resetSearch}
-                                                                className="px-4 py-2 bg-black/50 text-red-400 rounded-lg text-sm hover:bg-gray-900/70 transition-colors flex items-center gap-2 border border-gray-800/50 hover:border-gray-700"
+                                                                className={`px-4 py-2 rounded-lg text-sm transition-colors flex items-center gap-2 border ${isDarkMode
+                                                                    ? 'bg-black text-red-400 hover:bg-gray-900 border-gray-800 hover:border-gray-700'
+                                                                    : 'bg-white text-red-600 hover:bg-gray-50 border-gray-300 hover:border-red-400'
+                                                                    }`}
                                                             >
                                                                 <X className="h-4 w-4" />
                                                                 Limpiar búsqueda
@@ -762,32 +853,55 @@ const ConsultarBajasResguardos = () => {
                                                 return (
                                                     <tr
                                                         key={baja.id}
-                                                        className={`hover:bg-gray-900/50 cursor-pointer transition-all duration-300 ${selectedBaja?.folio_resguardo === baja.folio_resguardo ? 'bg-red-900/10 border-l-4 border-red-500' : ''}`}
+                                                        className={`cursor-pointer transition-colors group ${isDarkMode
+                                                            ? 'hover:bg-gray-900/50'
+                                                            : 'hover:bg-gray-50'
+                                                            } ${selectedBaja?.folio_resguardo === baja.folio_resguardo
+                                                                ? (isDarkMode
+                                                                    ? 'bg-red-900/10 border-l-4 border-red-500'
+                                                                    : 'bg-red-50 border-l-4 border-red-500'
+                                                                )
+                                                                : ''
+                                                            }`}
                                                         onClick={() => fetchBajaDetails(baja.folio_resguardo)}
                                                     >
                                                         <td className="px-4 py-4">
-                                                            <div className="text-sm font-medium text-red-400 flex items-center gap-2 group">
-                                                                <FileDigit className="h-4 w-4 text-red-400 group-hover:scale-110 transition-transform" />
+                                                            <div className={`text-sm font-medium flex items-center gap-2 transition-colors ${isDarkMode
+                                                                ? 'text-red-400 group-hover:text-red-300'
+                                                                : 'text-red-600 group-hover:text-red-700'
+                                                                }`}>
+                                                                <FileDigit className="h-4 w-4" />
                                                                 {baja.folio_resguardo}
                                                             </div>
                                                         </td>
                                                         <td className="px-4 py-4">
-                                                            <div className="text-sm font-medium text-gray-400 flex items-center gap-2 group">
-                                                                <FileDigit className="h-4 w-4 text-gray-400 group-hover:text-red-400 transition-colors" />
+                                                            <div className={`text-sm font-medium flex items-center gap-2 transition-colors ${isDarkMode
+                                                                ? 'text-gray-400 group-hover:text-red-400'
+                                                                : 'text-gray-600 group-hover:text-red-600'
+                                                                }`}>
+                                                                <FileDigit className="h-4 w-4" />
                                                                 {baja.folio_baja}
                                                             </div>
                                                         </td>
                                                         <td className="px-4 py-4">
-                                                            <div className="text-sm text-white flex items-center gap-2">
-                                                                <Calendar className="h-4 w-4 text-gray-400" />
+                                                            <div className={`text-sm flex items-center gap-2 transition-colors ${isDarkMode
+                                                                ? 'text-white group-hover:text-gray-200'
+                                                                : 'text-gray-900 group-hover:text-gray-700'
+                                                                }`}>
+                                                                <Calendar className={`h-4 w-4 ${isDarkMode ? 'text-gray-400' : 'text-gray-500'
+                                                                    }`} />
                                                                 {baja.f_resguardo.slice(0, 10).split('-').reverse().join('/')}
                                                             </div>
                                                         </td>
                                                         <td className="px-4 py-4 group relative">
-                                                            <div className="text-sm text-white hover:text-red-400 transition-colors">
+                                                            <div className={`text-sm transition-colors ${isDarkMode
+                                                                ? 'text-white hover:text-red-400'
+                                                                : 'text-gray-900 hover:text-red-600'
+                                                                }`}>
                                                                 {baja.dir_area}
                                                             </div>
-                                                            <div className="text-xs text-gray-500">{baja.area_resguardo}</div>
+                                                            <div className={`text-xs ${isDarkMode ? 'text-gray-500' : 'text-gray-600'
+                                                                }`}>{baja.area_resguardo}</div>
 
                                                             {filterResguardante && (
                                                                 <div className="mt-1">
@@ -797,7 +911,10 @@ const ConsultarBajasResguardos = () => {
                                                                         .map((matchedResguardante, idx) => (
                                                                             <div
                                                                                 key={idx}
-                                                                                className="inline-flex items-center px-2 py-0.5 rounded bg-red-500/20 border border-red-500/30 text-red-300 text-xs mr-1 mb-1"
+                                                                                className={`inline-flex items-center px-2 py-0.5 rounded text-xs mr-1 mb-1 border ${isDarkMode
+                                                                                    ? 'bg-red-500/20 border-red-500/30 text-red-300'
+                                                                                    : 'bg-red-100 border-red-300 text-red-700'
+                                                                                    }`}
                                                                             >
                                                                                 {matchedResguardante}
                                                                             </div>
@@ -806,10 +923,16 @@ const ConsultarBajasResguardos = () => {
                                                             )}
 
                                                             <div className="absolute left-1/2 -translate-x-1/2 top-full mt-2 w-max max-w-sm opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-[9999]">
-                                                                <div className="absolute left-1/2 -top-2 -translate-x-1/2 border-8 border-transparent border-b-gray-800"></div>
-                                                                <div className="bg-black border border-gray-800 rounded-lg shadow-xl p-4">
-                                                                    <h4 className="text-sm font-medium text-gray-300 mb-2 flex items-center gap-2">
-                                                                        <User className="h-4 w-4 text-red-400" />
+                                                                <div className={`absolute left-1/2 -top-2 -translate-x-1/2 border-8 border-transparent ${isDarkMode ? 'border-b-gray-800' : 'border-b-white'
+                                                                    }`}></div>
+                                                                <div className={`border rounded-lg shadow-xl p-4 ${isDarkMode
+                                                                    ? 'bg-black border-gray-800'
+                                                                    : 'bg-white border-gray-200'
+                                                                    }`}>
+                                                                    <h4 className={`text-sm font-medium mb-2 flex items-center gap-2 ${isDarkMode ? 'text-gray-300' : 'text-gray-700'
+                                                                        }`}>
+                                                                        <User className={`h-4 w-4 ${isDarkMode ? 'text-red-400' : 'text-red-600'
+                                                                            }`} />
                                                                         Resguardantes
                                                                     </h4>
                                                                     <div className="flex flex-col gap-2">
@@ -819,9 +942,13 @@ const ConsultarBajasResguardos = () => {
                                                                             .map((resguardante, idx) => (
                                                                                 <div
                                                                                     key={idx}
-                                                                                    className="flex items-center gap-2 text-sm text-gray-400 bg-gray-900/50 px-2 py-1 rounded-lg w-full hover:bg-gray-800/70 transition-colors"
+                                                                                    className={`flex items-center gap-2 text-sm px-2 py-1 rounded-lg w-full transition-colors ${isDarkMode
+                                                                                        ? 'text-gray-400 bg-gray-900/50 hover:bg-gray-800/70'
+                                                                                        : 'text-gray-600 bg-gray-100 hover:bg-gray-200'
+                                                                                        }`}
                                                                                 >
-                                                                                    <div className="h-2 w-2 rounded-full bg-red-500 animate-pulse"></div>
+                                                                                    <div className={`h-2 w-2 rounded-full animate-pulse ${isDarkMode ? 'bg-red-500' : 'bg-red-600'
+                                                                                        }`}></div>
                                                                                     {resguardante}
                                                                                 </div>
                                                                             ))}
@@ -845,9 +972,13 @@ const ConsultarBajasResguardos = () => {
 
                         {/* Pagination */}
                         {bajas.length > 0 && (
-                            <div className="flex items-center justify-between bg-black p-4 rounded-xl border-2 border-white/10 shadow-inner mb-4">
+                            <div className={`flex items-center justify-between p-4 rounded-xl border shadow-inner mb-4 ${isDarkMode
+                                ? 'bg-gray-900/30 border-gray-800'
+                                : 'bg-gray-50/50 border-gray-200'
+                                }`}>
                                 <div className="flex items-center space-x-4">
-                                    <span className="text-sm text-gray-400">
+                                    <span className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-600'
+                                        }`}>
                                         Página {currentPage} de {totalPages}
                                     </span>
                                     <select
@@ -857,7 +988,10 @@ const ConsultarBajasResguardos = () => {
                                             setRowsPerPage(Number(e.target.value));
                                             setCurrentPage(1);
                                         }}
-                                        className="bg-black/50 border border-gray-800/50 rounded-lg text-white text-sm py-1.5 px-3 focus:outline-none focus:ring-2 focus:ring-red-500/70 hover:border-gray-700 transition-all duration-300"
+                                        className={`border rounded-lg text-sm py-1.5 px-3 focus:outline-none focus:ring-2 transition-all duration-300 ${isDarkMode
+                                            ? 'bg-black border-gray-800 text-white focus:ring-red-500 hover:border-gray-700'
+                                            : 'bg-white border-gray-300 text-gray-900 focus:ring-red-500 hover:border-red-400'
+                                            }`}
                                     >
                                         <option value={10}>10 por página</option>
                                         <option value={25}>25 por página</option>
@@ -870,7 +1004,16 @@ const ConsultarBajasResguardos = () => {
                                         title='Anterior'
                                         onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
                                         disabled={currentPage === 1}
-                                        className={`p-2 rounded-lg transition-all duration-300 ${currentPage === 1 ? 'text-gray-600 bg-black/30 cursor-not-allowed border border-gray-800/30' : 'text-white bg-black/50 hover:bg-gray-900/70 border border-gray-800/50 hover:border-gray-700 hover:scale-105'}`}
+                                        className={`p-2 rounded-lg ${currentPage === 1
+                                            ? (isDarkMode
+                                                ? 'text-gray-600 bg-black cursor-not-allowed'
+                                                : 'text-gray-400 bg-gray-100 cursor-not-allowed'
+                                            )
+                                            : (isDarkMode
+                                                ? 'text-white bg-black hover:bg-gray-900 border border-gray-800 hover:border-gray-600 transition-colors'
+                                                : 'text-gray-900 bg-white hover:bg-gray-50 border border-gray-300 hover:border-red-400 transition-colors'
+                                            )
+                                            }`}
                                     >
                                         <ChevronLeft className="h-5 w-5" />
                                     </button>
@@ -878,7 +1021,16 @@ const ConsultarBajasResguardos = () => {
                                         title='Siguiente'
                                         onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
                                         disabled={currentPage >= totalPages}
-                                        className={`p-2 rounded-lg transition-all duration-300 ${currentPage >= totalPages ? 'text-gray-600 bg-black/30 cursor-not-allowed border border-gray-800/30' : 'text-white bg-black/50 hover:bg-gray-900/70 border border-gray-800/50 hover:border-gray-700 hover:scale-105'}`}
+                                        className={`p-2 rounded-lg ${currentPage >= totalPages
+                                            ? (isDarkMode
+                                                ? 'text-gray-600 bg-black cursor-not-allowed'
+                                                : 'text-gray-400 bg-gray-100 cursor-not-allowed'
+                                            )
+                                            : (isDarkMode
+                                                ? 'text-white bg-black hover:bg-gray-900 border border-gray-800 hover:border-gray-600 transition-colors'
+                                                : 'text-gray-900 bg-white hover:bg-gray-50 border border-gray-300 hover:border-red-400 transition-colors'
+                                            )
+                                            }`}
                                     >
                                         <ChevronRight className="h-5 w-5" />
                                     </button>
@@ -888,10 +1040,18 @@ const ConsultarBajasResguardos = () => {
                     </div>
 
                     {/* Right panel - Details */}
-                    <div ref={detailRef} className="flex-1 bg-black p-4 border-t lg:border-t-0 lg:border-l border-gray-800/50 flex flex-col lg:col-span-2">
-                        <div className="bg-black rounded-xl border-2 border-white/10 p-4 mb-4 shadow-inner shadow-red-900/20">
-                            <h2 className="text-lg font-medium text-gray-100 mb-4 flex items-center gap-2">
-                                <FileText className="h-5 w-5 text-red-400" />
+                    <div ref={detailRef} className={`flex-1 p-4 border-t lg:border-t-0 lg:border-l flex flex-col lg:col-span-2 ${isDarkMode
+                        ? 'bg-black border-gray-800'
+                        : 'bg-gray-50/30 border-gray-200'
+                        }`}>
+                        <div className={`rounded-xl border p-4 mb-4 shadow-inner ${isDarkMode
+                            ? 'bg-gray-900/30 border-gray-800'
+                            : 'bg-white border-gray-200'
+                            }`}>
+                            <h2 className={`text-lg font-medium mb-4 flex items-center gap-2 ${isDarkMode ? 'text-gray-100' : 'text-gray-900'
+                                }`}>
+                                <FileText className={`h-5 w-5 ${isDarkMode ? 'text-red-400' : 'text-red-600'
+                                    }`} />
                                 Detalles del Resguardo
                             </h2>
 
@@ -899,44 +1059,57 @@ const ConsultarBajasResguardos = () => {
                                 <>
                                     <div className="space-y-4">
                                         <div>
-                                            <label className="block text-xs uppercase tracking-wider text-gray-500 mb-1">Folio Resguardo</label>
-                                            <div className="text-lg font-medium text-red-400 flex items-center gap-2 animate-pulse">
+                                            <label className={`block text-xs uppercase tracking-wider mb-1 ${isDarkMode ? 'text-gray-500' : 'text-gray-600'
+                                                }`}>Folio Resguardo</label>
+                                            <div className={`text-lg font-medium flex items-center gap-2 ${isDarkMode ? 'text-red-400' : 'text-red-600'
+                                                }`}>
                                                 <FileDigit className="h-5 w-5" />
                                                 {selectedBaja.folio_resguardo}
                                             </div>
                                         </div>
 
                                         <div>
-                                            <label className="block text-xs uppercase tracking-wider text-gray-500 mb-1">Fecha</label>
-                                            <div className="text-sm text-white flex items-center gap-2">
-                                                <Calendar className="h-4 w-4 text-gray-400" />
+                                            <label className={`block text-xs uppercase tracking-wider mb-1 ${isDarkMode ? 'text-gray-500' : 'text-gray-600'
+                                                }`}>Fecha</label>
+                                            <div className={`text-sm flex items-center gap-2 ${isDarkMode ? 'text-white' : 'text-gray-900'
+                                                }`}>
+                                                <Calendar className={`h-4 w-4 ${isDarkMode ? 'text-gray-400' : 'text-gray-500'
+                                                    }`} />
                                                 {selectedBaja.f_resguardo.slice(0, 10).split('-').reverse().join('/')}
                                             </div>
                                         </div>
 
                                         <div>
-                                            <label className="block text-xs uppercase tracking-wider text-gray-500 mb-1">Director de Área</label>
-                                            <div className="text-sm text-white flex items-center gap-2">
-                                                <Building2 className="h-4 w-4 text-gray-400" />
+                                            <label className={`block text-xs uppercase tracking-wider mb-1 ${isDarkMode ? 'text-gray-500' : 'text-gray-600'
+                                                }`}>Director de Área</label>
+                                            <div className={`text-sm flex items-center gap-2 ${isDarkMode ? 'text-white' : 'text-gray-900'
+                                                }`}>
+                                                <Building2 className={`h-4 w-4 ${isDarkMode ? 'text-gray-400' : 'text-gray-500'
+                                                    }`} />
                                                 {selectedBaja.dir_area}
                                             </div>
-                                            <div className="text-xs text-gray-500 mt-1">
+                                            <div className={`text-xs mt-1 ${isDarkMode ? 'text-gray-500' : 'text-gray-600'
+                                                }`}>
                                                 {selectedBaja.area_resguardo}
                                             </div>
                                         </div>
 
                                         <div>
-                                            <label className="block text-xs uppercase tracking-wider text-gray-500 mb-1">Puesto</label>
-                                            <div className="text-sm text-white flex items-center gap-2">
-                                                <User className="h-4 w-4 text-gray-400" />
+                                            <label className={`block text-xs uppercase tracking-wider mb-1 ${isDarkMode ? 'text-gray-500' : 'text-gray-600'
+                                                }`}>Puesto</label>
+                                            <div className={`text-sm flex items-center gap-2 ${isDarkMode ? 'text-white' : 'text-gray-900'
+                                                }`}>
+                                                <User className={`h-4 w-4 ${isDarkMode ? 'text-gray-400' : 'text-gray-500'
+                                                    }`} />
                                                 {selectedBaja.puesto}
                                             </div>
                                         </div>
                                         <div>
-                                            <label className="block text-xs uppercase tracking-wider text-gray-500 mb-1">Resguardantes</label>
+                                            <label className={`block text-xs uppercase tracking-wider mb-1 ${isDarkMode ? 'text-gray-500' : 'text-gray-600'
+                                                }`}>Resguardantes</label>
                                             <div className="flex flex-wrap gap-2">
                                                 {Array.from(new Set(selectedBaja.articulos.map(a => a.usufinal || 'Sin asignar'))).map((resguardante, idx) => {
-                                                    const colorPalette = [
+                                                    const colorPalette = isDarkMode ? [
                                                         'from-slate-800 to-slate-700 border-slate-600 text-slate-200',
                                                         'from-zinc-800 to-zinc-700 border-zinc-600 text-zinc-200',
                                                         'from-neutral-800 to-neutral-700 border-neutral-600 text-neutral-200',
@@ -947,6 +1120,17 @@ const ConsultarBajasResguardos = () => {
                                                         'from-emerald-900 to-emerald-800 border-emerald-700 text-emerald-200',
                                                         'from-teal-900 to-teal-800 border-teal-700 text-teal-200',
                                                         'from-cyan-900 to-cyan-800 border-cyan-700 text-cyan-200',
+                                                    ] : [
+                                                        'from-slate-200 to-slate-300 border-slate-400 text-slate-800',
+                                                        'from-zinc-200 to-zinc-300 border-zinc-400 text-zinc-800',
+                                                        'from-neutral-200 to-neutral-300 border-neutral-400 text-neutral-800',
+                                                        'from-stone-200 to-stone-300 border-stone-400 text-stone-800',
+                                                        'from-red-200 to-red-300 border-red-400 text-red-800',
+                                                        'from-orange-200 to-orange-300 border-orange-400 text-orange-800',
+                                                        'from-amber-200 to-amber-300 border-amber-400 text-amber-800',
+                                                        'from-emerald-200 to-emerald-300 border-emerald-400 text-emerald-800',
+                                                        'from-teal-200 to-teal-300 border-teal-400 text-teal-800',
+                                                        'from-cyan-200 to-cyan-300 border-cyan-400 text-cyan-800',
                                                     ];
                                                     const color = colorPalette[idx % colorPalette.length];
                                                     return (
@@ -965,7 +1149,10 @@ const ConsultarBajasResguardos = () => {
 
                                     <button
                                         onClick={handleBajaPDF}
-                                        className="mt-6 w-full py-2.5 bg-red-900/20 border border-red-800 text-red-400 rounded-lg hover:bg-red-800/30 transition-all duration-300 flex items-center justify-center gap-2 hover:text-white hover:shadow-[0_0_15px_-3px_rgba(239,68,68,0.3)]"
+                                        className={`mt-6 w-full py-2.5 border rounded-lg transition-all duration-300 flex items-center justify-center gap-2 shadow-lg ${isDarkMode
+                                            ? 'bg-red-900/20 border-red-800 text-red-400 hover:bg-red-800/30 hover:text-white hover:shadow-red-500/20'
+                                            : 'bg-red-50 border-red-300 text-red-700 hover:bg-red-100 hover:border-red-400 hover:text-red-800'
+                                            }`}
                                     >
                                         <Download className="h-4 w-4" />
                                         Generar PDF de {Object.values(selectedItems).filter(Boolean).length > 0 ? 'Artículos Seleccionados' : 'Baja Completa'}
@@ -973,7 +1160,10 @@ const ConsultarBajasResguardos = () => {
                                     <RoleGuard roles={["admin", "superadmin"]} userRole={userRole}>
                                         <button
                                             onClick={() => initiateDelete('folio', { folioResguardo: selectedBaja.folio_resguardo })}
-                                            className="w-full py-2 bg-gradient-to-r from-red-900/20 to-red-900/10 text-red-400 rounded-lg hover:from-red-900/30 hover:to-red-900/20 transition-all duration-300 border border-red-900/50 flex items-center justify-center gap-2 mt-2 hover:text-white hover:shadow-[0_0_10px_-3px_rgba(239,68,68,0.2)]"
+                                            className={`w-full py-2 rounded-lg transition-all duration-300 border flex items-center justify-center gap-2 mt-2 shadow-lg ${isDarkMode
+                                                ? 'bg-gradient-to-r from-red-900/20 to-red-900/10 text-red-400 hover:from-red-900/30 hover:to-red-900/20 border-red-900/50 hover:text-white hover:shadow-red-500/20'
+                                                : 'bg-gradient-to-r from-red-100 to-red-50 text-red-700 hover:from-red-200 hover:to-red-100 border-red-300 hover:text-red-800'
+                                                }`}
                                         >
                                             <X className="h-4 w-4" />
                                             Eliminar Folio Completo
@@ -981,8 +1171,10 @@ const ConsultarBajasResguardos = () => {
                                     </RoleGuard>
                                 </>
                             ) : (
-                                <div className="flex flex-col items-center justify-center h-full min-h-[200px] text-gray-500">
-                                    <Info className="h-12 w-12 mb-2 text-gray-600 animate-pulse" />
+                                <div className={`flex flex-col items-center justify-center h-full min-h-[200px] ${isDarkMode ? 'text-gray-500' : 'text-gray-600'
+                                    }`}>
+                                    <Info className={`h-12 w-12 mb-2 animate-pulse ${isDarkMode ? 'text-gray-600' : 'text-gray-400'
+                                        }`} />
                                     <p className="text-sm">Seleccione una baja</p>
                                     <p className="text-xs mt-1">Haga clic en un folio para ver los detalles</p>
                                 </div>
@@ -990,20 +1182,33 @@ const ConsultarBajasResguardos = () => {
                         </div>
 
                         {/* Selected Items Panel */}
-                        <div className="bg-black rounded-xl border-2 border-white/10 p-4 flex-grow shadow-inner shadow-red-900/20 relative max-h-[70vh] overflow-hidden">
-                            <h2 className="text-lg font-medium text-gray-100 mb-4 flex items-center gap-2 sticky top-0 z-20 bg-black p-2 -m-2 backdrop-blur-md">
-                                <ListChecks className="h-5 w-5 text-red-400" />
+                        <div className={`rounded-xl border p-4 flex-grow shadow-inner relative max-h-[70vh] overflow-hidden ${isDarkMode
+                            ? 'bg-gray-900/30 border-gray-800'
+                            : 'bg-white border-gray-200'
+                            }`}>
+                            <h2 className={`text-lg font-medium mb-4 flex items-center gap-2 sticky top-0 z-20 p-2 -m-2 backdrop-blur-md ${isDarkMode
+                                ? 'text-gray-100 bg-black'
+                                : 'text-gray-900 bg-white'
+                                }`}>
+                                <ListChecks className={`h-5 w-5 ${isDarkMode ? 'text-red-400' : 'text-red-600'
+                                    }`} />
                                 Artículos Dados de Baja ({selectedBaja?.articulos.length || 0})
                             </h2>
 
                             {selectedBaja ? (
                                 <div className="space-y-3 mt-2 overflow-auto max-h-[54vh]">
-                                    <div className="sticky top-0 z-10 bg-gradient-to-b from-black/90 to-black/80 backdrop-blur-sm p-2 -mx-2 mb-2 border-b border-gray-800/50">
+                                    <div className={`sticky top-0 z-10 backdrop-blur-sm p-2 -mx-2 mb-2 border-b ${isDarkMode
+                                        ? 'bg-gradient-to-b from-black/90 to-black/80 border-gray-800/50'
+                                        : 'bg-gradient-to-b from-white/90 to-white/80 border-gray-200/50'
+                                        }`}>
                                         <div className="flex items-center justify-between gap-2">
                                             <div className="flex items-center gap-2">
                                                 <button
                                                     onClick={clearSelections}
-                                                    className="px-3 py-1.5 bg-black text-gray-400 rounded-lg text-sm hover:bg-gray-900 transition-all duration-300 border border-gray-800/50 hover:text-gray-300"
+                                                    className={`px-3 py-1.5 rounded-lg text-sm transition-all duration-300 border ${isDarkMode
+                                                        ? 'bg-black text-gray-400 hover:bg-gray-900 border-gray-800/50 hover:text-gray-300'
+                                                        : 'bg-white text-gray-600 hover:bg-gray-50 border-gray-300 hover:text-gray-700'
+                                                        }`}
                                                 >
                                                     Limpiar Selección
                                                 </button>
@@ -1014,7 +1219,10 @@ const ConsultarBajasResguardos = () => {
                                                                 const selectedArticulos = selectedBaja.articulos.filter(art => selectedItems[art.id]);
                                                                 initiateDelete('selected', { articulos: selectedArticulos });
                                                             }}
-                                                            className="px-3 py-1.5 bg-red-900/20 text-red-400 rounded-lg text-sm hover:bg-red-900/30 transition-all duration-300 border border-red-900/50 flex items-center gap-2 hover:text-white"
+                                                            className={`px-3 py-1.5 rounded-lg text-sm transition-all duration-300 border flex items-center gap-2 ${isDarkMode
+                                                                ? 'bg-red-900/20 text-red-400 hover:bg-red-900/30 border-red-900/50 hover:text-white'
+                                                                : 'bg-red-50 text-red-700 hover:bg-red-100 border-red-300 hover:text-red-800'
+                                                                }`}
                                                         >
                                                             <X className="h-3 w-3" />
                                                             Eliminar Seleccionados
@@ -1022,22 +1230,30 @@ const ConsultarBajasResguardos = () => {
                                                     </RoleGuard>
                                                 )}
                                             </div>
-                                            <span className="text-sm text-gray-400">
+                                            <span className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-600'
+                                                }`}>
                                                 {Object.values(selectedItems).filter(Boolean).length} seleccionados
                                             </span>
                                         </div>
                                     </div>
 
                                     {Object.entries(groupedItems).map(([folioBaja, articulos]) => (
-                                        <div key={folioBaja} className="mb-6 bg-gray-900/20 p-4 rounded-xl border border-gray-800/50">
+                                        <div key={folioBaja} className={`mb-6 p-4 rounded-xl border ${isDarkMode
+                                            ? 'bg-gray-900/20 border-gray-800/50'
+                                            : 'bg-gray-50 border-gray-200'
+                                            }`}>
                                             <div className="flex items-center justify-between mb-3">
-                                                <h3 className="text-sm font-medium text-red-400 flex items-center gap-2 group">
-                                                    <FileDigit className="h-4 w-4 text-red-400 group-hover:animate-pulse" />
+                                                <h3 className={`text-sm font-medium flex items-center gap-2 group ${isDarkMode ? 'text-red-400' : 'text-red-600'
+                                                    }`}>
+                                                    <FileDigit className="h-4 w-4 group-hover:animate-pulse" />
                                                     Folio de Baja: {folioBaja}
                                                 </h3>
                                                 <button
                                                     onClick={() => handleGroupSelection(folioBaja)}
-                                                    className="px-2 py-1 text-xs bg-red-900/20 text-red-400 rounded-lg hover:bg-red-900/30 transition-all duration-300 border border-red-900/50 hover:text-white"
+                                                    className={`px-2 py-1 text-xs rounded-lg transition-all duration-300 border ${isDarkMode
+                                                        ? 'bg-red-900/20 text-red-400 hover:bg-red-900/30 border-red-900/50 hover:text-white'
+                                                        : 'bg-red-50 text-red-700 hover:bg-red-100 border-red-300 hover:text-red-800'
+                                                        }`}
                                                 >
                                                     {articulos.every(art => selectedItems[art.id]) ? 'Deseleccionar Grupo' : 'Seleccionar Grupo'}
                                                 </button>
@@ -1046,10 +1262,16 @@ const ConsultarBajasResguardos = () => {
                                                 {articulos.map((articulo, index) => (
                                                     <div
                                                         key={`${folioBaja}-${index}`}
-                                                        className={`bg-gradient-to-b ${selectedItems[articulo.id]
-                                                            ? 'from-red-900/20 to-red-900/10 border-red-500 shadow-[0_0_15px_-3px_rgba(239,68,68,0.2)]'
-                                                            : 'from-black/40 to-black/30 border-gray-800/50 hover:border-gray-700/50'} 
-                                                            rounded-lg p-4 border-2 transition-all duration-300 hover:shadow-md`}
+                                                        className={`rounded-lg p-4 border-2 transition-all duration-300 hover:shadow-md ${selectedItems[articulo.id]
+                                                            ? (isDarkMode
+                                                                ? 'bg-gradient-to-b from-red-900/20 to-red-900/10 border-red-500 shadow-[0_0_15px_-3px_rgba(239,68,68,0.2)]'
+                                                                : 'bg-gradient-to-b from-red-100 to-red-50 border-red-400 shadow-[0_0_15px_-3px_rgba(239,68,68,0.1)]'
+                                                            )
+                                                            : (isDarkMode
+                                                                ? 'bg-gradient-to-b from-black/40 to-black/30 border-gray-800/50 hover:border-gray-700/50'
+                                                                : 'bg-gradient-to-b from-gray-50 to-white border-gray-200 hover:border-gray-300'
+                                                            )
+                                                            }`}
                                                     >
                                                         <div className="flex items-start justify-between gap-4">
                                                             <div
@@ -1057,25 +1279,43 @@ const ConsultarBajasResguardos = () => {
                                                                 className="flex-1 cursor-pointer group"
                                                             >
                                                                 <div className="flex items-center gap-2 mb-1">
-                                                                    <div className="text-sm font-medium text-white group-hover:text-red-400 transition-colors">
+                                                                    <div className={`text-sm font-medium transition-colors ${isDarkMode
+                                                                        ? 'text-white group-hover:text-red-400'
+                                                                        : 'text-gray-900 group-hover:text-red-600'
+                                                                        }`}>
                                                                         {articulo.num_inventario}
                                                                     </div>
-                                                                    <span className="text-xs bg-gray-800/70 text-gray-400 px-2 py-0.5 rounded">
+                                                                    <span className={`text-xs px-2 py-0.5 rounded ${isDarkMode
+                                                                        ? 'bg-gray-800/70 text-gray-400'
+                                                                        : 'bg-gray-200 text-gray-600'
+                                                                        }`}>
                                                                         {articulo.rubro}
                                                                     </span>
-                                                                    <span className={`text-xs px-2 py-0.5 rounded-full ${articulo.origen?.startsWith('INEA') || articulo.num_inventario.startsWith('INEA')
-                                                                            ? 'bg-blue-900/70 text-blue-200 border border-blue-700/50'
-                                                                            : 'bg-purple-900/70 text-purple-200 border border-purple-700/50'
+                                                                    <span className={`text-xs px-2 py-0.5 rounded-full border ${articulo.origen?.startsWith('INEA') || articulo.num_inventario.startsWith('INEA')
+                                                                        ? (isDarkMode
+                                                                            ? 'bg-blue-900/70 text-blue-200 border-blue-700/50'
+                                                                            : 'bg-blue-100 text-blue-800 border-blue-300'
+                                                                        )
+                                                                        : (isDarkMode
+                                                                            ? 'bg-purple-900/70 text-purple-200 border-purple-700/50'
+                                                                            : 'bg-purple-100 text-purple-800 border-purple-300'
+                                                                        )
                                                                         }`}>
                                                                         {articulo.origen?.startsWith('INEA') || articulo.num_inventario.startsWith('INEA') ? 'INEA' : 'ITEA'}
                                                                     </span>
                                                                 </div>
-                                                                <p className="text-sm text-gray-300 group-hover:text-white transition-colors">
+                                                                <p className={`text-sm transition-colors ${isDarkMode
+                                                                    ? 'text-gray-300 group-hover:text-white'
+                                                                    : 'text-gray-700 group-hover:text-gray-900'
+                                                                    }`}>
                                                                     {articulo.descripcion}
                                                                 </p>
-                                                                <div className="flex items-center gap-2 text-xs text-gray-500 mt-1 group-hover:text-gray-400 transition-colors">
+                                                                <div className={`flex items-center gap-2 text-xs mt-1 transition-colors ${isDarkMode
+                                                                    ? 'text-gray-500 group-hover:text-gray-400'
+                                                                    : 'text-gray-600 group-hover:text-gray-700'
+                                                                    }`}>
                                                                     <span>Condición: {articulo.condicion}</span>
-                                                                    <span className="text-gray-600">•</span>
+                                                                    <span className={isDarkMode ? 'text-gray-600' : 'text-gray-500'}>•</span>
                                                                     <span className="flex items-center gap-1">
                                                                         <Calendar className="h-3 w-3" />
                                                                         {selectedBaja?.f_resguardo.slice(0, 10).split('-').reverse().join('/')}
@@ -1088,7 +1328,10 @@ const ConsultarBajasResguardos = () => {
                                                                         e.stopPropagation();
                                                                         initiateDelete('single', { singleArticulo: articulo });
                                                                     }}
-                                                                    className="p-2 rounded-lg bg-gradient-to-b from-red-900/20 to-red-900/10 text-red-400 hover:from-red-900/30 hover:to-red-900/20 transition-all duration-300 border border-red-900/50 hover:text-white hover:shadow-[0_0_10px_-3px_rgba(239,68,68,0.2)]"
+                                                                    className={`p-2 rounded-lg transition-all duration-300 border shadow-lg ${isDarkMode
+                                                                        ? 'bg-gradient-to-b from-red-900/20 to-red-900/10 text-red-400 hover:from-red-900/30 hover:to-red-900/20 border-red-900/50 hover:text-white hover:shadow-red-500/20'
+                                                                        : 'bg-gradient-to-b from-red-100 to-red-50 text-red-700 hover:from-red-200 hover:to-red-100 border-red-300 hover:text-red-800'
+                                                                        }`}
                                                                     title="Eliminar artículo"
                                                                 >
                                                                     <X className="h-4 w-4" />
@@ -1102,8 +1345,10 @@ const ConsultarBajasResguardos = () => {
                                     ))}
                                 </div>
                             ) : (
-                                <div className="flex flex-col items-center justify-center h-full min-h-[200px] text-gray-500">
-                                    <ListChecks className="h-12 w-12 mb-2 text-gray-600 animate-pulse" />
+                                <div className={`flex flex-col items-center justify-center h-full min-h-[200px] ${isDarkMode ? 'text-gray-500' : 'text-gray-600'
+                                    }`}>
+                                    <ListChecks className={`h-12 w-12 mb-2 animate-pulse ${isDarkMode ? 'text-gray-600' : 'text-gray-400'
+                                        }`} />
                                     <p className="text-sm">No hay artículos para mostrar</p>
                                     <p className="text-xs mt-1">Seleccione una baja para ver sus artículos</p>
                                 </div>
@@ -1115,7 +1360,10 @@ const ConsultarBajasResguardos = () => {
 
             {/* Error Alert */}
             {error && (
-                <div className="fixed bottom-4 left-4 right-4 md:left-auto md:right-4 md:w-96 bg-red-900/70 text-red-100 px-4 py-3 rounded-lg shadow-lg border border-red-800/50 z-50 backdrop-blur-sm animate-fade-in">
+                <div className={`fixed bottom-4 left-4 right-4 md:left-auto md:right-4 md:w-96 px-4 py-3 rounded-lg shadow-lg border z-50 backdrop-blur-sm animate-fade-in ${isDarkMode
+                    ? 'bg-red-900/80 text-red-100 border-red-800'
+                    : 'bg-red-50 text-red-900 border-red-200'
+                    }`}>
                     <div className="flex items-center">
                         <AlertCircle className="h-5 w-5 text-red-400 mr-3 flex-shrink-0 animate-pulse" />
                         <div className="flex-1 min-w-0">
@@ -1124,7 +1372,10 @@ const ConsultarBajasResguardos = () => {
                         <button
                             title='Cerrar alerta'
                             onClick={() => setError(null)}
-                            className="ml-4 flex-shrink-0 p-1 rounded-full text-red-200 hover:text-white hover:bg-red-800/30 transition-colors"
+                            className={`ml-4 flex-shrink-0 p-1 rounded-full transition-colors ${isDarkMode
+                                ? 'text-red-200 hover:text-white hover:bg-red-800'
+                                : 'text-red-600 hover:text-red-800 hover:bg-red-100'
+                                }`}
                         >
                             <X className="h-4 w-4" />
                         </button>
@@ -1134,37 +1385,59 @@ const ConsultarBajasResguardos = () => {
 
             {/* Modal para descargar PDF de baja */}
             {showPDFModal && pdfBajaData && (
-                <div className="fixed inset-0 bg-black/90 flex items-center justify-center z-50 px-4 animate-fadeIn">
-                    <div className="bg-black rounded-2xl shadow-2xl border border-red-600/30 w-full max-w-md overflow-hidden transition-all duration-300 transform">
-                        <div className="relative p-6">
-                            <div className="absolute top-0 left-0 w-full h-1 bg-red-500/60"></div>
+                <div className={`fixed inset-0 flex items-center justify-center z-50 px-4 animate-fadeIn ${isDarkMode ? 'bg-black/90' : 'bg-gray-900/50'
+                    }`}>
+                    <div className={`rounded-2xl shadow-2xl border w-full max-w-md overflow-hidden transition-all duration-300 transform ${isDarkMode
+                        ? 'bg-black border-red-600/30'
+                        : 'bg-white border-red-300'
+                        }`}>
+                        <div className={`relative p-6 ${isDarkMode ? 'bg-black' : 'bg-white'
+                            }`}>
+                            <div className={`absolute top-0 left-0 w-full h-1 ${isDarkMode ? 'bg-red-500/60' : 'bg-red-400'
+                                }`}></div>
 
                             <button
                                 onClick={() => setShowPDFModal(false)}
-                                className="absolute top-3 right-3 p-2 rounded-full bg-black/60 hover:bg-gray-900 text-red-400 hover:text-red-500 border border-red-500/30 transition-colors hover:scale-110"
+                                className={`absolute top-3 right-3 p-2 rounded-full border transition-colors ${isDarkMode
+                                    ? 'bg-black/60 hover:bg-gray-900 text-red-400 hover:text-red-500 border-red-500/30'
+                                    : 'bg-gray-100 hover:bg-gray-200 text-red-600 hover:text-red-700 border-red-300'
+                                    }`}
                                 title="Cerrar"
                             >
                                 <X className="h-4 w-4" />
                             </button>
 
                             <div className="flex flex-col items-center text-center mb-4">
-                                <div className="p-3 bg-gradient-to-br from-red-500/10 to-red-600/10 rounded-full border border-red-500/30 mb-3 animate-pulse">
-                                    <FileDigit className="h-8 w-8 text-red-500" />
+                                <div className={`p-3 rounded-full border mb-3 animate-pulse ${isDarkMode
+                                    ? 'bg-gradient-to-br from-red-500/10 to-red-600/10 border-red-500/30'
+                                    : 'bg-gradient-to-br from-red-100 to-red-200 border-red-300'
+                                    }`}>
+                                    <FileDigit className={`h-8 w-8 ${isDarkMode ? 'text-red-500' : 'text-red-600'
+                                        }`} />
                                 </div>
-                                <h3 className="text-2xl font-bold text-white">Baja generada</h3>
-                                <p className="text-gray-400 mt-2">
+                                <h3 className={`text-2xl font-bold ${isDarkMode ? 'text-white' : 'text-gray-900'
+                                    }`}>Baja generada</h3>
+                                <p className={`mt-2 ${isDarkMode ? 'text-gray-400' : 'text-gray-600'
+                                    }`}>
                                     Descarga el PDF de la baja para imprimir o compartir
                                 </p>
                             </div>
 
                             <div className="space-y-5 mt-6">
-                                <div className="rounded-lg border border-gray-800 bg-gradient-to-b from-gray-900/50 to-gray-900/30 p-4">
-                                    <label className="block text-xs uppercase tracking-wider text-gray-500 mb-1">Documento generado</label>
+                                <div className={`rounded-lg border p-4 ${isDarkMode
+                                    ? 'border-gray-800 bg-gradient-to-b from-gray-900/50 to-gray-900/30'
+                                    : 'border-gray-200 bg-gradient-to-b from-gray-50 to-gray-100'
+                                    }`}>
+                                    <label className={`block text-xs uppercase tracking-wider mb-1 ${isDarkMode ? 'text-gray-500' : 'text-gray-600'
+                                        }`}>Documento generado</label>
                                     <div className="flex items-center gap-3">
-                                        <div className="p-2 bg-gray-800/70 rounded-lg">
-                                            <FileText className="h-4 w-4 text-red-400" />
+                                        <div className={`p-2 rounded-lg ${isDarkMode ? 'bg-gray-800/70' : 'bg-gray-200'
+                                            }`}>
+                                            <FileText className={`h-4 w-4 ${isDarkMode ? 'text-red-400' : 'text-red-600'
+                                                }`} />
                                         </div>
-                                        <span className="text-white font-medium">Baja {pdfBajaData.folio_baja}</span>
+                                        <span className={`font-medium ${isDarkMode ? 'text-white' : 'text-gray-900'
+                                            }`}>Baja {pdfBajaData.folio_baja}</span>
                                     </div>
                                 </div>
 
@@ -1211,7 +1484,10 @@ const ConsultarBajasResguardos = () => {
                                                 setShowPDFModal(false);
                                             }
                                         }}
-                                        className="w-full py-3 px-4 bg-red-600 text-white rounded-lg font-medium hover:bg-red-500 transition-all duration-300 flex items-center justify-center gap-2 hover:shadow-[0_0_15px_-3px_rgba(239,68,68,0.5)]"
+                                        className={`w-full py-3 px-4 rounded-lg font-medium transition-all duration-300 flex items-center justify-center gap-2 transform hover:scale-[1.02] shadow-lg ${isDarkMode
+                                            ? 'bg-red-600 text-white hover:bg-red-500 hover:shadow-red-500/30'
+                                            : 'bg-red-600 text-white hover:bg-red-500 hover:shadow-red-500/30'
+                                            }`}
                                     >
                                         <Download className="h-4 w-4" />
                                         Descargar PDF
@@ -1225,17 +1501,29 @@ const ConsultarBajasResguardos = () => {
 
             {/* Modal de confirmación de eliminación */}
             {showDeleteModal && (
-                <div className="fixed inset-0 bg-black/90 flex items-center justify-center z-50 px-4 animate-fadeIn">
-                    <div className="bg-black rounded-2xl shadow-2xl border border-red-900/30 w-full max-w-md overflow-hidden">
-                        <div className="relative p-6">
-                            <div className="absolute top-0 left-0 w-full h-1 bg-red-800/60"></div>
+                <div className={`fixed inset-0 flex items-center justify-center z-50 px-4 animate-fadeIn ${isDarkMode ? 'bg-black/90' : 'bg-gray-900/50'
+                    }`}>
+                    <div className={`rounded-2xl shadow-2xl border w-full max-w-md overflow-hidden ${isDarkMode
+                        ? 'bg-black border-red-900/30'
+                        : 'bg-white border-red-300'
+                        }`}>
+                        <div className={`relative p-6 ${isDarkMode ? 'bg-black' : 'bg-white'
+                            }`}>
+                            <div className={`absolute top-0 left-0 w-full h-1 ${isDarkMode ? 'bg-red-800/60' : 'bg-red-400'
+                                }`}></div>
 
                             <div className="flex flex-col items-center text-center mb-4">
-                                <div className="p-3 bg-red-900/20 rounded-full border border-red-900/30 mb-3 animate-pulse">
-                                    <AlertCircle className="h-8 w-8 text-red-500" />
+                                <div className={`p-3 rounded-full border mb-3 animate-pulse ${isDarkMode
+                                    ? 'bg-red-900/20 border-red-900/30'
+                                    : 'bg-red-100 border-red-300'
+                                    }`}>
+                                    <AlertCircle className={`h-8 w-8 ${isDarkMode ? 'text-red-500' : 'text-red-600'
+                                        }`} />
                                 </div>
-                                <h3 className="text-2xl font-bold text-white">Confirmar eliminación</h3>
-                                <p className="text-gray-400 mt-2">
+                                <h3 className={`text-2xl font-bold ${isDarkMode ? 'text-white' : 'text-gray-900'
+                                    }`}>Confirmar eliminación</h3>
+                                <p className={`mt-2 ${isDarkMode ? 'text-gray-400' : 'text-gray-600'
+                                    }`}>
                                     {deleteType === 'folio' && "¿Estás seguro de que deseas eliminar todo el folio de baja? Esta acción no se puede deshacer."}
                                     {deleteType === 'selected' && "¿Estás seguro de que deseas eliminar los artículos seleccionados? Esta acción no se puede deshacer."}
                                     {deleteType === 'single' && "¿Estás seguro de que deseas eliminar este artículo? Esta acción no se puede deshacer."}
@@ -1244,42 +1532,63 @@ const ConsultarBajasResguardos = () => {
 
                             <div className="space-y-4 mt-6">
                                 {deleteType === 'folio' && itemToDelete?.folioResguardo && (
-                                    <div className="rounded-lg border border-gray-800 bg-gradient-to-b from-gray-900/50 to-gray-900/30 p-4">
+                                    <div className={`rounded-lg border p-4 ${isDarkMode
+                                        ? 'border-gray-800 bg-gradient-to-b from-gray-900/50 to-gray-900/30'
+                                        : 'border-gray-200 bg-gradient-to-b from-gray-50 to-gray-100'
+                                        }`}>
                                         <div className="flex items-center gap-3">
-                                            <div className="p-2 bg-gray-800/70 rounded-lg">
-                                                <FileDigit className="h-4 w-4 text-red-400" />
+                                            <div className={`p-2 rounded-lg ${isDarkMode ? 'bg-gray-800/70' : 'bg-gray-200'
+                                                }`}>
+                                                <FileDigit className={`h-4 w-4 ${isDarkMode ? 'text-red-400' : 'text-red-600'
+                                                    }`} />
                                             </div>
                                             <div>
-                                                <span className="text-white font-medium">Folio: {itemToDelete.folioResguardo}</span>
-                                                <p className="text-sm text-gray-500">Se eliminarán todos los artículos asociados</p>
+                                                <span className={`font-medium ${isDarkMode ? 'text-white' : 'text-gray-900'
+                                                    }`}>Folio: {itemToDelete.folioResguardo}</span>
+                                                <p className={`text-sm ${isDarkMode ? 'text-gray-500' : 'text-gray-600'
+                                                    }`}>Se eliminarán todos los artículos asociados</p>
                                             </div>
                                         </div>
                                     </div>
                                 )}
 
                                 {deleteType === 'selected' && itemToDelete?.articulos && (
-                                    <div className="rounded-lg border border-gray-800 bg-gradient-to-b from-gray-900/50 to-gray-900/30 p-4">
+                                    <div className={`rounded-lg border p-4 ${isDarkMode
+                                        ? 'border-gray-800 bg-gradient-to-b from-gray-900/50 to-gray-900/30'
+                                        : 'border-gray-200 bg-gradient-to-b from-gray-50 to-gray-100'
+                                        }`}>
                                         <div className="flex items-center gap-3">
-                                            <div className="p-2 bg-gray-800/70 rounded-lg">
-                                                <ListChecks className="h-4 w-4 text-red-400" />
+                                            <div className={`p-2 rounded-lg ${isDarkMode ? 'bg-gray-800/70' : 'bg-gray-200'
+                                                }`}>
+                                                <ListChecks className={`h-4 w-4 ${isDarkMode ? 'text-red-400' : 'text-red-600'
+                                                    }`} />
                                             </div>
                                             <div>
-                                                <span className="text-white font-medium">{itemToDelete.articulos.length} artículos seleccionados</span>
-                                                <p className="text-sm text-gray-500">Se eliminarán los artículos marcados</p>
+                                                <span className={`font-medium ${isDarkMode ? 'text-white' : 'text-gray-900'
+                                                    }`}>{itemToDelete.articulos.length} artículos seleccionados</span>
+                                                <p className={`text-sm ${isDarkMode ? 'text-gray-500' : 'text-gray-600'
+                                                    }`}>Se eliminarán los artículos marcados</p>
                                             </div>
                                         </div>
                                     </div>
                                 )}
 
                                 {deleteType === 'single' && itemToDelete?.singleArticulo && (
-                                    <div className="rounded-lg border border-gray-800 bg-gradient-to-b from-gray-900/50 to-gray-900/30 p-4">
+                                    <div className={`rounded-lg border p-4 ${isDarkMode
+                                        ? 'border-gray-800 bg-gradient-to-b from-gray-900/50 to-gray-900/30'
+                                        : 'border-gray-200 bg-gradient-to-b from-gray-50 to-gray-100'
+                                        }`}>
                                         <div className="flex items-center gap-3">
-                                            <div className="p-2 bg-gray-800/70 rounded-lg">
-                                                <FileDigit className="h-4 w-4 text-red-400" />
+                                            <div className={`p-2 rounded-lg ${isDarkMode ? 'bg-gray-800/70' : 'bg-gray-200'
+                                                }`}>
+                                                <FileDigit className={`h-4 w-4 ${isDarkMode ? 'text-red-400' : 'text-red-600'
+                                                    }`} />
                                             </div>
                                             <div>
-                                                <span className="text-white font-medium">Artículo: {itemToDelete.singleArticulo.num_inventario}</span>
-                                                <p className="text-sm text-gray-500">{itemToDelete.singleArticulo.descripcion}</p>
+                                                <span className={`font-medium ${isDarkMode ? 'text-white' : 'text-gray-900'
+                                                    }`}>Artículo: {itemToDelete.singleArticulo.num_inventario}</span>
+                                                <p className={`text-sm ${isDarkMode ? 'text-gray-500' : 'text-gray-600'
+                                                    }`}>{itemToDelete.singleArticulo.descripcion}</p>
                                             </div>
                                         </div>
                                     </div>
@@ -1292,13 +1601,19 @@ const ConsultarBajasResguardos = () => {
                                             setItemToDelete(null);
                                             setDeleteType(null);
                                         }}
-                                        className="flex-1 py-2.5 px-4 bg-gradient-to-b from-gray-900/50 to-gray-900/30 text-gray-300 rounded-lg hover:from-gray-800/60 hover:to-gray-800/40 transition-all duration-300 border border-gray-800/50 hover:text-white"
+                                        className={`flex-1 py-2.5 px-4 rounded-lg transition-all duration-300 border ${isDarkMode
+                                            ? 'bg-gradient-to-b from-gray-900/50 to-gray-900/30 text-gray-300 hover:from-gray-800/60 hover:to-gray-800/40 border-gray-800/50 hover:text-white'
+                                            : 'bg-gradient-to-b from-gray-100 to-gray-200 text-gray-700 hover:from-gray-200 hover:to-gray-300 border-gray-300 hover:text-gray-900'
+                                            }`}
                                     >
                                         Cancelar
                                     </button>
                                     <button
                                         onClick={handleDelete}
-                                        className="flex-1 py-2.5 px-4 bg-gradient-to-r from-red-600 to-red-700 text-white rounded-lg hover:from-red-500 hover:to-red-600 transition-all duration-300 hover:shadow-[0_0_15px_-3px_rgba(239,68,68,0.3)]"
+                                        className={`flex-1 py-2.5 px-4 bg-gradient-to-r from-red-600 to-red-700 text-white rounded-lg hover:from-red-500 hover:to-red-600 transition-all duration-300 shadow-lg ${isDarkMode
+                                            ? 'hover:shadow-red-500/30'
+                                            : 'hover:shadow-red-500/30'
+                                            }`}
                                     >
                                         Eliminar
                                     </button>
