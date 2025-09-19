@@ -13,6 +13,7 @@ import { useUserRole } from "@/hooks/useUserRole";
 import RoleGuard from "@/components/roleGuard";
 import { useNotifications } from '@/hooks/useNotifications';
 import { useSearchParams } from 'next/navigation';
+import { useTheme } from '@/context/ThemeContext';
 
 interface Resguardo {
     id: number;
@@ -173,6 +174,7 @@ export default function ConsultarResguardos({ folioParam }: { folioParam?: strin
     const { createNotification } = useNotifications();
     const searchParams = useSearchParams();
     const [folioParamLoading, setFolioParamLoading] = useState(false);
+    const { isDarkMode } = useTheme();
 
     // Sincronizar los resguardantes editables cuando cambia el resguardo seleccionado
     useEffect(() => {
@@ -818,7 +820,10 @@ export default function ConsultarResguardos({ folioParam }: { folioParam?: strin
     const userRole = useUserRole();
 
     return (
-        <div className="bg-black text-white min-h-screen p-2 sm:p-4 md:p-6 lg:p-8">
+        <div className={`min-h-screen p-2 sm:p-4 md:p-6 lg:p-8 transition-colors duration-500 ${isDarkMode
+            ? 'bg-black text-white'
+            : 'bg-gradient-to-br from-gray-50 via-white to-gray-100 text-gray-900'
+            }`}>
             {/* Si está cargando el folio por param, mostrar loader sobre el panel derecho */}
             {folioParamLoading && (
                 <div className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center">
@@ -828,17 +833,28 @@ export default function ConsultarResguardos({ folioParam }: { folioParam?: strin
                     </div>
                 </div>
             )}
-            <div className="w-full mx-auto bg-black rounded-lg sm:rounded-xl shadow-2xl overflow-hidden transition-all duration-500 transform border border-gray-800">
+            <div className={`w-full mx-auto rounded-lg sm:rounded-xl shadow-2xl overflow-hidden transition-all duration-500 transform border ${isDarkMode
+                ? 'bg-black border-gray-800'
+                : 'bg-white border-gray-200'
+                }`}>
                 {/* Header */}
-                <div className="bg-gray-900/30 p-4 sm:p-6 flex flex-col sm:flex-row justify-between items-start sm:items-center border-b border-gray-800 gap-2 sm:gap-0">
+                <div className={`p-4 sm:p-6 flex flex-col sm:flex-row justify-between items-start sm:items-center border-b gap-2 sm:gap-0 ${isDarkMode
+                    ? 'bg-gray-900/30 border-gray-800'
+                    : 'bg-gray-50/50 border-gray-200'
+                    }`}>
                     <h1 className="text-xl sm:text-2xl md:text-3xl font-bold flex items-center">
-                        <span className="mr-2 sm:mr-3 bg-white text-black p-1 sm:p-2 rounded-lg border border-white text-sm sm:text-base shadow-lg">RES</span>
-                        <span className="text-white">
+                        <span className={`mr-2 sm:mr-3 p-1 sm:p-2 rounded-lg border text-sm sm:text-base shadow-lg ${isDarkMode
+                            ? 'bg-white text-black border-white'
+                            : 'bg-gray-900 text-white border-gray-900'
+                            }`}>RES</span>
+                        <span className={isDarkMode ? 'text-white' : 'text-gray-900'}>
                             Consulta de Resguardos
                         </span>
                     </h1>
-                    <div className="flex items-center gap-2 text-sm text-gray-400">
-                        <ListChecks className="h-4 w-4 text-white animate-pulse" />
+                    <div className={`flex items-center gap-2 text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-600'
+                        }`}>
+                        <ListChecks className={`h-4 w-4 animate-pulse ${isDarkMode ? 'text-white' : 'text-gray-900'
+                            }`} />
                         <span>{totalCount} resguardos registrados</span>
                     </div>
                 </div>
@@ -848,18 +864,25 @@ export default function ConsultarResguardos({ folioParam }: { folioParam?: strin
                     {/* Left panel - Resguardos table */}
                     <div className="flex-1 min-w-0 flex flex-col p-4 lg:col-span-3">
                         {/* Search */}
-                        <div className="mb-6 bg-gradient-to-br from-gray-900/50 to-blue-900/10 p-4 rounded-xl border border-gray-800 shadow-inner">
+                        <div className={`mb-6 p-4 rounded-xl border shadow-inner ${isDarkMode
+                            ? 'bg-gradient-to-br from-gray-900/50 to-blue-900/10 border-gray-800'
+                            : 'bg-gradient-to-br from-gray-50 to-blue-50/30 border-gray-200'
+                            }`}>
                             <div className="flex flex-col gap-4">
                                 <div className="relative flex-grow">
                                     <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                                        <Search className="h-5 w-5 text-white/80" />
+                                        <Search className={`h-5 w-5 ${isDarkMode ? 'text-white/80' : 'text-gray-500'
+                                            }`} />
                                     </div>
                                     <input
                                         type="text"
                                         value={searchTerm}
                                         onChange={(e) => setSearchTerm(e.target.value)}
                                         placeholder="Buscar por folio..."
-                                        className="pl-10 pr-4 py-3 w-full bg-black border border-gray-800 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-white focus:border-transparent transition-all duration-300 hover:border-white/50"
+                                        className={`pl-10 pr-4 py-3 w-full border rounded-xl focus:outline-none focus:ring-2 focus:border-transparent transition-all duration-300 ${isDarkMode
+                                            ? 'bg-black border-gray-800 text-white placeholder-gray-500 focus:ring-white hover:border-white/50'
+                                            : 'bg-white border-gray-300 text-gray-900 placeholder-gray-400 focus:ring-blue-500 hover:border-blue-400'
+                                            }`}
                                     />
                                 </div>
 
@@ -868,7 +891,13 @@ export default function ConsultarResguardos({ folioParam }: { folioParam?: strin
                                         <button
                                             onClick={resetSearch}
                                             disabled={!searchTerm}
-                                            className={`px-4 py-2 bg-black border border-gray-800 text-gray-400 rounded-lg hover:bg-gray-900 transition-colors flex items-center gap-2 text-sm ${!searchTerm ? 'opacity-50 cursor-not-allowed' : 'hover:border-white/50 hover:text-white'}`}
+                                            className={`px-4 py-2 border rounded-lg transition-colors flex items-center gap-2 text-sm ${!searchTerm
+                                                ? 'opacity-50 cursor-not-allowed'
+                                                : isDarkMode
+                                                    ? 'bg-black border-gray-800 text-gray-400 hover:bg-gray-900 hover:border-white/50 hover:text-white'
+                                                    : 'bg-white border-gray-300 text-gray-600 hover:bg-gray-50 hover:border-blue-400 hover:text-blue-600'
+                                                } ${!searchTerm && (isDarkMode ? 'bg-black border-gray-800 text-gray-400' : 'bg-white border-gray-300 text-gray-600')
+                                                }`}
                                         >
                                             <X className="h-4 w-4" />
                                             Limpiar búsqueda
@@ -880,7 +909,10 @@ export default function ConsultarResguardos({ folioParam }: { folioParam?: strin
                                             setPdfData(null);
                                             fetchResguardos();
                                         }}
-                                        className="px-4 py-2 bg-gray-900/20 border border-gray-700 text-gray-300 rounded-lg hover:bg-gray-800 transition-colors flex items-center gap-2 text-sm hover:border-white hover:text-white"
+                                        className={`px-4 py-2 border rounded-lg transition-colors flex items-center gap-2 text-sm ${isDarkMode
+                                            ? 'bg-gray-900/20 border-gray-700 text-gray-300 hover:bg-gray-800 hover:border-white hover:text-white'
+                                            : 'bg-gray-50 border-gray-300 text-gray-600 hover:bg-gray-100 hover:border-blue-400 hover:text-blue-600'
+                                            }`}
                                     >
                                         <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
                                         Actualizar
@@ -890,10 +922,14 @@ export default function ConsultarResguardos({ folioParam }: { folioParam?: strin
                         </div>
 
                         {/* Filtro avanzado */}
-                        <div className="mb-6 bg-gray-900/30 p-4 rounded-xl border border-gray-800 shadow-inner">
+                        <div className={`mb-6 p-4 rounded-xl border shadow-inner ${isDarkMode
+                            ? 'bg-gray-900/30 border-gray-800'
+                            : 'bg-gray-50/50 border-gray-200'
+                            }`}>
                             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                                 <div>
-                                    <label className="block text-xs uppercase tracking-wider text-gray-500 mb-1">Filtrar por fecha</label>
+                                    <label className={`block text-xs uppercase tracking-wider mb-1 ${isDarkMode ? 'text-gray-500' : 'text-gray-600'
+                                        }`}>Filtrar por fecha</label>
                                     <input
                                         title='Fecha de resguardo'
                                         type="date"
@@ -903,11 +939,15 @@ export default function ConsultarResguardos({ folioParam }: { folioParam?: strin
                                             setCurrentPage(1);
                                             setFilterDate(e.target.value);
                                         }}
-                                        className="w-full bg-black border border-gray-800 rounded-lg text-white py-2 px-3 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all duration-300 hover:border-blue-500/50"
+                                        className={`w-full border rounded-lg py-2 px-3 focus:outline-none focus:ring-2 transition-all duration-300 ${isDarkMode
+                                            ? 'bg-black border-gray-800 text-white focus:ring-blue-500 hover:border-blue-500/50'
+                                            : 'bg-white border-gray-300 text-gray-900 focus:ring-blue-500 hover:border-blue-400'
+                                            }`}
                                     />
                                 </div>
                                 <div>
-                                    <label className="block text-xs uppercase tracking-wider text-gray-500 mb-1">Filtrar por director</label>
+                                    <label className={`block text-xs uppercase tracking-wider mb-1 ${isDarkMode ? 'text-gray-500' : 'text-gray-600'
+                                        }`}>Filtrar por director</label>
                                     <input
                                         type="text"
                                         placeholder="Nombre del director..."
@@ -916,11 +956,15 @@ export default function ConsultarResguardos({ folioParam }: { folioParam?: strin
                                             setCurrentPage(1);
                                             setFilterDirector(e.target.value);
                                         }}
-                                        className="w-full bg-black border border-gray-800 rounded-lg text-white py-2 px-3 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all duration-300 hover:border-blue-500/50"
+                                        className={`w-full border rounded-lg py-2 px-3 focus:outline-none focus:ring-2 transition-all duration-300 ${isDarkMode
+                                            ? 'bg-black border-gray-800 text-white placeholder-gray-500 focus:ring-blue-500 hover:border-blue-500/50'
+                                            : 'bg-white border-gray-300 text-gray-900 placeholder-gray-400 focus:ring-blue-500 hover:border-blue-400'
+                                            }`}
                                     />
                                 </div>
                                 <div>
-                                    <label className="block text-xs uppercase tracking-wider text-gray-500 mb-1">
+                                    <label className={`block text-xs uppercase tracking-wider mb-1 ${isDarkMode ? 'text-gray-500' : 'text-gray-600'
+                                        }`}>
                                         Filtrar por resguardante
                                     </label>
                                     <input
@@ -931,7 +975,10 @@ export default function ConsultarResguardos({ folioParam }: { folioParam?: strin
                                             setCurrentPage(1);
                                             setFilterResguardante(e.target.value);
                                         }}
-                                        className="w-full bg-black border border-gray-800 rounded-lg text-white py-2 px-3 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all duration-300 hover:border-blue-500/50"
+                                        className={`w-full border rounded-lg py-2 px-3 focus:outline-none focus:ring-2 transition-all duration-300 ${isDarkMode
+                                            ? 'bg-black border-gray-800 text-white placeholder-gray-500 focus:ring-blue-500 hover:border-blue-500/50'
+                                            : 'bg-white border-gray-300 text-gray-900 placeholder-gray-400 focus:ring-blue-500 hover:border-blue-400'
+                                            }`}
                                     />
                                 </div>
                             </div>
@@ -943,7 +990,10 @@ export default function ConsultarResguardos({ folioParam }: { folioParam?: strin
                                         setFilterResguardante('');
                                         setCurrentPage(1);
                                     }}
-                                    className="px-4 py-2 bg-black border border-gray-800 text-gray-400 rounded-lg hover:bg-gray-900 transition-colors flex items-center gap-2 text-sm hover:border-blue-500/50 hover:text-blue-300"
+                                    className={`px-4 py-2 border rounded-lg transition-colors flex items-center gap-2 text-sm ${isDarkMode
+                                        ? 'bg-black border-gray-800 text-gray-400 hover:bg-gray-900 hover:border-blue-500/50 hover:text-blue-300'
+                                        : 'bg-white border-gray-300 text-gray-600 hover:bg-gray-50 hover:border-blue-400 hover:text-blue-600'
+                                        }`}
                                 >
                                     <X className="h-4 w-4" />
                                     Limpiar filtros
@@ -952,49 +1002,76 @@ export default function ConsultarResguardos({ folioParam }: { folioParam?: strin
                         </div>
 
                         {/* Table */}
-                        <div className="bg-gray-900/30 rounded-xl border border-gray-800 overflow-x-auto overflow-y-auto mb-6 flex flex-col flex-grow shadow-lg h-[40vh] max-h-[78vh]">
+                        <div className={`rounded-xl border overflow-x-auto overflow-y-auto mb-6 flex flex-col flex-grow shadow-lg h-[40vh] max-h-[78vh] ${isDarkMode
+                            ? 'bg-gray-900/30 border-gray-800'
+                            : 'bg-white border-gray-200'
+                            }`}>
                             <div className="flex-grow min-w-[800px]">
-                                <table className="min-w-full divide-y divide-gray-800">
-                                    <thead className="bg-black sticky top-0 z-10">
+                                <table className={`min-w-full divide-y ${isDarkMode ? 'divide-gray-800' : 'divide-gray-200'
+                                    }`}>
+                                    <thead className={`sticky top-0 z-10 ${isDarkMode ? 'bg-black' : 'bg-gray-50'
+                                        }`}>
                                         <tr>
                                             <th
                                                 onClick={() => handleSort('folio')}
-                                                className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider cursor-pointer hover:bg-gray-900 transition-colors group"
+                                                className={`px-4 py-3 text-left text-xs font-medium uppercase tracking-wider cursor-pointer transition-colors group ${isDarkMode
+                                                    ? 'text-gray-400 hover:bg-gray-900'
+                                                    : 'text-gray-600 hover:bg-gray-100'
+                                                    }`}
                                             >
                                                 <div className="flex items-center gap-1">
                                                     Folio
-                                                    <ArrowUpDown className={`h-3.5 w-3.5 ${sortField === 'folio' ? 'text-white animate-bounce' : 'text-gray-500 group-hover:text-white'}`} />
+                                                    <ArrowUpDown className={`h-3.5 w-3.5 ${sortField === 'folio'
+                                                        ? (isDarkMode ? 'text-white animate-bounce' : 'text-gray-900 animate-bounce')
+                                                        : (isDarkMode ? 'text-gray-500 group-hover:text-white' : 'text-gray-400 group-hover:text-gray-900')
+                                                        }`} />
                                                 </div>
                                             </th>
                                             <th
                                                 onClick={() => handleSort('f_resguardo')}
-                                                className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider cursor-pointer hover:bg-gray-900 transition-colors group"
+                                                className={`px-4 py-3 text-left text-xs font-medium uppercase tracking-wider cursor-pointer transition-colors group ${isDarkMode
+                                                    ? 'text-gray-400 hover:bg-gray-900'
+                                                    : 'text-gray-600 hover:bg-gray-100'
+                                                    }`}
                                             >
                                                 <div className="flex items-center gap-1">
                                                     Fecha
-                                                    <ArrowUpDown className={`h-3.5 w-3.5 ${sortField === 'f_resguardo' ? 'text-white animate-bounce' : 'text-gray-500 group-hover:text-white'}`} />
+                                                    <ArrowUpDown className={`h-3.5 w-3.5 ${sortField === 'f_resguardo'
+                                                        ? (isDarkMode ? 'text-white animate-bounce' : 'text-gray-900 animate-bounce')
+                                                        : (isDarkMode ? 'text-gray-500 group-hover:text-white' : 'text-gray-400 group-hover:text-gray-900')
+                                                        }`} />
                                                 </div>
                                             </th>
                                             <th
                                                 onClick={() => handleSort('dir_area')}
-                                                className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider cursor-pointer hover:bg-gray-900 transition-colors group"
+                                                className={`px-4 py-3 text-left text-xs font-medium uppercase tracking-wider cursor-pointer transition-colors group ${isDarkMode
+                                                    ? 'text-gray-400 hover:bg-gray-900'
+                                                    : 'text-gray-600 hover:bg-gray-100'
+                                                    }`}
                                             >
                                                 <div className="flex items-center gap-1">
                                                     Director
-                                                    <ArrowUpDown className={`h-3.5 w-3.5 ${sortField === 'dir_area' ? 'text-white animate-bounce' : 'text-gray-500 group-hover:text-white'}`} />
+                                                    <ArrowUpDown className={`h-3.5 w-3.5 ${sortField === 'dir_area'
+                                                        ? (isDarkMode ? 'text-white animate-bounce' : 'text-gray-900 animate-bounce')
+                                                        : (isDarkMode ? 'text-gray-500 group-hover:text-white' : 'text-gray-400 group-hover:text-gray-900')
+                                                        }`} />
                                                 </div>
                                             </th>
-                                            <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
+                                            <th className={`px-4 py-3 text-left text-xs font-medium uppercase tracking-wider ${isDarkMode ? 'text-gray-400' : 'text-gray-600'
+                                                }`}>
                                                 Artículos
                                             </th>
                                         </tr>
                                     </thead>
-                                    <tbody className="bg-transparent divide-y divide-gray-800/50">
+                                    <tbody className={`bg-transparent divide-y ${isDarkMode ? 'divide-gray-800/50' : 'divide-gray-200/50'
+                                        }`}>
                                         {loading ? (
                                             <tr className="h-96">
-                                                <td colSpan={4} className="px-6 py-24 text-center text-gray-400">
+                                                <td colSpan={4} className={`px-6 py-24 text-center ${isDarkMode ? 'text-gray-400' : 'text-gray-600'
+                                                    }`}>
                                                     <div className="flex flex-col items-center justify-center space-y-4">
-                                                        <RefreshCw className="h-12 w-12 animate-spin text-white" />
+                                                        <RefreshCw className={`h-12 w-12 animate-spin ${isDarkMode ? 'text-white' : 'text-gray-900'
+                                                            }`} />
                                                         <p className="text-lg font-medium">Cargando resguardos...</p>
                                                     </div>
                                                 </td>
@@ -1005,10 +1082,14 @@ export default function ConsultarResguardos({ folioParam }: { folioParam?: strin
                                                     <div className="flex flex-col items-center justify-center space-y-4 text-red-400">
                                                         <AlertCircle className="h-12 w-12" />
                                                         <p className="text-lg font-medium">Error al cargar resguardos</p>
-                                                        <p className="text-sm text-gray-400">{error}</p>
+                                                        <p className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-600'
+                                                            }`}>{error}</p>
                                                         <button
                                                             onClick={fetchResguardos}
-                                                            className="px-4 py-2 bg-black text-white rounded-lg text-sm hover:bg-gray-900 transition-colors border border-gray-800 hover:border-white/50"
+                                                            className={`px-4 py-2 rounded-lg text-sm transition-colors border ${isDarkMode
+                                                                ? 'bg-black text-white hover:bg-gray-900 border-gray-800 hover:border-white/50'
+                                                                : 'bg-white text-gray-900 hover:bg-gray-50 border-gray-300 hover:border-blue-400'
+                                                                }`}
                                                         >
                                                             Intentar nuevamente
                                                         </button>
@@ -1017,14 +1098,19 @@ export default function ConsultarResguardos({ folioParam }: { folioParam?: strin
                                             </tr>
                                         ) : resguardos.length === 0 ? (
                                             <tr className="h-96">
-                                                <td colSpan={4} className="px-6 py-24 text-center text-gray-400">
+                                                <td colSpan={4} className={`px-6 py-24 text-center ${isDarkMode ? 'text-gray-400' : 'text-gray-600'
+                                                    }`}>
                                                     <div className="flex flex-col items-center justify-center space-y-4">
-                                                        <Search className="h-12 w-12 text-gray-500" />
+                                                        <Search className={`h-12 w-12 ${isDarkMode ? 'text-gray-500' : 'text-gray-400'
+                                                            }`} />
                                                         <p className="text-lg font-medium">No se encontraron resguardos</p>
                                                         {searchTerm && (
                                                             <button
                                                                 onClick={resetSearch}
-                                                                className="px-4 py-2 bg-black text-white rounded-lg text-sm hover:bg-gray-900 transition-colors flex items-center gap-2 border border-gray-800 hover:border-white/50"
+                                                                className={`px-4 py-2 rounded-lg text-sm transition-colors flex items-center gap-2 border ${isDarkMode
+                                                                    ? 'bg-black text-white hover:bg-gray-900 border-gray-800 hover:border-white/50'
+                                                                    : 'bg-white text-gray-900 hover:bg-gray-50 border-gray-300 hover:border-blue-400'
+                                                                    }`}
                                                             >
                                                                 <X className="h-4 w-4" />
                                                                 Limpiar búsqueda
@@ -1045,25 +1131,44 @@ export default function ConsultarResguardos({ folioParam }: { folioParam?: strin
                                                 return (
                                                     <tr
                                                         key={resguardo.folio}
-                                                        className={`hover:bg-gray-900/50 cursor-pointer transition-colors group ${selectedResguardo?.folio === resguardo.folio ? 'bg-gray-900/10 border-l-4 border-white' : ''}`}
+                                                        className={`cursor-pointer transition-colors group ${isDarkMode
+                                                            ? 'hover:bg-gray-900/50'
+                                                            : 'hover:bg-gray-50'
+                                                            } ${selectedResguardo?.folio === resguardo.folio
+                                                                ? (isDarkMode
+                                                                    ? 'bg-gray-900/10 border-l-4 border-white'
+                                                                    : 'bg-blue-50 border-l-4 border-blue-500'
+                                                                )
+                                                                : ''
+                                                            }`}
                                                         onClick={() => fetchResguardoDetails(resguardo.folio)}
                                                     >
                                                         <td className="px-4 py-4">
-                                                            <div className="text-sm font-medium text-white flex items-center gap-2 group-hover:text-gray-200 transition-colors">
+                                                            <div className={`text-sm font-medium flex items-center gap-2 transition-colors ${isDarkMode
+                                                                ? 'text-white group-hover:text-gray-200'
+                                                                : 'text-gray-900 group-hover:text-gray-700'
+                                                                }`}>
                                                                 <FileDigit className="h-4 w-4" />
                                                                 {resguardo.folio}
                                                             </div>
                                                         </td>
                                                         <td className="px-4 py-4">
-                                                            <div className="text-sm text-white group-hover:text-gray-200 transition-colors">
+                                                            <div className={`text-sm transition-colors ${isDarkMode
+                                                                ? 'text-white group-hover:text-gray-200'
+                                                                : 'text-gray-900 group-hover:text-gray-700'
+                                                                }`}>
                                                                 {resguardo.f_resguardo.slice(0, 10).split('-').reverse().join('/')}
                                                             </div>
                                                         </td>
                                                         <td className="px-4 py-4 group relative">
-                                                            <div className="text-sm text-white hover:text-gray-200 transition-colors">
+                                                            <div className={`text-sm transition-colors ${isDarkMode
+                                                                ? 'text-white hover:text-gray-200'
+                                                                : 'text-gray-900 hover:text-gray-700'
+                                                                }`}>
                                                                 {resguardo.dir_area}
                                                             </div>
-                                                            <div className="text-xs text-gray-500">{resguardo.area_resguardo}</div>
+                                                            <div className={`text-xs ${isDarkMode ? 'text-gray-500' : 'text-gray-600'
+                                                                }`}>{resguardo.area_resguardo}</div>
 
                                                             {/* Si hay un filtro de resguardante activo, mostrar un indicador */}
                                                             {filterResguardante && (
@@ -1123,9 +1228,13 @@ export default function ConsultarResguardos({ folioParam }: { folioParam?: strin
 
                         {/* Pagination */}
                         {resguardos.length > 0 && (
-                            <div className="flex items-center justify-between bg-gray-900/30 p-4 rounded-xl border border-gray-800 shadow-inner mb-4">
+                            <div className={`flex items-center justify-between p-4 rounded-xl border shadow-inner mb-4 ${isDarkMode
+                                ? 'bg-gray-900/30 border-gray-800'
+                                : 'bg-gray-50/50 border-gray-200'
+                                }`}>
                                 <div className="flex items-center space-x-4">
-                                    <span className="text-sm text-gray-400">
+                                    <span className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-600'
+                                        }`}>
                                         Página {currentPage} de {totalPages}
                                     </span>
                                     <select
@@ -1135,7 +1244,10 @@ export default function ConsultarResguardos({ folioParam }: { folioParam?: strin
                                             setRowsPerPage(Number(e.target.value));
                                             setCurrentPage(1);
                                         }}
-                                        className="bg-black border border-gray-800 rounded-lg text-white text-sm py-1.5 px-3 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all duration-300 hover:border-blue-500/50"
+                                        className={`border rounded-lg text-sm py-1.5 px-3 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all duration-300 ${isDarkMode
+                                            ? 'bg-black border-gray-800 text-white hover:border-blue-500/50'
+                                            : 'bg-white border-gray-300 text-gray-900 hover:border-blue-400'
+                                            }`}
                                     >
                                         <option value={10}>10 por página</option>
                                         <option value={25}>25 por página</option>
@@ -1148,7 +1260,16 @@ export default function ConsultarResguardos({ folioParam }: { folioParam?: strin
                                         title='Anterior'
                                         onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
                                         disabled={currentPage === 1}
-                                        className={`p-2 rounded-lg ${currentPage === 1 ? 'text-gray-600 bg-black cursor-not-allowed' : 'text-white bg-black hover:bg-gray-900 border border-gray-800 hover:border-blue-500/50 transition-colors'}`}
+                                        className={`p-2 rounded-lg ${currentPage === 1
+                                            ? (isDarkMode
+                                                ? 'text-gray-600 bg-black cursor-not-allowed'
+                                                : 'text-gray-400 bg-gray-100 cursor-not-allowed'
+                                            )
+                                            : (isDarkMode
+                                                ? 'text-white bg-black hover:bg-gray-900 border border-gray-800 hover:border-blue-500/50 transition-colors'
+                                                : 'text-gray-900 bg-white hover:bg-gray-50 border border-gray-300 hover:border-blue-400 transition-colors'
+                                            )
+                                            }`}
                                     >
                                         <ChevronLeft className="h-5 w-5" />
                                     </button>
@@ -1156,7 +1277,16 @@ export default function ConsultarResguardos({ folioParam }: { folioParam?: strin
                                         title='Siguiente'
                                         onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
                                         disabled={currentPage >= totalPages}
-                                        className={`p-2 rounded-lg ${currentPage >= totalPages ? 'text-gray-600 bg-black cursor-not-allowed' : 'text-white bg-black hover:bg-gray-900 border border-gray-800 hover:border-blue-500/50 transition-colors'}`}
+                                        className={`p-2 rounded-lg ${currentPage >= totalPages
+                                            ? (isDarkMode
+                                                ? 'text-gray-600 bg-black cursor-not-allowed'
+                                                : 'text-gray-400 bg-gray-100 cursor-not-allowed'
+                                            )
+                                            : (isDarkMode
+                                                ? 'text-white bg-black hover:bg-gray-900 border border-gray-800 hover:border-blue-500/50 transition-colors'
+                                                : 'text-gray-900 bg-white hover:bg-gray-50 border border-gray-300 hover:border-blue-400 transition-colors'
+                                            )
+                                            }`}
                                     >
                                         <ChevronRight className="h-5 w-5" />
                                     </button>
@@ -1166,10 +1296,18 @@ export default function ConsultarResguardos({ folioParam }: { folioParam?: strin
                     </div>
 
                     {/* Right panel - Details */}
-                    <div ref={detailRef} className="flex-1 bg-black p-4 border-t lg:border-t-0 lg:border-l border-gray-800 flex flex-col lg:col-span-2">
-                        <div className="bg-gray-900/30 rounded-xl border border-gray-800 p-4 mb-4 shadow-inner">
-                            <h2 className="text-lg font-medium text-gray-100 mb-4 flex items-center gap-2">
-                                <FileText className="h-5 w-5 text-white" />
+                    <div ref={detailRef} className={`flex-1 p-4 border-t lg:border-t-0 lg:border-l flex flex-col lg:col-span-2 ${isDarkMode
+                        ? 'bg-black border-gray-800'
+                        : 'bg-gray-50/30 border-gray-200'
+                        }`}>
+                        <div className={`rounded-xl border p-4 mb-4 shadow-inner ${isDarkMode
+                            ? 'bg-gray-900/30 border-gray-800'
+                            : 'bg-white border-gray-200'
+                            }`}>
+                            <h2 className={`text-lg font-medium mb-4 flex items-center gap-2 ${isDarkMode ? 'text-gray-100' : 'text-gray-900'
+                                }`}>
+                                <FileText className={`h-5 w-5 ${isDarkMode ? 'text-white' : 'text-gray-900'
+                                    }`} />
                                 Detalles del Resguardo
                             </h2>
 
@@ -1177,7 +1315,8 @@ export default function ConsultarResguardos({ folioParam }: { folioParam?: strin
                                 <>
                                     <div className="space-y-4">
                                         <div>
-                                            <label className="block text-xs uppercase tracking-wider text-gray-500 mb-1">Folio</label>
+                                            <label className={`block text-xs uppercase tracking-wider mb-1 ${isDarkMode ? 'text-gray-500' : 'text-gray-600'
+                                                }`}>Folio</label>
                                             <div className="text-lg font-medium text-blue-400 flex items-center gap-2">
                                                 <FileDigit className="h-5 w-5" />
                                                 {selectedResguardo.folio}
@@ -1186,33 +1325,41 @@ export default function ConsultarResguardos({ folioParam }: { folioParam?: strin
 
                                         <div className="grid grid-cols-2 gap-4">
                                             <div>
-                                                <label className="block text-xs uppercase tracking-wider text-gray-500 mb-1">Fecha</label>
-                                                <div className="text-sm text-white flex items-center gap-2">
+                                                <label className={`block text-xs uppercase tracking-wider mb-1 ${isDarkMode ? 'text-gray-500' : 'text-gray-600'
+                                                    }`}>Fecha</label>
+                                                <div className={`text-sm flex items-center gap-2 ${isDarkMode ? 'text-white' : 'text-gray-900'
+                                                    }`}>
                                                     <Calendar className="h-4 w-4" />
                                                     {selectedResguardo.f_resguardo.slice(0, 10).split('-').reverse().join('/')}
                                                 </div>
                                             </div>
                                             <div>
-                                                <label className="block text-xs uppercase tracking-wider text-gray-500 mb-1">Artículos</label>
-                                                <div className="text-sm text-white">
+                                                <label className={`block text-xs uppercase tracking-wider mb-1 ${isDarkMode ? 'text-gray-500' : 'text-gray-600'
+                                                    }`}>Artículos</label>
+                                                <div className={`text-sm ${isDarkMode ? 'text-white' : 'text-gray-900'
+                                                    }`}>
                                                     {selectedResguardo.articulos.length}
                                                 </div>
                                             </div>
                                         </div>
 
                                         <div>
-                                            <label className="block text-xs uppercase tracking-wider text-gray-500 mb-1">Director de Área</label>
-                                            <div className="text-sm text-white flex items-center gap-2">
+                                            <label className={`block text-xs uppercase tracking-wider mb-1 ${isDarkMode ? 'text-gray-500' : 'text-gray-600'
+                                                }`}>Director de Área</label>
+                                            <div className={`text-sm flex items-center gap-2 ${isDarkMode ? 'text-white' : 'text-gray-900'
+                                                }`}>
                                                 <Building2 className="h-4 w-4" />
                                                 {selectedResguardo.dir_area}
                                             </div>
-                                            <div className="text-xs text-gray-500 mt-1">
+                                            <div className={`text-xs mt-1 ${isDarkMode ? 'text-gray-500' : 'text-gray-600'
+                                                }`}>
                                                 {selectedResguardo.area_resguardo}
                                             </div>
                                         </div>
 
                                         <div>
-                                            <label className="block text-xs uppercase tracking-wider text-gray-500 mb-1">Resguardantes</label>
+                                            <label className={`block text-xs uppercase tracking-wider mb-1 ${isDarkMode ? 'text-gray-500' : 'text-gray-600'
+                                                }`}>Resguardantes</label>
                                             <div className="flex flex-wrap gap-2">
                                                 {Array.from(new Set(selectedResguardo.articulos.map(a => a.resguardante || 'Sin asignar'))).map((resguardante, idx) => {
                                                     // Paleta de colores pastel bonitos
@@ -1261,8 +1408,10 @@ export default function ConsultarResguardos({ folioParam }: { folioParam?: strin
                                     </RoleGuard>
                                 </>
                             ) : (
-                                <div className="flex flex-col items-center justify-center h-full min-h-[200px] text-gray-500">
-                                    <Info className="h-12 w-12 mb-2 text-gray-600" />
+                                <div className={`flex flex-col items-center justify-center h-full min-h-[200px] ${isDarkMode ? 'text-gray-500' : 'text-gray-600'
+                                    }`}>
+                                    <Info className={`h-12 w-12 mb-2 ${isDarkMode ? 'text-gray-600' : 'text-gray-400'
+                                        }`} />
                                     <p className="text-sm">Seleccione un resguardo</p>
                                     <p className="text-xs mt-1">Haga clic en un folio para ver los detalles</p>
                                 </div>
@@ -1270,11 +1419,19 @@ export default function ConsultarResguardos({ folioParam }: { folioParam?: strin
                         </div>
 
                         {/* Selected Items */}
-                        <div className="bg-gray-900/30 rounded-xl border border-gray-800 flex-grow shadow-inner flex flex-col overflow-hidden">
+                        <div className={`rounded-xl border flex-grow shadow-inner flex flex-col overflow-hidden ${isDarkMode
+                            ? 'bg-gray-900/30 border-gray-800'
+                            : 'bg-white border-gray-200'
+                            }`}>
                             {/* Título fijo */}
-                            <div className="p-4 bg-black/80 backdrop-blur-md border-b border-gray-800 sticky top-0 z-20 flex items-center justify-between">
-                                <h2 className="text-lg font-medium text-gray-100 flex items-center gap-2">
-                                    <ListChecks className="h-5 w-5 text-white" />
+                            <div className={`p-4 backdrop-blur-md border-b sticky top-0 z-20 flex items-center justify-between ${isDarkMode
+                                ? 'bg-black/80 border-gray-800'
+                                : 'bg-white/80 border-gray-200'
+                                }`}>
+                                <h2 className={`text-lg font-medium flex items-center gap-2 ${isDarkMode ? 'text-gray-100' : 'text-gray-900'
+                                    }`}>
+                                    <ListChecks className={`h-5 w-5 ${isDarkMode ? 'text-white' : 'text-gray-900'
+                                        }`} />
                                     Artículos del Resguardo ({selectedResguardo?.articulos.length || 0})
                                 </h2>
                                 {selectedResguardo && (
@@ -1282,7 +1439,10 @@ export default function ConsultarResguardos({ folioParam }: { folioParam?: strin
                                         <button
                                             title={editResguardanteMode ? 'Cancelar edición' : 'Editar resguardantes'}
                                             onClick={() => setEditResguardanteMode(e => !e)}
-                                            className={`ml-2 p-2 rounded-lg border border-blue-800 bg-blue-900/20 text-blue-300 hover:bg-blue-800/30 transition-all duration-300 hover:scale-110 flex items-center gap-1 ${editResguardanteMode ? 'ring-2 ring-blue-400' : ''}`}
+                                            className={`ml-2 p-2 rounded-lg border transition-all duration-300 hover:scale-110 flex items-center gap-1 ${isDarkMode
+                                                ? 'border-blue-800 bg-blue-900/20 text-blue-300 hover:bg-blue-800/30'
+                                                : 'border-blue-300 bg-blue-50 text-blue-600 hover:bg-blue-100'
+                                                } ${editResguardanteMode ? 'ring-2 ring-blue-400' : ''}`}
                                         >
                                             <Pencil className="h-4 w-4" />
                                             <span className="hidden sm:inline text-xs">{editResguardanteMode ? 'Cancelar' : 'Editar'}</span>
@@ -1326,13 +1486,20 @@ export default function ConsultarResguardos({ folioParam }: { folioParam?: strin
                                                 return groups;
                                             }, {})
                                         ).map(([resguardante, articulos]) => (
-                                            <div key={resguardante} className="mb-8 rounded-xl bg-gray-950 shadow-sm border border-gray-800">
+                                            <div key={resguardante} className={`mb-8 rounded-xl shadow-sm border ${isDarkMode
+                                                ? 'bg-gray-950 border-gray-800'
+                                                : 'bg-gray-50 border-gray-200'
+                                                }`}>
                                                 {/* Cabecera minimalista */}
-                                                <div className="flex items-center justify-between px-6 py-3 bg-transparent border-b border-violet-900/10">
+                                                <div className={`flex items-center justify-between px-6 py-3 bg-transparent border-b ${isDarkMode ? 'border-violet-900/10' : 'border-gray-200'
+                                                    }`}>
                                                     <div className="flex items-center gap-2">
-                                                        <User className="h-5 w-5 text-blue-300/80" />
-                                                        <span className="font-medium text-violet-100 text-sm tracking-wide">{resguardante}</span>
-                                                        <span className="ml-2 text-xs text-violet-100/50">{articulos.length} artículo{articulos.length !== 1 ? 's' : ''}</span>
+                                                        <User className={`h-5 w-5 ${isDarkMode ? 'text-blue-300/80' : 'text-blue-600'
+                                                            }`} />
+                                                        <span className={`font-medium text-sm tracking-wide ${isDarkMode ? 'text-violet-100' : 'text-gray-900'
+                                                            }`}>{resguardante}</span>
+                                                        <span className={`ml-2 text-xs ${isDarkMode ? 'text-violet-100/50' : 'text-gray-600'
+                                                            }`}>{articulos.length} artículo{articulos.length !== 1 ? 's' : ''}</span>
                                                     </div>
                                                     <button
                                                         onClick={() => {
@@ -1358,19 +1525,26 @@ export default function ConsultarResguardos({ folioParam }: { folioParam?: strin
                                                             });
                                                             setShowPDFButton(true);
                                                         }}
-                                                        className="flex items-center gap-1 px-2.5 py-1 rounded bg-blue-800/10 hover:bg-blue-700/20 text-blue-200 text-xs font-normal border border-blue-800/10 transition-all duration-300 hover:scale-105 shadow-none"
+                                                        className={`flex items-center gap-1 px-2.5 py-1 rounded text-xs font-normal border transition-all duration-300 hover:scale-105 shadow-none ${isDarkMode
+                                                            ? 'bg-blue-800/10 hover:bg-blue-700/20 text-blue-200 border-blue-800/10'
+                                                            : 'bg-blue-50 hover:bg-blue-100 text-blue-600 border-blue-200'
+                                                            }`}
                                                     >
                                                         <FileText className="h-4 w-4" />
                                                         <span className="hidden sm:inline">PDF</span>
                                                     </button>
                                                 </div>
                                                 {/* Lista simple tipo list-group minimalista */}
-                                                <ul className="divide-y divide-blue-900/10 bg-black">
+                                                <ul className={`divide-y ${isDarkMode
+                                                    ? 'divide-blue-900/10 bg-black'
+                                                    : 'divide-gray-200 bg-white'
+                                                    }`}>
                                                     {articulos.map((articulo, index) => (
                                                         <li
                                                             key={`${selectedResguardo.folio}-${index}`}
                                                             className={`flex items-start gap-4 px-6 py-3 transition-all duration-200 ${selectedArticulos.includes(articulo.num_inventario)
-                                                                ? 'bg-blue-900/10' : 'hover:bg-blue-900/5'
+                                                                ? (isDarkMode ? 'bg-blue-900/10' : 'bg-blue-50')
+                                                                : (isDarkMode ? 'hover:bg-blue-900/5' : 'hover:bg-gray-50')
                                                                 }`}
                                                         >
                                                             <div
@@ -1387,7 +1561,8 @@ export default function ConsultarResguardos({ folioParam }: { folioParam?: strin
                                                             </div>
                                                             <div className="flex-1 min-w-0">
                                                                 <div className="flex flex-wrap items-center gap-2">
-                                                                    <span className="text-sm font-medium text-white truncate">{articulo.num_inventario}</span>
+                                                                    <span className={`text-sm font-medium truncate ${isDarkMode ? 'text-white' : 'text-gray-900'
+                                                                        }`}>{articulo.num_inventario}</span>
                                                                     <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-normal border ${articulo.condicion === 'B' ? 'bg-green-900/10 text-green-200 border border-green-900/20' :
                                                                         articulo.condicion === 'R' ? 'bg-yellow-900/10 text-yellow-200 border border-yellow-900/20' :
                                                                             articulo.condicion === 'M' ? 'bg-red-900/10 text-red-200 border border-red-900/20' :
@@ -1398,8 +1573,10 @@ export default function ConsultarResguardos({ folioParam }: { folioParam?: strin
                                                                             'bg-gray-900/10 text-gray-400 border-gray-800/20'
                                                                         }`}>{articulo.origen}</span>
                                                                 </div>
-                                                                <div className="text-xs text-gray-300 mt-1">{articulo.descripcion}</div>
-                                                                <div className="text-xs text-gray-500 mt-1 flex items-center gap-1">
+                                                                <div className={`text-xs mt-1 ${isDarkMode ? 'text-gray-300' : 'text-gray-700'
+                                                                    }`}>{articulo.descripcion}</div>
+                                                                <div className={`text-xs mt-1 flex items-center gap-1 ${isDarkMode ? 'text-gray-500' : 'text-gray-600'
+                                                                    }`}>
                                                                     <Briefcase className="h-3 w-3" />
                                                                     {articulo.rubro}
                                                                 </div>
@@ -1411,7 +1588,10 @@ export default function ConsultarResguardos({ folioParam }: { folioParam?: strin
                                                                             value={editedResguardantes[articulo.id] || ''}
                                                                             onChange={e => setEditedResguardantes(prev => ({ ...prev, [articulo.id]: e.target.value }))}
                                                                             placeholder="Resguardante (opcional)"
-                                                                            className="block w-full bg-gray-900/50 border border-gray-800 rounded-lg py-1.5 px-3 text-white placeholder-gray-500 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 transition-all duration-300 hover:border-blue-500/50"
+                                                                            className={`block w-full border rounded-lg py-1.5 px-3 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 transition-all duration-300 ${isDarkMode
+                                                                                ? 'bg-gray-900/50 border-gray-800 text-white placeholder-gray-500 hover:border-blue-500/50'
+                                                                                : 'bg-white border-gray-300 text-gray-900 placeholder-gray-400 hover:border-blue-400'
+                                                                                }`}
                                                                         />
                                                                         {editedResguardantes[articulo.id] && (
                                                                             <button
@@ -1424,9 +1604,12 @@ export default function ConsultarResguardos({ folioParam }: { folioParam?: strin
                                                                         )}
                                                                     </div>
                                                                 ) : (
-                                                                    <div className="mt-3 text-xs text-blue-200 flex items-center gap-2">
-                                                                        <User className="h-3.5 w-3.5 text-blue-400" />
-                                                                        {articulo.resguardante || <span className="italic text-gray-500">Sin asignar</span>}
+                                                                    <div className={`mt-3 text-xs flex items-center gap-2 ${isDarkMode ? 'text-blue-200' : 'text-blue-600'
+                                                                        }`}>
+                                                                        <User className={`h-3.5 w-3.5 ${isDarkMode ? 'text-blue-400' : 'text-blue-500'
+                                                                            }`} />
+                                                                        {articulo.resguardante || <span className={`italic ${isDarkMode ? 'text-gray-500' : 'text-gray-600'
+                                                                            }`}>Sin asignar</span>}
                                                                     </div>
                                                                 )}
                                                             </div>
@@ -1444,9 +1627,13 @@ export default function ConsultarResguardos({ folioParam }: { folioParam?: strin
                                                 </ul>
                                                 {/* Guardar/cancelar edición */}
                                                 {editResguardanteMode && (
-                                                    <div className="flex justify-end items-center gap-2 px-6 py-2 bg-transparent border-t border-violet-900/10">
+                                                    <div className={`flex justify-end items-center gap-2 px-6 py-2 bg-transparent border-t ${isDarkMode ? 'border-violet-900/10' : 'border-gray-200'
+                                                        }`}>
                                                         <button
-                                                            className="px-4 py-2 bg-black border border-gray-700 text-gray-300 rounded-lg hover:bg-gray-900 transition-colors text-sm hover:border-blue-500/50"
+                                                            className={`px-4 py-2 border rounded-lg transition-colors text-sm ${isDarkMode
+                                                                ? 'bg-black border-gray-700 text-gray-300 hover:bg-gray-900 hover:border-blue-500/50'
+                                                                : 'bg-white border-gray-300 text-gray-600 hover:bg-gray-50 hover:border-blue-400'
+                                                                }`}
                                                             onClick={() => setEditResguardanteMode(false)}
                                                             disabled={savingResguardantes}
                                                         >
@@ -1465,8 +1652,10 @@ export default function ConsultarResguardos({ folioParam }: { folioParam?: strin
                                         ))}
                                     </>
                                 ) : (
-                                    <div className="flex flex-col items-center justify-center h-full min-h-[200px] text-gray-500">
-                                        <ListChecks className="h-12 w-12 mb-2 text-gray-600" />
+                                    <div className={`flex flex-col items-center justify-center h-full min-h-[200px] ${isDarkMode ? 'text-gray-500' : 'text-gray-600'
+                                        }`}>
+                                        <ListChecks className={`h-12 w-12 mb-2 ${isDarkMode ? 'text-gray-600' : 'text-gray-400'
+                                            }`} />
                                         <p className="text-sm">No hay artículos para mostrar</p>
                                         <p className="text-xs mt-1">Seleccione un resguardo para ver sus artículos</p>
                                     </div>
@@ -1479,7 +1668,10 @@ export default function ConsultarResguardos({ folioParam }: { folioParam?: strin
 
             {/* Error Alert */}
             {error && (
-                <div className="fixed bottom-4 left-4 right-4 md:left-auto md:right-4 md:w-96 bg-red-900/80 text-red-100 px-4 py-3 rounded-lg shadow-lg border border-red-800 z-50 backdrop-blur-sm animate-fade-in">
+                <div className={`fixed bottom-4 left-4 right-4 md:left-auto md:right-4 md:w-96 px-4 py-3 rounded-lg shadow-lg border z-50 backdrop-blur-sm animate-fade-in ${isDarkMode
+                    ? 'bg-red-900/80 text-red-100 border-red-800'
+                    : 'bg-red-50 text-red-900 border-red-200'
+                    }`}>
                     <div className="flex items-center">
                         <AlertCircle className="h-5 w-5 text-red-400 mr-3 flex-shrink-0" />
                         <div className="flex-1 min-w-0">
@@ -1488,7 +1680,10 @@ export default function ConsultarResguardos({ folioParam }: { folioParam?: strin
                         <button
                             title='Cerrar alerta'
                             onClick={() => setError(null)}
-                            className="ml-4 flex-shrink-0 p-1 rounded-full text-red-200 hover:text-white hover:bg-red-800 transition-colors"
+                            className={`ml-4 flex-shrink-0 p-1 rounded-full transition-colors ${isDarkMode
+                                ? 'text-red-200 hover:text-white hover:bg-red-800'
+                                : 'text-red-600 hover:text-red-800 hover:bg-red-100'
+                                }`}
                         >
                             <X className="h-4 w-4" />
                         </button>
@@ -1498,13 +1693,21 @@ export default function ConsultarResguardos({ folioParam }: { folioParam?: strin
 
             {/* Modal para descargar PDF */}
             {showPDFButton && pdfData && (
-                <div className="fixed inset-0 bg-black/90 flex items-center justify-center z-50 px-4 animate-fadeIn">
-                    <div className="bg-black rounded-2xl shadow-2xl border border-green-600/30 w-full max-w-md overflow-hidden transition-all duration-300 transform">
-                        <div className="relative p-6 bg-black">
+                <div className={`fixed inset-0 flex items-center justify-center z-50 px-4 animate-fadeIn ${isDarkMode ? 'bg-black/90' : 'bg-gray-900/50'
+                    }`}>
+                    <div className={`rounded-2xl shadow-2xl border w-full max-w-md overflow-hidden transition-all duration-300 transform ${isDarkMode
+                        ? 'bg-black border-green-600/30'
+                        : 'bg-white border-green-300'
+                        }`}>
+                        <div className={`relative p-6 ${isDarkMode ? 'bg-black' : 'bg-white'
+                            }`}>
                             <div className="absolute top-0 left-0 w-full h-1 bg-green-500/40"></div>
                             <button
                                 onClick={() => setShowPDFButton(false)}
-                                className="absolute top-3 right-3 p-2 rounded-full bg-black/60 hover:bg-gray-900 text-green-400 hover:text-green-500 border border-green-500/30 transition-colors"
+                                className={`absolute top-3 right-3 p-2 rounded-full border transition-colors ${isDarkMode
+                                    ? 'bg-black/60 hover:bg-gray-900 text-green-400 hover:text-green-500 border-green-500/30'
+                                    : 'bg-gray-100 hover:bg-gray-200 text-green-600 hover:text-green-700 border-green-300'
+                                    }`}
                                 title="Cerrar"
                             >
                                 <X className="h-4 w-4" />
@@ -1513,19 +1716,27 @@ export default function ConsultarResguardos({ folioParam }: { folioParam?: strin
                                 <div className="p-3 bg-green-500/10 rounded-full border border-green-500/30 mb-3 animate-pulse">
                                     <FileDigit className="h-8 w-8 text-green-500" />
                                 </div>
-                                <h3 className="text-2xl font-bold text-white">Resguardo generado</h3>
-                                <p className="text-gray-400 mt-2">
+                                <h3 className={`text-2xl font-bold ${isDarkMode ? 'text-white' : 'text-gray-900'
+                                    }`}>Resguardo generado</h3>
+                                <p className={`mt-2 ${isDarkMode ? 'text-gray-400' : 'text-gray-600'
+                                    }`}>
                                     Descarga el PDF del resguardo para imprimir o compartir
                                 </p>
                             </div>
                             <div className="space-y-5 mt-6">
-                                <div className="rounded-lg border border-gray-800 bg-gray-900/50 p-4">
-                                    <label className="block text-xs uppercase tracking-wider text-gray-500 mb-1">Documento generado</label>
+                                <div className={`rounded-lg border p-4 ${isDarkMode
+                                    ? 'border-gray-800 bg-gray-900/50'
+                                    : 'border-gray-200 bg-gray-50'
+                                    }`}>
+                                    <label className={`block text-xs uppercase tracking-wider mb-1 ${isDarkMode ? 'text-gray-500' : 'text-gray-600'
+                                        }`}>Documento generado</label>
                                     <div className="flex items-center gap-3">
-                                        <div className="p-2 bg-gray-800 rounded-lg">
+                                        <div className={`p-2 rounded-lg ${isDarkMode ? 'bg-gray-800' : 'bg-gray-200'
+                                            }`}>
                                             <FileText className="h-4 w-4 text-green-400" />
                                         </div>
-                                        <span className="text-white font-medium">Resguardo {pdfData.folio}</span>
+                                        <span className={`font-medium ${isDarkMode ? 'text-white' : 'text-gray-900'
+                                            }`}>Resguardo {pdfData.folio}</span>
                                     </div>
                                 </div>
                                 <button
