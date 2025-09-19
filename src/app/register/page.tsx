@@ -1,6 +1,7 @@
 "use client"
 
 import { useState } from 'react'
+import { useTheme } from '@/context/ThemeContext'
 import supabase from '@/app/lib/supabase/client'
 import { useRouter } from 'next/navigation'
 import { User, Lock, Shield, UserCircle, Users, Eye, EyeOff } from 'lucide-react'
@@ -9,6 +10,7 @@ import RoleGuard from "@/components/roleGuard"
 import Link from 'next/link'
 
 export default function RegisterPage() {
+    const { isDarkMode } = useTheme();
     // --- LÓGICA ORIGINAL (SIN CAMBIOS) ---
     const [step, setStep] = useState(1); // Paso 1: Datos personales, Paso 2: Credenciales
     const [firstName, setFirstName] = useState('');
@@ -166,27 +168,46 @@ export default function RegisterPage() {
         }
     };
 
-    // --- PANTALLA DE ACCESO RESTRINGIDO (SIN CAMBIOS DE DISEÑO) ---
+    // --- PANTALLA DE ACCESO RESTRINGIDO ---
     const restrictedContent = (
-        <div className="min-h-screen w-full overflow-hidden relative bg-black">
-            <div className="absolute inset-0 bg-black opacity-80 z-0">
+        <div className={`min-h-screen w-full overflow-hidden relative transition-colors duration-500 ${isDarkMode ? 'bg-black' : 'bg-gradient-to-br from-gray-50 via-white to-red-50'
+            }`}>
+            <div className={`absolute inset-0 opacity-80 z-0 transition-colors duration-500 ${isDarkMode ? 'bg-black' : 'bg-white/20'
+                }`}>
                 <div className="absolute inset-0 bg-grid"></div>
             </div>
             <div className="relative z-10 flex items-center justify-center min-h-screen p-4">
-                <div className="w-full max-w-2xl bg-black/60 backdrop-blur-lg rounded-2xl shadow-2xl border border-red-800/30 overflow-hidden">
-                    <div className="relative p-8 flex flex-col items-center justify-center bg-gradient-to-b from-black to-black/40 border-b border-red-800/20">
-                        <img src="/images/ITEA_logo.png" alt="Logo ITEA" className="h-32 w-auto object-contain animate-float mb-6" />
-                        <div className="absolute -bottom-px left-0 right-0 h-px bg-gradient-to-r from-transparent via-red-500/50 to-transparent"></div>
+                <div className={`w-full max-w-2xl backdrop-blur-lg rounded-2xl shadow-2xl overflow-hidden transition-colors duration-500 ${isDarkMode
+                        ? 'bg-black/60 border border-red-800/30'
+                        : 'bg-white/80 border border-red-200'
+                    }`}>
+                    <div className={`relative p-8 flex flex-col items-center justify-center border-b transition-colors duration-500 ${isDarkMode
+                            ? 'bg-gradient-to-b from-black to-black/40 border-b border-red-800/20'
+                            : 'bg-gradient-to-b from-white to-white/60 border-b border-red-200'
+                        }`}>
+                        <img
+                            src={isDarkMode ? "/images/ITEA_logo.svg" : "/images/ITEA_logo_negro.svg"}
+                            alt="Logo ITEA"
+                            className="h-32 w-auto object-contain animate-float mb-6"
+                        />
+                        <div className={`absolute -bottom-px left-0 right-0 h-px bg-gradient-to-r from-transparent to-transparent transition-colors duration-500 ${isDarkMode ? 'via-red-500/50' : 'via-red-400/50'
+                            }`}></div>
                     </div>
                     <div className="p-8">
                         <div className="flex flex-col items-center">
-                            <div className="mb-6 bg-gradient-to-r from-red-500/20 via-red-500/10 to-red-500/20 p-px rounded-xl">
-                                <div className="bg-black/40 rounded-xl p-4 backdrop-blur-sm">
+                            <div className={`mb-6 p-px rounded-xl transition-colors duration-500 ${isDarkMode
+                                    ? 'bg-gradient-to-r from-red-500/20 via-red-500/10 to-red-500/20'
+                                    : 'bg-gradient-to-r from-red-400/30 via-red-400/20 to-red-400/30'
+                                }`}>
+                                <div className={`rounded-xl p-4 backdrop-blur-sm transition-colors duration-500 ${isDarkMode ? 'bg-black/40' : 'bg-white/60'
+                                    }`}>
                                     <div className="flex items-center justify-center mb-4">
                                         <Shield className="h-10 w-10 text-red-500 animate-pulse" />
                                     </div>
-                                    <h1 className="text-xl font-bold text-center text-white mb-2">Acceso Restringido</h1>
-                                    <p className="text-center text-gray-300 text-sm">Si necesitas acceso, contacta a un administrador.</p>
+                                    <h1 className={`text-xl font-bold text-center mb-2 transition-colors duration-500 ${isDarkMode ? 'text-white' : 'text-gray-900'
+                                        }`}>Acceso Restringido</h1>
+                                    <p className={`text-center text-sm transition-colors duration-500 ${isDarkMode ? 'text-gray-300' : 'text-gray-600'
+                                        }`}>Si necesitas acceso, contacta a un administrador.</p>
                                 </div>
                             </div>
                             <Link href="/" className="group relative px-6 py-3 overflow-hidden rounded-lg bg-gradient-to-r from-blue-600 to-blue-500 text-white font-medium text-sm inline-flex items-center gap-2 hover:shadow-lg hover:shadow-blue-500/20 transition-all duration-300">
@@ -198,7 +219,13 @@ export default function RegisterPage() {
                 </div>
             </div>
             <style jsx>{`
-                .bg-grid { background-image: linear-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 1px), linear-gradient(90deg, rgba(255, 255, 255, 0.03) 1px, transparent 1px); background-size: 30px 30px; }
+                .bg-grid { 
+                    background-image: ${isDarkMode
+                    ? 'linear-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 1px), linear-gradient(90deg, rgba(255, 255, 255, 0.03) 1px, transparent 1px)'
+                    : 'linear-gradient(rgba(59, 130, 246, 0.1) 1px, transparent 1px), linear-gradient(90deg, rgba(59, 130, 246, 0.1) 1px, transparent 1px)'
+                }; 
+                    background-size: 30px 30px; 
+                }
                 @keyframes float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-10px); } }
                 .animate-float { animation: float 6s ease-in-out infinite; }
             `}</style>
@@ -208,11 +235,16 @@ export default function RegisterPage() {
     return (
         <RoleGuard roles={["superadmin"]} userRole={userRole} fallback={restrictedContent}>
             {/* --- NUEVO DISEÑO INSPIRADO EN EL COMPONENTE DE LOGIN --- */}
-            <div className="min-h-screen relative overflow-hidden bg-black flex items-center justify-center p-4">
+            <div className={`min-h-screen relative overflow-hidden flex items-center justify-center p-4 transition-colors duration-500 ${isDarkMode
+                    ? 'bg-black'
+                    : 'bg-gradient-to-br from-blue-50 via-white to-blue-100'
+                }`}>
                 {/* Efectos de fondo animados */}
                 <div className="absolute inset-0">
-                    <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-blue-500/20 rounded-full blur-3xl animate-pulse"></div>
-                    <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-white/20 rounded-full blur-3xl animate-pulse" style={{ animationDelay: '2s' }}></div>
+                    <div className={`absolute top-1/4 left-1/4 w-96 h-96 rounded-full blur-3xl animate-pulse transition-colors duration-500 ${isDarkMode ? 'bg-blue-500/20' : 'bg-blue-400/30'
+                        }`}></div>
+                    <div className={`absolute bottom-1/4 right-1/4 w-96 h-96 rounded-full blur-3xl animate-pulse transition-colors duration-500 ${isDarkMode ? 'bg-white/20' : 'bg-blue-300/20'
+                        }`} style={{ animationDelay: '2s' }}></div>
                 </div>
 
                 <div className="relative z-10 w-full max-w-6xl px-6 animate-fade-in">
@@ -221,17 +253,30 @@ export default function RegisterPage() {
                         <div className="text-center lg:text-left">
                             <div className="inline-flex items-center justify-center lg:justify-start mb-8">
                                 <div className="relative group">
-                                    <div className="absolute -inset-1 rounded-3xl bg-blue-500/20 blur-md group-hover:bg-blue-500/30 transition-all duration-700 animate-pulse"></div>
-                                    <div className="relative p-6 rounded-3xl bg-white/5 border border-white/10 backdrop-blur-xl">
-                                        <img src="/images/ITEA_logo.png" alt="Logo ITEA" className="h-20 w-auto object-contain" />
+                                    <div className={`absolute -inset-1 rounded-3xl blur-md group-hover:transition-all duration-700 animate-pulse ${isDarkMode
+                                            ? 'bg-blue-500/20 group-hover:bg-blue-500/30'
+                                            : 'bg-blue-400/30 group-hover:bg-blue-400/40'
+                                        }`}></div>
+                                    <div className={`relative p-6 rounded-3xl backdrop-blur-xl transition-colors duration-500 ${isDarkMode
+                                            ? 'bg-white/5 border border-white/10'
+                                            : 'bg-white/60 border border-blue-200/30'
+                                        }`}>
+                                        <img
+                                            src={isDarkMode ? "/images/ITEA_logo.svg" : "/images/ITEA_logo_negro.svg"}
+                                            alt="Logo ITEA"
+                                            className="h-20 w-auto object-contain"
+                                        />
                                     </div>
                                 </div>
                             </div>
-                            <h1 className="text-5xl lg:text-6xl font-extralight text-white mb-6 tracking-tight">
+                            <h1 className={`text-5xl lg:text-6xl font-extralight mb-6 tracking-tight transition-colors duration-500 ${isDarkMode ? 'text-white' : 'text-gray-900'
+                                }`}>
                                 Registro de
-                                <span className="block text-blue-400">Nuevo Usuario</span>
+                                <span className={`block transition-colors duration-500 ${isDarkMode ? 'text-blue-400' : 'text-blue-600'
+                                    }`}>Nuevo Usuario</span>
                             </h1>
-                            <p className="text-xl text-gray-400 font-light">
+                            <p className={`text-xl font-light transition-colors duration-500 ${isDarkMode ? 'text-gray-400' : 'text-gray-600'
+                                }`}>
                                 Creación de cuentas para el sistema de inventario.
                             </p>
                         </div>
@@ -243,19 +288,31 @@ export default function RegisterPage() {
                                 <div className="flex items-center justify-center gap-4 mb-6">
                                     <div className={`flex items-center gap-2 transition-opacity duration-300 ${step === 1 ? 'opacity-100' : 'opacity-50'}`}>
                                         <div className="w-8 h-8 rounded-full flex items-center justify-center bg-blue-600 text-white font-bold">1</div>
-                                        <span className="text-white font-medium">Datos</span>
+                                        <span className={`font-medium transition-colors duration-500 ${isDarkMode ? 'text-white' : 'text-gray-900'
+                                            }`}>Datos</span>
                                     </div>
-                                    <div className={`flex-1 h-0.5 transition-colors duration-500 ${step === 2 ? 'bg-blue-500' : 'bg-white/20'}`}></div>
+                                    <div className={`flex-1 h-0.5 transition-colors duration-500 ${step === 2
+                                            ? 'bg-blue-500'
+                                            : isDarkMode ? 'bg-white/20' : 'bg-gray-300'
+                                        }`}></div>
                                     <div className={`flex items-center gap-2 transition-opacity duration-300 ${step === 2 ? 'opacity-100' : 'opacity-50'}`}>
-                                        <span className="text-white font-medium">Acceso</span>
-                                        <div className={`w-8 h-8 rounded-full flex items-center justify-center text-white font-bold transition-colors duration-500 ${step === 2 ? 'bg-blue-600' : 'bg-white/20'}`}>2</div>
+                                        <span className={`font-medium transition-colors duration-500 ${isDarkMode ? 'text-white' : 'text-gray-900'
+                                            }`}>Acceso</span>
+                                        <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold transition-colors duration-500 ${step === 2
+                                                ? 'bg-blue-600 text-white'
+                                                : isDarkMode ? 'bg-white/20 text-white' : 'bg-gray-300 text-gray-600'
+                                            }`}>2</div>
                                     </div>
                                 </div>
 
                                 {error && (
                                     <div className="relative">
-                                        <div className="absolute inset-0 bg-red-500/10 rounded-xl blur-sm"></div>
-                                        <p className="relative text-red-400 text-sm text-center p-3 bg-red-500/5 border border-red-500/20 rounded-xl animate-fade-in backdrop-blur-sm">{error}</p>
+                                        <div className={`absolute inset-0 rounded-xl blur-sm transition-colors duration-500 ${isDarkMode ? 'bg-red-500/10' : 'bg-red-400/20'
+                                            }`}></div>
+                                        <p className={`relative text-sm text-center p-3 rounded-xl animate-fade-in backdrop-blur-sm transition-colors duration-500 ${isDarkMode
+                                                ? 'text-red-400 bg-red-500/5 border border-red-500/20'
+                                                : 'text-red-600 bg-red-50/80 border border-red-200'
+                                            }`}>{error}</p>
                                     </div>
                                 )}
 
@@ -263,12 +320,34 @@ export default function RegisterPage() {
                                 {step === 1 && (
                                     <>
                                         <div className="relative group">
-                                            <UserCircle className="w-5 h-5 text-gray-400 absolute left-4 top-1/2 -translate-y-1/2 group-focus-within:text-blue-400" />
-                                            <input type="text" value={firstName} onChange={(e) => setFirstName(e.target.value)} placeholder="Nombre(s)" required className="w-full pl-12 pr-4 py-4 text-base bg-white/5 border border-white/20 rounded-2xl focus:outline-none focus:ring-2 focus:ring-blue-500/50 text-white placeholder-gray-400" />
+                                            <UserCircle className={`w-5 h-5 absolute left-4 top-1/2 -translate-y-1/2 group-focus-within:text-blue-400 transition-colors duration-300 ${isDarkMode ? 'text-gray-400' : 'text-gray-500'
+                                                }`} />
+                                            <input
+                                                type="text"
+                                                value={firstName}
+                                                onChange={(e) => setFirstName(e.target.value)}
+                                                placeholder="Nombre(s)"
+                                                required
+                                                className={`w-full pl-12 pr-4 py-4 text-base rounded-2xl focus:outline-none focus:ring-2 focus:ring-blue-500/50 transition-colors duration-500 ${isDarkMode
+                                                        ? 'bg-white/5 border border-white/20 text-white placeholder-gray-400'
+                                                        : 'bg-white/80 border border-gray-300 text-gray-900 placeholder-gray-500'
+                                                    }`}
+                                            />
                                         </div>
                                         <div className="relative group">
-                                            <Users className="w-5 h-5 text-gray-400 absolute left-4 top-1/2 -translate-y-1/2 group-focus-within:text-blue-400" />
-                                            <input type="text" value={lastName} onChange={(e) => setLastName(e.target.value)} placeholder="Apellido(s)" required className="w-full pl-12 pr-4 py-4 text-base bg-white/5 border border-white/20 rounded-2xl focus:outline-none focus:ring-2 focus:ring-blue-500/50 text-white placeholder-gray-400" />
+                                            <Users className={`w-5 h-5 absolute left-4 top-1/2 -translate-y-1/2 group-focus-within:text-blue-400 transition-colors duration-300 ${isDarkMode ? 'text-gray-400' : 'text-gray-500'
+                                                }`} />
+                                            <input
+                                                type="text"
+                                                value={lastName}
+                                                onChange={(e) => setLastName(e.target.value)}
+                                                placeholder="Apellido(s)"
+                                                required
+                                                className={`w-full pl-12 pr-4 py-4 text-base rounded-2xl focus:outline-none focus:ring-2 focus:ring-blue-500/50 transition-colors duration-500 ${isDarkMode
+                                                        ? 'bg-white/5 border border-white/20 text-white placeholder-gray-400'
+                                                        : 'bg-white/80 border border-gray-300 text-gray-900 placeholder-gray-500'
+                                                    }`}
+                                            />
                                         </div>
                                         <button type="submit" className="w-full py-4 bg-blue-600 text-white rounded-2xl font-semibold hover:bg-blue-700 transition-colors">Continuar</button>
                                     </>
@@ -278,29 +357,101 @@ export default function RegisterPage() {
                                 {step === 2 && (
                                     <>
                                         <div className="relative group">
-                                            <User className="w-5 h-5 text-gray-400 absolute left-4 top-1/2 -translate-y-1/2 group-focus-within:text-blue-400" />
-                                            <input type="text" value={username} onChange={(e) => setUsername(e.target.value)} placeholder="Nombre de Usuario" required className="w-full pl-12 pr-4 py-4 text-base bg-white/5 border border-white/20 rounded-2xl focus:outline-none focus:ring-2 focus:ring-blue-500/50 text-white placeholder-gray-400" />
+                                            <User className={`w-5 h-5 absolute left-4 top-1/2 -translate-y-1/2 group-focus-within:text-blue-400 transition-colors duration-300 ${isDarkMode ? 'text-gray-400' : 'text-gray-500'
+                                                }`} />
+                                            <input
+                                                type="text"
+                                                value={username}
+                                                onChange={(e) => setUsername(e.target.value)}
+                                                placeholder="Nombre de Usuario"
+                                                required
+                                                className={`w-full pl-12 pr-4 py-4 text-base rounded-2xl focus:outline-none focus:ring-2 focus:ring-blue-500/50 transition-colors duration-500 ${isDarkMode
+                                                        ? 'bg-white/5 border border-white/20 text-white placeholder-gray-400'
+                                                        : 'bg-white/80 border border-gray-300 text-gray-900 placeholder-gray-500'
+                                                    }`}
+                                            />
                                         </div>
                                         <div className="relative group">
-                                            <Lock className="w-5 h-5 text-gray-400 absolute left-4 top-1/2 -translate-y-1/2 group-focus-within:text-blue-400" />
-                                            <input type={showPassword ? "text" : "password"} value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Contraseña (mín. 8 caracteres)" required minLength={8} className="w-full pl-12 pr-12 py-4 text-base bg-white/5 border border-white/20 rounded-2xl focus:outline-none focus:ring-2 focus:ring-blue-500/50 text-white placeholder-gray-400" />
-                                            <button type="button" onClick={() => setShowPassword(v => !v)} className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-blue-400">{showPassword ? <EyeOff size={20} /> : <Eye size={20} />}</button>
+                                            <Lock className={`w-5 h-5 absolute left-4 top-1/2 -translate-y-1/2 group-focus-within:text-blue-400 transition-colors duration-300 ${isDarkMode ? 'text-gray-400' : 'text-gray-500'
+                                                }`} />
+                                            <input
+                                                type={showPassword ? "text" : "password"}
+                                                value={password}
+                                                onChange={(e) => setPassword(e.target.value)}
+                                                placeholder="Contraseña (mín. 8 caracteres)"
+                                                required
+                                                minLength={8}
+                                                className={`w-full pl-12 pr-12 py-4 text-base rounded-2xl focus:outline-none focus:ring-2 focus:ring-blue-500/50 transition-colors duration-500 ${isDarkMode
+                                                        ? 'bg-white/5 border border-white/20 text-white placeholder-gray-400'
+                                                        : 'bg-white/80 border border-gray-300 text-gray-900 placeholder-gray-500'
+                                                    }`}
+                                            />
+                                            <button
+                                                type="button"
+                                                onClick={() => setShowPassword(v => !v)}
+                                                className={`absolute right-4 top-1/2 -translate-y-1/2 hover:text-blue-400 transition-colors duration-300 ${isDarkMode ? 'text-gray-400' : 'text-gray-500'
+                                                    }`}
+                                            >
+                                                {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+                                            </button>
                                         </div>
                                         <div className="relative group">
-                                            <Lock className="w-5 h-5 text-gray-400 absolute left-4 top-1/2 -translate-y-1/2 group-focus-within:text-blue-400" />
-                                            <input type={showConfirmPassword ? "text" : "password"} value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} placeholder="Confirmar Contraseña" required minLength={8} className="w-full pl-12 pr-12 py-4 text-base bg-white/5 border border-white/20 rounded-2xl focus:outline-none focus:ring-2 focus:ring-blue-500/50 text-white placeholder-gray-400" />
-                                            <button type="button" onClick={() => setShowConfirmPassword(v => !v)} className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-blue-400">{showConfirmPassword ? <EyeOff size={20} /> : <Eye size={20} />}</button>
+                                            <Lock className={`w-5 h-5 absolute left-4 top-1/2 -translate-y-1/2 group-focus-within:text-blue-400 transition-colors duration-300 ${isDarkMode ? 'text-gray-400' : 'text-gray-500'
+                                                }`} />
+                                            <input
+                                                type={showConfirmPassword ? "text" : "password"}
+                                                value={confirmPassword}
+                                                onChange={(e) => setConfirmPassword(e.target.value)}
+                                                placeholder="Confirmar Contraseña"
+                                                required
+                                                minLength={8}
+                                                className={`w-full pl-12 pr-12 py-4 text-base rounded-2xl focus:outline-none focus:ring-2 focus:ring-blue-500/50 transition-colors duration-500 ${isDarkMode
+                                                        ? 'bg-white/5 border border-white/20 text-white placeholder-gray-400'
+                                                        : 'bg-white/80 border border-gray-300 text-gray-900 placeholder-gray-500'
+                                                    }`}
+                                            />
+                                            <button
+                                                type="button"
+                                                onClick={() => setShowConfirmPassword(v => !v)}
+                                                className={`absolute right-4 top-1/2 -translate-y-1/2 hover:text-blue-400 transition-colors duration-300 ${isDarkMode ? 'text-gray-400' : 'text-gray-500'
+                                                    }`}
+                                            >
+                                                {showConfirmPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+                                            </button>
                                         </div>
                                         <div className="relative group">
-                                            <Shield className="w-5 h-5 text-gray-400 absolute left-4 top-1/2 -translate-y-1/2 group-focus-within:text-blue-400" />
-                                            <select title='Rol de usuario' value={rol} onChange={(e) => setRol(e.target.value)} required className="w-full pl-12 pr-4 py-4 text-base bg-white/5 border border-white/20 rounded-2xl focus:outline-none focus:ring-2 focus:ring-blue-500/50 text-white placeholder-gray-400 appearance-none">
-                                                <option value="usuario" className="bg-gray-900">Usuario Normal</option>
-                                                <option value="admin" className="bg-gray-900">Administrador</option>
+                                            <Shield className={`w-5 h-5 absolute left-4 top-1/2 -translate-y-1/2 group-focus-within:text-blue-400 transition-colors duration-300 ${isDarkMode ? 'text-gray-400' : 'text-gray-500'
+                                                }`} />
+                                            <select
+                                                title='Rol de usuario'
+                                                value={rol}
+                                                onChange={(e) => setRol(e.target.value)}
+                                                required
+                                                className={`w-full pl-12 pr-4 py-4 text-base rounded-2xl focus:outline-none focus:ring-2 focus:ring-blue-500/50 appearance-none transition-colors duration-500 ${isDarkMode
+                                                        ? 'bg-white/5 border border-white/20 text-white placeholder-gray-400'
+                                                        : 'bg-white/80 border border-gray-300 text-gray-900 placeholder-gray-500'
+                                                    }`}
+                                            >
+                                                <option value="usuario" className={isDarkMode ? "bg-gray-900" : "bg-white"}>Usuario Normal</option>
+                                                <option value="admin" className={isDarkMode ? "bg-gray-900" : "bg-white"}>Administrador</option>
                                             </select>
                                         </div>
                                         <div className="grid grid-cols-2 gap-4 pt-2">
-                                            <button type="button" onClick={handlePrevStep} className="w-full py-4 bg-white/10 text-white rounded-2xl font-semibold hover:bg-white/20 transition-colors">Atrás</button>
-                                            <button type="submit" disabled={isLoading} className="w-full py-4 bg-blue-600 text-white rounded-2xl font-semibold hover:bg-blue-700 transition-colors flex items-center justify-center disabled:bg-blue-800">
+                                            <button
+                                                type="button"
+                                                onClick={handlePrevStep}
+                                                className={`w-full py-4 rounded-2xl font-semibold transition-colors ${isDarkMode
+                                                        ? 'bg-white/10 text-white hover:bg-white/20'
+                                                        : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                                                    }`}
+                                            >
+                                                Atrás
+                                            </button>
+                                            <button
+                                                type="submit"
+                                                disabled={isLoading}
+                                                className="w-full py-4 bg-blue-600 text-white rounded-2xl font-semibold hover:bg-blue-700 transition-colors flex items-center justify-center disabled:bg-blue-800"
+                                            >
                                                 {isLoading ? <div className="w-5 h-5 border-2 border-white/50 border-t-white rounded-full animate-spin"></div> : 'Crear Cuenta'}
                                             </button>
                                         </div>
@@ -308,7 +459,12 @@ export default function RegisterPage() {
                                 )}
 
                                 <div className="text-center pt-2">
-                                    <p className="text-gray-400 text-sm">¿Ya tienes una cuenta? <a href="/login" className="text-blue-400 hover:underline">Iniciar sesión</a></p>
+                                    <p className={`text-sm transition-colors duration-500 ${isDarkMode ? 'text-gray-400' : 'text-gray-600'
+                                        }`}>
+                                        ¿Ya tienes una cuenta?
+                                        <a href="/login" className={`hover:underline transition-colors duration-300 ${isDarkMode ? 'text-blue-400' : 'text-blue-600'
+                                            }`}> Iniciar sesión</a>
+                                    </p>
                                 </div>
                             </form>
                         </div>

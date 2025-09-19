@@ -1,5 +1,6 @@
 "use client"
 import { useState, useEffect, useCallback, useRef } from 'react';
+import { useTheme } from '@/context/ThemeContext';
 import { Plus, Save, Trash2, Edit, AlertTriangle, CheckCircle, X, Search, RefreshCw, Layers } from 'lucide-react';
 import supabase from "@/app/lib/supabase/client";
 import { useNotifications } from '@/hooks/useNotifications';
@@ -23,6 +24,7 @@ const CONFIG_TYPES = [
 ];
 
 export default function ConfigManagementComponent() {
+    const { isDarkMode } = useTheme();
     // Estados
     const [configItems, setConfigItems] = useState<ConfigItem[]>([]);
     const [loading, setLoading] = useState<boolean>(true);
@@ -331,31 +333,51 @@ export default function ConfigManagementComponent() {
     };
 
     return (
-        <div className="bg-black text-white min-h-screen p-2 sm:p-4 md:p-6 lg:p-8 animate-gradient-x">
-            <div className="w-full mx-auto bg-black rounded-lg sm:rounded-xl shadow-2xl overflow-hidden transition-all duration-500 transform border-2 border-white/10">
+        <div className={`min-h-screen p-2 sm:p-4 md:p-6 lg:p-8 animate-gradient-x transition-colors duration-500 ${isDarkMode
+            ? 'bg-black text-white'
+            : 'bg-gradient-to-br from-gray-50 via-white to-gray-50 text-gray-900'
+            }`}>
+            <div className={`w-full mx-auto rounded-lg sm:rounded-xl shadow-2xl overflow-hidden transition-all duration-500 transform ${isDarkMode
+                ? 'bg-black border-2 border-white/10'
+                : 'bg-white border-2 border-gray-200'
+                }`}>
                 {/* Header con título y efecto glassmorphism */}
-                <div className="bg-black p-4 sm:p-6 flex flex-col sm:flex-row justify-between items-start sm:items-center border-b-2 border-white/10 gap-2 sm:gap-0">
-                    <h1 className="text-xl sm:text-2xl md:text-3xl font-bold flex items-center text-white">
-                        <span className="mr-2 sm:mr-3 bg-white/5 text-white p-1 sm:p-2 rounded-lg border border-white/10 text-sm sm:text-base shadow-lg transition-all">ADM</span>
+                <div className={`p-4 sm:p-6 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 sm:gap-0 transition-colors duration-500 ${isDarkMode
+                    ? 'bg-black border-b-2 border-white/10'
+                    : 'bg-white border-b-2 border-gray-200'
+                    }`}>
+                    <h1 className={`text-xl sm:text-2xl md:text-3xl font-bold flex items-center transition-colors duration-500 ${isDarkMode ? 'text-white' : 'text-gray-900'
+                        }`}>
+                        <span className={`mr-2 sm:mr-3 p-1 sm:p-2 rounded-lg text-sm sm:text-base shadow-lg transition-all duration-500 ${isDarkMode
+                            ? 'bg-white/5 text-white border border-white/10'
+                            : 'bg-gray-600 text-white border border-gray-700'
+                            }`}>ADM</span>
                         Gestión de Configuración
                     </h1>
                 </div>
 
                 {/* Tabs con efecto hover y gradientes */}
-                <div className="px-2 sm:px-4 md:px-6 pt-4 sm:pt-6 border-b border-gray-800">
+                <div className={`px-2 sm:px-4 md:px-6 pt-4 sm:pt-6 transition-colors duration-500 ${isDarkMode ? 'border-b border-gray-800' : 'border-b border-gray-200'
+                    }`}>
                     <div className="flex flex-wrap gap-1 sm:gap-2">
                         {CONFIG_TYPES.map((type) => (
                             <button
                                 key={type.id}
                                 onClick={() => handleTabChange(type.id)}
-                                className={`px-3 py-2 rounded-t-lg text-sm font-medium transition-all duration-300 transform hover:scale-105 ${
-                                    activeTab === type.id
+                                className={`px-3 py-2 rounded-t-lg text-sm font-medium transition-all duration-300 transform hover:scale-105 ${activeTab === type.id
+                                    ? isDarkMode
                                         ? 'bg-white/5 text-white border-t border-l border-r border-white/10 shadow-lg'
-                                        : 'text-gray-400 hover:text-white hover:bg-black hover:shadow-md'
-                                }`}
+                                        : 'bg-gray-50 text-gray-700 border-t border-l border-r border-gray-200 shadow-lg'
+                                    : isDarkMode
+                                        ? 'text-gray-400 hover:text-white hover:bg-black hover:shadow-md'
+                                        : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100 hover:shadow-md'
+                                    }`}
                             >
                                 <div className="flex items-center">
-                                    <Layers size={16} className={`mr-1.5 ${activeTab === type.id ? 'text-white animate-pulse' : ''}`} />
+                                    <Layers size={16} className={`mr-1.5 ${activeTab === type.id
+                                        ? isDarkMode ? 'text-white animate-pulse' : 'text-gray-600 animate-pulse'
+                                        : ''
+                                        }`} />
                                     {type.label}
                                 </div>
                             </button>
@@ -365,11 +387,14 @@ export default function ConfigManagementComponent() {
 
                 {/* Mensajes con animación mejorada */}
                 {message.text && (
-                    <div className={`mx-2 sm:mx-4 md:mx-6 mt-4 sm:mt-6 p-3 sm:p-4 rounded-lg flex items-center justify-between transition-all duration-500 animate-slide-in-right ${
-                        message.type === 'success' 
-                            ? 'bg-gradient-to-r from-green-900/80 via-green-800/80 to-green-900/80 border-green-500/30' 
-                            : 'bg-gradient-to-r from-red-900/80 via-red-800/80 to-red-900/80 border-red-500/30'
-                    } backdrop-blur-sm border shadow-lg`}>
+                    <div className={`mx-2 sm:mx-4 md:mx-6 mt-4 sm:mt-6 p-3 sm:p-4 rounded-lg flex items-center justify-between transition-all duration-500 animate-slide-in-right backdrop-blur-sm border shadow-lg ${message.type === 'success'
+                        ? isDarkMode
+                            ? 'bg-gradient-to-r from-green-900/80 via-green-800/80 to-green-900/80 border-green-500/30'
+                            : 'bg-gradient-to-r from-green-100 via-green-50 to-green-100 border-green-300 text-green-800'
+                        : isDarkMode
+                            ? 'bg-gradient-to-r from-red-900/80 via-red-800/80 to-red-900/80 border-red-500/30'
+                            : 'bg-gradient-to-r from-red-100 via-red-50 to-red-100 border-red-300 text-red-800'
+                        }`}>
                         <div className="flex items-center">
                             {message.type === 'success' ?
                                 <CheckCircle className="mr-2 sm:mr-3" size={20} /> :
@@ -377,7 +402,12 @@ export default function ConfigManagementComponent() {
                             }
                             <span className="font-medium text-sm sm:text-base">{message.text}</span>
                         </div>
-                        <button onClick={handleCloseMessage} className="p-1 rounded-full hover:bg-black transition-colors" title='Cerrar'>
+                        <button
+                            onClick={handleCloseMessage}
+                            className={`p-1 rounded-full transition-colors ${isDarkMode ? 'hover:bg-black' : 'hover:bg-gray-200'
+                                }`}
+                            title='Cerrar'
+                        >
                             <X size={16} />
                         </button>
                     </div>
@@ -393,40 +423,61 @@ export default function ConfigManagementComponent() {
                                 placeholder={`Buscar ${getActiveTabLabel().toLowerCase()}...`}
                                 value={searchTerm}
                                 onChange={(e) => setSearchTerm(e.target.value)}
-                                className="w-full sm:w-64 bg-black border border-white/10 rounded-lg p-2 pl-8 focus:border-white/20 focus:ring-2 focus:ring-white/10 transition-all duration-300 text-sm group-hover:border-white/20"
+                                className={`w-full sm:w-64 rounded-lg p-2 pl-8 text-sm transition-all duration-300 ${isDarkMode
+                                    ? 'bg-black border border-white/10 focus:border-white/20 focus:ring-2 focus:ring-white/10 group-hover:border-white/20 text-white'
+                                    : 'bg-white border border-gray-300 focus:border-gray-500 focus:ring-2 focus:ring-gray-500/20 group-hover:border-gray-400 text-gray-900'
+                                    }`}
                             />
-                            <Search size={18} className="absolute left-2 top-2.5 text-gray-500 group-hover:text-gray-400 transition-colors" />
+                            <Search size={18} className={`absolute left-2 top-2.5 transition-colors ${isDarkMode
+                                ? 'text-gray-500 group-hover:text-gray-400'
+                                : 'text-gray-400 group-hover:text-gray-600'
+                                }`} />
                         </div>
 
                         {/* Botones con gradientes y efectos hover */}
                         <div className="flex gap-2">
                             <button
                                 onClick={handleAdd}
-                                className="flex items-center px-4 py-2 bg-white/5 hover:bg-white/10 border border-white/10 rounded-lg transition-all duration-300 text-sm transform hover:scale-105 hover:shadow-lg group"
+                                className={`flex items-center px-4 py-2 rounded-lg transition-all duration-300 text-sm transform hover:scale-105 hover:shadow-lg group ${isDarkMode
+                                    ? 'bg-white/5 hover:bg-white/10 border border-white/10 text-white'
+                                    : 'bg-gray-600 hover:bg-gray-700 border border-gray-700 text-white'
+                                    }`}
                             >
-                                <Plus size={16} className="mr-1.5 text-white group-hover:rotate-90 transition-transform duration-300" />
+                                <Plus size={16} className={`mr-1.5 group-hover:rotate-90 transition-transform duration-300 ${isDarkMode ? 'text-white' : 'text-white'
+                                    }`} />
                                 Agregar {getActiveTabLabel()}
                             </button>
                             <button
                                 title='Recargar'
                                 onClick={fetchConfigItems}
-                                className="p-2 bg-black border border-white/10 hover:bg-white/5 rounded-lg transition-all duration-300 transform hover:scale-105 hover:shadow-lg group"
+                                className={`p-2 rounded-lg transition-all duration-300 transform hover:scale-105 hover:shadow-lg group ${isDarkMode
+                                    ? 'bg-black border border-white/10 hover:bg-white/5'
+                                    : 'bg-white border border-gray-300 hover:bg-gray-100'
+                                    }`}
                             >
-                                <RefreshCw size={16} className="text-gray-300 group-hover:rotate-180 transition-transform duration-500" />
+                                <RefreshCw size={16} className={`group-hover:rotate-180 transition-transform duration-500 ${isDarkMode ? 'text-gray-300' : 'text-gray-600'
+                                    }`} />
                             </button>
                         </div>
                     </div>
 
                     {/* Formulario con efectos de glassmorphism */}
                     {formMode === 'add' && (
-                        <div className="mb-6 bg-black p-4 rounded-lg border-2 border-white/10 animate-fade-in shadow-xl hover:shadow-2xl transition-all duration-300">
-                            <h2 className="text-lg font-semibold mb-4 pb-2 border-b border-white/10">
+                        <div className={`mb-6 p-4 rounded-lg animate-fade-in shadow-xl hover:shadow-2xl transition-all duration-300 ${isDarkMode
+                            ? 'bg-black border-2 border-white/10'
+                            : 'bg-white border-2 border-gray-200'
+                            }`}>
+                            <h2 className={`text-lg font-semibold mb-4 pb-2 transition-colors duration-500 ${isDarkMode
+                                ? 'border-b border-white/10 text-white'
+                                : 'border-b border-gray-200 text-gray-900'
+                                }`}>
                                 Agregar Nuevo {getActiveTabLabel()}
                             </h2>
 
                             <form onSubmit={handleSubmit}>
                                 <div className="mb-4">
-                                    <label className="block mb-1 text-sm font-medium">
+                                    <label className={`block mb-1 text-sm font-medium transition-colors duration-500 ${isDarkMode ? 'text-white' : 'text-gray-700'
+                                        }`}>
                                         Concepto <span className="text-red-500">*</span>
                                     </label>
                                     <input
@@ -434,18 +485,27 @@ export default function ConfigManagementComponent() {
                                         type="text"
                                         value={currentItem.concepto || ''}
                                         onChange={(e) => setCurrentItem({ ...currentItem, concepto: e.target.value.toUpperCase() })}
-                                        className={`w-full bg-black border ${error ? 'border-red-500' : 'border-gray-700'} rounded-lg p-2 focus:border-white focus:ring focus:ring-gray-700 focus:ring-opacity-50 transition-all`}
+                                        className={`w-full rounded-lg p-2 transition-all ${isDarkMode
+                                            ? `bg-black border ${error ? 'border-red-500' : 'border-gray-700'} focus:border-white focus:ring focus:ring-gray-700 focus:ring-opacity-50 text-white`
+                                            : `bg-white border ${error ? 'border-red-500' : 'border-gray-300'} focus:border-gray-500 focus:ring focus:ring-gray-500 focus:ring-opacity-50 text-gray-900`
+                                            }`}
                                         placeholder={`Nombre del ${getActiveTabLabel().toLowerCase()}`}
                                     />
                                     {error && <p className="text-red-500 text-xs mt-1">{error}</p>}
                                 </div>
                                 <div className="flex items-center gap-2 mt-2">
                                     {currentItem.concepto && currentItem.concepto.trim() !== '' ? (
-                                        <span className="flex px-2 py-0.5 rounded-full text-xs font-semibold items-center gap-1 bg-white/5 text-white border border-white/20">
+                                        <span className={`flex px-2 py-0.5 rounded-full text-xs font-semibold items-center gap-1 transition-colors duration-500 ${isDarkMode
+                                            ? 'bg-white/5 text-white border border-white/20'
+                                            : 'bg-gray-100 text-gray-800 border border-gray-200'
+                                            }`}>
                                             {currentItem.concepto}
                                         </span>
                                     ) : (
-                                        <span className="text-amber-400 flex items-center gap-1 bg-amber-900/30 border border-amber-500 rounded-full px-2 py-0.5 text-xs font-semibold animate-fade-in">
+                                        <span className={`flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-semibold animate-fade-in ${isDarkMode
+                                            ? 'text-amber-400 bg-amber-900/30 border border-amber-500'
+                                            : 'text-amber-700 bg-amber-100 border border-amber-300'
+                                            }`}>
                                             <AlertTriangle size={14} />
                                             <span>Sin concepto</span>
                                         </span>
@@ -455,18 +515,27 @@ export default function ConfigManagementComponent() {
                                     <button
                                         type="button"
                                         onClick={handleCancel}
-                                        className="px-3 py-1.5 bg-gray-800 hover:bg-gray-700 rounded-lg transition-colors text-sm"
+                                        className={`px-3 py-1.5 rounded-lg transition-colors text-sm ${isDarkMode
+                                            ? 'bg-gray-800 hover:bg-gray-700 text-white'
+                                            : 'bg-gray-200 hover:bg-gray-300 text-gray-700'
+                                            }`}
                                     >
                                         Cancelar
                                     </button>
                                     <button
                                         type="submit"
                                         disabled={isSubmitting}
-                                        className="px-3 py-1.5 rounded-lg transition-colors text-sm flex items-center bg-white text-black hover:bg-gray-200"
+                                        className={`px-3 py-1.5 rounded-lg transition-colors text-sm flex items-center ${isDarkMode
+                                            ? 'bg-white text-black hover:bg-gray-200'
+                                            : 'bg-gray-600 text-white hover:bg-gray-700'
+                                            }`}
                                     >
                                         {isSubmitting ? (
                                             <>
-                                                <div className="w-3 h-3 border-2 border-gray-400 border-t-white rounded-full animate-spin mr-2"></div>
+                                                <div className={`w-3 h-3 border-2 rounded-full animate-spin mr-2 ${isDarkMode
+                                                    ? 'border-gray-400 border-t-white'
+                                                    : 'border-gray-300 border-t-white'
+                                                    }`}></div>
                                                 Procesando...
                                             </>
                                         ) : (
@@ -482,31 +551,45 @@ export default function ConfigManagementComponent() {
                     )}
 
                     {/* Tabla con efectos mejorados */}
-                    <div className="overflow-x-auto border-2 border-white/10 rounded-lg shadow-xl [&_::-webkit-scrollbar]:w-2 [&_::-webkit-scrollbar-track]:bg-transparent [&_::-webkit-scrollbar-thumb]:bg-white/10 [&_::-webkit-scrollbar-thumb:hover]:bg-white/20">
-                        <table className="min-w-full divide-y-2 divide-white/10">
-                            <thead className="bg-black">
+                    <div className={`overflow-x-auto rounded-lg shadow-xl transition-colors duration-500 ${isDarkMode
+                        ? 'border-2 border-white/10 [&_::-webkit-scrollbar]:w-2 [&_::-webkit-scrollbar-track]:bg-transparent [&_::-webkit-scrollbar-thumb]:bg-white/10 [&_::-webkit-scrollbar-thumb:hover]:bg-white/20'
+                        : 'border-2 border-gray-200 [&_::-webkit-scrollbar]:w-2 [&_::-webkit-scrollbar-track]:bg-transparent [&_::-webkit-scrollbar-thumb]:bg-gray-300 [&_::-webkit-scrollbar-thumb:hover]:bg-gray-400'
+                        }`}>
+                        <table className={`min-w-full transition-colors duration-500 ${isDarkMode ? 'divide-y-2 divide-white/10' : 'divide-y-2 divide-gray-200'
+                            }`}>
+                            <thead className={isDarkMode ? "bg-black" : "bg-gray-50"}>
                                 <tr>
-                                    <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
+                                    <th scope="col" className={`px-4 py-3 text-left text-xs font-medium uppercase tracking-wider transition-colors duration-500 ${isDarkMode ? 'text-gray-400' : 'text-gray-600'
+                                        }`}>
                                         {getActiveTabLabel()}
                                     </th>
-                                    <th scope="col" className="px-4 py-3 text-right text-xs font-medium text-gray-400 uppercase tracking-wider w-32">
+                                    <th scope="col" className={`px-4 py-3 text-right text-xs font-medium uppercase tracking-wider w-32 transition-colors duration-500 ${isDarkMode ? 'text-gray-400' : 'text-gray-600'
+                                        }`}>
                                         Acciones
                                     </th>
                                 </tr>
                             </thead>
-                            <tbody className="bg-black divide-y divide-white/10 transition-all duration-300 overflow-y-auto max-h-[600px] scroll-smooth">
+                            <tbody className={`transition-all duration-300 overflow-y-auto max-h-[600px] scroll-smooth ${isDarkMode
+                                ? 'bg-black divide-y divide-white/10'
+                                : 'bg-white divide-y divide-gray-200'
+                                }`}>
                                 {loading ? (
                                     <tr>
-                                        <td colSpan={3} className="px-4 py-4 text-center text-sm">
+                                        <td colSpan={3} className={`px-4 py-4 text-center text-sm transition-colors duration-500 ${isDarkMode ? 'text-white' : 'text-gray-900'
+                                            }`}>
                                             <div className="flex justify-center items-center">
-                                                <div className="w-5 h-5 border-2 border-gray-500 border-t-white rounded-full animate-spin mr-2"></div>
+                                                <div className={`w-5 h-5 border-2 rounded-full animate-spin mr-2 ${isDarkMode
+                                                    ? 'border-gray-500 border-t-white'
+                                                    : 'border-gray-300 border-t-gray-600'
+                                                    }`}></div>
                                                 Cargando datos...
                                             </div>
                                         </td>
                                     </tr>
                                 ) : filteredItems.length === 0 ? (
                                     <tr>
-                                        <td colSpan={3} className="px-4 py-4 text-center text-sm">
+                                        <td colSpan={3} className={`px-4 py-4 text-center text-sm transition-colors duration-500 ${isDarkMode ? 'text-white' : 'text-gray-900'
+                                            }`}>
                                             {searchTerm
                                                 ? `No se encontraron ${getActiveTabLabel().toLowerCase()} con el término de búsqueda.`
                                                 : `No hay ${getActiveTabLabel().toLowerCase()} registrados.`}
@@ -514,7 +597,10 @@ export default function ConfigManagementComponent() {
                                     </tr>
                                 ) : (
                                     filteredItems.map((item) => (
-                                        <tr key={item.id} className={`hover:bg-gray-900 transition-colors ${deletingRow === item.id ? 'bg-red-900 bg-opacity-20' : ''}`}>
+                                        <tr key={item.id} className={`transition-colors ${deletingRow === item.id
+                                            ? isDarkMode ? 'bg-red-900 bg-opacity-20' : 'bg-red-100'
+                                            : isDarkMode ? 'hover:bg-gray-900' : 'hover:bg-gray-50'
+                                            }`}>
                                             <td className="px-4 py-3 text-sm">
                                                 {editingRow === item.id ? (
                                                     <div className="flex items-center space-x-2">
@@ -523,7 +609,10 @@ export default function ConfigManagementComponent() {
                                                             type="text"
                                                             value={editValue}
                                                             onChange={(e) => setEditValue(e.target.value.toUpperCase())}
-                                                            className={`w-full bg-black border ${error && editingRow === item.id ? 'border-red-500' : 'border-gray-700'} rounded-lg p-1 focus:border-white focus:ring focus:ring-gray-700 focus:ring-opacity-50 transition-all text-sm`}
+                                                            className={`w-full rounded-lg p-1 text-sm transition-all ${isDarkMode
+                                                                ? `bg-black border ${error && editingRow === item.id ? 'border-red-500' : 'border-gray-700'} focus:border-white focus:ring focus:ring-gray-700 focus:ring-opacity-50 text-white`
+                                                                : `bg-white border ${error && editingRow === item.id ? 'border-red-500' : 'border-gray-300'} focus:border-gray-500 focus:ring focus:ring-gray-500 focus:ring-opacity-50 text-gray-900`
+                                                                }`}
                                                             placeholder={`Nombre del ${getActiveTabLabel().toLowerCase()}`}
                                                             onKeyDown={(e) => {
                                                                 if (e.key === 'Enter') {
@@ -537,19 +626,26 @@ export default function ConfigManagementComponent() {
                                                         <div className="flex space-x-1">
                                                             <button
                                                                 onClick={() => saveRowEdit(item.id)}
-                                                                className="p-1 bg-gray-800 hover:bg-gray-700 rounded-md transition-colors"
+                                                                className={`p-1 rounded-md transition-colors ${isDarkMode
+                                                                    ? 'bg-gray-800 hover:bg-gray-700'
+                                                                    : 'bg-gray-200 hover:bg-gray-300'
+                                                                    }`}
                                                                 title="Guardar"
                                                                 disabled={isSubmitting}
                                                             >
                                                                 {isSubmitting ? (
-                                                                    <div className="w-3 h-3 border-2 border-gray-500 border-t-white rounded-full animate-spin"></div>
+                                                                    <div className={`w-3 h-3 border-2 rounded-full animate-spin ${isDarkMode
+                                                                        ? 'border-gray-500 border-t-white'
+                                                                        : 'border-gray-400 border-t-gray-600'
+                                                                        }`}></div>
                                                                 ) : (
                                                                     <Save size={16} />
                                                                 )}
                                                             </button>
                                                             <button
                                                                 onClick={cancelRowEdit}
-                                                                className="p-1 hover:bg-gray-700 rounded-md transition-colors"
+                                                                className={`p-1 rounded-md transition-colors ${isDarkMode ? 'hover:bg-gray-700' : 'hover:bg-gray-300'
+                                                                    }`}
                                                                 title="Cancelar"
                                                             >
                                                                 <X size={16} />
@@ -558,11 +654,17 @@ export default function ConfigManagementComponent() {
                                                     </div>
                                                 ) : (
                                                     item.concepto && item.concepto.trim() !== '' ? (
-                                                        <span className="inline-flex px-2 py-0.5 rounded-full text-xs font-semibold items-center gap-1 bg-white/5 text-white border border-white/20 w-fit max-w-full transition-all duration-300 hover:bg-white/10">
+                                                        <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-semibold items-center gap-1 w-fit max-w-full transition-all duration-300 ${isDarkMode
+                                                            ? 'bg-white/5 text-white border border-white/20 hover:bg-white/10'
+                                                            : 'bg-gray-100 text-gray-800 border border-gray-200 hover:bg-gray-200'
+                                                            }`}>
                                                             {item.concepto}
                                                         </span>
                                                     ) : (
-                                                        <span className="text-amber-400 flex items-center gap-1 bg-amber-900/30 border border-amber-500 rounded-full px-2 py-0.5 text-xs font-semibold animate-fade-in">
+                                                        <span className={`flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-semibold animate-fade-in ${isDarkMode
+                                                            ? 'text-amber-400 bg-amber-900/30 border border-amber-500'
+                                                            : 'text-amber-700 bg-amber-100 border border-amber-300'
+                                                            }`}>
                                                             <AlertTriangle size={14} />
                                                             <span>Sin concepto</span>
                                                         </span>
@@ -577,7 +679,8 @@ export default function ConfigManagementComponent() {
                                                     <div className="flex justify-end space-x-1 opacity-50">
                                                         <button
                                                             title='Editar'
-                                                            className="p-1 hover:bg-gray-700 rounded-md transition-colors cursor-not-allowed"
+                                                            className={`p-1 rounded-md transition-colors cursor-not-allowed ${isDarkMode ? 'hover:bg-gray-700' : 'hover:bg-gray-300'
+                                                                }`}
                                                             disabled
                                                         >
                                                             <Edit size={16} />
@@ -600,14 +703,20 @@ export default function ConfigManagementComponent() {
                                                             disabled={isSubmitting}
                                                         >
                                                             {isSubmitting ? (
-                                                                <div className="w-3 h-3 border-2 border-gray-500 border-t-white rounded-full animate-spin"></div>
+                                                                <div className={`w-3 h-3 border-2 rounded-full animate-spin ${isDarkMode
+                                                                    ? 'border-gray-500 border-t-white'
+                                                                    : 'border-red-300 border-t-white'
+                                                                    }`}></div>
                                                             ) : (
                                                                 <CheckCircle size={16} />
                                                             )}
                                                         </button>
                                                         <button
                                                             onClick={cancelDelete}
-                                                            className="p-1 bg-gray-800 hover:bg-gray-700 rounded-md transition-colors"
+                                                            className={`p-1 rounded-md transition-colors ${isDarkMode
+                                                                ? 'bg-gray-800 hover:bg-gray-700'
+                                                                : 'bg-gray-200 hover:bg-gray-300'
+                                                                }`}
                                                             title="Cancelar"
                                                         >
                                                             <X size={16} />
@@ -617,7 +726,8 @@ export default function ConfigManagementComponent() {
                                                     <div className="flex justify-end space-x-1">
                                                         <button
                                                             onClick={() => handleEdit(item)}
-                                                            className="p-1 hover:bg-gray-700 rounded-md transition-colors"
+                                                            className={`p-1 rounded-md transition-colors ${isDarkMode ? 'hover:bg-gray-700' : 'hover:bg-gray-200'
+                                                                }`}
                                                             title="Editar"
                                                         >
                                                             <Edit size={16} />
@@ -640,7 +750,8 @@ export default function ConfigManagementComponent() {
                     </div>
 
                     {/* Contador de resultados */}
-                    <div className="mt-4 text-sm text-gray-400">
+                    <div className={`mt-4 text-sm transition-colors duration-500 ${isDarkMode ? 'text-gray-400' : 'text-gray-600'
+                        }`}>
                         Mostrando {filteredItems.length} de {configItems.filter(item => item.tipo === activeTab).length} {getActiveTabLabel().toLowerCase()}
                     </div>
                 </div>
