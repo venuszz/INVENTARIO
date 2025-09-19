@@ -1,5 +1,6 @@
 "use client";
 import { useState, useEffect } from 'react';
+import { useTheme } from '@/context/ThemeContext';
 import {
     FileText, Download, FileSpreadsheet, File,
     FileDigit, X, AlertCircle,
@@ -22,6 +23,7 @@ interface Firma {
 }
 
 export default function ReportesIteaDashboard() {
+    const { isDarkMode } = useTheme();
     // Estado para controlar el modal de exportación
     const [exportModalOpen, setExportModalOpen] = useState(false);
     const [selectedReport, setSelectedReport] = useState('');
@@ -94,57 +96,57 @@ export default function ReportesIteaDashboard() {
         }
     }
 
-    // Datos de reportes ITEA con íconos coloridos y fondos sutiles en escala de grises
+    // Datos de reportes ITEA con íconos coloridos y fondos adaptativos
     const reportes = [
         {
             id: 1,
             title: 'General',
             path: '/reportes/itea/general',
             icon: <Database className="h-5 w-5" />,
-            color: 'bg-gray-900/40',
-            borderColor: 'border-gray-600/50',
-            hoverColor: 'hover:border-gray-400',
-            iconColor: 'text-blue-400'
+            color: isDarkMode ? 'bg-gray-900/40' : 'bg-blue-50',
+            borderColor: isDarkMode ? 'border-gray-600/50' : 'border-blue-200',
+            hoverColor: isDarkMode ? 'hover:border-gray-400' : 'hover:border-blue-400',
+            iconColor: isDarkMode ? 'text-blue-400' : 'text-blue-600'
         },
         {
             id: 2,
             title: 'Activos',
             path: '/reportes/itea/activos',
             icon: <CheckCircle className="h-5 w-5" />,
-            color: 'bg-white/5',
-            borderColor: 'border-gray-700/50',
-            hoverColor: 'hover:border-gray-500',
-            iconColor: 'text-emerald-400'
+            color: isDarkMode ? 'bg-white/5' : 'bg-emerald-50',
+            borderColor: isDarkMode ? 'border-gray-700/50' : 'border-emerald-200',
+            hoverColor: isDarkMode ? 'hover:border-gray-500' : 'hover:border-emerald-400',
+            iconColor: isDarkMode ? 'text-emerald-400' : 'text-emerald-600'
         },
         {
             id: 3,
             title: 'Inactivos',
             path: '/reportes/itea/inactivos',
             icon: <UserX className="h-5 w-5" />,
-            color: 'bg-gray-800/30',
-            borderColor: 'border-gray-600/40',
-            hoverColor: 'hover:border-gray-400',
-            iconColor: 'text-amber-400'
+            color: isDarkMode ? 'bg-gray-800/30' : 'bg-amber-50',
+            borderColor: isDarkMode ? 'border-gray-600/40' : 'border-amber-200',
+            hoverColor: isDarkMode ? 'hover:border-gray-400' : 'hover:border-amber-400',
+            iconColor: isDarkMode ? 'text-amber-400' : 'text-amber-600'
         },
         {
             id: 4,
             title: 'No localizados',
             path: '/reportes/itea/no-localizados',
             icon: <MapPin className="h-5 w-5" />,
-            color: 'bg-gray-950/50',
-            borderColor: 'border-gray-800/60',
-            hoverColor: 'hover:border-gray-600',
-            iconColor: 'text-rose-400'
+            color: isDarkMode ? 'bg-gray-950/50' : 'bg-rose-50',
+            borderColor: isDarkMode ? 'border-gray-800/60' : 'border-rose-200',
+            hoverColor: isDarkMode ? 'hover:border-gray-600' : 'hover:border-rose-400',
+            iconColor: isDarkMode ? 'text-rose-400' : 'text-rose-600'
         },
         {
             id: 5,
             title: 'Obsoletos',
             path: '/reportes/itea/obsoletos',
             icon: <Trash2 className="h-5 w-5" />,
-            color: 'bg-white/10',
-            borderColor: 'border-gray-700/50',
-            hoverColor: 'hover:border-gray-500',
-            iconColor: 'text-violet-400'
+            color: isDarkMode ? 'bg-white/10' : 'bg-violet-50',
+            borderColor: isDarkMode ? 'border-gray-700/50' : 'border-violet-200',
+            hoverColor: isDarkMode ? 'hover:border-gray-500' : 'hover:border-violet-400',
+            iconColor: isDarkMode ? 'text-violet-400' : 'text-violet-600'
         },
     ];
 
@@ -319,12 +321,30 @@ export default function ReportesIteaDashboard() {
     const userRole = useUserRole();
 
     return (
-        <div className="bg-black text-white min-h-screen p-2 sm:p-4 md:p-6 lg:p-8">
-            <div className="w-full mx-auto bg-gradient-to-br from-gray-900/30 via-black to-gray-900/20 rounded-lg sm:rounded-xl shadow-2xl overflow-hidden border border-gray-800/30 transition-all duration-500 transform">
+        <div className={`min-h-screen p-2 sm:p-4 md:p-6 lg:p-8 transition-colors duration-500 ${
+            isDarkMode 
+                ? 'bg-black text-white' 
+                : 'bg-gradient-to-br from-gray-50 via-white to-violet-50 text-gray-900'
+        }`}>
+            <div className={`w-full mx-auto rounded-lg sm:rounded-xl shadow-2xl overflow-hidden transition-all duration-500 transform ${
+                isDarkMode 
+                    ? 'bg-gradient-to-br from-gray-900/30 via-black to-gray-900/20 border border-gray-800/30' 
+                    : 'bg-gradient-to-br from-white via-violet-50/30 to-white border border-gray-200'
+            }`}>
                 {/* Header */}
-                <div className="bg-black/50 p-4 sm:p-6 flex flex-col sm:flex-row justify-between items-start sm:items-center border-b border-gray-800/30 gap-2 sm:gap-0">
-                    <h1 className="text-xl sm:text-2xl md:text-3xl font-bold flex items-center text-white">
-                        <span className="mr-2 sm:mr-3 bg-gray-900/30 text-white p-1 sm:p-2 rounded-lg border border-gray-700/50 text-sm sm:text-base">
+                <div className={`p-4 sm:p-6 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 sm:gap-0 transition-colors duration-500 ${
+                    isDarkMode 
+                        ? 'bg-black/50 border-b border-gray-800/30' 
+                        : 'bg-white/80 border-b border-gray-200'
+                }`}>
+                    <h1 className={`text-xl sm:text-2xl md:text-3xl font-bold flex items-center transition-colors duration-500 ${
+                        isDarkMode ? 'text-white' : 'text-gray-900'
+                    }`}>
+                        <span className={`mr-2 sm:mr-3 p-1 sm:p-2 rounded-lg text-sm sm:text-base transition-colors duration-500 ${
+                            isDarkMode 
+                                ? 'bg-gray-900/30 text-white border border-gray-700/50' 
+                                : 'bg-gray-600 text-white border border-gray-700'
+                        }`}>
                             <FileText className="h-4 w-4 inline mr-1" />
                             REP
                         </span>
@@ -334,14 +354,22 @@ export default function ReportesIteaDashboard() {
                         <RoleGuard roles={["admin", "superadmin"]} userRole={userRole}>
                             <button
                                 onClick={() => setFirmasModalOpen(true)}
-                                className="p-2 rounded-lg text-gray-400 hover:text-violet-400 transition-colors border border-gray-800 hover:border-violet-500/30"
+                                className={`p-2 rounded-lg transition-colors ${
+                                    isDarkMode 
+                                        ? 'text-gray-400 hover:text-violet-400 border border-gray-800 hover:border-violet-500/30'
+                                        : 'text-gray-600 hover:text-violet-600 border border-gray-300 hover:border-violet-400/50'
+                                }`}
                                 title="Configurar Firmas"
                             >
                                 <Settings2 className="h-5 w-5" />
                             </button>
                         </RoleGuard>
-                        <div className="flex items-center gap-2 text-sm text-gray-400">
-                            <ListChecks className="h-4 w-4 text-violet-400" />
+                        <div className={`flex items-center gap-2 text-sm transition-colors duration-500 ${
+                            isDarkMode ? 'text-gray-400' : 'text-gray-600'
+                        }`}>
+                            <ListChecks className={`h-4 w-4 ${
+                                isDarkMode ? 'text-violet-400' : 'text-violet-600'
+                            }`} />
                             <span>{reportes.length} categorías de reportes</span>
                         </div>
                     </div>
@@ -356,18 +384,26 @@ export default function ReportesIteaDashboard() {
                                 className={`${reporte.color} backdrop-blur-sm rounded-lg border ${reporte.borderColor} p-4 ${reporte.hoverColor} transition-all duration-300 shadow-lg hover:shadow-xl hover:scale-[1.02] flex flex-col items-center w-full min-h-[260px] relative overflow-hidden`}
                             >
                                 {/* Efecto de brillo en la esquina */}
-                                <div className="absolute -top-10 -right-10 w-20 h-20 bg-gradient-to-br from-white/10 to-transparent transform rotate-45"></div>
+                                <div className={`absolute -top-10 -right-10 w-20 h-20 bg-gradient-to-br transform rotate-45 ${
+                                    isDarkMode ? 'from-white/10 to-transparent' : 'from-violet-200/30 to-transparent'
+                                }`}></div>
                                 
                                 <div className="flex justify-between items-center mb-4 w-full relative">
                                     <div className="flex items-center mx-auto">
-                                        <div className={`bg-black p-2 rounded-lg mr-3 border ${reporte.borderColor}`}>
+                                        <div className={`p-2 rounded-lg mr-3 border ${reporte.borderColor} transition-colors duration-500 ${
+                                            isDarkMode ? 'bg-black' : 'bg-white'
+                                        }`}>
                                             <span className={reporte.iconColor}>{reporte.icon}</span>
                                         </div>
-                                        <h3 className="text-lg font-medium">{reporte.title}</h3>
+                                        <h3 className={`text-lg font-medium transition-colors duration-500 ${
+                                            isDarkMode ? 'text-white' : 'text-gray-900'
+                                        }`}>{reporte.title}</h3>
                                     </div>
                                 </div>
 
-                                <p className="text-gray-400 mb-4 text-sm text-center">
+                                <p className={`mb-4 text-sm text-center transition-colors duration-500 ${
+                                    isDarkMode ? 'text-gray-400' : 'text-gray-600'
+                                }`}>
                                     {reporte.title === 'General' ? 'Información completa de todos los registros del sistema' :
                                         reporte.title === 'Activos' ? 'Registros actualmente en uso, con sus diferentes estados' :
                                             reporte.title === 'Inactivos' ? 'Registros dados de baja temporalmente' :
@@ -377,7 +413,9 @@ export default function ReportesIteaDashboard() {
 
                                 <button
                                     onClick={() => openExportModal(reporte.title)}
-                                    className={`w-full py-2.5 bg-black/40 hover:bg-black/60 rounded-lg flex items-center justify-center gap-2 transition-all duration-300 border ${reporte.borderColor} hover:${reporte.hoverColor} group`}
+                                    className={`w-full py-2.5 rounded-lg flex items-center justify-center gap-2 transition-all duration-300 border ${reporte.borderColor} hover:${reporte.hoverColor} group ${
+                                        isDarkMode ? 'bg-black/40 hover:bg-black/60' : 'bg-white/60 hover:bg-white/80'
+                                    }`}
                                 >
                                     <Download size={16} className={`${reporte.iconColor} group-hover:scale-110 transition-transform duration-300`} />
                                     <span className={reporte.iconColor}>Exportar</span>
@@ -388,67 +426,137 @@ export default function ReportesIteaDashboard() {
                 </div>
 
                 {/* Footer con nuevo diseño */}
-                <div className="bg-black/50 p-4 border-t border-gray-800/30 text-center text-sm text-gray-300/70">
+                <div className={`p-4 text-center text-sm transition-colors duration-500 ${
+                    isDarkMode 
+                        ? 'bg-black/50 border-t border-gray-800/30 text-gray-300/70' 
+                        : 'bg-white/80 border-t border-gray-200 text-gray-600'
+                }`}>
                     <p>Selecciona un reporte para exportarlo en PDF, Excel o CSV</p>
                 </div>
             </div>
 
             {/* Modal de exportación - Actualizado con el nuevo esquema de colores */}
             {exportModalOpen && (
-                <div className="fixed inset-0 bg-black/90 flex items-center justify-center z-50 px-4 animate-fadeIn backdrop-blur-sm">
-                    <div className="bg-gradient-to-br from-gray-900/50 via-black to-gray-900/30 rounded-2xl shadow-2xl border border-gray-600/30 w-full max-w-md overflow-hidden transition-all duration-300 transform flex flex-col items-center">
+                <div className={`fixed inset-0 flex items-center justify-center z-50 px-4 animate-fadeIn backdrop-blur-sm ${
+                    isDarkMode ? 'bg-black/90' : 'bg-black/60'
+                }`}>
+                    <div className={`rounded-2xl shadow-2xl w-full max-w-md overflow-hidden transition-all duration-300 transform flex flex-col items-center ${
+                        isDarkMode 
+                            ? 'bg-gradient-to-br from-gray-900/50 via-black to-gray-900/30 border border-gray-600/30' 
+                            : 'bg-gradient-to-br from-white via-violet-50/30 to-white border border-gray-300'
+                    }`}>
                         <div className="relative p-6 flex flex-col items-center w-full">
-                            <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-gray-500/60 via-gray-400 to-gray-500/60"></div>
+                            <div className={`absolute top-0 left-0 w-full h-1 bg-gradient-to-r ${
+                                isDarkMode 
+                                    ? 'from-gray-500/60 via-gray-400 to-gray-500/60' 
+                                    : 'from-violet-400/60 via-violet-500 to-violet-400/60'
+                            }`}></div>
                             <button
                                 onClick={() => setExportModalOpen(false)}
-                                className="absolute top-3 right-3 p-2 rounded-full bg-black/60 hover:bg-gray-900/30 text-gray-400 hover:text-gray-300 border border-gray-500/30 transition-colors"
+                                className={`absolute top-3 right-3 p-2 rounded-full transition-colors ${
+                                    isDarkMode 
+                                        ? 'bg-black/60 hover:bg-gray-900/30 text-gray-400 hover:text-gray-300 border border-gray-500/30'
+                                        : 'bg-white/80 hover:bg-gray-100 text-gray-600 hover:text-gray-800 border border-gray-300'
+                                }`}
                                 title="Cerrar"
                             >
                                 <X className="h-4 w-4" />
                             </button>
                             <div className="flex flex-col items-center text-center mb-4 w-full">
-                                <div className="p-3 bg-gray-500/10 rounded-full border border-gray-500/30 mb-3 mx-auto">
-                                    <FileDigit className="h-8 w-8 text-gray-400" />
+                                <div className={`p-3 rounded-full mb-3 mx-auto transition-colors duration-500 ${
+                                    isDarkMode 
+                                        ? 'bg-gray-500/10 border border-gray-500/30' 
+                                        : 'bg-violet-100 border border-violet-200'
+                                }`}>
+                                    <FileDigit className={`h-8 w-8 transition-colors duration-500 ${
+                                        isDarkMode ? 'text-gray-400' : 'text-violet-600'
+                                    }`} />
                                 </div>
-                                <h3 className="text-2xl font-bold text-white">Exportar Reporte</h3>
-                                <p className="text-gray-400 mt-2">
-                                    Selecciona el formato para exportar el reporte <span className="text-gray-300 font-bold">{selectedReport}</span>
+                                <h3 className={`text-2xl font-bold transition-colors duration-500 ${
+                                    isDarkMode ? 'text-white' : 'text-gray-900'
+                                }`}>Exportar Reporte</h3>
+                                <p className={`mt-2 transition-colors duration-500 ${
+                                    isDarkMode ? 'text-gray-400' : 'text-gray-600'
+                                }`}>
+                                    Selecciona el formato para exportar el reporte <span className={`font-bold ${
+                                        isDarkMode ? 'text-gray-300' : 'text-gray-800'
+                                    }`}>{selectedReport}</span>
                                 </p>
                             </div>
                             <div className="space-y-5 mt-6 w-full">
                                 <div className="grid grid-cols-3 gap-3">
                                     <button
                                         onClick={() => handleExport('PDF')}
-                                        className="flex flex-col items-center justify-center p-4 bg-black hover:bg-gray-900/20 rounded-xl border border-gray-800/30 hover:border-gray-600/50 transition-all transform hover:scale-[1.02] group"
+                                        className={`flex flex-col items-center justify-center p-4 rounded-xl transition-all transform hover:scale-[1.02] group ${
+                                            isDarkMode 
+                                                ? 'bg-black hover:bg-gray-900/20 border border-gray-800/30 hover:border-gray-600/50'
+                                                : 'bg-white hover:bg-gray-50 border border-gray-200 hover:border-gray-400'
+                                        }`}
                                         disabled={isExporting}
                                     >
-                                        <File size={32} className="text-gray-400 group-hover:text-gray-300 transition-colors mb-2" />
-                                        <span className="font-medium text-gray-100">PDF</span>
-                                        <span className="text-xs text-gray-400">Documento</span>
+                                        <File size={32} className={`transition-colors mb-2 ${
+                                            isDarkMode 
+                                                ? 'text-gray-400 group-hover:text-gray-300' 
+                                                : 'text-gray-600 group-hover:text-gray-700'
+                                        }`} />
+                                        <span className={`font-medium ${
+                                            isDarkMode ? 'text-gray-100' : 'text-gray-800'
+                                        }`}>PDF</span>
+                                        <span className={`text-xs ${
+                                            isDarkMode ? 'text-gray-400' : 'text-gray-600'
+                                        }`}>Documento</span>
                                     </button>
                                     <button
                                         onClick={() => handleExport('Excel')}
-                                        className="flex flex-col items-center justify-center p-4 bg-black hover:bg-gray-900/20 rounded-xl border border-gray-800/30 hover:border-gray-600/50 transition-all transform hover:scale-[1.02] group"
+                                        className={`flex flex-col items-center justify-center p-4 rounded-xl transition-all transform hover:scale-[1.02] group ${
+                                            isDarkMode 
+                                                ? 'bg-black hover:bg-gray-900/20 border border-gray-800/30 hover:border-gray-600/50'
+                                                : 'bg-white hover:bg-gray-50 border border-gray-200 hover:border-gray-400'
+                                        }`}
                                         disabled={isExporting}
                                     >
-                                        <FileSpreadsheet size={32} className="text-gray-400 group-hover:text-gray-300 transition-colors mb-2" />
-                                        <span className="font-medium text-gray-100">Excel</span>
-                                        <span className="text-xs text-gray-400">Hoja cálculo</span>
+                                        <FileSpreadsheet size={32} className={`transition-colors mb-2 ${
+                                            isDarkMode 
+                                                ? 'text-gray-400 group-hover:text-gray-300' 
+                                                : 'text-gray-600 group-hover:text-gray-700'
+                                        }`} />
+                                        <span className={`font-medium ${
+                                            isDarkMode ? 'text-gray-100' : 'text-gray-800'
+                                        }`}>Excel</span>
+                                        <span className={`text-xs ${
+                                            isDarkMode ? 'text-gray-400' : 'text-gray-600'
+                                        }`}>Hoja cálculo</span>
                                     </button>
                                     <button
                                         onClick={() => handleExport('CSV')}
-                                        className="flex flex-col items-center justify-center p-4 bg-black hover:bg-gray-900/20 rounded-xl border border-gray-800/30 hover:border-gray-600/50 transition-all transform hover:scale-[1.02] group"
+                                        className={`flex flex-col items-center justify-center p-4 rounded-xl transition-all transform hover:scale-[1.02] group ${
+                                            isDarkMode 
+                                                ? 'bg-black hover:bg-gray-900/20 border border-gray-800/30 hover:border-gray-600/50'
+                                                : 'bg-white hover:bg-gray-50 border border-gray-200 hover:border-gray-400'
+                                        }`}
                                         disabled={isExporting}
                                     >
-                                        <FileText size={32} className="text-gray-400 group-hover:text-gray-300 transition-colors mb-2" />
-                                        <span className="font-medium text-gray-100">CSV</span>
-                                        <span className="text-xs text-gray-400">Datos crudos</span>
+                                        <FileText size={32} className={`transition-colors mb-2 ${
+                                            isDarkMode 
+                                                ? 'text-gray-400 group-hover:text-gray-300' 
+                                                : 'text-gray-600 group-hover:text-gray-700'
+                                        }`} />
+                                        <span className={`font-medium ${
+                                            isDarkMode ? 'text-gray-100' : 'text-gray-800'
+                                        }`}>CSV</span>
+                                        <span className={`text-xs ${
+                                            isDarkMode ? 'text-gray-400' : 'text-gray-600'
+                                        }`}>Datos crudos</span>
                                     </button>
                                 </div>
                                 <div className="flex justify-end mt-4">
                                     <button
                                         onClick={() => setExportModalOpen(false)}
-                                        className="px-4 py-2 bg-black hover:bg-violet-900/20 rounded-lg transition-colors text-sm border border-violet-800/30 text-violet-300 hover:text-violet-200"
+                                        className={`px-4 py-2 rounded-lg transition-colors text-sm ${
+                                            isDarkMode 
+                                                ? 'bg-black hover:bg-violet-900/20 border border-violet-800/30 text-violet-300 hover:text-violet-200'
+                                                : 'bg-gray-100 hover:bg-gray-200 border border-gray-300 text-gray-700 hover:text-gray-800'
+                                        }`}
                                     >
                                         Cancelar
                                     </button>
@@ -461,22 +569,44 @@ export default function ReportesIteaDashboard() {
 
             {/* Modal de Firmas - Actualizado con el nuevo esquema de colores */}
             {firmasModalOpen && (
-                <div className="fixed inset-0 bg-black/95 flex items-center justify-center z-50 px-4 backdrop-blur-md animate-fadeIn">
-                    <div className="bg-gradient-to-br from-gray-900/30 via-black to-gray-900/20 w-full max-w-md rounded-2xl overflow-hidden border border-gray-800/30">
+                <div className={`fixed inset-0 flex items-center justify-center z-50 px-4 backdrop-blur-md animate-fadeIn ${
+                    isDarkMode ? 'bg-black/95' : 'bg-black/60'
+                }`}>
+                    <div className={`w-full max-w-md rounded-2xl overflow-hidden transition-colors duration-500 ${
+                        isDarkMode 
+                            ? 'bg-gradient-to-br from-gray-900/30 via-black to-gray-900/20 border border-gray-800/30'
+                            : 'bg-gradient-to-br from-white via-violet-50/30 to-white border border-violet-200'
+                    }`}>
                         {/* Barra superior */}
-                        <div className="h-0.5 w-full bg-gradient-to-r from-gray-700/80 via-gray-400 to-gray-700/80"></div>
+                        <div className={`h-0.5 w-full bg-gradient-to-r ${
+                            isDarkMode 
+                                ? 'from-gray-700/80 via-gray-400 to-gray-700/80' 
+                                : 'from-violet-400/80 via-violet-500 to-violet-400/80'
+                        }`}></div>
                         <div className="p-6">
                             {/* Header */}
                             <div className="flex items-center justify-between mb-5">
                                 <div className="flex items-center gap-3">
-                                    <div className="p-2 bg-black rounded-lg border border-violet-700/30">
-                                        <Settings2 className="h-5 w-5 text-violet-400" />
+                                    <div className={`p-2 rounded-lg transition-colors duration-500 ${
+                                        isDarkMode 
+                                            ? 'bg-black border border-violet-700/30' 
+                                            : 'bg-white border border-violet-200'
+                                    }`}>
+                                        <Settings2 className={`h-5 w-5 ${
+                                            isDarkMode ? 'text-violet-400' : 'text-violet-600'
+                                        }`} />
                                     </div>
-                                    <h3 className="text-lg font-semibold text-white">Configuración de Firmas</h3>
+                                    <h3 className={`text-lg font-semibold transition-colors duration-500 ${
+                                        isDarkMode ? 'text-white' : 'text-gray-900'
+                                    }`}>Configuración de Firmas</h3>
                                 </div>
                                 <button
                                     onClick={() => setFirmasModalOpen(false)}
-                                    className="p-1.5 rounded-lg text-gray-500 hover:text-violet-400 transition-colors focus:outline-none"
+                                    className={`p-1.5 rounded-lg transition-colors focus:outline-none ${
+                                        isDarkMode 
+                                            ? 'text-gray-500 hover:text-violet-400' 
+                                            : 'text-gray-600 hover:text-violet-600'
+                                    }`}
                                     title="Cerrar"
                                 >
                                     <X className="h-5 w-5" />
@@ -491,8 +621,12 @@ export default function ReportesIteaDashboard() {
                                             key={firma.id} 
                                             className={`group p-4 relative rounded-xl transition-all duration-300 ${
                                                 isEditing 
-                                                    ? 'bg-gray-900/20 border border-gray-700/50' 
-                                                    : 'bg-black border border-gray-800/30 hover:border-gray-600/40'
+                                                    ? isDarkMode 
+                                                        ? 'bg-gray-900/20 border border-gray-700/50' 
+                                                        : 'bg-violet-50 border border-violet-300'
+                                                    : isDarkMode
+                                                        ? 'bg-black border border-gray-800/30 hover:border-gray-600/40'
+                                                        : 'bg-white border border-violet-200 hover:border-violet-400/60'
                                             }`}
                                         >
                                             {isEditing ? (
@@ -541,31 +675,45 @@ export default function ReportesIteaDashboard() {
                                                         });
                                                     }
                                                 }} className="space-y-3">
-                                                    <h4 className="font-medium text-violet-400 text-sm mb-2">{firma.concepto}</h4>
+                                                    <h4 className={`font-medium text-sm mb-2 transition-colors duration-500 ${
+                                                        isDarkMode ? 'text-violet-400' : 'text-violet-700'
+                                                    }`}>{firma.concepto}</h4>
                                                     <div className="space-y-3">
                                                         <div>
-                                                            <label className="block text-xs font-medium text-violet-400/70 mb-1">
+                                                            <label className={`block text-xs font-medium mb-1 transition-colors duration-500 ${
+                                                                isDarkMode ? 'text-violet-400/70' : 'text-violet-700/80'
+                                                            }`}>
                                                                 Nombre
                                                             </label>
                                                             <input
                                                                 type="text"
                                                                 name="nombre"
                                                                 defaultValue={firma.nombre || ''}
-                                                                className="w-full px-3 py-2 bg-black border border-gray-800 focus:border-violet-700/60 rounded-lg focus:outline-none focus:ring-1 focus:ring-violet-700/30 text-white text-sm transition-all"
+                                                                className={`w-full px-3 py-2 rounded-lg focus:outline-none focus:ring-1 text-sm transition-all ${
+                                                                    isDarkMode 
+                                                                        ? 'bg-black border border-gray-800 focus:border-violet-700/60 focus:ring-violet-700/30 text-white'
+                                                                        : 'bg-white border border-gray-300 focus:border-violet-500 focus:ring-violet-500/30 text-gray-900'
+                                                                }`}
                                                                 autoFocus
                                                                 title="Nombre de la persona que firma"
                                                                 placeholder="Nombre completo"
                                                             />
                                                         </div>
                                                         <div>
-                                                            <label className="block text-xs font-medium text-violet-400/70 mb-1">
+                                                            <label className={`block text-xs font-medium mb-1 transition-colors duration-500 ${
+                                                                isDarkMode ? 'text-violet-400/70' : 'text-violet-700/80'
+                                                            }`}>
                                                                 Puesto
                                                             </label>
                                                             <input
                                                                 type="text"
                                                                 name="puesto"
                                                                 defaultValue={firma.puesto || ''}
-                                                                className="w-full px-3 py-2 bg-black border border-gray-800 focus:border-violet-700/60 rounded-lg focus:outline-none focus:ring-1 focus:ring-violet-700/30 text-white text-sm transition-all"
+                                                                className={`w-full px-3 py-2 rounded-lg focus:outline-none focus:ring-1 text-sm transition-all ${
+                                                                    isDarkMode 
+                                                                        ? 'bg-black border border-gray-800 focus:border-violet-700/60 focus:ring-violet-700/30 text-white'
+                                                                        : 'bg-white border border-gray-300 focus:border-violet-500 focus:ring-violet-500/30 text-gray-900'
+                                                                }`}
                                                                 title="Puesto de la persona que firma"
                                                                 placeholder="Cargo o puesto"
                                                             />
@@ -575,7 +723,11 @@ export default function ReportesIteaDashboard() {
                                                         <button
                                                             type="button"
                                                             onClick={() => setEditingFirma(null)}
-                                                            className="px-3 py-1.5 bg-gray-900 hover:bg-gray-800 rounded-md text-gray-400 text-xs font-medium transition-all focus:outline-none"
+                                                            className={`px-3 py-1.5 rounded-md text-xs font-medium transition-all focus:outline-none ${
+                                                                isDarkMode 
+                                                                    ? 'bg-gray-900 hover:bg-gray-800 text-gray-400'
+                                                                    : 'bg-gray-200 hover:bg-gray-300 text-gray-600'
+                                                            }`}
                                                         >
                                                             Cancelar
                                                         </button>
@@ -590,13 +742,23 @@ export default function ReportesIteaDashboard() {
                                             ) : (
                                                 <div className="flex justify-between items-start">
                                                     <div>
-                                                        <h4 className="font-medium text-violet-400 text-sm">{firma.concepto}</h4>
-                                                        <p className="text-white text-sm mt-1.5">{firma.nombre || 'Sin asignar'}</p>
-                                                        <p className="text-gray-500 text-xs mt-0.5">{firma.puesto || 'Sin asignar'}</p>
+                                                        <h4 className={`font-medium text-sm transition-colors duration-500 ${
+                                                            isDarkMode ? 'text-violet-400' : 'text-violet-700'
+                                                        }`}>{firma.concepto}</h4>
+                                                        <p className={`text-sm mt-1.5 transition-colors duration-500 ${
+                                                            isDarkMode ? 'text-white' : 'text-gray-900'
+                                                        }`}>{firma.nombre || 'Sin asignar'}</p>
+                                                        <p className={`text-xs mt-0.5 transition-colors duration-500 ${
+                                                            isDarkMode ? 'text-gray-500' : 'text-gray-600'
+                                                        }`}>{firma.puesto || 'Sin asignar'}</p>
                                                     </div>
                                                     <button
                                                         onClick={() => setEditingFirma(firma)}
-                                                        className="p-1.5 rounded-md bg-black opacity-0 group-hover:opacity-100 text-gray-500 hover:text-violet-400 transition-all border border-gray-800 hover:border-violet-700/30 focus:outline-none"
+                                                        className={`p-1.5 rounded-md opacity-0 group-hover:opacity-100 transition-all focus:outline-none ${
+                                                            isDarkMode 
+                                                                ? 'bg-black text-gray-500 hover:text-violet-400 border border-gray-800 hover:border-violet-700/30'
+                                                                : 'bg-white text-gray-600 hover:text-violet-600 border border-gray-300 hover:border-violet-400/50'
+                                                        }`}
                                                         title="Editar firma"
                                                     >
                                                         <Pencil className="h-3.5 w-3.5" />
@@ -609,7 +771,9 @@ export default function ReportesIteaDashboard() {
                             </div>
 
                             {/* Línea separadora */}
-                            <div className="mt-5 mb-4 h-px w-full bg-gradient-to-r from-transparent via-violet-800/30 to-transparent"></div>
+                            <div className={`mt-5 mb-4 h-px w-full bg-gradient-to-r from-transparent to-transparent ${
+                                isDarkMode ? 'via-violet-800/30' : 'via-violet-300/50'
+                            }`}></div>
                         </div>
                     </div>
                 </div>
@@ -617,16 +781,26 @@ export default function ReportesIteaDashboard() {
 
             {/* Error Alert - Actualizado con el nuevo esquema de colores */}
             {error && (
-                <div className="fixed bottom-4 left-4 right-4 md:left-auto md:right-4 md:w-96 bg-rose-900/80 text-rose-100 px-4 py-3 rounded-lg shadow-lg border border-rose-800 z-50 backdrop-blur-sm animate-fade-in">
+                <div className={`fixed bottom-4 left-4 right-4 md:left-auto md:right-4 md:w-96 px-4 py-3 rounded-lg shadow-lg z-50 backdrop-blur-sm animate-fade-in transition-colors duration-500 ${
+                    isDarkMode 
+                        ? 'bg-rose-900/80 text-rose-100 border border-rose-800'
+                        : 'bg-white/90 text-rose-800 border border-rose-300'
+                }`}>
                     <div className="flex items-center">
-                        <AlertCircle className="h-5 w-5 text-rose-400 mr-3 flex-shrink-0" />
+                        <AlertCircle className={`h-5 w-5 mr-3 flex-shrink-0 transition-colors duration-500 ${
+                            isDarkMode ? 'text-rose-400' : 'text-rose-600'
+                        }`} />
                         <div className="flex-1 min-w-0">
                             <p className="text-sm font-medium">{error}</p>
                         </div>
                         <button
                             title='Cerrar alerta'
                             onClick={() => setError(null)}
-                            className="ml-4 flex-shrink-0 p-1 rounded-full text-rose-200 hover:text-white hover:bg-rose-800/60"
+                            className={`ml-4 flex-shrink-0 p-1 rounded-full transition-colors ${
+                                isDarkMode 
+                                    ? 'text-rose-200 hover:text-white hover:bg-rose-800/60'
+                                    : 'text-rose-600 hover:text-rose-800 hover:bg-rose-200/60'
+                            }`}
                         >
                             <X className="h-4 w-4" />
                         </button>

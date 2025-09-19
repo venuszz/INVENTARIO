@@ -381,45 +381,39 @@ export default function DirectorioManagementComponent() {
     const handleCloseMessage = () => setMessage({ type: '', text: '' });
 
     return (
-        <div className={`min-h-screen p-2 sm:p-4 md:p-6 lg:p-8 transition-colors duration-500 ${
-            isDarkMode 
-                ? 'bg-black text-white' 
-                : 'bg-gradient-to-br from-gray-50 via-white to-blue-50 text-gray-900'
-        }`}>
-            <div className={`w-full mx-auto rounded-lg sm:rounded-xl shadow-2xl overflow-hidden transition-all duration-500 transform ${
-                isDarkMode 
-                    ? 'bg-black border-2 border-white/10' 
-                    : 'bg-white border-2 border-gray-200'
+        <div className={`min-h-screen p-2 sm:p-4 md:p-6 lg:p-8 transition-colors duration-500 ${isDarkMode
+                ? 'bg-black text-white'
+                : 'bg-gradient-to-br from-gray-50 via-white to-gray-50 text-gray-900'
             }`}>
-                {/* Header con título y efecto glassmorphism */}
-                <div className={`p-4 sm:p-6 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 sm:gap-0 transition-colors duration-500 ${
-                    isDarkMode 
-                        ? 'bg-black border-b-2 border-white/10' 
-                        : 'bg-white border-b-2 border-gray-200'
+            <div className={`w-full mx-auto rounded-lg sm:rounded-xl shadow-2xl overflow-hidden transition-all duration-500 transform ${isDarkMode
+                    ? 'bg-black border-2 border-white/10'
+                    : 'bg-white border-2 border-gray-200'
                 }`}>
-                    <h1 className={`text-xl sm:text-2xl md:text-3xl font-bold flex items-center transition-colors duration-500 ${
-                        isDarkMode ? 'text-white' : 'text-gray-900'
+                {/* Header con título y efecto glassmorphism */}
+                <div className={`p-4 sm:p-6 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 sm:gap-0 transition-colors duration-500 ${isDarkMode
+                        ? 'bg-black border-b-2 border-white/10'
+                        : 'bg-white border-b-2 border-gray-200'
                     }`}>
-                        <span className={`mr-2 sm:mr-3 p-1 sm:p-2 rounded-lg text-sm sm:text-base shadow-lg transition-all duration-500 ${
-                            isDarkMode 
-                                ? 'bg-black border-2 border-white/10 text-white' 
-                                : 'bg-blue-600 border-2 border-blue-700 text-white'
-                        }`}>DIR</span>
+                    <h1 className={`text-xl sm:text-2xl md:text-3xl font-bold flex items-center transition-colors duration-500 ${isDarkMode ? 'text-white' : 'text-gray-900'
+                        }`}>
+                        <span className={`mr-2 sm:mr-3 p-1 sm:p-2 rounded-lg text-sm sm:text-base shadow-lg transition-all duration-500 ${isDarkMode
+                                ? 'bg-black border-2 border-white/10 text-white'
+                                : 'bg-gray-600 border-2 border-gray-700 text-white'
+                            }`}>DIR</span>
                         Directorio de Personal Autorizado
                     </h1>
                 </div>
 
                 {/* Mensajes con animación mejorada */}
                 {message.text && (
-                    <div className={`mx-2 sm:mx-4 md:mx-6 mt-4 sm:mt-6 p-3 sm:p-4 rounded-lg flex items-center justify-between transition-all duration-500 animate-slide-in-right backdrop-blur-sm border shadow-lg ${
-                        message.type === 'success'
+                    <div className={`mx-2 sm:mx-4 md:mx-6 mt-4 sm:mt-6 p-3 sm:p-4 rounded-lg flex items-center justify-between transition-all duration-500 animate-slide-in-right backdrop-blur-sm border shadow-lg ${message.type === 'success'
                             ? isDarkMode
                                 ? 'bg-gradient-to-r from-green-900/80 via-green-800/80 to-green-900/80 border-green-500/30'
                                 : 'bg-gradient-to-r from-green-100 via-green-50 to-green-100 border-green-300 text-green-800'
                             : isDarkMode
                                 ? 'bg-gradient-to-r from-red-900/80 via-red-800/80 to-red-900/80 border-red-500/30'
                                 : 'bg-gradient-to-r from-red-100 via-red-50 to-red-100 border-red-300 text-red-800'
-                    }`}>
+                        }`}>
                         <div className="flex items-center">
                             {message.type === 'success' ?
                                 <CheckCircle className="mr-2 sm:mr-3" size={20} /> :
@@ -427,11 +421,10 @@ export default function DirectorioManagementComponent() {
                             }
                             <span className="font-medium text-sm sm:text-base">{message.text}</span>
                         </div>
-                        <button 
-                            onClick={handleCloseMessage} 
-                            className={`p-1 rounded-full transition-colors ${
-                                isDarkMode ? 'hover:bg-black' : 'hover:bg-gray-200'
-                            }`} 
+                        <button
+                            onClick={handleCloseMessage}
+                            className={`p-1 rounded-full transition-colors ${isDarkMode ? 'hover:bg-black' : 'hover:bg-gray-200'
+                                }`}
                             title='Cerrar'
                         >
                             <X size={16} />
@@ -449,17 +442,15 @@ export default function DirectorioManagementComponent() {
                                 placeholder="Buscar personal autorizado..."
                                 value={searchTerm}
                                 onChange={(e) => setSearchTerm(e.target.value)}
-                                className={`w-full sm:w-64 rounded-lg p-2 pl-8 text-sm transition-all duration-300 ${
-                                    isDarkMode 
+                                className={`w-full sm:w-64 rounded-lg p-2 pl-8 text-sm transition-all duration-300 ${isDarkMode
                                         ? 'bg-black border-2 border-white/10 focus:border-white/20 focus:ring-2 focus:ring-white/10 group-hover:border-white/20 text-white'
-                                        : 'bg-white border-2 border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 group-hover:border-gray-400 text-gray-900'
-                                }`}
+                                        : 'bg-white border-2 border-gray-300 focus:border-gray-500 focus:ring-2 focus:ring-gray-500/20 group-hover:border-gray-400 text-gray-900'
+                                    }`}
                             />
-                            <Search size={18} className={`absolute left-2 top-2.5 transition-colors ${
-                                isDarkMode 
-                                    ? 'text-gray-500 group-hover:text-gray-400' 
+                            <Search size={18} className={`absolute left-2 top-2.5 transition-colors ${isDarkMode
+                                    ? 'text-gray-500 group-hover:text-gray-400'
                                     : 'text-gray-400 group-hover:text-gray-600'
-                            }`} />
+                                }`} />
                         </div>
 
                         {/* Botones con efectos hover */}
@@ -467,77 +458,65 @@ export default function DirectorioManagementComponent() {
                             <button
                                 onClick={handleAddNew}
                                 disabled={isAddingNew}
-                                className={`flex items-center px-4 py-2 rounded-lg transition-all duration-300 text-sm transform hover:scale-105 group disabled:opacity-50 ${
-                                    isDarkMode 
+                                className={`flex items-center px-4 py-2 rounded-lg transition-all duration-300 text-sm transform hover:scale-105 group disabled:opacity-50 ${isDarkMode
                                         ? 'bg-black border-2 border-white/10 hover:bg-white/5 text-white'
-                                        : 'bg-blue-600 border-2 border-blue-700 hover:bg-blue-700 text-white'
-                                }`}
+                                        : 'bg-gray-600 border-2 border-gray-700 hover:bg-gray-700 text-white'
+                                    }`}
                             >
-                                <Plus size={16} className={`mr-1.5 group-hover:rotate-90 transition-transform duration-300 ${
-                                    isDarkMode ? 'text-emerald-400' : 'text-white'
-                                }`} />
+                                <Plus size={16} className={`mr-1.5 group-hover:rotate-90 transition-transform duration-300 ${isDarkMode ? 'text-emerald-400' : 'text-white'
+                                    }`} />
                                 Agregar Personal
                             </button>
                             <button
                                 title="Recargar datos"
                                 onClick={fetchDirectorio}
-                                className={`p-2 rounded-lg transition-all duration-300 transform hover:scale-105 group ${
-                                    isDarkMode 
+                                className={`p-2 rounded-lg transition-all duration-300 transform hover:scale-105 group ${isDarkMode
                                         ? 'bg-black border-2 border-white/10 hover:bg-white/5'
                                         : 'bg-white border-2 border-gray-300 hover:bg-gray-100'
-                                }`}
+                                    }`}
                             >
-                                <RefreshCw size={16} className={`group-hover:rotate-180 transition-transform duration-500 ${
-                                    isDarkMode ? 'text-gray-300' : 'text-gray-600'
-                                }`} />
+                                <RefreshCw size={16} className={`group-hover:rotate-180 transition-transform duration-500 ${isDarkMode ? 'text-gray-300' : 'text-gray-600'
+                                    }`} />
                             </button>
                         </div>
                     </div>
 
                     {/* Tabla mejorada con efectos */}
-                    <div className={`overflow-x-auto rounded-lg shadow-xl transition-colors duration-500 ${
-                        isDarkMode 
-                            ? 'border-2 border-white/10' 
+                    <div className={`overflow-x-auto rounded-lg shadow-xl transition-colors duration-500 ${isDarkMode
+                            ? 'border-2 border-white/10'
                             : 'border-2 border-gray-200'
-                    }`}>
-                        <table className={`min-w-full transition-colors duration-500 ${
-                            isDarkMode ? 'divide-y-2 divide-white/10' : 'divide-y-2 divide-gray-200'
                         }`}>
+                        <table className={`min-w-full transition-colors duration-500 ${isDarkMode ? 'divide-y-2 divide-white/10' : 'divide-y-2 divide-gray-200'
+                            }`}>
                             <thead className={isDarkMode ? "bg-black" : "bg-gray-50"}>
                                 <tr>
                                     {/* Eliminamos la columna ID */}
-                                    <th scope="col" className={`px-4 py-3 text-left text-xs font-medium uppercase tracking-wider transition-colors duration-500 ${
-                                        isDarkMode ? 'text-gray-400' : 'text-gray-600'
-                                    }`}>
+                                    <th scope="col" className={`px-4 py-3 text-left text-xs font-medium uppercase tracking-wider transition-colors duration-500 ${isDarkMode ? 'text-gray-400' : 'text-gray-600'
+                                        }`}>
                                         NOMBRE DEL PERSONAL
                                     </th>
-                                    <th scope="col" className={`px-4 py-3 text-left text-xs font-medium uppercase tracking-wider transition-colors duration-500 ${
-                                        isDarkMode ? 'text-gray-400' : 'text-gray-600'
-                                    }`}>
+                                    <th scope="col" className={`px-4 py-3 text-left text-xs font-medium uppercase tracking-wider transition-colors duration-500 ${isDarkMode ? 'text-gray-400' : 'text-gray-600'
+                                        }`}>
                                         ÁREA DE ADSCRIPCIÓN
                                     </th>
-                                    <th scope="col" className={`px-4 py-3 text-left text-xs font-medium uppercase tracking-wider transition-colors duration-500 ${
-                                        isDarkMode ? 'text-gray-400' : 'text-gray-600'
-                                    }`}>
+                                    <th scope="col" className={`px-4 py-3 text-left text-xs font-medium uppercase tracking-wider transition-colors duration-500 ${isDarkMode ? 'text-gray-400' : 'text-gray-600'
+                                        }`}>
                                         PUESTO
                                     </th>
-                                    <th scope="col" className={`px-4 py-3 text-right text-xs font-medium uppercase tracking-wider transition-colors duration-500 ${
-                                        isDarkMode ? 'text-gray-400' : 'text-gray-600'
-                                    }`}>
+                                    <th scope="col" className={`px-4 py-3 text-right text-xs font-medium uppercase tracking-wider transition-colors duration-500 ${isDarkMode ? 'text-gray-400' : 'text-gray-600'
+                                        }`}>
                                         ACCIONES
                                     </th>
                                 </tr>
                             </thead>
-                            <tbody className={`transition-colors duration-500 ${
-                                isDarkMode 
-                                    ? 'bg-black/50 divide-y divide-gray-800/30' 
+                            <tbody className={`transition-colors duration-500 ${isDarkMode
+                                    ? 'bg-black/50 divide-y divide-gray-800/30'
                                     : 'bg-white divide-y divide-gray-200'
-                            }`}>
+                                }`}>
                                 {/* Fila para agregar nuevo empleado */}
                                 {isAddingNew && (
-                                    <tr className={`animate-fadeIn transition-colors duration-500 ${
-                                        isDarkMode ? 'bg-gray-900 bg-opacity-50' : 'bg-blue-50'
-                                    }`}>
+                                    <tr className={`animate-fadeIn transition-colors duration-500 ${isDarkMode ? 'bg-gray-900 bg-opacity-50' : 'bg-gray-50'
+                                        }`}>
                                         {/* Nombre */}
                                         <td className="px-4 py-2 text-sm">
                                             <input
@@ -546,11 +525,10 @@ export default function DirectorioManagementComponent() {
                                                 value={newEmployee.nombre || ''}
                                                 onChange={(e) => setNewEmployee({ ...newEmployee, nombre: e.target.value.toUpperCase() })}
                                                 placeholder="Nombre completo"
-                                                className={`w-full rounded p-1.5 text-sm transition-all ${
-                                                    isDarkMode 
+                                                className={`w-full rounded p-1.5 text-sm transition-all ${isDarkMode
                                                         ? 'bg-black border border-gray-700 focus:border-white focus:ring focus:ring-gray-700 focus:ring-opacity-50 text-white'
-                                                        : 'bg-white border border-gray-300 focus:border-blue-500 focus:ring focus:ring-blue-500 focus:ring-opacity-50 text-gray-900'
-                                                }`}
+                                                        : 'bg-white border border-gray-300 focus:border-gray-500 focus:ring focus:ring-gray-500 focus:ring-opacity-50 text-gray-900'
+                                                    }`}
                                             />
                                         </td>
                                         {/* Áreas: chips + input para agregar manualmente */}
@@ -559,17 +537,15 @@ export default function DirectorioManagementComponent() {
                                                 {selectedAreas.map(id_area => {
                                                     const areaObj = areas.find(a => a.id_area === id_area);
                                                     return areaObj ? (
-                                                        <span key={id_area} className={`flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-semibold transition-colors duration-500 ${
-                                                            isDarkMode 
+                                                        <span key={id_area} className={`flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-semibold transition-colors duration-500 ${isDarkMode
                                                                 ? 'bg-emerald-900/40 text-emerald-200 border border-emerald-700'
                                                                 : 'bg-emerald-100 text-emerald-800 border border-emerald-300'
-                                                        }`}>
+                                                            }`}>
                                                             {areaObj.nombre}
                                                             <button
                                                                 type="button"
-                                                                className={`ml-1 hover:text-red-400 focus:outline-none transition-colors ${
-                                                                    isDarkMode ? 'text-emerald-300' : 'text-emerald-600'
-                                                                }`}
+                                                                className={`ml-1 hover:text-red-400 focus:outline-none transition-colors ${isDarkMode ? 'text-emerald-300' : 'text-emerald-600'
+                                                                    }`}
                                                                 onClick={() => setSelectedAreas(selectedAreas.filter(a => a !== id_area))}
                                                                 title="Quitar área"
                                                             >
@@ -581,11 +557,10 @@ export default function DirectorioManagementComponent() {
                                                 <input
                                                     type="text"
                                                     placeholder="Agregar área..."
-                                                    className={`rounded p-1.5 text-xs w-32 transition-all ${
-                                                        isDarkMode 
+                                                    className={`rounded p-1.5 text-xs w-32 transition-all ${isDarkMode
                                                             ? 'bg-black border border-gray-700 text-white focus:border-emerald-400 focus:ring focus:ring-emerald-700 focus:ring-opacity-50'
                                                             : 'bg-white border border-gray-300 text-gray-900 focus:border-emerald-500 focus:ring focus:ring-emerald-500 focus:ring-opacity-50'
-                                                    }`}
+                                                        }`}
                                                     value={addAreaInput}
                                                     onChange={e => setAddAreaInput(e.target.value)}
                                                     onKeyDown={async (e) => {
@@ -612,19 +587,17 @@ export default function DirectorioManagementComponent() {
                                         {/* Puesto como chip azul o aviso si no hay */}
                                         <td className="px-4 py-2 text-sm">
                                             {newEmployee.puesto && newEmployee.puesto.trim() !== '' ? (
-                                                <span className={`flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-semibold transition-colors duration-500 ${
-                                                    isDarkMode 
+                                                <span className={`flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-semibold transition-colors duration-500 ${isDarkMode
                                                         ? 'bg-slate-600/20 text-slate-300 border border-slate-500/50'
                                                         : 'bg-slate-100 text-slate-700 border border-slate-300'
-                                                }`}>
+                                                    }`}>
                                                     {newEmployee.puesto}
                                                 </span>
                                             ) : (
-                                                <span className={`flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-semibold animate-fade-in transition-colors duration-500 ${
-                                                    isDarkMode 
+                                                <span className={`flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-semibold animate-fade-in transition-colors duration-500 ${isDarkMode
                                                         ? 'text-amber-400 bg-amber-900/30 border border-amber-500'
                                                         : 'text-amber-700 bg-amber-100 border border-amber-300'
-                                                }`}>
+                                                    }`}>
                                                     <AlertTriangle size={14} />
                                                     <span>Sin puesto</span>
                                                 </span>
@@ -640,11 +613,10 @@ export default function DirectorioManagementComponent() {
                                                     title="Guardar"
                                                 >
                                                     {isSubmitting ? (
-                                                        <div className={`w-4 h-4 border-2 rounded-full animate-spin ${
-                                                            isDarkMode 
+                                                        <div className={`w-4 h-4 border-2 rounded-full animate-spin ${isDarkMode
                                                                 ? 'border-gray-400 border-t-white'
                                                                 : 'border-green-300 border-t-white'
-                                                        }`}></div>
+                                                            }`}></div>
                                                     ) : (
                                                         <CheckSquare size={16} />
                                                     )}
@@ -663,34 +635,30 @@ export default function DirectorioManagementComponent() {
 
                                 {loading ? (
                                     <tr>
-                                        <td colSpan={4} className={`px-4 py-4 text-center text-sm transition-colors duration-500 ${
-                                            isDarkMode ? 'text-white' : 'text-gray-900'
-                                        }`}>
+                                        <td colSpan={4} className={`px-4 py-4 text-center text-sm transition-colors duration-500 ${isDarkMode ? 'text-white' : 'text-gray-900'
+                                            }`}>
                                             <div className="flex justify-center items-center">
-                                                <div className={`w-5 h-5 border-2 rounded-full animate-spin mr-2 ${
-                                                    isDarkMode 
+                                                <div className={`w-5 h-5 border-2 rounded-full animate-spin mr-2 ${isDarkMode
                                                         ? 'border-gray-500 border-t-white'
-                                                        : 'border-gray-300 border-t-blue-600'
-                                                }`}></div>
+                                                        : 'border-gray-300 border-t-gray-600'
+                                                    }`}></div>
                                                 Cargando directorio de personal...
                                             </div>
                                         </td>
                                     </tr>
                                 ) : filteredDirectorio.length === 0 ? (
                                     <tr>
-                                        <td colSpan={4} className={`px-4 py-4 text-center text-sm transition-colors duration-500 ${
-                                            isDarkMode ? 'text-white' : 'text-gray-900'
-                                        }`}>
+                                        <td colSpan={4} className={`px-4 py-4 text-center text-sm transition-colors duration-500 ${isDarkMode ? 'text-white' : 'text-gray-900'
+                                            }`}>
                                             {searchTerm ? 'No se encontró personal con el término de búsqueda.' : 'No hay personal registrado.'}
                                         </td>
                                     </tr>
                                 ) : (
                                     filteredDirectorio.map((employee) => (
-                                        <tr key={employee.id_directorio} className={`transition-colors ${
-                                            editingId === employee.id_directorio 
-                                                ? isDarkMode ? 'bg-gray-900 bg-opacity-80' : 'bg-blue-50'
+                                        <tr key={employee.id_directorio} className={`transition-colors ${editingId === employee.id_directorio
+                                                ? isDarkMode ? 'bg-gray-900 bg-opacity-80' : 'bg-gray-50'
                                                 : isDarkMode ? 'hover:bg-gray-900' : 'hover:bg-gray-50'
-                                        }`}>
+                                            }`}>
                                             {/* Eliminamos la celda del ID */}
                                             {editingId === employee.id_directorio ? (
                                                 <>
@@ -702,11 +670,10 @@ export default function DirectorioManagementComponent() {
                                                             type="text"
                                                             value={editEmployee.nombre || ''}
                                                             onChange={(e) => setEditEmployee({ ...editEmployee, nombre: e.target.value.toUpperCase() })}
-                                                            className={`w-full rounded p-1.5 text-sm transition-all ${
-                                                                isDarkMode 
+                                                            className={`w-full rounded p-1.5 text-sm transition-all ${isDarkMode
                                                                     ? 'bg-black border border-gray-700 focus:border-white focus:ring focus:ring-gray-700 focus:ring-opacity-50 text-white'
-                                                                    : 'bg-white border border-gray-300 focus:border-blue-500 focus:ring focus:ring-blue-500 focus:ring-opacity-50 text-gray-900'
-                                                            }`}
+                                                                    : 'bg-white border border-gray-300 focus:border-gray-500 focus:ring focus:ring-gray-500 focus:ring-opacity-50 text-gray-900'
+                                                                }`}
                                                         />
                                                     </td>
                                                     {/* Áreas: chips + input para agregar manualmente */}
@@ -715,17 +682,15 @@ export default function DirectorioManagementComponent() {
                                                             {editSelectedAreas.map(id_area => {
                                                                 const areaObj = areas.find(a => a.id_area === id_area);
                                                                 return areaObj ? (
-                                                                    <span key={id_area} className={`flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-semibold transition-colors duration-500 ${
-                                                                        isDarkMode 
+                                                                    <span key={id_area} className={`flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-semibold transition-colors duration-500 ${isDarkMode
                                                                             ? 'bg-emerald-900/40 text-emerald-200 border border-emerald-700'
                                                                             : 'bg-emerald-100 text-emerald-800 border border-emerald-300'
-                                                                    }`}>
+                                                                        }`}>
                                                                         {areaObj.nombre}
                                                                         <button
                                                                             type="button"
-                                                                            className={`ml-1 hover:text-red-400 focus:outline-none transition-colors ${
-                                                                                isDarkMode ? 'text-emerald-300' : 'text-emerald-600'
-                                                                            }`}
+                                                                            className={`ml-1 hover:text-red-400 focus:outline-none transition-colors ${isDarkMode ? 'text-emerald-300' : 'text-emerald-600'
+                                                                                }`}
                                                                             onClick={() => setEditSelectedAreas(editSelectedAreas.filter(a => a !== id_area))}
                                                                             title="Quitar área"
                                                                         >
@@ -737,11 +702,10 @@ export default function DirectorioManagementComponent() {
                                                             <input
                                                                 type="text"
                                                                 placeholder="Agregar área..."
-                                                                className={`rounded p-1.5 text-xs w-32 transition-all ${
-                                                                    isDarkMode 
+                                                                className={`rounded p-1.5 text-xs w-32 transition-all ${isDarkMode
                                                                         ? 'bg-black border border-gray-700 text-white focus:border-emerald-400 focus:ring focus:ring-emerald-700 focus:ring-opacity-50'
                                                                         : 'bg-white border border-gray-300 text-gray-900 focus:border-emerald-500 focus:ring focus:ring-emerald-500 focus:ring-opacity-50'
-                                                                }`}
+                                                                    }`}
                                                                 value={editAreaInput}
                                                                 onChange={e => setEditAreaInput(e.target.value)}
                                                                 onKeyDown={async (e) => {
@@ -768,19 +732,17 @@ export default function DirectorioManagementComponent() {
                                                     {/* Puesto como chip azul o aviso si no hay */}
                                                     <td className="px-4 py-2 text-sm">
                                                         {editEmployee.puesto && editEmployee.puesto.trim() !== '' ? (
-                                                            <span className={`flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-semibold transition-colors duration-500 ${
-                                                                isDarkMode 
+                                                            <span className={`flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-semibold transition-colors duration-500 ${isDarkMode
                                                                     ? 'bg-slate-600/20 text-slate-300 border border-slate-500/50'
                                                                     : 'bg-slate-100 text-slate-700 border border-slate-300'
-                                                            }`}>
+                                                                }`}>
                                                                 {editEmployee.puesto}
                                                             </span>
                                                         ) : (
-                                                            <span className={`flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-semibold animate-fade-in transition-colors duration-500 ${
-                                                                isDarkMode 
+                                                            <span className={`flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-semibold animate-fade-in transition-colors duration-500 ${isDarkMode
                                                                     ? 'text-amber-400 bg-amber-900/30 border border-amber-500'
                                                                     : 'text-amber-700 bg-amber-100 border border-amber-300'
-                                                            }`}>
+                                                                }`}>
                                                                 <AlertTriangle size={14} />
                                                                 <span>Sin puesto</span>
                                                             </span>
@@ -796,11 +758,10 @@ export default function DirectorioManagementComponent() {
                                                                 title="Guardar cambios"
                                                             >
                                                                 {isSubmitting ? (
-                                                                    <div className={`w-4 h-4 border-2 rounded-full animate-spin ${
-                                                                        isDarkMode 
+                                                                    <div className={`w-4 h-4 border-2 rounded-full animate-spin ${isDarkMode
                                                                             ? 'border-gray-400 border-t-white'
                                                                             : 'border-green-300 border-t-white'
-                                                                    }`}></div>
+                                                                        }`}></div>
                                                                 ) : (
                                                                     <CheckSquare size={16} />
                                                                 )}
@@ -818,9 +779,8 @@ export default function DirectorioManagementComponent() {
                                             ) : deletingId === employee.id_directorio ? (
                                                 <>
                                                     <td colSpan={3} className="px-4 py-3 text-sm">
-                                                        <div className={`flex items-center transition-colors duration-500 ${
-                                                            isDarkMode ? 'text-red-400' : 'text-red-600'
-                                                        }`}>
+                                                        <div className={`flex items-center transition-colors duration-500 ${isDarkMode ? 'text-red-400' : 'text-red-600'
+                                                            }`}>
                                                             <AlertTriangle size={16} className="mr-2" />
                                                             <span>¿Confirma eliminar a <strong>{employee.nombre}</strong>?</span>
                                                         </div>
@@ -834,22 +794,20 @@ export default function DirectorioManagementComponent() {
                                                                 title="Confirmar eliminación"
                                                             >
                                                                 {isSubmitting ? (
-                                                                    <div className={`w-4 h-4 border-2 rounded-full animate-spin ${
-                                                                        isDarkMode 
+                                                                    <div className={`w-4 h-4 border-2 rounded-full animate-spin ${isDarkMode
                                                                             ? 'border-gray-400 border-t-white'
                                                                             : 'border-red-300 border-t-white'
-                                                                    }`}></div>
+                                                                        }`}></div>
                                                                 ) : (
                                                                     <CheckSquare size={16} />
                                                                 )}
                                                             </button>
                                                             <button
                                                                 onClick={handleCancelDelete}
-                                                                className={`p-1 rounded-md transition-colors ${
-                                                                    isDarkMode 
+                                                                className={`p-1 rounded-md transition-colors ${isDarkMode
                                                                         ? 'bg-gray-700 hover:bg-gray-600'
                                                                         : 'bg-gray-200 hover:bg-gray-300'
-                                                                }`}
+                                                                    }`}
                                                                 title="Cancelar eliminación"
                                                             >
                                                                 <XSquare size={16} />
@@ -859,17 +817,15 @@ export default function DirectorioManagementComponent() {
                                                 </>
                                             ) : (
                                                 <>
-                                                    <td className={`px-4 py-3 text-sm font-medium transition-colors duration-500 ${
-                                                        !employee.nombre || employee.nombre.trim() === '' 
-                                                            ? isDarkMode 
-                                                                ? 'bg-amber-900 bg-opacity-50 border-l-2 border-amber-500' 
+                                                    <td className={`px-4 py-3 text-sm font-medium transition-colors duration-500 ${!employee.nombre || employee.nombre.trim() === ''
+                                                            ? isDarkMode
+                                                                ? 'bg-amber-900 bg-opacity-50 border-l-2 border-amber-500'
                                                                 : 'bg-amber-100 border-l-2 border-amber-400'
                                                             : ''
-                                                    } ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
+                                                        } ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
                                                         {employee.nombre || (
-                                                            <span className={`flex items-center gap-1 transition-colors duration-500 ${
-                                                                isDarkMode ? 'text-amber-400' : 'text-amber-700'
-                                                            }`}>
+                                                            <span className={`flex items-center gap-1 transition-colors duration-500 ${isDarkMode ? 'text-amber-400' : 'text-amber-700'
+                                                                }`}>
                                                                 <AlertTriangle size={14} />
                                                                 <span>Sin nombre</span>
                                                             </span>
@@ -886,19 +842,17 @@ export default function DirectorioManagementComponent() {
                                                     {/* Puesto como chip azul o aviso si no hay */}
                                                     <td className="px-4 py-3 text-sm">
                                                         {employee.puesto && employee.puesto.trim() !== '' ? (
-                                                            <span className={`flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-semibold transition-colors duration-500 ${
-                                                                isDarkMode 
+                                                            <span className={`flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-semibold transition-colors duration-500 ${isDarkMode
                                                                     ? 'bg-slate-600/20 text-slate-300 border border-slate-500/50'
                                                                     : 'bg-slate-100 text-slate-700 border border-slate-300'
-                                                            }`}>
+                                                                }`}>
                                                                 {employee.puesto}
                                                             </span>
                                                         ) : (
-                                                            <span className={`flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-semibold animate-fade-in transition-colors duration-500 ${
-                                                                isDarkMode 
+                                                            <span className={`flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-semibold animate-fade-in transition-colors duration-500 ${isDarkMode
                                                                     ? 'text-amber-400 bg-amber-900/30 border border-amber-500'
                                                                     : 'text-amber-700 bg-amber-100 border border-amber-300'
-                                                            }`}>
+                                                                }`}>
                                                                 <AlertTriangle size={14} />
                                                                 <span>Sin puesto</span>
                                                             </span>
@@ -908,9 +862,8 @@ export default function DirectorioManagementComponent() {
                                                         <div className="flex justify-end space-x-1">
                                                             <button
                                                                 onClick={() => handleEdit(employee)}
-                                                                className={`p-1 rounded-md transition-colors ${
-                                                                    isDarkMode ? 'hover:bg-gray-700' : 'hover:bg-gray-200'
-                                                                }`}
+                                                                className={`p-1 rounded-md transition-colors ${isDarkMode ? 'hover:bg-gray-700' : 'hover:bg-gray-200'
+                                                                    }`}
                                                                 title="Editar"
                                                                 disabled={editingId !== null || deletingId !== null || isAddingNew}
                                                             >
@@ -937,22 +890,20 @@ export default function DirectorioManagementComponent() {
 
                     {/* Error message con estilo mejorado */}
                     {error && (
-                        <div className={`mt-3 text-sm p-3 rounded-lg animate-fade-in transition-colors duration-500 ${
-                            isDarkMode 
-                                ? 'text-white bg-black border-2 border-white/10' 
+                        <div className={`mt-3 text-sm p-3 rounded-lg animate-fade-in transition-colors duration-500 ${isDarkMode
+                                ? 'text-white bg-black border-2 border-white/10'
                                 : 'text-gray-900 bg-white border-2 border-gray-200'
-                        }`}>
+                            }`}>
                             <AlertTriangle size={16} className="inline-block mr-2 mb-1" />
                             {error}
                         </div>
                     )}
 
                     {/* Contador de resultados con estilo mejorado */}
-                    <div className={`mt-4 text-sm p-2 rounded-lg transition-colors duration-500 ${
-                        isDarkMode 
-                            ? 'text-white bg-black border-2 border-white/10' 
+                    <div className={`mt-4 text-sm p-2 rounded-lg transition-colors duration-500 ${isDarkMode
+                            ? 'text-white bg-black border-2 border-white/10'
                             : 'text-gray-900 bg-white border-2 border-gray-200'
-                    }`}>
+                        }`}>
                         Mostrando {filteredDirectorio.length} de {directorio.length} empleados en el directorio
                     </div>
                 </div>
@@ -1004,11 +955,10 @@ function AreaChips({ areaIds, areas }: { areaIds: number[], areas: { id_area: nu
     const chips = areas.filter(a => areaIds.includes(a.id_area));
     if (chips.length === 0) {
         return (
-            <span className={`flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-semibold animate-fade-in transition-colors duration-500 ${
-                isDarkMode 
+            <span className={`flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-semibold animate-fade-in transition-colors duration-500 ${isDarkMode
                     ? 'text-amber-400 bg-amber-900/30 border border-amber-500'
                     : 'text-amber-700 bg-amber-100 border border-amber-300'
-            }`}>
+                }`}>
                 <AlertTriangle size={14} />
                 <span>Sin área</span>
             </span>
@@ -1017,11 +967,10 @@ function AreaChips({ areaIds, areas }: { areaIds: number[], areas: { id_area: nu
     return (
         <>
             {chips.map(area => (
-                <span key={area.id_area} className={`flex rounded-full px-2 py-0.5 text-xs font-semibold items-center gap-1 transition-colors duration-500 ${
-                    isDarkMode 
+                <span key={area.id_area} className={`flex rounded-full px-2 py-0.5 text-xs font-semibold items-center gap-1 transition-colors duration-500 ${isDarkMode
                         ? 'bg-white/5 text-white border border-white/20'
-                        : 'bg-blue-100 text-blue-800 border border-blue-200'
-                }`}>
+                        : 'bg-gray-100 text-gray-800 border border-gray-200'
+                    }`}>
                     {area.nombre}
                 </span>
             ))}
