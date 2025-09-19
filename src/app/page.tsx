@@ -1,7 +1,9 @@
 "use client";
 import { useEffect, useState, useRef } from 'react';
+import { useTheme } from '@/context/ThemeContext';
 
 export default function Inicio() {
+  const { isDarkMode } = useTheme();
   const [isLoaded, setIsLoaded] = useState(false);
   const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
   const [currentTime, setCurrentTime] = useState('');
@@ -15,7 +17,7 @@ export default function Inicio() {
     // Muestra la hora y fecha actual
     const updateDateTime = () => {
       const now = new Date();
-      
+
       // Format time in 12-hour format with AM/PM
       setCurrentTime(now.toLocaleTimeString('es-MX', {
         hour: '2-digit',
@@ -31,7 +33,7 @@ export default function Inicio() {
         month: 'long',
         year: 'numeric'
       };
-      setCurrentDate(now.toLocaleDateString('es-MX', options)); 
+      setCurrentDate(now.toLocaleDateString('es-MX', options));
     };
 
     // Update immediately and then every second
@@ -117,22 +119,29 @@ export default function Inicio() {
   return (
     <div
       ref={containerRef}
-      className="flex flex-col items-center justify-center h-full w-full bg-black overflow-hidden relative"
+      className={`flex flex-col items-center justify-center h-full w-full overflow-hidden relative transition-colors duration-500 ${isDarkMode ? 'bg-black' : 'bg-gradient-to-br from-gray-50 via-white to-gray-100'
+        }`}
     >
       {/* Clock and Date Display */}
-      <div className="absolute top-8 left-8 z-20 text-white">
-        <div className="bg-black/40 backdrop-blur-sm rounded-xl p-4 border border-white/10 shadow-2xl">
+      <div className={`absolute top-8 left-8 z-20 transition-colors duration-500 ${isDarkMode ? 'text-white' : 'text-gray-800'
+        }`}>
+        <div className={`backdrop-blur-sm rounded-xl p-4 shadow-2xl transition-all duration-500 ${isDarkMode
+          ? 'bg-black/40 border border-white/10'
+          : 'bg-white/60 border border-gray-200/30'
+          }`}>
           <div className="text-4xl font-light tracking-wider mb-1">
             {currentTime}
           </div>
-          <div className="text-sm text-gray-300 capitalize">
+          <div className={`text-sm capitalize transition-colors duration-500 ${isDarkMode ? 'text-gray-300' : 'text-gray-600'
+            }`}>
             {currentDate}
           </div>
         </div>
       </div>
 
       {/* Fondo de gradiente animado */}
-      <div className="absolute inset-0 bg-black opacity-80 z-0">
+      <div className={`absolute inset-0 z-0 transition-opacity duration-500 ${isDarkMode ? 'bg-black opacity-80' : 'bg-white/20 opacity-60'
+        }`}>
         <div className="absolute inset-0 bg-grid"></div>
       </div>
 
@@ -148,9 +157,12 @@ export default function Inicio() {
 
       {/* Efecto de luz que sigue al cursor */}
       <div
-        className="absolute w-64 h-64 rounded-full pointer-events-none z-0 opacity-20 blur-3xl"
+        className={`absolute w-64 h-64 rounded-full pointer-events-none z-0 blur-3xl transition-opacity duration-500 ${isDarkMode ? 'opacity-20' : 'opacity-30'
+          }`}
         style={{
-          background: 'radial-gradient(circle, rgba(255,255,255,0.8) 0%, rgba(255,255,255,0) 70%)',
+          background: isDarkMode
+            ? 'radial-gradient(circle, rgba(255,255,255,0.8) 0%, rgba(255,255,255,0) 70%)'
+            : 'radial-gradient(circle, rgba(59,130,246,0.6) 0%, rgba(59,130,246,0) 70%)',
           transform: `translate(${mousePosition.x - 128}px, ${mousePosition.y - 128}px)`,
           transition: 'transform 0.1s ease-out'
         }}
@@ -160,18 +172,20 @@ export default function Inicio() {
       <div className="absolute inset-0 bg-connections z-0"></div>
 
       {/* Resplandor principal */}
-      <div className={`absolute rounded-full bg-white opacity-10 transform scale-100 transition-all duration-1000 w-96 h-96 blur-3xl z-0 animate-pulse`}></div>
+      <div className={`absolute rounded-full transform scale-100 transition-all duration-1000 w-96 h-96 blur-3xl z-10 animate-pulse ${isDarkMode ? 'bg-white opacity-10' : 'bg-gray-400 opacity-30'
+        }`}></div>
 
       {/* Logo con animación */}
-      <div className="relative z-10">
+      <div className="relative z-20">
         <div className={`transform transition-all duration-1000 ${isLoaded ? 'scale-100 opacity-100' : 'scale-90 opacity-0'}`}>
           <img
-            src="/images/TLAX_logo.svg"
+            src={isDarkMode ? "/images/TLAX_logo.svg" : "/images/TLAX_logo_negro.png"}
             alt="Logo ITEA"
             className="h-80 w-auto object-contain animate-float"
             onLoad={() => setIsLoaded(true)}
           />
-          <p className='text-center text-gray-800 pt-2'>Derechos Reservados ©2025</p>
+          <p className={`text-center pt-2 transition-colors duration-500 ${isDarkMode ? 'text-gray-800' : 'text-white/30'
+            }`}>Derechos Reservados ©2025</p>
         </div>
 
         {/* Círculos orbitando alrededor del logo */}
@@ -189,23 +203,26 @@ export default function Inicio() {
       <style jsx>{`
         .particle {
           position: absolute;
-          background: white;
+          background: ${isDarkMode ? 'white' : '#3b82f6'};
           border-radius: 50%;
           pointer-events: none;
         }
         
         .bg-grid {
-          background-image: linear-gradient(rgba(255, 255, 255, 0.05) 1px, transparent 1px),
-          linear-gradient(90deg, rgba(255, 255, 255, 0.05) 1px, transparent 1px);
+          background-image: ${isDarkMode
+          ? 'linear-gradient(rgba(255, 255, 255, 0.05) 1px, transparent 1px), linear-gradient(90deg, rgba(255, 255, 255, 0.05) 1px, transparent 1px)'
+          : 'linear-gradient(rgba(59, 130, 246, 0.1) 1px, transparent 1px), linear-gradient(90deg, rgba(59, 130, 246, 0.1) 1px, transparent 1px)'
+        };
           background-size: 20px 20px;
           width: 100%;
           height: 100%;
         }
         
         .bg-connections {
-          background-image: 
-            radial-gradient(rgba(255, 255, 255, 0.15) 1px, transparent 1px),
-            radial-gradient(rgba(255, 255, 255, 0.1) 1px, transparent 1px);
+          background-image: ${isDarkMode
+          ? 'radial-gradient(rgba(255, 255, 255, 0.15) 1px, transparent 1px), radial-gradient(rgba(255, 255, 255, 0.1) 1px, transparent 1px)'
+          : 'radial-gradient(rgba(59, 130, 246, 0.2) 1px, transparent 1px), radial-gradient(rgba(59, 130, 246, 0.15) 1px, transparent 1px)'
+        };
           background-size: 40px 40px, 20px 20px;
           background-position: 0 0, 10px 10px;
         }
@@ -215,7 +232,7 @@ export default function Inicio() {
           width: 200%;
           height: 200%;
           left: -50%;
-          background: rgba(255, 255, 255, 0.03);
+          background: ${isDarkMode ? 'rgba(255, 255, 255, 0.03)' : 'rgba(59, 130, 246, 0.05)'};
           border-radius: 43%;
         }
         
@@ -240,7 +257,7 @@ export default function Inicio() {
           position: absolute;
           top: 50%;
           left: 50%;
-          border: 1px solid rgba(255, 255, 255, 0.1);
+          border: 1px solid ${isDarkMode ? 'rgba(255, 255, 255, 0.1)' : 'rgba(59, 130, 246, 0.2)'};
           border-radius: 50%;
           transform: translate(-50%, -50%);
         }
@@ -267,7 +284,7 @@ export default function Inicio() {
           position: absolute;
           width: 6px;
           height: 6px;
-          background: white;
+          background: ${isDarkMode ? 'white' : '#3b82f6'};
           border-radius: 50%;
           top: 50%;
           left: 50%;

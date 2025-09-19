@@ -1,6 +1,7 @@
 "use client"
 import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useTheme } from '@/context/ThemeContext';
 import supabase from '@/app/lib/supabase/client';
 import {
     BarChart3,
@@ -48,8 +49,8 @@ const containerVariants = {
 };
 
 const cardVariants = {
-    hidden: { 
-        opacity: 0, 
+    hidden: {
+        opacity: 0,
         y: 50,
         scale: 0.9,
         rotateX: -15
@@ -71,7 +72,7 @@ const cardVariants = {
         scale: 1.02,
         rotateX: 5,
         y: -5,
-        transition: { 
+        transition: {
             duration: 0.3,
             type: "spring",
             stiffness: 400,
@@ -81,12 +82,12 @@ const cardVariants = {
 };
 
 const modalVariants = {
-    hidden: { 
+    hidden: {
         opacity: 0,
         scale: 0.95,
         y: 10
     },
-    visible: { 
+    visible: {
         opacity: 1,
         scale: 1,
         y: 0,
@@ -132,14 +133,14 @@ interface AnimatedCounterProps {
 const AnimatedCounter = ({ value, className, prefix = '', suffix = '', loading = false, isInteger = false, isCurrency = false }: AnimatedCounterProps) => {
     // Estado para el valor actual mostrado
     const [displayValue, setDisplayValue] = useState<number>(0);
-    
+
     // Referencia para el intervalo de animación
     const intervalRef = useRef<NodeJS.Timeout | null>(null);
-    
+
     // Convertir valor a número si es string
-    const numericValue = typeof value === 'string' ? 
+    const numericValue = typeof value === 'string' ?
         parseFloat(value.replace(/[^0-9.-]+/g, '')) : value;
-    
+
     // Formatear el número según sea entero, decimal o moneda
     const formatNumber = (num: number) => {
         if (isCurrency) {
@@ -150,7 +151,7 @@ const AnimatedCounter = ({ value, className, prefix = '', suffix = '', loading =
             return num.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
         }
     };
-    
+
     // Efecto para animar el contador
     useEffect(() => {
         // Limpiar intervalo anterior si existe
@@ -160,8 +161,8 @@ const AnimatedCounter = ({ value, className, prefix = '', suffix = '', loading =
         if (loading) {
             // Durante la carga, mostrar números aleatorios
             intervalRef.current = setInterval(() => {
-                const randomValue = isInteger ? 
-                    Math.floor(Math.random() * 1000) : 
+                const randomValue = isInteger ?
+                    Math.floor(Math.random() * 1000) :
                     Math.random() * 10000;
                 setDisplayValue(randomValue);
             }, 100);
@@ -171,19 +172,19 @@ const AnimatedCounter = ({ value, className, prefix = '', suffix = '', loading =
             const steps = 20; // número de pasos
             const increment = (numericValue - displayValue) / steps;
             let currentStep = 0;
-            
+
             intervalRef.current = setInterval(() => {
                 if (currentStep >= steps) {
                     setDisplayValue(numericValue);
                     if (intervalRef.current) clearInterval(intervalRef.current);
                     return;
                 }
-                
+
                 setDisplayValue(prev => prev + increment);
                 currentStep++;
             }, duration / steps);
         }
-        
+
         // Limpiar intervalo al desmontar
         return () => {
             if (intervalRef.current) {
@@ -191,7 +192,7 @@ const AnimatedCounter = ({ value, className, prefix = '', suffix = '', loading =
             }
         };
     }, [numericValue, loading, isInteger, isCurrency]);
-    
+
     return (
         <span className={className}>
             {prefix}
@@ -202,37 +203,41 @@ const AnimatedCounter = ({ value, className, prefix = '', suffix = '', loading =
 };
 
 // Skeletons para loading (mantenemos para compatibilidad)
-const Skeleton = ({ className = "" }: { className?: string }) => (
-    <div className={`animate-pulse bg-white/10 rounded ${className}`}></div>
+const Skeleton = ({ className = "", isDarkMode }: { className?: string; isDarkMode: boolean }) => (
+    <div className={`animate-pulse rounded ${isDarkMode ? 'bg-white/10' : 'bg-gray-300'} ${className}`}></div>
 );
 
-const HeaderSkeleton = () => (
-    <div className="bg-black p-4 sm:p-6 flex flex-col sm:flex-row justify-between items-start sm:items-center border-b border-white/10 gap-2 sm:gap-0">
+const HeaderSkeleton = ({ isDarkMode }: { isDarkMode: boolean }) => (
+    <div className={`p-4 sm:p-6 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 sm:gap-0 transition-colors duration-500 ${isDarkMode
+        ? 'bg-black border-b border-white/10'
+        : 'bg-white border-b border-gray-200'
+        }`}>
         <div className="flex items-center">
-            <Skeleton className="w-12 h-12 mr-3 rounded-xl" />
-            <Skeleton className="w-48 h-8" />
+            <Skeleton className="w-12 h-12 mr-3 rounded-xl" isDarkMode={isDarkMode} />
+            <Skeleton className="w-48 h-8" isDarkMode={isDarkMode} />
         </div>
         <div className="flex gap-2">
-            <Skeleton className="w-32 h-10 rounded-xl" />
-            <Skeleton className="w-40 h-10 rounded-xl" />
+            <Skeleton className="w-32 h-10 rounded-xl" isDarkMode={isDarkMode} />
+            <Skeleton className="w-40 h-10 rounded-xl" isDarkMode={isDarkMode} />
         </div>
     </div>
 );
 
-const TableSkeleton = () => (
+const TableSkeleton = ({ isDarkMode }: { isDarkMode: boolean }) => (
     <div className="overflow-y-auto px-6 py-4 space-y-2">
-        <Skeleton className="h-6 w-full mb-2" />
+        <Skeleton className="h-6 w-full mb-2" isDarkMode={isDarkMode} />
         {[...Array(5)].map((_, i) => (
             <div key={i} className="flex gap-2 mb-2">
-                <Skeleton className="h-4 w-1/3" />
-                <Skeleton className="h-4 w-1/6" />
-                <Skeleton className="h-4 w-1/4" />
+                <Skeleton className="h-4 w-1/3" isDarkMode={isDarkMode} />
+                <Skeleton className="h-4 w-1/6" isDarkMode={isDarkMode} />
+                <Skeleton className="h-4 w-1/4" isDarkMode={isDarkMode} />
             </div>
         ))}
     </div>
 );
 
 export default function InventoryDashboard() {
+    const { isDarkMode } = useTheme();
     const [activeWarehouse, setActiveWarehouse] = useState('INEA');
     const [selectedCard, setSelectedCard] = useState<InventoryCard | null>(null);
     const [direction, setDirection] = useState(0);
@@ -314,7 +319,7 @@ export default function InventoryDashboard() {
         // Inicializar editableRubros con los datos actuales
         const totalCard = currentData.cards.find(card => card.id === `${activeWarehouse.toLowerCase()}-total`);
         if (!totalCard) return;
-        
+
         const initialRubros = totalCard.categories.map((cat, index) => ({
             numeroPartida: '',
             rubro: cat.name,
@@ -323,7 +328,7 @@ export default function InventoryDashboard() {
             isPreFilled: true, // Marcar como pre-rellenado
             id: `rubro-${index}` // Agregar ID único
         }));
-        
+
         setEditableRubros(initialRubros);
         setShowExportModal(true);
     };
@@ -417,19 +422,33 @@ export default function InventoryDashboard() {
     // Función para obtener el color según el estatus
     const getStatusColor = (status: string) => {
         const statusLower = status.toLowerCase();
-        if (statusLower.includes('activo')) return "text-white";
-        if (statusLower.includes('inactivo')) return "text-white/90";
-        if (statusLower.includes('no localizado')) return "text-white/80";
-        return "text-white/70";
+        if (isDarkMode) {
+            if (statusLower.includes('activo')) return "text-white";
+            if (statusLower.includes('inactivo')) return "text-white/90";
+            if (statusLower.includes('no localizado')) return "text-white/80";
+            return "text-white/70";
+        } else {
+            if (statusLower.includes('activo')) return "text-gray-900";
+            if (statusLower.includes('inactivo')) return "text-gray-700";
+            if (statusLower.includes('no localizado')) return "text-gray-600";
+            return "text-gray-500";
+        }
     };
 
     // Función para obtener el color de fondo según el estatus
     const getStatusBgColor = (status: string) => {
         const statusLower = status.toLowerCase();
-        if (statusLower.includes('activo')) return "bg-white/5";
-        if (statusLower.includes('inactivo')) return "bg-white/4";
-        if (statusLower.includes('no localizado')) return "bg-white/3";
-        return "bg-white/2";
+        if (isDarkMode) {
+            if (statusLower.includes('activo')) return "bg-white/5";
+            if (statusLower.includes('inactivo')) return "bg-white/4";
+            if (statusLower.includes('no localizado')) return "bg-white/3";
+            return "bg-white/2";
+        } else {
+            if (statusLower.includes('activo')) return "bg-blue-50";
+            if (statusLower.includes('inactivo')) return "bg-gray-50";
+            if (statusLower.includes('no localizado')) return "bg-orange-50";
+            return "bg-gray-25";
+        }
     };
 
     // Función para cargar datos de estatus y rubros
@@ -735,59 +754,78 @@ export default function InventoryDashboard() {
     // Nuevo: obtiene el colorScheme de la tarjeta seleccionada
 
     return (
-        <div className="bg-black text-white min-h-screen p-2 sm:p-4 md:p-6 lg:p-8">
-            <div className="w-full mx-auto bg-black rounded-2xl sm:rounded-3xl shadow-2xl overflow-hidden border border-white/10 transition-all duration-500">
+        <div className={`min-h-screen p-2 sm:p-4 md:p-6 lg:p-8 transition-colors duration-500 ${isDarkMode
+            ? 'bg-black text-white'
+            : 'bg-gradient-to-br from-gray-50 via-white to-gray-50 text-gray-900'
+            }`}>
+            <div className={`w-full mx-auto rounded-2xl sm:rounded-3xl shadow-2xl overflow-hidden transition-all duration-500 ${isDarkMode
+                ? 'bg-black border border-white/10'
+                : 'bg-white border border-gray-200'
+                }`}>
                 {/* Header Section */}
                 {loading ? (
-                    <HeaderSkeleton />
+                    <HeaderSkeleton isDarkMode={isDarkMode} />
                 ) : (
-                <div className="bg-black p-4 sm:p-6 flex flex-col sm:flex-row justify-between items-start sm:items-center border-b border-white/10 gap-2 sm:gap-0">
-                    <motion.h1 
-                        initial={{ x: -20, opacity: 0 }}
-                        animate={{ x: 0, opacity: 1 }}
-                        className="text-xl sm:text-2xl md:text-3xl font-bold flex items-center"
-                    >
-                        <motion.span 
-                            className="mr-2 sm:mr-3 bg-black text-white p-2 sm:p-3 rounded-xl border border-white/10 text-base sm:text-lg shadow-lg"
-                            whileHover={{ rotate: [0, -10, 10, -10, 0] }}
-                            transition={{ duration: 0.5 }}
+                    <div className={`p-4 sm:p-6 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 sm:gap-0 transition-colors duration-500 ${isDarkMode
+                        ? 'bg-black border-b border-white/10'
+                        : 'bg-white border-b border-gray-200'
+                        }`}>
+                        <motion.h1
+                            initial={{ x: -20, opacity: 0 }}
+                            animate={{ x: 0, opacity: 1 }}
+                            className={`text-xl sm:text-2xl md:text-3xl font-bold flex items-center transition-colors duration-500 ${isDarkMode ? 'text-white' : 'text-gray-900'
+                                }`}
                         >
-                            DSH
-                        </motion.span>
-                        Clasificación del Gasto
-                    </motion.h1>
-                    <div className="flex gap-2 items-center">
-                        <motion.button
-                            onClick={toggleWarehouse}
-                            whileHover={{ scale: 1.05 }}
-                            whileTap={{ scale: 0.98 }}
-                            className="flex items-center space-x-2 px-5 py-2 bg-black rounded-xl border border-white/20 shadow-sm group focus:outline-none focus:ring-1 focus:ring-white/10 transition-all hover:border-white/40 relative overflow-hidden"
-                        >
-                            <motion.div
-                                animate={{ rotate: direction ? 360 : 0 }}
+                            <motion.span
+                                className={`mr-2 sm:mr-3 p-2 sm:p-3 rounded-xl text-base sm:text-lg shadow-lg transition-colors duration-500 ${isDarkMode
+                                    ? 'bg-black text-white border border-white/10'
+                                    : 'bg-gray-600 text-white border border-gray-700'
+                                    }`}
+                                whileHover={{ rotate: [0, -10, 10, -10, 0] }}
                                 transition={{ duration: 0.5 }}
                             >
-                                <Repeat size={16} className="text-white/90" />
-                            </motion.div>
-                            <span className="text-white/90 font-medium tracking-wide">
-                                {activeWarehouse === 'INEA' ? 'Cambiar a ITEA' : 'Cambiar a INEA'}
-                            </span>
-                            <div className={`w-2 h-2 rounded-full ml-2 ${activeWarehouse === 'INEA' ? 'bg-blue-500' : 'bg-green-500'}`}></div>
-                        </motion.button>
-                        <motion.button
-                            onClick={handleExportClick}
-                            className="flex items-center gap-2 px-4 py-2 rounded-xl border border-white/20 bg-black transition-all duration-300 shadow-sm focus:outline-none focus:ring-1 focus:ring-white/10 hover:border-white/40"
-                            title={`Exportar PDF Totales ${activeWarehouse}`}
-                            whileHover={{ scale: 1.05 }}
-                            whileTap={{ scale: 0.98 }}
-                        >
-                            <Download size={18} className="text-white/90" />
-                            <span className="font-medium text-white/90">
-                                Exportar PDF {activeWarehouse}
-                            </span>
-                        </motion.button>
+                                DSH
+                            </motion.span>
+                            Clasificación del Gasto
+                        </motion.h1>
+                        <div className="flex gap-2 items-center">
+                            <motion.button
+                                onClick={toggleWarehouse}
+                                whileHover={{ scale: 1.05 }}
+                                whileTap={{ scale: 0.98 }}
+                                className={`flex items-center space-x-2 px-5 py-2 rounded-xl shadow-sm group focus:outline-none transition-all relative overflow-hidden ${isDarkMode
+                                    ? 'bg-black border border-white/20 focus:ring-1 focus:ring-white/10 hover:border-white/40'
+                                    : 'bg-white border border-gray-300 focus:ring-1 focus:ring-blue-500 hover:border-gray-400'
+                                    }`}
+                            >
+                                <motion.div
+                                    animate={{ rotate: direction ? 360 : 0 }}
+                                    transition={{ duration: 0.5 }}
+                                >
+                                    <Repeat size={16} className={isDarkMode ? "text-white/90" : "text-gray-700"} />
+                                </motion.div>
+                                <span className={`font-medium tracking-wide ${isDarkMode ? "text-white/90" : "text-gray-700"}`}>
+                                    {activeWarehouse === 'INEA' ? 'Cambiar a ITEA' : 'Cambiar a INEA'}
+                                </span>
+                                <div className={`w-2 h-2 rounded-full ml-2 ${activeWarehouse === 'INEA' ? 'bg-gray-500' : 'bg-green-500'}`}></div>
+                            </motion.button>
+                            <motion.button
+                                onClick={handleExportClick}
+                                className={`flex items-center gap-2 px-4 py-2 rounded-xl transition-all duration-300 shadow-sm focus:outline-none ${isDarkMode
+                                    ? 'border border-white/20 bg-black focus:ring-1 focus:ring-white/10 hover:border-white/40'
+                                    : 'border border-gray-300 bg-white focus:ring-1 focus:ring-gray-500 hover:border-gray-400'
+                                    }`}
+                                title={`Exportar PDF Totales ${activeWarehouse}`}
+                                whileHover={{ scale: 1.05 }}
+                                whileTap={{ scale: 0.98 }}
+                            >
+                                <Download size={18} className={isDarkMode ? "text-white/90" : "text-gray-700"} />
+                                <span className={`font-medium ${isDarkMode ? "text-white/90" : "text-gray-700"}`}>
+                                    Exportar PDF {activeWarehouse}
+                                </span>
+                            </motion.button>
+                        </div>
                     </div>
-                </div>
                 )}
                 {/* Main Content */}
                 <AnimatePresence custom={direction} initial={false} mode="wait">
@@ -801,52 +839,70 @@ export default function InventoryDashboard() {
                         className="p-4 sm:p-8"
                     >
                         <div className="mb-8 flex items-center gap-4">
-                            <div className="p-2 rounded-xl bg-black border border-white/10 shadow-md">
+                            <div className={`p-2 rounded-xl shadow-md transition-colors duration-500 ${isDarkMode
+                                ? 'bg-black border border-white/10'
+                                : 'bg-gray-600 border border-gray-700'
+                                }`}>
                                 <BarChart3 className="text-white" size={28} />
                             </div>
-                            <h2 className="text-xl font-semibold text-white tracking-wide">
+                            <h2 className={`text-xl font-semibold tracking-wide transition-colors duration-500 ${isDarkMode ? 'text-white' : 'text-gray-900'
+                                }`}>
                                 {currentData.title}
                             </h2>
                         </div>
                         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
                             {currentData.cards.map((card, i) => {
-                                    return (
-                                        <motion.div
-                                            key={card.id}
-                                            custom={i}
-                                            variants={cardVariants}
-                                            initial="hidden"
-                                            animate="visible"
-                                            whileHover="hover"
-                                            onClick={() => openModal(card)}
-                                            className="group relative flex flex-col p-7 rounded-2xl bg-black border border-white/20 cursor-pointer transition-all duration-300 hover:shadow-[0_8px_32px_0_rgba(255,255,255,0.03)] backdrop-blur-lg transform-gpu overflow-hidden"
-                                            style={{
-                                                boxShadow: "0 2px 24px 0 rgba(255,255,255,0.02)"
-                                            }}
-                                        >
-                                            <div className="flex justify-between items-start flex-grow w-full">
-                                                <div className="flex-1 min-w-0">
-                                                    <h3 className="text-white text-sm font-semibold mb-2 flex items-center gap-2 truncate">
-                                                        <span className={`w-2.5 h-2.5 rounded-full ${card.bgColor}`}></span>
-                                                        {card.title}
-                                                    </h3>
-                                                    <p className="text-4xl font-light text-white truncate">
-                                                        <AnimatedCounter value={card.value} loading={false} isCurrency={true} />
-                                                    </p>
-                                                </div>
-                                                <motion.div 
-                                                    className="flex-shrink-0 ml-4 p-2.5 rounded-xl bg-white/5 group-hover:scale-110 transition-transform duration-300 border border-white/10"
-                                                    whileHover={{ rotate: 8 }}
-                                                >
-                                                    <card.icon className="text-white/90 w-5 h-5" />
-                                                </motion.div>
+                                return (
+                                    <motion.div
+                                        key={card.id}
+                                        custom={i}
+                                        variants={cardVariants}
+                                        initial="hidden"
+                                        animate="visible"
+                                        whileHover="hover"
+                                        onClick={() => openModal(card)}
+                                        className={`group relative flex flex-col p-7 rounded-2xl cursor-pointer transition-all duration-300 backdrop-blur-lg transform-gpu overflow-hidden ${isDarkMode
+                                            ? 'bg-black border border-white/20 hover:shadow-[0_8px_32px_0_rgba(255,255,255,0.03)]'
+                                            : 'bg-white border border-gray-200 hover:shadow-[0_8px_32px_0_rgba(0,0,0,0.1)]'
+                                            }`}
+                                        style={{
+                                            boxShadow: isDarkMode
+                                                ? "0 2px 24px 0 rgba(255,255,255,0.02)"
+                                                : "0 2px 24px 0 rgba(0,0,0,0.05)"
+                                        }}
+                                    >
+                                        <div className="flex justify-between items-start flex-grow w-full">
+                                            <div className="flex-1 min-w-0">
+                                                <h3 className={`text-sm font-semibold mb-2 flex items-center gap-2 truncate transition-colors duration-500 ${isDarkMode ? 'text-white' : 'text-gray-900'
+                                                    }`}>
+                                                    <span className={`w-2.5 h-2.5 rounded-full ${card.bgColor}`}></span>
+                                                    {card.title}
+                                                </h3>
+                                                <p className={`text-4xl font-light truncate transition-colors duration-500 ${isDarkMode ? 'text-white' : 'text-gray-900'
+                                                    }`}>
+                                                    <AnimatedCounter value={card.value} loading={false} isCurrency={true} />
+                                                </p>
                                             </div>
-                                            <div className="mt-auto pt-5 text-base text-white/70 border-t border-white/10 group-hover:text-white/90 transition-colors font-medium tracking-wide truncate">
-                                                <AnimatedCounter value={card.count} loading={false} isInteger={true} suffix=" artículos" />
-                                            </div>
-                                        </motion.div>
-                                    );
-                                })}
+                                            <motion.div
+                                                className={`flex-shrink-0 ml-4 p-2.5 rounded-xl group-hover:scale-110 transition-all duration-300 ${isDarkMode
+                                                    ? 'bg-white/5 border border-white/10'
+                                                    : 'bg-gray-100 border border-gray-200'
+                                                    }`}
+                                                whileHover={{ rotate: 8 }}
+                                            >
+                                                <card.icon className={`w-5 h-5 transition-colors duration-500 ${isDarkMode ? 'text-white/90' : 'text-gray-700'
+                                                    }`} />
+                                            </motion.div>
+                                        </div>
+                                        <div className={`mt-auto pt-5 text-base font-medium tracking-wide truncate transition-colors duration-300 ${isDarkMode
+                                            ? 'text-white/70 border-t border-white/10 group-hover:text-white/90'
+                                            : 'text-gray-600 border-t border-gray-200 group-hover:text-gray-900'
+                                            }`}>
+                                            <AnimatedCounter value={card.count} loading={false} isInteger={true} suffix=" artículos" />
+                                        </div>
+                                    </motion.div>
+                                );
+                            })}
                         </div>
                     </motion.div>
                 </AnimatePresence>
@@ -855,11 +911,12 @@ export default function InventoryDashboard() {
             {/* Modal con cierre al hacer click fuera */}
             <AnimatePresence>
                 {selectedCard && typeof selectedCard !== 'string' && (
-                    <motion.div 
+                    <motion.div
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
                         exit={{ opacity: 0 }}
-                        className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/95"
+                        className={`fixed inset-0 z-50 flex items-center justify-center p-4 ${isDarkMode ? 'bg-black/95' : 'bg-black/60'
+                            }`}
                         onClick={(e) => {
                             if (e.target === e.currentTarget) {
                                 closeModal();
@@ -871,18 +928,32 @@ export default function InventoryDashboard() {
                             initial="hidden"
                             animate="visible"
                             exit="exit"
-                            className={`w-full max-w-md bg-black border border-white/20 rounded-2xl overflow-hidden max-h-[90vh] flex flex-col shadow-xl`}
-                            style={{ boxShadow: "0 2px 24px 0 rgba(255,255,255,0.02)" }}
+                            className={`w-full max-w-md rounded-2xl overflow-hidden max-h-[90vh] flex flex-col shadow-xl transition-colors duration-500 ${isDarkMode
+                                ? 'bg-black border border-white/20'
+                                : 'bg-white border border-gray-300'
+                                }`}
+                            style={{
+                                boxShadow: isDarkMode
+                                    ? "0 2px 24px 0 rgba(255,255,255,0.02)"
+                                    : "0 2px 24px 0 rgba(0,0,0,0.15)"
+                            }}
                         >
-                            <div className="flex justify-between items-center px-6 py-4 border-b border-white/10 bg-black">
-                                <h3 className="text-lg font-semibold flex items-center gap-2 text-white">
+                            <div className={`flex justify-between items-center px-6 py-4 transition-colors duration-500 ${isDarkMode
+                                ? 'border-b border-white/10 bg-black'
+                                : 'border-b border-gray-200 bg-white'
+                                }`}>
+                                <h3 className={`text-lg font-semibold flex items-center gap-2 transition-colors duration-500 ${isDarkMode ? 'text-white' : 'text-gray-900'
+                                    }`}>
                                     <span className={`w-2.5 h-2.5 rounded-full ${selectedCard?.bgColor}`}></span>
                                     {selectedCard?.title}
                                 </h3>
                                 <button
                                     type="button"
                                     onClick={closeModal}
-                                    className="p-2 rounded hover:bg-white/10 transition-colors text-white"
+                                    className={`p-2 rounded transition-colors ${isDarkMode
+                                        ? 'hover:bg-white/10 text-white'
+                                        : 'hover:bg-gray-100 text-gray-600'
+                                        }`}
                                     aria-label="Cerrar"
                                 >
                                     <X size={18} />
@@ -890,38 +961,55 @@ export default function InventoryDashboard() {
                             </div>
                             {/* Mostrar rubros si existen (incluido para el total) */}
                             {loading ? (
-                                <TableSkeleton />
+                                <TableSkeleton isDarkMode={isDarkMode} />
                             ) : selectedCard?.categories.length > 0 && (
                                 <div className="overflow-y-auto px-6 py-4 space-y-2">
-                                    <table className="w-full text-left border-separate border-spacing-0 text-xs bg-black">
+                                    <table className={`w-full text-left border-separate border-spacing-0 text-xs transition-colors duration-500 ${isDarkMode ? 'bg-black' : 'bg-white'
+                                        }`}>
                                         <thead>
-                                            <tr className="bg-black">
-                                                <th className="px-2 py-1 text-white/60 font-semibold">Rubro</th>
-                                                <th className="px-2 py-1 text-white/60 font-semibold text-center">Total</th>
-                                                <th className="px-2 py-1 text-white/60 font-semibold text-right">Valor</th>
+                                            <tr className={isDarkMode ? "bg-black" : "bg-gray-50"}>
+                                                <th className={`px-2 py-1 font-semibold transition-colors duration-500 ${isDarkMode ? 'text-white/60' : 'text-gray-600'
+                                                    }`}>Rubro</th>
+                                                <th className={`px-2 py-1 font-semibold text-center transition-colors duration-500 ${isDarkMode ? 'text-white/60' : 'text-gray-600'
+                                                    }`}>Total</th>
+                                                <th className={`px-2 py-1 font-semibold text-right transition-colors duration-500 ${isDarkMode ? 'text-white/60' : 'text-gray-600'
+                                                    }`}>Valor</th>
                                             </tr>
                                         </thead>
                                         <tbody>
                                             {selectedCard.categories.map((category, idx) => (
-                                                <tr key={idx} className="border-t border-white/10 hover:bg-white/5 transition-colors">
-                                                    <td className="px-2 py-1 text-white/90 flex items-center gap-2">
-                                                        <category.icon size={14} className="text-white/60" />
+                                                <tr key={idx} className={`transition-colors ${isDarkMode
+                                                    ? 'border-t border-white/10 hover:bg-white/5'
+                                                    : 'border-t border-gray-200 hover:bg-gray-50'
+                                                    }`}>
+                                                    <td className={`px-2 py-1 flex items-center gap-2 transition-colors duration-500 ${isDarkMode ? 'text-white/90' : 'text-gray-900'
+                                                        }`}>
+                                                        <category.icon size={14} className={`transition-colors duration-500 ${isDarkMode ? 'text-white/60' : 'text-gray-500'
+                                                            }`} />
                                                         {category.name}
                                                     </td>
-                                                    <td className="px-2 py-1 text-white/80 text-center">{category.count}</td>
-                                                    <td className="px-2 py-1 text-white/80 text-right">{category.value}</td>
+                                                    <td className={`px-2 py-1 text-center transition-colors duration-500 ${isDarkMode ? 'text-white/80' : 'text-gray-700'
+                                                        }`}>{category.count}</td>
+                                                    <td className={`px-2 py-1 text-right transition-colors duration-500 ${isDarkMode ? 'text-white/80' : 'text-gray-700'
+                                                        }`}>{category.value}</td>
                                                 </tr>
                                             ))}
                                         </tbody>
                                     </table>
                                 </div>
                             )}
-                            <div className="px-6 py-4 border-t border-white/10 bg-black">
+                            <div className={`px-6 py-4 transition-colors duration-500 ${isDarkMode
+                                ? 'border-t border-white/10 bg-black'
+                                : 'border-t border-gray-200 bg-white'
+                                }`}>
                                 <div className="flex justify-between items-center">
-                                    <span className="text-white/70 text-sm">Total</span>
+                                    <span className={`text-sm transition-colors duration-500 ${isDarkMode ? 'text-white/70' : 'text-gray-600'
+                                        }`}>Total</span>
                                     <div className="text-right">
-                                        <span className="text-lg font-semibold text-white">{selectedCard.value}</span>
-                                        <div className="text-xs text-white/50">{selectedCard.count} artículos</div>
+                                        <span className={`text-lg font-semibold transition-colors duration-500 ${isDarkMode ? 'text-white' : 'text-gray-900'
+                                            }`}>{selectedCard.value}</span>
+                                        <div className={`text-xs transition-colors duration-500 ${isDarkMode ? 'text-white/50' : 'text-gray-500'
+                                            }`}>{selectedCard.count} artículos</div>
                                     </div>
                                 </div>
                             </div>
@@ -937,7 +1025,8 @@ export default function InventoryDashboard() {
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
                         exit={{ opacity: 0 }}
-                        className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/95"
+                        className={`fixed inset-0 z-50 flex items-center justify-center p-4 ${isDarkMode ? 'bg-black/95' : 'bg-black/60'
+                            }`}
                         onClick={(e) => {
                             if (e.target === e.currentTarget) {
                                 setShowExportModal(false);
@@ -949,29 +1038,50 @@ export default function InventoryDashboard() {
                             initial="hidden"
                             animate="visible"
                             exit="exit"
-                            className="w-full max-w-4xl bg-black border border-white/20 rounded-2xl overflow-hidden max-h-[90vh] flex flex-col shadow-xl"
-                            style={{ boxShadow: "0 2px 24px 0 rgba(255,255,255,0.02)" }}
+                            className={`w-full max-w-4xl rounded-2xl overflow-hidden max-h-[90vh] flex flex-col shadow-xl transition-colors duration-500 ${isDarkMode
+                                ? 'bg-black border border-white/20'
+                                : 'bg-white border border-gray-300'
+                                }`}
+                            style={{
+                                boxShadow: isDarkMode
+                                    ? "0 2px 24px 0 rgba(255,255,255,0.02)"
+                                    : "0 2px 24px 0 rgba(0,0,0,0.15)"
+                            }}
                         >
-                            <div className="flex justify-between items-center px-6 py-4 border-b border-white/10 bg-black">
-                                <h3 className="text-lg font-semibold text-white">Editar datos para exportación</h3>
+                            <div className={`flex justify-between items-center px-6 py-4 transition-colors duration-500 ${isDarkMode
+                                ? 'border-b border-white/10 bg-black'
+                                : 'border-b border-gray-200 bg-white'
+                                }`}>
+                                <h3 className={`text-lg font-semibold transition-colors duration-500 ${isDarkMode ? 'text-white' : 'text-gray-900'
+                                    }`}>Editar datos para exportación</h3>
                                 <button
                                     title='Cerrar'
                                     onClick={() => setShowExportModal(false)}
-                                    className="p-2 rounded hover:bg-white/10 transition-colors text-white"
+                                    className={`p-2 rounded transition-colors ${isDarkMode
+                                        ? 'hover:bg-white/10 text-white'
+                                        : 'hover:bg-gray-100 text-gray-600'
+                                        }`}
                                 >
                                     <X size={18} />
                                 </button>
                             </div>
 
-                            <div className="flex items-center gap-4 px-6 py-4 border-b border-white/10">
+                            <div className={`flex items-center gap-4 px-6 py-4 transition-colors duration-500 ${isDarkMode
+                                    ? 'border-b border-white/10'
+                                    : 'border-b border-gray-200'
+                                }`}>
                                 <div className="flex flex-col">
-                                    <label className="text-sm text-white/70">Fecha</label>
+                                    <label className={`text-sm transition-colors duration-500 ${isDarkMode ? 'text-white/70' : 'text-gray-600'
+                                        }`}>Fecha</label>
                                     <input
                                         title='Fecha de exportación'
                                         type="date"
                                         value={exportDate}
                                         onChange={(e) => setExportDate(e.target.value)}
-                                        className="mt-1 px-3 py-2 bg-black border border-white/20 rounded-lg text-white focus:outline-none focus:border-white/40"
+                                        className={`mt-1 px-3 py-2 rounded-lg focus:outline-none transition-colors duration-500 ${isDarkMode
+                                                ? 'bg-black border border-white/20 text-white focus:border-white/40'
+                                                : 'bg-white border border-gray-300 text-gray-900 focus:border-blue-500'
+                                            }`}
                                     />
                                 </div>
                             </div>
@@ -979,19 +1089,27 @@ export default function InventoryDashboard() {
                             <div className="overflow-y-auto px-6 py-4">
                                 <table className="w-full text-left border-separate border-spacing-0">
                                     <thead>
-                                        <tr className="bg-black">
-                                            <th className="px-3 py-2 text-white/60 font-semibold">No. Partida</th>
-                                            <th className="px-3 py-2 text-white/60 font-semibold">Rubro</th>
-                                            <th className="px-3 py-2 text-white/60 font-semibold text-center">Total</th>
-                                            <th className="px-3 py-2 text-white/60 font-semibold text-right">Valor</th>
-                                            <th className="px-3 py-2 text-white/60 font-semibold w-16"></th>
+                                        <tr className={isDarkMode ? "bg-black" : "bg-gray-50"}>
+                                            <th className={`px-3 py-2 font-semibold transition-colors duration-500 ${isDarkMode ? 'text-white/60' : 'text-gray-600'
+                                                }`}>No. Partida</th>
+                                            <th className={`px-3 py-2 font-semibold transition-colors duration-500 ${isDarkMode ? 'text-white/60' : 'text-gray-600'
+                                                }`}>Rubro</th>
+                                            <th className={`px-3 py-2 font-semibold text-center transition-colors duration-500 ${isDarkMode ? 'text-white/60' : 'text-gray-600'
+                                                }`}>Total</th>
+                                            <th className={`px-3 py-2 font-semibold text-right transition-colors duration-500 ${isDarkMode ? 'text-white/60' : 'text-gray-600'
+                                                }`}>Valor</th>
+                                            <th className={`px-3 py-2 font-semibold w-16 transition-colors duration-500 ${isDarkMode ? 'text-white/60' : 'text-gray-600'
+                                                }`}></th>
                                         </tr>
                                     </thead>
                                     <tbody className="relative">
                                         {editableRubros.map((rubro, index) => (
-                                            <tr 
+                                            <tr
                                                 key={rubro.id}
-                                                className="border-t border-white/10 cursor-move group"
+                                                className={`cursor-move group transition-colors duration-500 ${isDarkMode
+                                                        ? 'border-t border-white/10'
+                                                        : 'border-t border-gray-200'
+                                                    }`}
                                                 draggable={true}
                                                 onDragStart={(e) => {
                                                     e.dataTransfer.setData('text/plain', index.toString());
@@ -1018,15 +1136,15 @@ export default function InventoryDashboard() {
                                                     e.preventDefault();
                                                     const draggedIndex = parseInt(e.dataTransfer.getData('text/plain'));
                                                     if (draggedIndex === index) return;
-                                                    
+
                                                     const tr = e.currentTarget as HTMLTableRowElement;
                                                     tr.style.borderTop = '';
                                                     tr.style.borderBottom = '';
-                                                    
+
                                                     const rect = tr.getBoundingClientRect();
                                                     const midPoint = (rect.bottom + rect.top) / 2;
                                                     const newIndex = e.clientY < midPoint ? index : index + 1;
-                                                    
+
                                                     reorderRubros(draggedIndex, newIndex);
                                                 }}
                                             >
@@ -1036,51 +1154,72 @@ export default function InventoryDashboard() {
                                                         type="text"
                                                         value={rubro.numeroPartida}
                                                         onChange={(e) => updateRubro(index, 'numeroPartida', e.target.value)}
-                                                        className="w-full bg-black border border-white/20 rounded px-2 py-1 text-white focus:outline-none focus:border-white/40"
+                                                        className={`w-full rounded px-2 py-1 focus:outline-none transition-colors duration-500 ${isDarkMode
+                                                                ? 'bg-black border border-white/20 text-white focus:border-white/40'
+                                                                : 'bg-white border border-gray-300 text-gray-900 focus:border-blue-500'
+                                                            }`}
                                                     />
                                                 </td>
                                                 <td className="px-3 py-2">
                                                     {rubro.isPreFilled ? (
-                                                        <div className="w-full px-2 py-1 text-white bg-white/5 rounded">
+                                                        <div className={`w-full px-2 py-1 rounded transition-colors duration-500 ${isDarkMode
+                                                                ? 'text-white bg-white/5'
+                                                                : 'text-gray-900 bg-gray-100'
+                                                            }`}>
                                                             {rubro.rubro}
                                                         </div>
                                                     ) : (
                                                         <input
-                                                                title='Rubro'
-                                                                type="text"
-                                                                value={rubro.rubro}
-                                                                onChange={(e) => updateRubro(index, 'rubro', e.target.value)}
-                                                                className="w-full bg-black border border-white/20 rounded px-2 py-1 text-white focus:outline-none focus:border-white/40"
+                                                            title='Rubro'
+                                                            type="text"
+                                                            value={rubro.rubro}
+                                                            onChange={(e) => updateRubro(index, 'rubro', e.target.value)}
+                                                            className={`w-full rounded px-2 py-1 focus:outline-none transition-colors duration-500 ${isDarkMode
+                                                                    ? 'bg-black border border-white/20 text-white focus:border-white/40'
+                                                                    : 'bg-white border border-gray-300 text-gray-900 focus:border-blue-500'
+                                                                }`}
                                                         />
                                                     )}
                                                 </td>
                                                 <td className="px-3 py-2">
                                                     {rubro.isPreFilled ? (
-                                                        <div className="w-full px-2 py-1 text-white bg-white/5 rounded text-center">
+                                                        <div className={`w-full px-2 py-1 rounded text-center transition-colors duration-500 ${isDarkMode
+                                                                ? 'text-white bg-white/5'
+                                                                : 'text-gray-900 bg-gray-100'
+                                                            }`}>
                                                             {rubro.count}
                                                         </div>
                                                     ) : (
                                                         <input
-                                                                title='Total'
-                                                                type="number"
-                                                                value={rubro.count}
-                                                                onChange={(e) => updateRubro(index, 'count', parseInt(e.target.value) || 0)}
-                                                                className="w-full bg-black border border-white/20 rounded px-2 py-1 text-white focus:outline-none focus:border-white/40 text-center"
+                                                            title='Total'
+                                                            type="number"
+                                                            value={rubro.count}
+                                                            onChange={(e) => updateRubro(index, 'count', parseInt(e.target.value) || 0)}
+                                                            className={`w-full rounded px-2 py-1 text-center focus:outline-none transition-colors duration-500 ${isDarkMode
+                                                                    ? 'bg-black border border-white/20 text-white focus:border-white/40'
+                                                                    : 'bg-white border border-gray-300 text-gray-900 focus:border-blue-500'
+                                                                }`}
                                                         />
                                                     )}
                                                 </td>
                                                 <td className="px-3 py-2">
                                                     {rubro.isPreFilled ? (
-                                                        <div className="w-full px-2 py-1 text-white bg-white/5 rounded text-right">
+                                                        <div className={`w-full px-2 py-1 rounded text-right transition-colors duration-500 ${isDarkMode
+                                                                ? 'text-white bg-white/5'
+                                                                : 'text-gray-900 bg-gray-100'
+                                                            }`}>
                                                             ${rubro.sum.toLocaleString('es-MX', { minimumFractionDigits: 2 })}
                                                         </div>
                                                     ) : (
                                                         <input
-                                                                title='Valor'
-                                                                type="number"
-                                                                value={rubro.sum}
-                                                                onChange={(e) => updateRubro(index, 'sum', parseFloat(e.target.value) || 0)}
-                                                                className="w-full bg-black border border-white/20 rounded px-2 py-1 text-white focus:outline-none focus:border-white/40 text-right"
+                                                            title='Valor'
+                                                            type="number"
+                                                            value={rubro.sum}
+                                                            onChange={(e) => updateRubro(index, 'sum', parseFloat(e.target.value) || 0)}
+                                                            className={`w-full rounded px-2 py-1 text-right focus:outline-none transition-colors duration-500 ${isDarkMode
+                                                                    ? 'bg-black border border-white/20 text-white focus:border-white/40'
+                                                                    : 'bg-white border border-gray-300 text-gray-900 focus:border-blue-500'
+                                                                }`}
                                                         />
                                                     )}
                                                 </td>
@@ -1095,8 +1234,10 @@ export default function InventoryDashboard() {
                                                         </button>
                                                     )}
                                                     <div className="opacity-0 group-hover:opacity-100 transition-opacity absolute right-full top-1/2 -translate-y-1/2 pr-2">
-                                                        <div className="bg-white/5 rounded p-1">
-                                                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-white/60">
+                                                        <div className={`rounded p-1 transition-colors duration-500 ${isDarkMode ? 'bg-white/5' : 'bg-gray-200'
+                                                            }`}>
+                                                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={`transition-colors duration-500 ${isDarkMode ? 'text-white/60' : 'text-gray-600'
+                                                                }`}>
                                                                 <line x1="4" y1="12" x2="20" y2="12"></line>
                                                                 <line x1="4" y1="6" x2="20" y2="6"></line>
                                                                 <line x1="4" y1="18" x2="20" y2="18"></line>
@@ -1107,13 +1248,17 @@ export default function InventoryDashboard() {
                                             </tr>
                                         ))}
                                     </tbody>
-                                    <tfoot className="border-t border-white/10">
+                                    <tfoot className={`transition-colors duration-500 ${isDarkMode ? 'border-t border-white/10' : 'border-t border-gray-200'
+                                        }`}>
                                         <tr>
-                                            <td colSpan={2} className="px-3 py-3 text-right text-white/70">Total:</td>
-                                            <td className="px-3 py-3 text-center text-white">
+                                            <td colSpan={2} className={`px-3 py-3 text-right transition-colors duration-500 ${isDarkMode ? 'text-white/70' : 'text-gray-600'
+                                                }`}>Total:</td>
+                                            <td className={`px-3 py-3 text-center transition-colors duration-500 ${isDarkMode ? 'text-white' : 'text-gray-900'
+                                                }`}>
                                                 {editableRubros.reduce((acc, rubro) => acc + rubro.count, 0)}
                                             </td>
-                                            <td className="px-3 py-3 text-right text-white">
+                                            <td className={`px-3 py-3 text-right transition-colors duration-500 ${isDarkMode ? 'text-white' : 'text-gray-900'
+                                                }`}>
                                                 ${editableRubros.reduce((acc, rubro) => acc + rubro.sum, 0).toLocaleString('es-MX', { minimumFractionDigits: 2 })}
                                             </td>
                                             <td></td>
@@ -1122,23 +1267,35 @@ export default function InventoryDashboard() {
                                 </table>
                             </div>
 
-                            <div className="px-6 py-4 border-t border-white/10 flex justify-between items-center">
+                            <div className={`px-6 py-4 flex justify-between items-center transition-colors duration-500 ${isDarkMode
+                                    ? 'border-t border-white/10'
+                                    : 'border-t border-gray-200'
+                                }`}>
                                 <button
                                     onClick={addNewRubro}
-                                    className="px-4 py-2 bg-white/5 text-white rounded-lg hover:bg-white/10 transition-colors"
+                                    className={`px-4 py-2 rounded-lg transition-colors ${isDarkMode
+                                            ? 'bg-white/5 text-white hover:bg-white/10'
+                                            : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                                        }`}
                                 >
                                     Agregar rubro
                                 </button>
                                 <div className="flex gap-3">
                                     <button
                                         onClick={() => setShowExportModal(false)}
-                                        className="px-4 py-2 border border-white/20 text-white rounded-lg hover:bg-white/10"
+                                        className={`px-4 py-2 rounded-lg transition-colors ${isDarkMode
+                                                ? 'border border-white/20 text-white hover:bg-white/10'
+                                                : 'border border-gray-300 text-gray-700 hover:bg-gray-100'
+                                            }`}
                                     >
                                         Cancelar
                                     </button>
                                     <button
                                         onClick={handleExportPDFWithData}
-                                        className="px-4 py-2 bg-white/10 text-white rounded-lg hover:bg-white/20"
+                                        className={`px-4 py-2 rounded-lg transition-colors ${isDarkMode
+                                                ? 'bg-white/10 text-white hover:bg-white/20'
+                                                : 'bg-blue-600 text-white hover:bg-blue-700'
+                                            }`}
                                     >
                                         Exportar PDF
                                     </button>

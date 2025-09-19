@@ -269,7 +269,7 @@ export default function NavigationBar() {
                         <div className="flex-shrink-0 flex items-center">
                             <Link href="/" onClick={closeAll} className="hover:opacity-80 transition-opacity duration-300">
                                 <Image
-                                    src={isDarkMode ? "/images/ITEA_logo.svg" : "/images/ITEA_logo_negro.png"}
+                                    src={isDarkMode ? "/images/ITEA_logo.svg" : "/images/ITEA_logo_negro.svg"}
                                     alt="Logo ITEA"
                                     width={40}
                                     height={40}
