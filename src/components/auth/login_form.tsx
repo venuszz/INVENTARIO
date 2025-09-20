@@ -1,12 +1,14 @@
 "use client"
 
 import { useState } from 'react';
+import { useTheme } from '@/context/ThemeContext';
 import supabase from '@/app/lib/supabase/client';
 import { useSearchParams } from 'next/navigation';
 import { User, Lock, Eye, EyeOff, LogIn } from 'lucide-react';
 import Cookies from 'js-cookie';
 
 export default function LoginPage() {
+    const { isDarkMode } = useTheme();
     const [username, setUsername] = useState('');
     const [password, setPassword] = useState('');
     const [error, setError] = useState<string | null>(null);
@@ -84,12 +86,22 @@ export default function LoginPage() {
 
     // --- NUEVO DISEÑO INSPIRADO EN EL COMPONENTE VEHICULAR ---
     return (
-        <div className="h-screen relative overflow-hidden bg-black flex items-center justify-center">
+        <div className={`h-screen relative overflow-hidden flex items-center justify-center transition-colors duration-500 ${
+            isDarkMode
+                ? 'bg-black'
+                : 'bg-gradient-to-br from-blue-50 via-white to-blue-100'
+        }`}>
             {/* Efectos de fondo animados */}
             <div className="absolute inset-0">
-                <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-blue-500/20 rounded-full blur-3xl animate-pulse"></div>
-                <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-white/20 rounded-full blur-3xl animate-pulse" style={{ animationDelay: '2s' }}></div>
-                <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-64 h-64 bg-blue-400/10 rounded-full blur-2xl animate-pulse" style={{ animationDelay: '4s' }}></div>
+                <div className={`absolute top-1/4 left-1/4 w-96 h-96 rounded-full blur-3xl animate-pulse transition-colors duration-500 ${
+                    isDarkMode ? 'bg-blue-500/20' : 'bg-blue-400/30'
+                }`}></div>
+                <div className={`absolute bottom-1/4 right-1/4 w-96 h-96 rounded-full blur-3xl animate-pulse transition-colors duration-500 ${
+                    isDarkMode ? 'bg-white/20' : 'bg-blue-300/20'
+                }`} style={{ animationDelay: '2s' }}></div>
+                <div className={`absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-64 h-64 rounded-full blur-2xl animate-pulse transition-colors duration-500 ${
+                    isDarkMode ? 'bg-blue-400/10' : 'bg-blue-200/20'
+                }`} style={{ animationDelay: '4s' }}></div>
             </div>
 
             <div className="relative z-10 w-full max-w-6xl px-6 animate-fade-in">
@@ -99,23 +111,36 @@ export default function LoginPage() {
                     <div className="text-center lg:text-left">
                         <div className="inline-flex items-center justify-center lg:justify-start mb-8">
                             <div className="relative group">
-                                <div className="absolute -inset-1 rounded-3xl bg-blue-500/20 blur-md group-hover:bg-blue-500/30 transition-all duration-700 animate-pulse"></div>
-                                <div className="relative p-6 rounded-3xl bg-white/5 border border-white/10 backdrop-blur-xl">
-                                    {/* Imagen original mantenida */}
+                                <div className={`absolute -inset-1 rounded-3xl blur-md group-hover:transition-all duration-700 animate-pulse ${
+                                    isDarkMode
+                                        ? 'bg-blue-500/20 group-hover:bg-blue-500/30'
+                                        : 'bg-blue-400/30 group-hover:bg-blue-400/40'
+                                }`}></div>
+                                <div className={`relative p-6 rounded-3xl backdrop-blur-xl transition-colors duration-500 ${
+                                    isDarkMode
+                                        ? 'bg-white/5 border border-white/10'
+                                        : 'bg-white/60 border border-blue-200/30'
+                                }`}>
                                     <img
-                                        src="/images/ITEA_logo.png"
-                                        alt="Logo Gobierno"
+                                        src={isDarkMode ? "/images/ITEA_logo.svg" : "/images/ITEA_logo_negro.svg"}
+                                        alt="Logo ITEA"
                                         className="h-20 w-auto object-contain"
                                     />
                                 </div>
                             </div>
                         </div>
 
-                        <h1 className="text-5xl lg:text-6xl font-extralight text-white mb-6 tracking-tight">
+                        <h1 className={`text-5xl lg:text-6xl font-extralight mb-6 tracking-tight transition-colors duration-500 ${
+                            isDarkMode ? 'text-white' : 'text-gray-900'
+                        }`}>
                             Sistema
-                            <span className="block text-blue-400">Gubernamental</span>
+                            <span className={`block transition-colors duration-500 ${
+                                isDarkMode ? 'text-blue-400' : 'text-blue-600'
+                            }`}>Gubernamental</span>
                         </h1>
-                        <p className="text-xl text-gray-400 font-light">
+                        <p className={`text-xl font-light transition-colors duration-500 ${
+                            isDarkMode ? 'text-gray-400' : 'text-gray-600'
+                        }`}>
                             Acceso a la plataforma de gestión de inventario.
                         </p>
                     </div>
@@ -123,20 +148,28 @@ export default function LoginPage() {
                     {/* Panel derecho - Formulario */}
                     <div className="w-full max-w-md mx-auto lg:mx-0">
                         <form onSubmit={handleLogin} className="space-y-6">
-                            <h2 className="text-2xl font-bold text-white mb-6 text-center lg:hidden">
+                            <h2 className={`text-2xl font-bold mb-6 text-center lg:hidden transition-colors duration-500 ${
+                                isDarkMode ? 'text-white' : 'text-gray-900'
+                            }`}>
                                 Iniciar Sesión
                             </h2>
                             {/* Campo de Usuario */}
                             <div className="relative group">
                                 <div className="absolute left-4 top-1/2 transform -translate-y-1/2 transition-all duration-300">
-                                    <User className="w-5 h-5 text-gray-400 group-focus-within:text-blue-400 group-focus-within:scale-110" />
+                                    <User className={`w-5 h-5 group-focus-within:text-blue-400 group-focus-within:scale-110 transition-colors duration-300 ${
+                                        isDarkMode ? 'text-gray-400' : 'text-gray-500'
+                                    }`} />
                                 </div>
                                 <input
                                     type="text"
                                     value={username}
                                     onChange={(e) => setUsername(e.target.value)}
                                     placeholder="Nombre de Usuario"
-                                    className="w-full pl-12 pr-4 py-4 text-base bg-white/5 border border-white/20 rounded-2xl focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 text-white placeholder-gray-400 backdrop-blur-xl transition-all duration-300 hover:bg-white/10 focus:bg-white/10"
+                                    className={`w-full pl-12 pr-4 py-4 text-base rounded-2xl focus:outline-none focus:ring-2 focus:ring-blue-500/50 backdrop-blur-xl transition-all duration-300 ${
+                                        isDarkMode
+                                            ? 'bg-white/5 border border-white/20 text-white placeholder-gray-400 hover:bg-white/10 focus:bg-white/10'
+                                            : 'bg-white/80 border border-gray-300 text-gray-900 placeholder-gray-500 hover:bg-white focus:bg-white'
+                                    }`}
                                     autoComplete="username"
                                     disabled={isLoading}
                                     required
@@ -146,14 +179,20 @@ export default function LoginPage() {
                             {/* Campo de Contraseña */}
                             <div className="relative group">
                                 <div className="absolute left-4 top-1/2 transform -translate-y-1/2 transition-all duration-300">
-                                    <Lock className="w-5 h-5 text-gray-400 group-focus-within:text-blue-400 group-focus-within:scale-110" />
+                                    <Lock className={`w-5 h-5 group-focus-within:text-blue-400 group-focus-within:scale-110 transition-colors duration-300 ${
+                                        isDarkMode ? 'text-gray-400' : 'text-gray-500'
+                                    }`} />
                                 </div>
                                 <input
                                     type={showPassword ? "text" : "password"}
                                     value={password}
                                     onChange={(e) => setPassword(e.target.value)}
                                     placeholder="Contraseña"
-                                    className="w-full pl-12 pr-12 py-4 text-base bg-white/5 border border-white/20 rounded-2xl focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 text-white placeholder-gray-400 backdrop-blur-xl transition-all duration-300 hover:bg-white/10 focus:bg-white/10"
+                                    className={`w-full pl-12 pr-12 py-4 text-base rounded-2xl focus:outline-none focus:ring-2 focus:ring-blue-500/50 backdrop-blur-xl transition-all duration-300 ${
+                                        isDarkMode
+                                            ? 'bg-white/5 border border-white/20 text-white placeholder-gray-400 hover:bg-white/10 focus:bg-white/10'
+                                            : 'bg-white/80 border border-gray-300 text-gray-900 placeholder-gray-500 hover:bg-white focus:bg-white'
+                                    }`}
                                     autoComplete="current-password"
                                     disabled={isLoading}
                                     required
@@ -161,7 +200,9 @@ export default function LoginPage() {
                                 <button
                                     type="button"
                                     onClick={() => setShowPassword((prev) => !prev)}
-                                    className="absolute right-4 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-blue-400 focus:outline-none"
+                                    className={`absolute right-4 top-1/2 transform -translate-y-1/2 hover:text-blue-400 focus:outline-none transition-colors duration-300 ${
+                                        isDarkMode ? 'text-gray-400' : 'text-gray-500'
+                                    }`}
                                     tabIndex={-1}
                                     aria-label={showPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'}
                                     disabled={isLoading}
@@ -176,8 +217,14 @@ export default function LoginPage() {
 
                             {error && (
                                 <div className="relative">
-                                    <div className="absolute inset-0 bg-red-500/10 rounded-xl blur-sm"></div>
-                                    <p className="relative text-red-400 text-sm text-center p-3 bg-red-500/5 border border-red-500/20 rounded-xl animate-fade-in backdrop-blur-sm">
+                                    <div className={`absolute inset-0 rounded-xl blur-sm transition-colors duration-500 ${
+                                        isDarkMode ? 'bg-red-500/10' : 'bg-red-400/20'
+                                    }`}></div>
+                                    <p className={`relative text-sm text-center p-3 rounded-xl animate-fade-in backdrop-blur-sm transition-colors duration-500 ${
+                                        isDarkMode
+                                            ? 'text-red-400 bg-red-500/5 border border-red-500/20'
+                                            : 'text-red-600 bg-red-50/80 border border-red-200'
+                                    }`}>
                                         {error}
                                     </p>
                                 </div>

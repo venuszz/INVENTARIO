@@ -63,6 +63,7 @@ export default function NavigationBar() {
     const [showLogoutModal, setShowLogoutModal] = useState(false);
     const [modalPosition, setModalPosition] = useState({ x: 0, y: 0 });
     const [popoverPosition, setPopoverPosition] = useState<'top' | 'bottom'>('bottom');
+    const [isHeaderExpanded, setIsHeaderExpanded] = useState(false);
     const handleLogout = useCerrarSesion();
     const { notifications, doNotDisturb } = useNotifications();
     const unreadCount = notifications.filter(n => !n.is_read && !n.data?.is_deleted).length;
@@ -264,7 +265,8 @@ export default function NavigationBar() {
         <nav className={`${isDarkMode ? 'bg-black text-white' : 'bg-white text-gray-900'} shadow-lg relative z-50 transition-colors duration-300`}>
             {/* Desktop Navigation */}
             <div className="max-w-7xl mx-auto px-4">
-                <div className="flex justify-between h-16">
+                <div className="flex items-center h-16 relative">
+                    {/* Left side - Logo */}
                     <div className="flex items-center">
                         <div className="flex-shrink-0 flex items-center">
                             <Link href="/" onClick={closeAll} className="hover:opacity-80 transition-opacity duration-300">
@@ -278,7 +280,11 @@ export default function NavigationBar() {
                                 />
                             </Link>
                         </div>
-                        <div className="hidden md:ml-8 md:flex md:space-x-1">
+                    </div>
+
+                    {/* Center - Navigation Menus */}
+                    <div className="flex-1 flex justify-center">
+                        <div className="hidden md:flex md:space-x-1">
                             <RoleGuard roles={["admin", "superadmin"]} userRole={userData.rol}>
                                 <div className="relative">
                                     <button
@@ -454,86 +460,143 @@ export default function NavigationBar() {
                         </div>
                     </div>
 
-                    <div className="hidden md:flex items-center">
-                        <div className="flex items-center space-x-3">
-                            <RoleGuard roles={["superadmin", "admin"]} userRole={userData.rol}>
-                                <button
-                                    onClick={() => setNotificationsOpen(true)}
-                                    className={`p-2 rounded-full relative transition-all duration-200 hover:scale-110 ${isDarkMode
-                                        ? 'text-gray-300 hover:text-white hover:bg-gray-800'
-                                        : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
-                                    }`}
-                                    title={doNotDisturb ? "Modo No Molestar activo" : "Notificaciones"}
-                                >
-                                    <Bell className="h-5 w-5" />
-                                    {unreadCount > 0 && (
+                    {/* Right side - Action buttons */}
+                    <div className="hidden md:flex items-center h-full">
+                        {/* Hover trigger area for expanding buttons */}
+                        <div 
+                            className="flex items-center h-full"
+                            onMouseEnter={() => setIsHeaderExpanded(true)}
+                            onMouseLeave={() => setIsHeaderExpanded(false)}
+                        >
+                            {/* Collapsible buttons container */}
+                            <div className={`flex items-center transition-all duration-500 ease-in-out overflow-hidden ${
+                                isHeaderExpanded 
+                                    ? 'max-w-96 opacity-100 translate-x-0' 
+                                    : 'max-w-0 opacity-0 -translate-x-8'
+                            }`}>
+                                <div className="flex items-center space-x-2 pr-2">
+                                        <RoleGuard roles={["superadmin"]} userRole={userData.rol}>
+                                            <Link
+                                                href="/register"
+                                                className={`p-2 rounded-full transition-all duration-200 hover:scale-110 ${
+                                                    isDarkMode
+                                                        ? 'text-gray-300 hover:text-white hover:bg-gray-800'
+                                                        : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
+                                                }`}
+                                                title="Añadir usuario"
+                                            >
+                                                <User className="h-5 w-5" />
+                                            </Link>
+                                        </RoleGuard>
+                                        <RoleGuard roles={["superadmin", "admin"]} userRole={userData.rol}>
+                                            <Link
+                                                href="/dashboard"
+                                                className={`p-2 rounded-full transition-all duration-200 hover:scale-110 ${
+                                                    pathname === '/dashboard' 
+                                                        ? isDarkMode ? 'text-white bg-white/10 border border-white/20' : 'text-gray-900 bg-gray-100 border border-gray-300'
+                                                        : isDarkMode ? 'text-gray-300 hover:text-white hover:bg-gray-800' : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
+                                                }`}
+                                                title="Dashboard"
+                                            >
+                                                <Grid className="h-5 w-5" />
+                                            </Link>
+                                        </RoleGuard>
+                                        <button
+                                            onClick={toggleDarkMode}
+                                            className={`p-2 rounded-full transition-all duration-200 hover:scale-110 ${
+                                                isDarkMode
+                                                    ? 'text-gray-300 hover:text-white hover:bg-gray-800'
+                                                    : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
+                                            }`}
+                                            aria-label="Cambiar modo de color"
+                                            title={isDarkMode ? "Cambiar a modo claro" : "Cambiar a modo oscuro"}
+                                        >
+                                            {isDarkMode ? (
+                                                <Sun className="w-4 h-4" />
+                                            ) : (
+                                                <Moon className="w-4 h-4" />
+                                            )}
+                                        </button>
+                                </div>
+                            </div>
+                            
+                            {/* Hover trigger indicator - Minimalist */}
+                            <div className={`flex items-center justify-center transition-all duration-500 ease-in-out ${
+                                isHeaderExpanded 
+                                    ? 'w-2 h-6 opacity-30' 
+                                    : 'w-6 h-6 opacity-70 hover:opacity-100'
+                            } ${
+                                isDarkMode 
+                                    ? 'hover:bg-gray-800/30' 
+                                    : 'hover:bg-gray-200/30'
+                            } rounded-full`}>
+                                <div className={`transition-all duration-300 ${
+                                    isHeaderExpanded 
+                                        ? 'w-0.5 h-3 bg-current rounded-full' 
+                                        : 'flex space-x-0.5'
+                                }`}>
+                                    {!isHeaderExpanded && (
                                         <>
-                                            <span className={`absolute top-0 right-0 h-2 w-2 rounded-full ${doNotDisturb ? 'bg-purple-500' : 'bg-white'
-                                                }`}></span>
-                                            {!doNotDisturb && (
-                                                <span className="absolute -top-2 -right-2 bg-white text-black text-xs font-bold rounded-full px-1.5 min-w-[18px] text-center border border-black shadow">
-                                                    {unreadCount}
-                                                </span>
-                                            )}
-                                            {doNotDisturb && (
-                                                <span className="absolute -top-2 -right-2 bg-purple-600 text-white text-xs font-bold rounded-full p-1 min-w-[18px] text-center border border-black shadow">
-                                                    <Moon size={10} />
-                                                </span>
-                                            )}
+                                            <div className={`w-0.5 h-0.5 rounded-full ${
+                                                isDarkMode ? 'bg-gray-500' : 'bg-gray-600'
+                                            }`}></div>
+                                            <div className={`w-0.5 h-0.5 rounded-full ${
+                                                isDarkMode ? 'bg-gray-500' : 'bg-gray-600'
+                                            }`}></div>
+                                            <div className={`w-0.5 h-0.5 rounded-full ${
+                                                isDarkMode ? 'bg-gray-500' : 'bg-gray-600'
+                                            }`}></div>
                                         </>
                                     )}
-                                </button>
-                            </RoleGuard>
-                            <RoleGuard roles={["superadmin"]} userRole={userData.rol}>
-                                <Link
-                                    href="/register"
-                                    className={`p-2 rounded-full transition-all duration-200 hover:scale-110 ${isDarkMode
-                                        ? 'text-gray-300 hover:text-white hover:bg-gray-800'
-                                        : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
-                                    }`}
-                                    title="Añadir usuario"
-                                >
-                                    <User className="h-5 w-5" />
-                                </Link>
-                            </RoleGuard>
-                            <RoleGuard roles={["superadmin", "admin"]} userRole={userData.rol}>
-                                <Link
-                                    href="/dashboard"
+                                </div>
+                            </div>
+                        </div>
+                        
+                        {/* Always visible buttons */}
+                        <div className={`flex items-center space-x-3 transition-all duration-500 ${
+                            isHeaderExpanded ? 'ml-1' : 'ml-3'
+                        }`}>
+                                <RoleGuard roles={["superadmin", "admin"]} userRole={userData.rol}>
+                                    <button
+                                        onClick={() => setNotificationsOpen(true)}
+                                        className={`p-2 rounded-full relative transition-all duration-200 hover:scale-110 ${
+                                            isDarkMode
+                                                ? 'text-gray-300 hover:text-white hover:bg-gray-800'
+                                                : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
+                                        }`}
+                                        title={doNotDisturb ? "Modo No Molestar activo" : "Notificaciones"}
+                                    >
+                                        <Bell className="h-5 w-5" />
+                                        {unreadCount > 0 && (
+                                            <>
+                                                <span className={`absolute top-0 right-0 h-2 w-2 rounded-full ${
+                                                    doNotDisturb ? 'bg-purple-500' : 'bg-white'
+                                                }`}></span>
+                                                {!doNotDisturb && (
+                                                    <span className="absolute -top-2 -right-2 bg-white text-black text-xs font-bold rounded-full px-1.5 min-w-[18px] text-center border border-black shadow">
+                                                        {unreadCount}
+                                                    </span>
+                                                )}
+                                                {doNotDisturb && (
+                                                    <span className="absolute -top-2 -right-2 bg-purple-600 text-white text-xs font-bold rounded-full p-1 min-w-[18px] text-center border border-black shadow">
+                                                        <Moon size={10} />
+                                                    </span>
+                                                )}
+                                            </>
+                                        )}
+                                    </button>
+                                </RoleGuard>
+                                <button
+                                    onClick={initiateLogout}
                                     className={`p-2 rounded-full transition-all duration-200 hover:scale-110 ${
-                                        pathname === '/dashboard' 
-                                            ? isDarkMode ? 'text-white bg-white/10 border border-white/20' : 'text-gray-900 bg-gray-100 border border-gray-300'
-                                            : isDarkMode ? 'text-gray-300 hover:text-white hover:bg-gray-800' : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
+                                        isDarkMode
+                                            ? 'text-gray-300 hover:text-white hover:bg-gray-800'
+                                            : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
                                     }`}
-                                    title="Dashboard"
+                                    title='Cerrar sesión'
                                 >
-                                    <Grid className="h-5 w-5" />
-                                </Link>
-                            </RoleGuard>
-                            <button
-                                onClick={initiateLogout}
-                                className={`p-2 rounded-full transition-all duration-200 hover:scale-110 ${isDarkMode
-                                    ? 'text-gray-300 hover:text-white hover:bg-gray-800'
-                                    : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
-                                }`}
-                                title='Cerrar sesión'
-                            >
-                                <LogOut className="h-5 w-5" />
-                            </button>
-                            <button
-                                onClick={toggleDarkMode}
-                                className={`p-2 rounded-full transition-all duration-200 hover:scale-110 ${isDarkMode
-                                    ? 'text-gray-300 hover:text-white hover:bg-gray-800'
-                                    : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
-                                    }`}
-                                aria-label="Cambiar modo de color"
-                                title={isDarkMode ? "Cambiar a modo claro" : "Cambiar a modo oscuro"}
-                            >
-                                {isDarkMode ? (
-                                    <Sun className="w-4 h-4" />
-                                ) : (
-                                    <Moon className="w-4 h-4" />
-                                )}
-                            </button>
+                                    <LogOut className="h-5 w-5" />
+                                </button>
                         </div>
                     </div>
 

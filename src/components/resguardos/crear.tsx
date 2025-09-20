@@ -76,7 +76,7 @@ interface ActiveFilter {
     type: 'id' | 'descripcion' | 'rubro' | 'estado' | 'estatus' | 'area' | 'usufinal' | 'resguardante' | null;
 }
 
-const colorPalette = [
+const colorPaletteDark = [
     'bg-gray-900/30 text-white border-white hover:bg-gray-900/40 transition-colors',
     'bg-green-900/30 text-green-200 border-green-700 hover:bg-green-900/40 transition-colors',
     'bg-yellow-900/30 text-yellow-200 border-yellow-700 hover:bg-yellow-900/40 transition-colors',
@@ -90,14 +90,33 @@ const colorPalette = [
     'bg-gray-900/30 text-gray-200 border-gray-700 hover:bg-gray-900/40 transition-colors',
 ];
 
-function getColorClass(value: string | null | undefined) {
-    if (!value) return 'bg-gray-900/20 text-gray-300 border border-gray-900 hover:bg-gray-900/30';
+const colorPaletteLight = [
+    'bg-gray-100 text-gray-800 border-gray-400 hover:bg-gray-200 transition-colors',
+    'bg-green-100 text-green-800 border-green-400 hover:bg-green-200 transition-colors',
+    'bg-yellow-100 text-yellow-800 border-yellow-400 hover:bg-yellow-200 transition-colors',
+    'bg-purple-100 text-purple-800 border-purple-400 hover:bg-purple-200 transition-colors',
+    'bg-pink-100 text-pink-800 border-pink-400 hover:bg-pink-200 transition-colors',
+    'bg-red-100 text-red-800 border-red-400 hover:bg-red-200 transition-colors',
+    'bg-cyan-100 text-cyan-800 border-cyan-400 hover:bg-cyan-200 transition-colors',
+    'bg-orange-100 text-orange-800 border-orange-400 hover:bg-orange-200 transition-colors',
+    'bg-teal-100 text-teal-800 border-teal-400 hover:bg-teal-200 transition-colors',
+    'bg-indigo-100 text-indigo-800 border-indigo-400 hover:bg-indigo-200 transition-colors',
+    'bg-gray-100 text-gray-700 border-gray-400 hover:bg-gray-200 transition-colors',
+];
+
+function getColorClass(value: string | null | undefined, isDarkMode: boolean) {
+    if (!value) {
+        return isDarkMode 
+            ? 'bg-gray-900/20 text-gray-300 border border-gray-900 hover:bg-gray-900/30'
+            : 'bg-gray-100 text-gray-600 border border-gray-400 hover:bg-gray-200';
+    }
     let hash = 0;
     for (let i = 0; i < value.length; i++) {
         hash = value.charCodeAt(i) + ((hash << 5) - hash);
     }
-    const idx = Math.abs(hash) % colorPalette.length;
-    return colorPalette[idx];
+    const palette = isDarkMode ? colorPaletteDark : colorPaletteLight;
+    const idx = Math.abs(hash) % palette.length;
+    return palette[idx];
 }
 
 export default function CrearResguardos() {
@@ -1596,9 +1615,11 @@ export default function CrearResguardos() {
                                                                     {mueble.rubro}
                                                                 </div>
                                                                 <div className={`text-[10px] font-mono px-2 py-0.5 rounded-full border inline-block w-fit transition-all duration-300
-                                                                    ${mueble.origen === 'INEA' ? 'bg-gray-900/30 text-white border-white group-hover:bg-gray-900/40' :
-                                                                        mueble.origen === 'ITEA' ? 'bg-pink-900/30 text-pink-200 border-pink-700 group-hover:bg-pink-900/40' :
-                                                                            'bg-gray-900/40 text-gray-400 border-gray-800 group-hover:bg-gray-900/60'}`}
+                                                                    ${mueble.origen === 'INEA' ? 
+                                                                        (isDarkMode ? 'bg-gray-900/30 text-white border-white group-hover:bg-gray-900/40' : 'bg-blue-100 text-blue-800 border-blue-400 group-hover:bg-blue-200') :
+                                                                        mueble.origen === 'ITEA' ? 
+                                                                        (isDarkMode ? 'bg-pink-900/30 text-pink-200 border-pink-700 group-hover:bg-pink-900/40' : 'bg-pink-100 text-pink-800 border-pink-400 group-hover:bg-pink-200') :
+                                                                        (isDarkMode ? 'bg-gray-900/40 text-gray-400 border-gray-800 group-hover:bg-gray-900/60' : 'bg-gray-100 text-gray-600 border-gray-400 group-hover:bg-gray-200')}`}
                                                                 >
                                                                     {mueble.origen}
                                                                 </div>
@@ -1614,24 +1635,28 @@ export default function CrearResguardos() {
                                                         </td>
                                                         <td className="px-4 py-4">
                                                             <div className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border transition-all duration-300 
-                                                                ${getColorClass(mueble.area)} transform group-hover:scale-105`}>
+                                                                ${getColorClass(mueble.area, isDarkMode)} transform group-hover:scale-105`}>
                                                                 {mueble.area || 'No especificada'}
                                                             </div>
                                                         </td>
                                                         <td className="px-4 py-4">
                                                             <div className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border gap-1 
-                                                                ${getColorClass(mueble.usufinal)} transform group-hover:scale-105 transition-all duration-300`}>
-                                                                <User className="h-3.5 w-3.5 text-white" />
+                                                                ${getColorClass(mueble.usufinal, isDarkMode)} transform group-hover:scale-105 transition-all duration-300`}>
+                                                                <User className={`h-3.5 w-3.5 ${isDarkMode ? 'text-white' : 'text-gray-700'}`} />
                                                                 {mueble.usufinal || 'No asignado'}
                                                             </div>
                                                         </td>
                                                         <td className="px-4 py-4">
                                                             <div className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border transform group-hover:scale-105 transition-all duration-300
-                                                                ${mueble.estado === 'B' ? 'bg-green-900/20 text-green-300 border-green-900 group-hover:bg-green-900/30' :
-                                                                    mueble.estado === 'R' ? 'bg-yellow-900/20 text-yellow-300 border-yellow-900 group-hover:bg-yellow-900/30' :
-                                                                        mueble.estado === 'M' ? 'bg-red-900/20 text-red-300 border-red-900 group-hover:bg-red-900/30' :
-                                                                            mueble.estado === 'N' ? 'bg-gray-900/20 text-white border-gray-900 group-hover:bg-gray-900/30' :
-                                                                                'bg-gray-900/20 text-gray-300 border-gray-900 group-hover:bg-gray-900/30'}`}
+                                                                ${mueble.estado === 'B' ? 
+                                                                    (isDarkMode ? 'bg-green-900/20 text-green-300 border-green-900 group-hover:bg-green-900/30' : 'bg-green-100 text-green-800 border-green-400 group-hover:bg-green-200') :
+                                                                    mueble.estado === 'R' ? 
+                                                                    (isDarkMode ? 'bg-yellow-900/20 text-yellow-300 border-yellow-900 group-hover:bg-yellow-900/30' : 'bg-yellow-100 text-yellow-800 border-yellow-400 group-hover:bg-yellow-200') :
+                                                                        mueble.estado === 'M' ? 
+                                                                        (isDarkMode ? 'bg-red-900/20 text-red-300 border-red-900 group-hover:bg-red-900/30' : 'bg-red-100 text-red-800 border-red-400 group-hover:bg-red-200') :
+                                                                            mueble.estado === 'N' ? 
+                                                                            (isDarkMode ? 'bg-gray-900/20 text-white border-gray-900 group-hover:bg-gray-900/30' : 'bg-gray-100 text-gray-800 border-gray-400 group-hover:bg-gray-200') :
+                                                                            (isDarkMode ? 'bg-gray-900/20 text-gray-300 border-gray-900 group-hover:bg-gray-900/30' : 'bg-gray-100 text-gray-600 border-gray-400 group-hover:bg-gray-200')}`}
                                                             >
                                                                 {mueble.estado}
                                                             </div>
@@ -1934,11 +1959,15 @@ export default function CrearResguardos() {
                                                         {mueble.id_inv}
                                                     </div>
                                                     <div className={`inline-flex items-center px-1.5 py-0.5 rounded-full text-xs font-medium 
-                                                        ${mueble.estado === 'B' ? 'bg-green-900/20 text-green-300 border border-green-900' :
-                                                            mueble.estado === 'R' ? 'bg-yellow-900/20 text-yellow-300 border border-yellow-900' :
-                                                                mueble.estado === 'M' ? 'bg-red-900/20 text-red-300 border border-red-900' :
-                                                                    mueble.estado === 'N' ? 'bg-blue-900/20 text-blue-300 border border-blue-900' :
-                                                                        'bg-gray-900/20 text-gray-300 border border-gray-900'}`}>
+                                                        ${mueble.estado === 'B' ? 
+                                                            (isDarkMode ? 'bg-green-900/20 text-green-300 border border-green-900' : 'bg-green-100 text-green-800 border border-green-400') :
+                                                            mueble.estado === 'R' ? 
+                                                            (isDarkMode ? 'bg-yellow-900/20 text-yellow-300 border border-yellow-900' : 'bg-yellow-100 text-yellow-800 border border-yellow-400') :
+                                                                mueble.estado === 'M' ? 
+                                                                (isDarkMode ? 'bg-red-900/20 text-red-300 border border-red-900' : 'bg-red-100 text-red-800 border border-red-400') :
+                                                                    mueble.estado === 'N' ? 
+                                                                    (isDarkMode ? 'bg-blue-900/20 text-blue-300 border border-blue-900' : 'bg-blue-100 text-blue-800 border border-blue-400') :
+                                                                    (isDarkMode ? 'bg-gray-900/20 text-gray-300 border border-gray-900' : 'bg-gray-100 text-gray-600 border border-gray-400')}`}>
                                                         {mueble.estado}
                                                     </div>
                                                 </div>
@@ -1952,9 +1981,11 @@ export default function CrearResguardos() {
                                                     {mueble.rubro}
                                                 </div>
                                                 <div className={`text-[10px] mt-1 font-mono px-2 py-0.5 rounded-full border inline-block
-                                                    ${mueble.origen === 'INEA' ? 'bg-blue-900/30 text-blue-300 border-blue-700' :
-                                                        mueble.origen === 'ITEA' ? 'bg-pink-900/30 text-pink-200 border-pink-700' :
-                                                            'bg-gray-900/40 text-gray-400 border-gray-800'}`}
+                                                    ${mueble.origen === 'INEA' ? 
+                                                        (isDarkMode ? 'bg-blue-900/30 text-blue-300 border-blue-700' : 'bg-blue-100 text-blue-800 border-blue-400') :
+                                                        mueble.origen === 'ITEA' ? 
+                                                        (isDarkMode ? 'bg-pink-900/30 text-pink-200 border-pink-700' : 'bg-pink-100 text-pink-800 border-pink-400') :
+                                                        (isDarkMode ? 'bg-gray-900/40 text-gray-400 border-gray-800' : 'bg-gray-100 text-gray-600 border-gray-400')}`}
                                                 >
                                                     {mueble.origen}
                                                 </div>
