@@ -3,7 +3,7 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { usePathname } from 'next/navigation';
-import { ChevronDown, ChevronRight, User, LogOut, Database, FileText, Settings, Menu, X, Grid, Bell, Moon, Sun} from 'lucide-react';
+import { ChevronDown, ChevronRight, User, LogOut, Database, FileText, Settings, Menu, X, Grid, Bell, Moon, Sun } from 'lucide-react';
 import Cookies from 'js-cookie';
 import { useRouter } from 'next/navigation';
 import supabase from '@/app/lib/supabase/client';
@@ -262,7 +262,7 @@ export default function NavigationBar() {
     const isActive = (path: string) => pathname === path || pathname.startsWith(path + '/');
 
     return (
-        <nav className={`${isDarkMode ? 'bg-black text-white' : 'bg-white text-gray-900'} shadow-lg relative z-50 transition-colors duration-300`}>
+        <nav className={`${pathname === '/' ? (isDarkMode ? 'text-white' : 'text-gray-900') : (isDarkMode ? 'bg-black text-white' : 'bg-white text-gray-900')} ${pathname === '/' ? '' : 'shadow-lg'} ${pathname === '/' ? 'fixed top-0 left-0 right-0' : 'relative'} z-50 transition-colors duration-300`}>
             {/* Desktop Navigation */}
             <div className="max-w-7xl mx-auto px-4">
                 <div className="flex items-center h-16 relative">
@@ -291,7 +291,9 @@ export default function NavigationBar() {
                                         onClick={() => toggleMenu("Inventario")}
                                         className={`flex items-center px-4 py-2 rounded-md transition-all duration-300 ease-in-out transform ${isActive("/inventario")
                                             ? isDarkMode ? 'text-white bg-white/10 border border-white/20 scale-105' : 'text-gray-900 bg-gray-100 border border-gray-300 scale-105'
-                                            : isDarkMode ? 'text-gray-300 hover:text-white hover:bg-gray-800 hover:scale-105' : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100 hover:scale-105'
+                                            : isDarkMode
+                                                ? `text-gray-300 hover:text-white hover:scale-105 ${pathname === '/' ? 'hover:bg-white/10' : 'hover:bg-gray-800'}`
+                                                : `text-gray-600 hover:text-gray-900 hover:scale-105 ${pathname === '/' ? 'hover:bg-black/5' : 'hover:bg-gray-100'}`
                                             }`}
                                     >
                                         <span className="mr-2"><Database className="w-4 h-4" /></span>
@@ -299,7 +301,7 @@ export default function NavigationBar() {
                                         <ChevronDown className={`ml-1 w-3 h-3 transition-transform duration-300 ${openMenu === "Inventario" ? 'rotate-180' : ''}`} />
                                     </button>
                                     {openMenu === "Inventario" && (
-                                        <div className={`absolute left-0 mt-1 w-56 rounded-md ${isDarkMode ? 'bg-black border-white/10' : 'bg-white border-gray-200'} shadow-lg z-20 border animate-in slide-in-from-top-2 fade-in duration-200`}>
+                                        <div className={`absolute left-0 mt-1 w-56 rounded-md ${pathname === '/' ? (isDarkMode ? 'bg-black/20 border-white/20 backdrop-blur-md' : 'bg-white/20 border-gray-200/30 backdrop-blur-md') : (isDarkMode ? 'bg-black border-white/10' : 'bg-white border-gray-200')} shadow-lg z-20 border animate-in slide-in-from-top-2 fade-in duration-200`}>
                                             <div className="py-1">
                                                 <RoleGuard roles={["admin", "superadmin"]} userRole={userData.rol}>
                                                     <Link
@@ -307,7 +309,9 @@ export default function NavigationBar() {
                                                         onClick={closeAll}
                                                         className={`block px-4 py-2 text-sm transition-all duration-200 ${pathname === "/inventario/registro"
                                                             ? isDarkMode ? 'text-white bg-white/10 border-r-2 border-white' : 'text-gray-900 bg-gray-100 border-r-2 border-gray-900'
-                                                            : isDarkMode ? 'text-gray-300 hover:bg-gray-800 hover:text-white hover:translate-x-1' : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900 hover:translate-x-1'
+                                                            : isDarkMode
+                                                                ? `text-gray-300 hover:text-white hover:translate-x-1 ${pathname === '/' ? 'hover:bg-white/10' : 'hover:bg-gray-800'}`
+                                                                : `text-gray-600 hover:text-gray-900 hover:translate-x-1 ${pathname === '/' ? 'hover:bg-black/5' : 'hover:bg-gray-100'}`
                                                             }`}
                                                     >
                                                         Registro de nuevos bienes
@@ -326,7 +330,9 @@ export default function NavigationBar() {
                                                 onClick={() => toggleMenu(item.title)}
                                                 className={`flex items-center px-4 py-2 rounded-md transition-all duration-300 ease-in-out transform ${isActive(item.path)
                                                     ? isDarkMode ? 'text-white bg-white/10 border border-white/20 scale-105' : 'text-gray-900 bg-gray-100 border border-gray-300 scale-105'
-                                                    : isDarkMode ? 'text-gray-300 hover:text-white hover:bg-gray-800 hover:scale-105' : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100 hover:scale-105'
+                                                    : isDarkMode
+                                                        ? `text-gray-300 hover:text-white hover:scale-105 ${pathname === '/' ? 'hover:bg-white/10' : 'hover:bg-gray-800'}`
+                                                        : `text-gray-600 hover:text-gray-900 hover:scale-105 ${pathname === '/' ? 'hover:bg-black/5' : 'hover:bg-gray-100'}`
                                                     }`}
                                             >
                                                 <span className="mr-2">{item.icon}</span>
@@ -334,7 +340,7 @@ export default function NavigationBar() {
                                                 <ChevronDown className={`ml-1 w-3 h-3 transition-transform duration-300 ${openMenu === item.title ? 'rotate-180' : ''}`} />
                                             </button>
                                             {openMenu === item.title && (
-                                                <div className={`absolute left-0 mt-1 w-56 rounded-md ${isDarkMode ? 'bg-black border-white/10' : 'bg-white border-gray-200'} shadow-lg z-20 border animate-in slide-in-from-top-2 fade-in duration-200`}>
+                                                <div className={`absolute left-0 mt-1 w-56 rounded-md ${pathname === '/' ? (isDarkMode ? 'bg-black/20 border-white/20 backdrop-blur-md' : 'bg-white/20 border-gray-200/30 backdrop-blur-md') : (isDarkMode ? 'bg-black border-white/10' : 'bg-white border-gray-200')} shadow-lg z-20 border animate-in slide-in-from-top-2 fade-in duration-200`}>
                                                     <div className="py-1">
                                                         {item.submenu.map((subItem) => (
                                                             <div key={subItem.title}>
@@ -344,14 +350,16 @@ export default function NavigationBar() {
                                                                             onClick={(e) => toggleSubmenu(`${item.title}-${subItem.title}`, e)}
                                                                             className={`flex justify-between w-full px-4 py-2 text-sm transition-all duration-200 ${isActive(subItem.path)
                                                                                 ? isDarkMode ? 'text-white bg-white/10 border-r-2 border-white' : 'text-gray-900 bg-gray-100 border-r-2 border-gray-900'
-                                                                                : isDarkMode ? 'text-gray-300 hover:bg-gray-800 hover:text-white hover:translate-x-1' : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900 hover:translate-x-1'
+                                                                                : isDarkMode
+                                                                                    ? `text-gray-300 hover:text-white hover:translate-x-1 ${pathname === '/' ? 'hover:bg-white/10' : 'hover:bg-gray-800'}`
+                                                                                    : `text-gray-600 hover:text-gray-900 hover:translate-x-1 ${pathname === '/' ? 'hover:bg-black/5' : 'hover:bg-gray-100'}`
                                                                                 }`}
                                                                         >
                                                                             {subItem.title}
                                                                             <ChevronRight className="w-3 h-3" />
                                                                         </button>
                                                                         {openSubmenu === `${item.title}-${subItem.title}` && (
-                                                                            <div className={`absolute left-full top-0 w-56 rounded-md ${isDarkMode ? 'bg-black border-white/10' : 'bg-white border-gray-200'} shadow-lg z-30 border animate-in slide-in-from-left-2 fade-in duration-200`}>
+                                                                            <div className={`absolute left-full top-0 w-56 rounded-md ${pathname === '/' ? (isDarkMode ? 'bg-black/20 border-white/20 backdrop-blur-md' : 'bg-white/20 border-gray-200/30 backdrop-blur-md') : (isDarkMode ? 'bg-black border-white/10' : 'bg-white border-gray-200')} shadow-lg z-30 border animate-in slide-in-from-left-2 fade-in duration-200`}>
                                                                                 <div className="py-1">
                                                                                     {subItem.children.map((child) => (
                                                                                         <Link
@@ -360,7 +368,9 @@ export default function NavigationBar() {
                                                                                             onClick={closeAll}
                                                                                             className={`block px-4 py-2 text-sm transition-all duration-200 ${pathname === child.path
                                                                                                 ? isDarkMode ? 'text-white bg-white/10 border-r-2 border-white' : 'text-gray-900 bg-gray-100 border-r-2 border-gray-900'
-                                                                                                : isDarkMode ? 'text-gray-300 hover:bg-gray-800 hover:text-white hover:translate-x-1' : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900 hover:translate-x-1'
+                                                                                                : isDarkMode
+                                                                                                    ? `text-gray-300 hover:text-white hover:translate-x-1 ${pathname === '/' ? 'hover:bg-white/10' : 'hover:bg-gray-800'}`
+                                                                                                    : `text-gray-600 hover:text-gray-900 hover:translate-x-1 ${pathname === '/' ? 'hover:bg-black/5' : 'hover:bg-gray-100'}`
                                                                                                 }`}
                                                                                         >
                                                                                             {child.title}
@@ -377,7 +387,9 @@ export default function NavigationBar() {
                                                                             onClick={closeAll}
                                                                             className={`block px-4 py-2 text-sm transition-all duration-200 ${pathname === subItem.path
                                                                                 ? isDarkMode ? 'text-white bg-white/10 border-r-2 border-white' : 'text-gray-900 bg-gray-100 border-r-2 border-gray-900'
-                                                                                : isDarkMode ? 'text-gray-300 hover:bg-gray-800 hover:text-white hover:translate-x-1' : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900 hover:translate-x-1'
+                                                                                : isDarkMode
+                                                                                    ? `text-gray-300 hover:text-white hover:translate-x-1 ${pathname === '/' ? 'hover:bg-white/10' : 'hover:bg-gray-800'}`
+                                                                                    : `text-gray-600 hover:text-gray-900 hover:translate-x-1 ${pathname === '/' ? 'hover:bg-black/5' : 'hover:bg-gray-100'}`
                                                                                 }`}
                                                                         >
                                                                             {subItem.title}
@@ -389,7 +401,9 @@ export default function NavigationBar() {
                                                                         onClick={closeAll}
                                                                         className={`block px-4 py-2 text-sm transition-all duration-200 ${pathname === subItem.path
                                                                             ? isDarkMode ? 'text-white bg-white/10 border-r-2 border-white' : 'text-gray-900 bg-gray-100 border-r-2 border-gray-900'
-                                                                            : isDarkMode ? 'text-gray-300 hover:bg-gray-800 hover:text-white hover:translate-x-1' : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900 hover:translate-x-1'
+                                                                            : isDarkMode
+                                                                                ? `text-gray-300 hover:text-white hover:translate-x-1 ${pathname === '/' ? 'hover:bg-white/10' : 'hover:bg-gray-800'}`
+                                                                                : `text-gray-600 hover:text-gray-900 hover:translate-x-1 ${pathname === '/' ? 'hover:bg-black/5' : 'hover:bg-gray-100'}`
                                                                             }`}
                                                                     >
                                                                         {subItem.title}
@@ -422,7 +436,9 @@ export default function NavigationBar() {
                                         onClick={() => toggleMenu("Administración")}
                                         className={`flex items-center px-4 py-2 rounded-md transition-all duration-300 ease-in-out transform ${isActive("/admin")
                                             ? isDarkMode ? 'text-white bg-white/10 border border-white/20 scale-105' : 'text-gray-900 bg-gray-100 border border-gray-300 scale-105'
-                                            : isDarkMode ? 'text-gray-300 hover:text-white hover:bg-gray-800 hover:scale-105' : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100 hover:scale-105'
+                                            : isDarkMode
+                                                ? `text-gray-300 hover:text-white hover:scale-105 ${pathname === '/' ? 'hover:bg-white/10' : 'hover:bg-gray-800'}`
+                                                : `text-gray-600 hover:text-gray-900 hover:scale-105 ${pathname === '/' ? 'hover:bg-black/5' : 'hover:bg-gray-100'}`
                                             }`}
                                     >
                                         <span className="mr-2"><Settings className="w-4 h-4" /></span>
@@ -430,14 +446,16 @@ export default function NavigationBar() {
                                         <ChevronDown className={`ml-1 w-3 h-3 transition-transform duration-300 ${openMenu === "Administración" ? 'rotate-180' : ''}`} />
                                     </button>
                                     {openMenu === "Administración" && (
-                                        <div className={`absolute left-0 mt-1 w-56 rounded-md ${isDarkMode ? 'bg-black border-white/10' : 'bg-white border-gray-200'} shadow-lg z-20 border animate-in slide-in-from-top-2 fade-in duration-200`}>
+                                        <div className={`absolute left-0 mt-1 w-56 rounded-md ${pathname === '/' ? (isDarkMode ? 'bg-black/20 border-white/20 backdrop-blur-md' : 'bg-white/20 border-gray-200/30 backdrop-blur-md') : (isDarkMode ? 'bg-black border-white/10' : 'bg-white border-gray-200')} shadow-lg z-20 border animate-in slide-in-from-top-2 fade-in duration-200`}>
                                             <div className="py-1">
                                                 <Link
                                                     href="/admin/areas"
                                                     onClick={closeAll}
                                                     className={`block px-4 py-2 text-sm transition-all duration-200 ${pathname === "/admin/areas"
                                                         ? isDarkMode ? 'text-white bg-white/10 border-r-2 border-white' : 'text-gray-900 bg-gray-100 border-r-2 border-gray-900'
-                                                        : isDarkMode ? 'text-gray-300 hover:bg-gray-800 hover:text-white hover:translate-x-1' : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900 hover:translate-x-1'
+                                                        : isDarkMode
+                                                            ? `text-gray-300 hover:text-white hover:translate-x-1 ${pathname === '/' ? 'hover:bg-white/10' : 'hover:bg-gray-800'}`
+                                                            : `text-gray-600 hover:text-gray-900 hover:translate-x-1 ${pathname === '/' ? 'hover:bg-black/5' : 'hover:bg-gray-100'}`
                                                         }`}
                                                 >
                                                     Configuración General
@@ -447,7 +465,9 @@ export default function NavigationBar() {
                                                     onClick={closeAll}
                                                     className={`block px-4 py-2 text-sm transition-all duration-200 ${pathname === "/admin/personal"
                                                         ? isDarkMode ? 'text-white bg-white/10 border-r-2 border-white' : 'text-gray-900 bg-gray-100 border-r-2 border-gray-900'
-                                                        : isDarkMode ? 'text-gray-300 hover:bg-gray-800 hover:text-white hover:translate-x-1' : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900 hover:translate-x-1'
+                                                        : isDarkMode
+                                                            ? `text-gray-300 hover:text-white hover:translate-x-1 ${pathname === '/' ? 'hover:bg-white/10' : 'hover:bg-gray-800'}`
+                                                            : `text-gray-600 hover:text-gray-900 hover:translate-x-1 ${pathname === '/' ? 'hover:bg-black/5' : 'hover:bg-gray-100'}`
                                                         }`}
                                                 >
                                                     Directorio de Personal
@@ -463,140 +483,126 @@ export default function NavigationBar() {
                     {/* Right side - Action buttons */}
                     <div className="hidden md:flex items-center h-full">
                         {/* Hover trigger area for expanding buttons */}
-                        <div 
+                        <div
                             className="flex items-center h-full"
                             onMouseEnter={() => setIsHeaderExpanded(true)}
                             onMouseLeave={() => setIsHeaderExpanded(false)}
                         >
                             {/* Collapsible buttons container */}
-                            <div className={`flex items-center transition-all duration-500 ease-in-out overflow-hidden ${
-                                isHeaderExpanded 
-                                    ? 'max-w-96 opacity-100 translate-x-0' 
+                            <div className={`flex items-center transition-all duration-500 ease-in-out overflow-hidden ${isHeaderExpanded
+                                    ? 'max-w-96 opacity-100 translate-x-0'
                                     : 'max-w-0 opacity-0 -translate-x-8'
-                            }`}>
+                                }`}>
                                 <div className="flex items-center space-x-2 pr-2">
-                                        <RoleGuard roles={["superadmin"]} userRole={userData.rol}>
-                                            <Link
-                                                href="/register"
-                                                className={`p-2 rounded-full transition-all duration-200 hover:scale-110 ${
-                                                    isDarkMode
-                                                        ? 'text-gray-300 hover:text-white hover:bg-gray-800'
-                                                        : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
-                                                }`}
-                                                title="Añadir usuario"
-                                            >
-                                                <User className="h-5 w-5" />
-                                            </Link>
-                                        </RoleGuard>
-                                        <RoleGuard roles={["superadmin", "admin"]} userRole={userData.rol}>
-                                            <Link
-                                                href="/dashboard"
-                                                className={`p-2 rounded-full transition-all duration-200 hover:scale-110 ${
-                                                    pathname === '/dashboard' 
-                                                        ? isDarkMode ? 'text-white bg-white/10 border border-white/20' : 'text-gray-900 bg-gray-100 border border-gray-300'
-                                                        : isDarkMode ? 'text-gray-300 hover:text-white hover:bg-gray-800' : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
-                                                }`}
-                                                title="Dashboard"
-                                            >
-                                                <Grid className="h-5 w-5" />
-                                            </Link>
-                                        </RoleGuard>
-                                        <button
-                                            onClick={toggleDarkMode}
-                                            className={`p-2 rounded-full transition-all duration-200 hover:scale-110 ${
-                                                isDarkMode
+                                    <RoleGuard roles={["superadmin"]} userRole={userData.rol}>
+                                        <Link
+                                            href="/register"
+                                            className={`p-2 rounded-full transition-all duration-200 hover:scale-110 ${isDarkMode
                                                     ? 'text-gray-300 hover:text-white hover:bg-gray-800'
                                                     : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
-                                            }`}
-                                            aria-label="Cambiar modo de color"
-                                            title={isDarkMode ? "Cambiar a modo claro" : "Cambiar a modo oscuro"}
+                                                }`}
+                                            title="Añadir usuario"
                                         >
-                                            {isDarkMode ? (
-                                                <Sun className="w-4 h-4" />
-                                            ) : (
-                                                <Moon className="w-4 h-4" />
-                                            )}
-                                        </button>
+                                            <User className="h-5 w-5" />
+                                        </Link>
+                                    </RoleGuard>
+                                    <RoleGuard roles={["superadmin", "admin"]} userRole={userData.rol}>
+                                        <Link
+                                            href="/dashboard"
+                                            className={`p-2 rounded-full transition-all duration-200 hover:scale-110 ${pathname === '/dashboard'
+                                                    ? isDarkMode ? 'text-white bg-white/10 border border-white/20' : 'text-gray-900 bg-gray-100 border border-gray-300'
+                                                    : isDarkMode ? 'text-gray-300 hover:text-white hover:bg-gray-800' : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
+                                                }`}
+                                            title="Dashboard"
+                                        >
+                                            <Grid className="h-5 w-5" />
+                                        </Link>
+                                    </RoleGuard>
+                                    <button
+                                        onClick={toggleDarkMode}
+                                        className={`p-2 rounded-full transition-all duration-200 hover:scale-110 ${isDarkMode
+                                                ? 'text-gray-300 hover:text-white hover:bg-gray-800'
+                                                : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
+                                            }`}
+                                        aria-label="Cambiar modo de color"
+                                        title={isDarkMode ? "Cambiar a modo claro" : "Cambiar a modo oscuro"}
+                                    >
+                                        {isDarkMode ? (
+                                            <Sun className="w-4 h-4" />
+                                        ) : (
+                                            <Moon className="w-4 h-4" />
+                                        )}
+                                    </button>
                                 </div>
                             </div>
-                            
+
                             {/* Hover trigger indicator - Minimalist */}
-                            <div className={`flex items-center justify-center transition-all duration-500 ease-in-out ${
-                                isHeaderExpanded 
-                                    ? 'w-2 h-6 opacity-30' 
+                            <div className={`flex items-center justify-center transition-all duration-500 ease-in-out ${isHeaderExpanded
+                                    ? 'w-2 h-6 opacity-30'
                                     : 'w-6 h-6 opacity-70 hover:opacity-100'
-                            } ${
-                                isDarkMode 
-                                    ? 'hover:bg-gray-800/30' 
+                                } ${isDarkMode
+                                    ? 'hover:bg-gray-800/30'
                                     : 'hover:bg-gray-200/30'
-                            } rounded-full`}>
-                                <div className={`transition-all duration-300 ${
-                                    isHeaderExpanded 
-                                        ? 'w-0.5 h-3 bg-current rounded-full' 
+                                } rounded-full`}>
+                                <div className={`transition-all duration-300 ${isHeaderExpanded
+                                        ? 'w-0.5 h-3 bg-current rounded-full'
                                         : 'flex space-x-0.5'
-                                }`}>
+                                    }`}>
                                     {!isHeaderExpanded && (
                                         <>
-                                            <div className={`w-0.5 h-0.5 rounded-full ${
-                                                isDarkMode ? 'bg-gray-500' : 'bg-gray-600'
-                                            }`}></div>
-                                            <div className={`w-0.5 h-0.5 rounded-full ${
-                                                isDarkMode ? 'bg-gray-500' : 'bg-gray-600'
-                                            }`}></div>
-                                            <div className={`w-0.5 h-0.5 rounded-full ${
-                                                isDarkMode ? 'bg-gray-500' : 'bg-gray-600'
-                                            }`}></div>
+                                            <div className={`w-0.5 h-0.5 rounded-full ${isDarkMode ? 'bg-gray-500' : 'bg-gray-600'
+                                                }`}></div>
+                                            <div className={`w-0.5 h-0.5 rounded-full ${isDarkMode ? 'bg-gray-500' : 'bg-gray-600'
+                                                }`}></div>
+                                            <div className={`w-0.5 h-0.5 rounded-full ${isDarkMode ? 'bg-gray-500' : 'bg-gray-600'
+                                                }`}></div>
                                         </>
                                     )}
                                 </div>
                             </div>
                         </div>
-                        
+
                         {/* Always visible buttons */}
-                        <div className={`flex items-center space-x-3 transition-all duration-500 ${
-                            isHeaderExpanded ? 'ml-1' : 'ml-3'
-                        }`}>
-                                <RoleGuard roles={["superadmin", "admin"]} userRole={userData.rol}>
-                                    <button
-                                        onClick={() => setNotificationsOpen(true)}
-                                        className={`p-2 rounded-full relative transition-all duration-200 hover:scale-110 ${
-                                            isDarkMode
-                                                ? 'text-gray-300 hover:text-white hover:bg-gray-800'
-                                                : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
-                                        }`}
-                                        title={doNotDisturb ? "Modo No Molestar activo" : "Notificaciones"}
-                                    >
-                                        <Bell className="h-5 w-5" />
-                                        {unreadCount > 0 && (
-                                            <>
-                                                <span className={`absolute top-0 right-0 h-2 w-2 rounded-full ${
-                                                    doNotDisturb ? 'bg-purple-500' : 'bg-white'
-                                                }`}></span>
-                                                {!doNotDisturb && (
-                                                    <span className="absolute -top-2 -right-2 bg-white text-black text-xs font-bold rounded-full px-1.5 min-w-[18px] text-center border border-black shadow">
-                                                        {unreadCount}
-                                                    </span>
-                                                )}
-                                                {doNotDisturb && (
-                                                    <span className="absolute -top-2 -right-2 bg-purple-600 text-white text-xs font-bold rounded-full p-1 min-w-[18px] text-center border border-black shadow">
-                                                        <Moon size={10} />
-                                                    </span>
-                                                )}
-                                            </>
-                                        )}
-                                    </button>
-                                </RoleGuard>
+                        <div className={`flex items-center space-x-3 transition-all duration-500 ${isHeaderExpanded ? 'ml-1' : 'ml-3'
+                            }`}>
+                            <RoleGuard roles={["superadmin", "admin"]} userRole={userData.rol}>
                                 <button
-                                    onClick={initiateLogout}
-                                    className={`p-2 rounded-full transition-all duration-200 hover:scale-110 ${
-                                        isDarkMode
+                                    onClick={() => setNotificationsOpen(true)}
+                                    className={`p-2 rounded-full relative transition-all duration-200 hover:scale-110 ${isDarkMode
                                             ? 'text-gray-300 hover:text-white hover:bg-gray-800'
                                             : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
-                                    }`}
-                                    title='Cerrar sesión'
+                                        }`}
+                                    title={doNotDisturb ? "Modo No Molestar activo" : "Notificaciones"}
                                 >
-                                    <LogOut className="h-5 w-5" />
+                                    <Bell className="h-5 w-5" />
+                                    {unreadCount > 0 && (
+                                        <>
+                                            <span className={`absolute top-0 right-0 h-2 w-2 rounded-full ${doNotDisturb ? 'bg-purple-500' : 'bg-white'
+                                                }`}></span>
+                                            {!doNotDisturb && (
+                                                <span className="absolute -top-2 -right-2 bg-white text-black text-xs font-bold rounded-full px-1.5 min-w-[18px] text-center border border-black shadow">
+                                                    {unreadCount}
+                                                </span>
+                                            )}
+                                            {doNotDisturb && (
+                                                <span className="absolute -top-2 -right-2 bg-purple-600 text-white text-xs font-bold rounded-full p-1 min-w-[18px] text-center border border-black shadow">
+                                                    <Moon size={10} />
+                                                </span>
+                                            )}
+                                        </>
+                                    )}
                                 </button>
+                            </RoleGuard>
+                            <button
+                                onClick={initiateLogout}
+                                className={`p-2 rounded-full transition-all duration-200 hover:scale-110 ${isDarkMode
+                                        ? 'text-gray-300 hover:text-white hover:bg-gray-800'
+                                        : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
+                                    }`}
+                                title='Cerrar sesión'
+                            >
+                                <LogOut className="h-5 w-5" />
+                            </button>
                         </div>
                     </div>
 
@@ -605,7 +611,7 @@ export default function NavigationBar() {
                         className={`md:hidden p-2 rounded-full transition-all duration-200 hover:scale-110 ${isDarkMode
                             ? 'text-gray-300 hover:text-white hover:bg-gray-800'
                             : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
-                        }`}
+                            }`}
                     >
                         {mobileMenuOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
                     </button>
@@ -614,7 +620,7 @@ export default function NavigationBar() {
 
             {/* Mobile Menu */}
             {mobileMenuOpen && (
-                <div className={`md:hidden ${isDarkMode ? 'bg-black' : 'bg-white'} animate-in slide-in-from-top-4 fade-in duration-300`}>
+                <div className={`md:hidden ${pathname === '/' ? (isDarkMode ? 'bg-black/80 backdrop-blur-md' : 'bg-white/80 backdrop-blur-md') : (isDarkMode ? 'bg-black' : 'bg-white')} animate-in slide-in-from-top-4 fade-in duration-300`}>
                     <div className="px-2 pt-2 pb-3 space-y-1">
                         <RoleGuard roles={["superadmin"]} userRole={userData.rol}>
                             <div>
@@ -622,7 +628,9 @@ export default function NavigationBar() {
                                     onClick={() => toggleMenu("Inventario")}
                                     className={`flex justify-between w-full px-3 py-2 rounded-md transition-all duration-300 ${isActive("/inventario")
                                         ? isDarkMode ? 'text-white bg-white/10 border border-white/20' : 'text-gray-900 bg-gray-100 border border-gray-300'
-                                        : isDarkMode ? 'text-gray-300 hover:text-white hover:bg-gray-800' : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
+                                        : isDarkMode
+                                            ? `text-gray-300 hover:text-white ${pathname === '/' ? 'hover:bg-white/10' : 'hover:bg-gray-800'}`
+                                            : `text-gray-600 hover:text-gray-900 ${pathname === '/' ? 'hover:bg-black/5' : 'hover:bg-gray-100'}`
                                         }`}
                                 >
                                     <div className="flex items-center">
@@ -638,8 +646,10 @@ export default function NavigationBar() {
                                                 href="/inventario/registro"
                                                 onClick={closeAll}
                                                 className={`block px-3 py-2 rounded-md text-sm transition-all duration-200 ${pathname === "/inventario/registro"
-                                                    ? 'text-white bg-white/10 border-l-2 border-white'
-                                                    : 'text-gray-400 hover:text-white hover:bg-gray-800 hover:translate-x-1'
+                                                    ? isDarkMode ? 'text-white bg-white/10 border-l-2 border-white' : 'text-gray-900 bg-gray-100 border-l-2 border-gray-900'
+                                                    : isDarkMode
+                                                        ? `text-gray-400 hover:text-white hover:translate-x-1 ${pathname === '/' ? 'hover:bg-white/10' : 'hover:bg-gray-800'}`
+                                                        : `text-gray-500 hover:text-gray-900 hover:translate-x-1 ${pathname === '/' ? 'hover:bg-black/5' : 'hover:bg-gray-100'}`
                                                     }`}
                                             >
                                                 Añadir nuevos bienes
@@ -655,7 +665,9 @@ export default function NavigationBar() {
                                     onClick={() => toggleMenu(item.title)}
                                     className={`flex justify-between w-full px-3 py-2 rounded-md transition-all duration-300 ${isActive(item.path)
                                         ? isDarkMode ? 'text-white bg-white/10 border border-white/20' : 'text-gray-900 bg-gray-100 border border-gray-300'
-                                        : isDarkMode ? 'text-gray-300 hover:text-white hover:bg-gray-800' : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
+                                        : isDarkMode
+                                            ? `text-gray-300 hover:text-white ${pathname === '/' ? 'hover:bg-white/10' : 'hover:bg-gray-800'}`
+                                            : `text-gray-600 hover:text-gray-900 ${pathname === '/' ? 'hover:bg-black/5' : 'hover:bg-gray-100'}`
                                         }`}
                                 >
                                     <div className="flex items-center">
@@ -674,8 +686,10 @@ export default function NavigationBar() {
                                                         <button
                                                             onClick={(e) => toggleSubmenu(`${item.title}-${subItem.title}`, e)}
                                                             className={`flex justify-between w-full px-3 py-2 rounded-md text-sm transition-all duration-200 ${isActive(subItem.path)
-                                                                ? 'text-white bg-white/10 border-l-2 border-white'
-                                                                : 'text-gray-400 hover:text-white hover:bg-gray-800 hover:translate-x-1'
+                                                                ? isDarkMode ? 'text-white bg-white/10 border-l-2 border-white' : 'text-gray-900 bg-gray-100 border-l-2 border-gray-900'
+                                                                : isDarkMode
+                                                                    ? `text-gray-400 hover:text-white hover:translate-x-1 ${pathname === '/' ? 'hover:bg-white/10' : 'hover:bg-gray-800'}`
+                                                                    : `text-gray-500 hover:text-gray-900 hover:translate-x-1 ${pathname === '/' ? 'hover:bg-black/5' : 'hover:bg-gray-100'}`
                                                                 }`}
                                                         >
                                                             {subItem.title}
@@ -690,8 +704,10 @@ export default function NavigationBar() {
                                                                         href={child.path}
                                                                         onClick={closeAll}
                                                                         className={`block px-3 py-2 rounded-md text-sm transition-all duration-200 ${pathname === child.path
-                                                                            ? 'text-white bg-white/10 border-l-2 border-white'
-                                                                            : 'text-gray-400 hover:text-white hover:bg-gray-800 hover:translate-x-1'
+                                                                            ? isDarkMode ? 'text-white bg-white/10 border-l-2 border-white' : 'text-gray-900 bg-gray-100 border-l-2 border-gray-900'
+                                                                            : isDarkMode
+                                                                                ? `text-gray-400 hover:text-white hover:translate-x-1 ${pathname === '/' ? 'hover:bg-white/10' : 'hover:bg-gray-800'}`
+                                                                                : `text-gray-500 hover:text-gray-900 hover:translate-x-1 ${pathname === '/' ? 'hover:bg-black/5' : 'hover:bg-gray-100'}`
                                                                             }`}
                                                                     >
                                                                         {child.title}
@@ -706,8 +722,10 @@ export default function NavigationBar() {
                                                             href={subItem.path}
                                                             onClick={closeAll}
                                                             className={`block px-3 py-2 rounded-md text-sm transition-all duration-200 ${pathname === subItem.path
-                                                                ? 'text-white bg-white/10 border-l-2 border-white'
-                                                                : 'text-gray-400 hover:text-white hover:bg-gray-800 hover:translate-x-1'
+                                                                ? isDarkMode ? 'text-white bg-white/10 border-l-2 border-white' : 'text-gray-900 bg-gray-100 border-l-2 border-gray-900'
+                                                                : isDarkMode
+                                                                    ? `text-gray-400 hover:text-white hover:translate-x-1 ${pathname === '/' ? 'hover:bg-white/10' : 'hover:bg-gray-800'}`
+                                                                    : `text-gray-500 hover:text-gray-900 hover:translate-x-1 ${pathname === '/' ? 'hover:bg-black/5' : 'hover:bg-gray-100'}`
                                                                 }`}
                                                         >
                                                             {subItem.title}
@@ -718,8 +736,10 @@ export default function NavigationBar() {
                                                         href={subItem.path}
                                                         onClick={closeAll}
                                                         className={`block px-3 py-2 rounded-md text-sm transition-all duration-200 ${pathname === subItem.path
-                                                            ? 'text-white bg-white/10 border-l-2 border-white'
-                                                            : 'text-gray-400 hover:text-white hover:bg-gray-800 hover:translate-x-1'
+                                                            ? isDarkMode ? 'text-white bg-white/10 border-l-2 border-white' : 'text-gray-900 bg-gray-100 border-l-2 border-gray-900'
+                                                            : isDarkMode
+                                                                ? `text-gray-400 hover:text-white hover:translate-x-1 ${pathname === '/' ? 'hover:bg-white/10' : 'hover:bg-gray-800'}`
+                                                                : `text-gray-500 hover:text-gray-900 hover:translate-x-1 ${pathname === '/' ? 'hover:bg-black/5' : 'hover:bg-gray-100'}`
                                                             }`}
                                                     >
                                                         {subItem.title}
@@ -737,7 +757,9 @@ export default function NavigationBar() {
                                     onClick={() => toggleMenu("Administración")}
                                     className={`flex justify-between w-full px-3 py-2 rounded-md transition-all duration-300 ${isActive("/admin")
                                         ? isDarkMode ? 'text-white bg-white/10 border border-white/20' : 'text-gray-900 bg-gray-100 border border-gray-300'
-                                        : isDarkMode ? 'text-gray-300 hover:text-white hover:bg-gray-800' : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
+                                        : isDarkMode
+                                            ? `text-gray-300 hover:text-white ${pathname === '/' ? 'hover:bg-white/10' : 'hover:bg-gray-800'}`
+                                            : `text-gray-600 hover:text-gray-900 ${pathname === '/' ? 'hover:bg-black/5' : 'hover:bg-gray-100'}`
                                         }`}
                                 >
                                     <div className="flex items-center">
@@ -752,8 +774,10 @@ export default function NavigationBar() {
                                             href="/admin/areas"
                                             onClick={closeAll}
                                             className={`block px-3 py-2 rounded-md text-sm transition-all duration-200 ${pathname === "/admin/areas"
-                                                ? 'text-white bg-white/10 border-l-2 border-white'
-                                                : 'text-gray-400 hover:text-white hover:bg-gray-800 hover:translate-x-1'
+                                                ? isDarkMode ? 'text-white bg-white/10 border-l-2 border-white' : 'text-gray-900 bg-gray-100 border-l-2 border-gray-900'
+                                                : isDarkMode
+                                                    ? `text-gray-400 hover:text-white hover:translate-x-1 ${pathname === '/' ? 'hover:bg-white/10' : 'hover:bg-gray-800'}`
+                                                    : `text-gray-500 hover:text-gray-900 hover:translate-x-1 ${pathname === '/' ? 'hover:bg-black/5' : 'hover:bg-gray-100'}`
                                                 }`}
                                         >
                                             Configuración General
@@ -762,8 +786,10 @@ export default function NavigationBar() {
                                             href="/admin/personal"
                                             onClick={closeAll}
                                             className={`block px-3 py-2 rounded-md text-sm transition-all duration-200 ${pathname === "/admin/personal"
-                                                ? 'text-white bg-white/10 border-l-2 border-white'
-                                                : 'text-gray-400 hover:text-white hover:bg-gray-800 hover:translate-x-1'
+                                                ? isDarkMode ? 'text-white bg-white/10 border-l-2 border-white' : 'text-gray-900 bg-gray-100 border-l-2 border-gray-900'
+                                                : isDarkMode
+                                                    ? `text-gray-400 hover:text-white hover:translate-x-1 ${pathname === '/' ? 'hover:bg-white/10' : 'hover:bg-gray-800'}`
+                                                    : `text-gray-500 hover:text-gray-900 hover:translate-x-1 ${pathname === '/' ? 'hover:bg-black/5' : 'hover:bg-gray-100'}`
                                                 }`}
                                         >
                                             Directorio de Personal
@@ -851,10 +877,10 @@ export default function NavigationBar() {
                                 <div className="flex w-full gap-2">
                                     <button
                                         onClick={() => setShowLogoutModal(false)}
-                                        className={`flex-1 py-1.5 px-3 text-xs rounded-md border transition-all duration-200 hover:scale-105 ${isDarkMode 
+                                        className={`flex-1 py-1.5 px-3 text-xs rounded-md border transition-all duration-200 hover:scale-105 ${isDarkMode
                                             ? 'bg-gray-800/50 text-gray-300 hover:bg-gray-800 border-gray-700/50'
                                             : 'bg-gray-100 text-gray-600 hover:bg-gray-200 border-gray-300'
-                                        }`}
+                                            }`}
                                     >
                                         Cancelar
                                     </button>
@@ -863,7 +889,7 @@ export default function NavigationBar() {
                                         className={`flex-1 py-1.5 px-3 text-xs rounded-md border transition-all duration-200 hover:scale-105 ${isDarkMode
                                             ? 'bg-white/20 text-white hover:bg-white/30 border-white/30'
                                             : 'bg-gray-900 text-white hover:bg-gray-800 border-gray-900'
-                                        }`}
+                                            }`}
                                     >
                                         Confirmar
                                     </button>

@@ -119,15 +119,15 @@ export default function Inicio() {
   return (
     <div
       ref={containerRef}
-      className={`flex flex-col items-center justify-center h-full w-full overflow-hidden relative transition-colors duration-500 ${isDarkMode ? 'bg-black' : 'bg-gradient-to-br from-gray-50 via-white to-gray-100'
+      className={`flex flex-col items-center justify-center h-screen w-full overflow-hidden relative transition-colors duration-500 ${isDarkMode ? 'bg-black' : 'bg-gradient-to-br from-gray-50 via-white to-gray-100'
         }`}
     >
       {/* Clock and Date Display */}
-      <div className={`absolute top-8 left-8 z-20 transition-colors duration-500 ${isDarkMode ? 'text-white' : 'text-gray-800'
+      <div className={`absolute top-20 left-8 z-20 transition-colors duration-500 ${isDarkMode ? 'text-white' : 'text-gray-800'
         }`}>
         <div className={`backdrop-blur-sm rounded-xl p-4 shadow-2xl transition-all duration-500 ${isDarkMode
-          ? 'bg-black/40 border border-white/10'
-          : 'bg-white/60 border border-gray-200/30'
+          ? 'bg-black/5 border border-white/5'
+          : 'bg-white/5 border border-white/10'
           }`}>
           <div className="text-4xl font-light tracking-wider mb-1">
             {currentTime}
