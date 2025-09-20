@@ -281,6 +281,7 @@ export default function ConsultasIteaGeneral() {
     const [message, setMessage] = useState<Message | null>(null);
     const [showBajaModal, setShowBajaModal] = useState(false);
     const [bajaCause, setBajaCause] = useState('');
+    const [showInactiveModal, setShowInactiveModal] = useState(false);
     const detailRef = useRef<HTMLDivElement>(null);
     const { createNotification } = useNotifications();
     const { isDarkMode } = useTheme();
@@ -698,8 +699,12 @@ export default function ConsultasIteaGeneral() {
 
     const markAsInactive = async () => {
         if (!selectedItem) return;
-        if (!confirm('¿Está seguro de que desea marcar este artículo como INACTIVO?')) return;
+        setShowInactiveModal(true);
+    };
 
+    const confirmMarkAsInactive = async () => {
+        if (!selectedItem) return;
+        setShowInactiveModal(false);
         setLoading(true);
         try {
             const { error } = await supabase
@@ -722,9 +727,16 @@ export default function ConsultasIteaGeneral() {
 
             fetchMuebles();
             setSelectedItem(null);
+            setMessage({
+                type: 'success',
+                text: 'Artículo marcado como INACTIVO correctamente'
+            });
         } catch (error) {
             console.error('Error al marcar como inactivo:', error);
-            setError('Error al cambiar el estatus. Por favor, intente nuevamente.');
+            setMessage({
+                type: 'error',
+                text: 'Error al cambiar el estatus. Por favor, intente nuevamente.'
+            });
 
             // Notificación de error
             await createNotification({
@@ -2310,35 +2322,69 @@ export default function ConsultasIteaGeneral() {
 
             {/* Modal para completar información del director */}
             {showDirectorModal && (
-                <div className="fixed inset-0 bg-black/90 flex items-center justify-center z-50 px-4 animate-fadeIn">
-                    <div className="bg-black rounded-2xl shadow-2xl border border-yellow-600/30 w-full max-w-md overflow-hidden transition-all duration-300 transform">
-                        <div className="relative p-6 bg-gradient-to-b from-black to-gray-900">
+                <div className={`fixed inset-0 flex items-center justify-center z-50 px-4 animate-fadeIn ${
+                    isDarkMode ? 'bg-black/90' : 'bg-black/50'
+                }`}>
+                    <div className={`rounded-2xl shadow-2xl border w-full max-w-md overflow-hidden transition-all duration-300 transform ${
+                        isDarkMode 
+                            ? 'bg-black border-yellow-600/30' 
+                            : 'bg-white border-yellow-200'
+                    }`}>
+                        <div className={`relative p-6 ${
+                            isDarkMode 
+                                ? 'bg-gradient-to-b from-black to-gray-900' 
+                                : 'bg-gradient-to-b from-yellow-50 to-white'
+                        }`}>
                             <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-yellow-500/60 via-yellow-400 to-yellow-500/60"></div>
 
                             <div className="flex flex-col items-center text-center mb-4">
-                                <div className="p-3 bg-yellow-500/10 rounded-full border border-yellow-500/30 mb-3">
+                                <div className={`p-3 rounded-full border mb-3 ${
+                                    isDarkMode 
+                                        ? 'bg-yellow-500/10 border-yellow-500/30' 
+                                        : 'bg-yellow-100 border-yellow-200'
+                                }`}>
                                     <AlertCircle className="h-8 w-8 text-yellow-500" />
                                 </div>
-                                <h3 className="text-2xl font-bold text-white">Información requerida</h3>
-                                <p className="text-gray-400 mt-2">
+                                <h3 className={`text-2xl font-bold ${
+                                    isDarkMode ? 'text-white' : 'text-gray-900'
+                                }`}>Información requerida</h3>
+                                <p className={`mt-2 ${
+                                    isDarkMode ? 'text-gray-400' : 'text-gray-600'
+                                }`}>
                                     Por favor complete el área del director/jefe de área seleccionado
                                 </p>
                             </div>
 
                             <div className="space-y-5 mt-6">
-                                <div className="rounded-lg border border-gray-800 bg-gray-900/50 p-4">
-                                    <label className="text-xs uppercase tracking-wider text-gray-500 mb-1 block">Director/Jefe seleccionado</label>
+                                <div className={`rounded-lg border p-4 ${
+                                    isDarkMode 
+                                        ? 'border-gray-800 bg-gray-900/50' 
+                                        : 'border-gray-200 bg-gray-50'
+                                }`}>
+                                    <label className={`text-xs uppercase tracking-wider mb-1 block ${
+                                        isDarkMode ? 'text-gray-500' : 'text-gray-600'
+                                    }`}>Director/Jefe seleccionado</label>
                                     <div className="flex items-center gap-3">
-                                        <div className="p-2 bg-gray-800 rounded-lg">
-                                            <User className="h-4 w-4 text-yellow-400" />
+                                        <div className={`p-2 rounded-lg ${
+                                            isDarkMode ? 'bg-gray-800' : 'bg-yellow-100'
+                                        }`}>
+                                            <User className={`h-4 w-4 ${
+                                                isDarkMode ? 'text-yellow-400' : 'text-yellow-600'
+                                            }`} />
                                         </div>
-                                        <span className="text-white font-medium">{incompleteDirector?.nombre || 'Director'}</span>
+                                        <span className={`font-medium ${
+                                            isDarkMode ? 'text-white' : 'text-gray-900'
+                                        }`}>{incompleteDirector?.nombre || 'Director'}</span>
                                     </div>
                                 </div>
 
                                 <div>
-                                    <label className="flex text-sm font-medium text-gray-300 mb-2 gap-2">
-                                        <LayoutGrid className="h-4 w-4 text-gray-400" />
+                                    <label className={`flex text-sm font-medium mb-2 gap-2 ${
+                                        isDarkMode ? 'text-gray-300' : 'text-gray-700'
+                                    }`}>
+                                        <LayoutGrid className={`h-4 w-4 ${
+                                            isDarkMode ? 'text-gray-400' : 'text-gray-500'
+                                        }`} />
                                         Área
                                     </label>
                                     <input
@@ -2346,7 +2392,11 @@ export default function ConsultasIteaGeneral() {
                                         value={directorFormData.area}
                                         onChange={(e) => setDirectorFormData({ area: e.target.value })}
                                         placeholder="Ej: Administración, Recursos Humanos, Contabilidad..."
-                                        className="block w-full bg-gray-900 border border-gray-700 rounded-lg py-3 px-4 text-white placeholder-gray-500 focus:outline-none focus:border-yellow-500 focus:ring-1 focus:ring-yellow-500 transition-colors"
+                                        className={`block w-full border rounded-lg py-3 px-4 focus:outline-none focus:ring-1 transition-colors ${
+                                            isDarkMode 
+                                                ? 'bg-gray-900 border-gray-700 text-white placeholder-gray-500 focus:border-yellow-500 focus:ring-yellow-500' 
+                                                : 'bg-white border-gray-300 text-gray-900 placeholder-gray-400 focus:border-yellow-500 focus:ring-yellow-500'
+                                        }`}
                                         required
                                     />
                                     {!directorFormData.area && (
@@ -2359,10 +2409,18 @@ export default function ConsultasIteaGeneral() {
                             </div>
                         </div>
 
-                        <div className="p-5 bg-black border-t border-gray-800 flex justify-end gap-3">
+                        <div className={`p-5 border-t flex justify-end gap-3 ${
+                            isDarkMode 
+                                ? 'bg-black border-gray-800' 
+                                : 'bg-white border-gray-200'
+                        }`}>
                             <button
                                 onClick={() => setShowDirectorModal(false)}
-                                className="px-5 py-2.5 bg-gray-900 text-white rounded-lg text-sm hover:bg-gray-800 border border-gray-800 transition-colores flex items-center gap-2"
+                                className={`px-5 py-2.5 rounded-lg text-sm border transition-colors flex items-center gap-2 ${
+                                    isDarkMode 
+                                        ? 'bg-gray-900 text-white hover:bg-gray-800 border-gray-800' 
+                                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200 border-gray-300'
+                                }`}
                             >
                                 <X className="h-4 w-4" />
                                 Cancelar
@@ -2370,10 +2428,15 @@ export default function ConsultasIteaGeneral() {
                             <button
                                 onClick={saveDirectorInfo}
                                 disabled={savingDirector || !directorFormData.area}
-                                className={`px-5 py-2.5 rounded-lg text-sm flex items-center gap-2 transition-all duration-300 
-                                    ${savingDirector || !directorFormData.area ?
-                                        'bg-gray-900 text-gray-500 cursor-not-allowed border border-gray-800' :
-                                        'bg-gradient-to-r from-yellow-600 to-yellow-500 text-black font-medium hover:shadow-lg hover:shadow-yellow-500/20'}`}
+                                className={`px-5 py-2.5 rounded-lg text-sm flex items-center gap-2 transition-all duration-300 ${
+                                    savingDirector || !directorFormData.area
+                                        ? isDarkMode
+                                            ? 'bg-gray-900 text-gray-500 cursor-not-allowed border border-gray-800'
+                                            : 'bg-gray-200 text-gray-400 cursor-not-allowed border border-gray-300'
+                                        : isDarkMode
+                                            ? 'bg-gradient-to-r from-yellow-600 to-yellow-500 text-black font-medium hover:shadow-lg hover:shadow-yellow-500/20'
+                                            : 'bg-yellow-600 text-white font-medium hover:bg-yellow-700'
+                                }`}
                             >
                                 {savingDirector ? (
                                     <RefreshCw className="h-4 w-4 animate-spin" />
@@ -2456,35 +2519,71 @@ export default function ConsultasIteaGeneral() {
             {/* Modal de confirmación de baja */}
             {showBajaModal && selectedItem && (
                 <>
-                    <div className="fixed inset-0 bg-black/90 flex items-center justify-center z-50 px-4 animate-fadeIn">
-                        <div className="bg-black rounded-2xl shadow-2xl border border-red-600/30 w-full max-w-md overflow-hidden transition-all duration-300 transform">
-                            <div className="relative p-6 bg-gradient-to-b from-black to-gray-900">
+                    <div className={`fixed inset-0 flex items-center justify-center z-50 px-4 animate-fadeIn ${
+                        isDarkMode ? 'bg-black/90' : 'bg-black/50'
+                    }`}>
+                        <div className={`rounded-2xl shadow-2xl border w-full max-w-md overflow-hidden transition-all duration-300 transform ${
+                            isDarkMode 
+                                ? 'bg-black border-red-600/30' 
+                                : 'bg-white border-red-200'
+                        }`}>
+                            <div className={`relative p-6 ${
+                                isDarkMode 
+                                    ? 'bg-gradient-to-b from-black to-gray-900' 
+                                    : 'bg-gradient-to-b from-red-50 to-white'
+                            }`}>
                                 <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-red-500/60 via-red-400 to-red-500/60"></div>
                                 <div className="flex flex-col items-center text-center mb-4">
-                                    <div className="p-3 bg-red-500/10 rounded-full border border-red-500/30 mb-3">
+                                    <div className={`p-3 rounded-full border mb-3 ${
+                                        isDarkMode 
+                                            ? 'bg-red-500/10 border-red-500/30' 
+                                            : 'bg-red-100 border-red-200'
+                                    }`}>
                                         <AlertTriangle className="h-8 w-8 text-red-500" />
                                     </div>
-                                    <h3 className="text-2xl font-bold text-white">¿Dar de baja este artículo?</h3>
+                                    <h3 className={`text-2xl font-bold ${
+                                        isDarkMode ? 'text-white' : 'text-gray-900'
+                                    }`}>¿Dar de baja este artículo?</h3>
                                 </div>
                                 {selectedItem && (
-                                    <div className="rounded-lg border border-gray-800 bg-gray-900/50 p-4 mb-4">
-                                        <div className="text-left text-sm text-gray-300">
-                                            <div><span className="font-bold text-white">ID:</span> {selectedItem.id_inv}</div>
-                                            <div><span className="font-bold text-white">Descripción:</span> {selectedItem.descripcion}</div>
-                                            <div><span className="font-bold text-white">Área:</span> {selectedItem.area}</div>
+                                    <div className={`rounded-lg border p-4 mb-4 ${
+                                        isDarkMode 
+                                            ? 'border-gray-800 bg-gray-900/50' 
+                                            : 'border-gray-200 bg-gray-50'
+                                    }`}>
+                                        <div className={`text-left text-sm ${
+                                            isDarkMode ? 'text-gray-300' : 'text-gray-700'
+                                        }`}>
+                                            <div><span className={`font-bold ${
+                                                isDarkMode ? 'text-white' : 'text-gray-900'
+                                            }`}>ID:</span> {selectedItem.id_inv}</div>
+                                            <div><span className={`font-bold ${
+                                                isDarkMode ? 'text-white' : 'text-gray-900'
+                                            }`}>Descripción:</span> {selectedItem.descripcion}</div>
+                                            <div><span className={`font-bold ${
+                                                isDarkMode ? 'text-white' : 'text-gray-900'
+                                            }`}>Área:</span> {selectedItem.area}</div>
                                         </div>
                                     </div>
                                 )}
                                 <div>
-                                    <label className="flex items-center gap-2 text-sm font-medium text-gray-300 mb-2">
-                                        <Info className="h-4 w-4 text-gray-400" />
+                                    <label className={`flex items-center gap-2 text-sm font-medium mb-2 ${
+                                        isDarkMode ? 'text-gray-300' : 'text-gray-700'
+                                    }`}>
+                                        <Info className={`h-4 w-4 ${
+                                            isDarkMode ? 'text-gray-400' : 'text-gray-500'
+                                        }`} />
                                         Causa de Baja
                                     </label>
                                     <textarea
                                         value={bajaCause}
                                         onChange={(e) => setBajaCause(e.target.value)}
                                         placeholder="Ingrese la causa de baja"
-                                        className="block w-full bg-gray-900 border border-gray-700 rounded-lg py-3 px-4 text-white placeholder-gray-500 focus:outline-none focus:border-red-500 focus:ring-1 focus:ring-red-500 transition-colores"
+                                        className={`block w-full border rounded-lg py-3 px-4 focus:outline-none focus:ring-1 transition-colors ${
+                                            isDarkMode 
+                                                ? 'bg-gray-900 border-gray-700 text-white placeholder-gray-500 focus:border-red-500 focus:ring-red-500' 
+                                                : 'bg-white border-gray-300 text-gray-900 placeholder-gray-400 focus:border-red-500 focus:ring-red-500'
+                                        }`}
                                         rows={3}
                                         required
                                     />
@@ -2496,10 +2595,18 @@ export default function ConsultasIteaGeneral() {
                                     )}
                                 </div>
                             </div>
-                            <div className="p-5 bg-black border-t border-gray-800 flex justify-end gap-3">
+                            <div className={`p-5 border-t flex justify-end gap-3 ${
+                                isDarkMode 
+                                    ? 'bg-black border-gray-800' 
+                                    : 'bg-white border-gray-200'
+                            }`}>
                                 <button
                                     onClick={() => setShowBajaModal(false)}
-                                    className="px-5 py-2.5 bg-gray-900 text-white rounded-lg text-sm hover:bg-gray-800 border border-gray-800 transition-colores flex items-center gap-2"
+                                    className={`px-5 py-2.5 rounded-lg text-sm border transition-colors flex items-center gap-2 ${
+                                        isDarkMode 
+                                            ? 'bg-gray-900 text-white hover:bg-gray-800 border-gray-800' 
+                                            : 'bg-gray-100 text-gray-700 hover:bg-gray-200 border-gray-300'
+                                    }`}
                                 >
                                     <X className="h-4 w-4" />
                                     Cancelar
@@ -2507,10 +2614,15 @@ export default function ConsultasIteaGeneral() {
                                 <button
                                     onClick={confirmBaja}
                                     disabled={!bajaCause}
-                                    className={`px-5 py-2.5 rounded-lg text-sm flex items-center gap-2 transition-all duration-300 
-                                        ${!bajaCause ?
-                                            'bg-gray-900 text-gray-500 cursor-not-allowed border border-gray-800' :
-                                            'bg-gradient-to-r from-red-600 to-red-500 text-white font-medium hover:shadow-lg hover:shadow-red-500/20'}`}
+                                    className={`px-5 py-2.5 rounded-lg text-sm flex items-center gap-2 transition-all duration-300 ${
+                                        !bajaCause
+                                            ? isDarkMode
+                                                ? 'bg-gray-900 text-gray-500 cursor-not-allowed border border-gray-800'
+                                                : 'bg-gray-200 text-gray-400 cursor-not-allowed border border-gray-300'
+                                            : isDarkMode
+                                                ? 'bg-gradient-to-r from-red-600 to-red-500 text-white font-medium hover:shadow-lg hover:shadow-red-500/20'
+                                                : 'bg-red-600 text-white font-medium hover:bg-red-700'
+                                    }`}
                                 >
                                     <Trash2 className="h-4 w-4" />
                                     Dar de Baja
@@ -2519,6 +2631,81 @@ export default function ConsultasIteaGeneral() {
                         </div>
                     </div>
                 </>
+            )}
+
+            {/* Modal de confirmación para marcar como inactivo */}
+            {showInactiveModal && selectedItem && (
+                <div className={`fixed inset-0 flex items-center justify-center z-50 px-4 animate-fadeIn ${
+                    isDarkMode ? 'bg-black/90' : 'bg-black/50'
+                }`}>
+                    <div className={`rounded-2xl shadow-2xl border w-full max-w-md overflow-hidden transition-all duration-300 transform ${
+                        isDarkMode 
+                            ? 'bg-black border-orange-600/30' 
+                            : 'bg-white border-orange-200'
+                    }`}>
+                        <div className={`relative p-6 ${
+                            isDarkMode 
+                                ? 'bg-gradient-to-b from-black to-gray-900' 
+                                : 'bg-gradient-to-b from-orange-50 to-white'
+                        }`}>
+                            <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-orange-500/60 via-orange-400 to-orange-500/60"></div>
+                            <div className="flex flex-col items-center text-center mb-4">
+                                <div className={`p-3 rounded-full border mb-3 ${
+                                    isDarkMode 
+                                        ? 'bg-orange-500/10 border-orange-500/30' 
+                                        : 'bg-orange-100 border-orange-200'
+                                }`}>
+                                    <AlertTriangle className="h-8 w-8 text-orange-500" />
+                                </div>
+                                <h3 className={`text-2xl font-bold ${
+                                    isDarkMode ? 'text-white' : 'text-gray-900'
+                                }`}>¿Marcar como INACTIVO?</h3>
+                                <p className={`mt-2 ${
+                                    isDarkMode ? 'text-gray-400' : 'text-gray-600'
+                                }`}>El artículo será marcado como <span className="text-orange-500 font-semibold">INACTIVO</span> en el inventario.</p>
+                            </div>
+                            <div className={`rounded-lg border p-4 mb-4 text-left text-sm ${
+                                isDarkMode 
+                                    ? 'border-gray-800 bg-gray-900/50 text-gray-300' 
+                                    : 'border-gray-200 bg-gray-50 text-gray-700'
+                            }`}>
+                                <div><span className={`font-bold ${
+                                    isDarkMode ? 'text-white' : 'text-gray-900'
+                                }`}>ID:</span> {selectedItem.id_inv}</div>
+                                <div><span className={`font-bold ${
+                                    isDarkMode ? 'text-white' : 'text-gray-900'
+                                }`}>Descripción:</span> {selectedItem.descripcion}</div>
+                                <div><span className={`font-bold ${
+                                    isDarkMode ? 'text-white' : 'text-gray-900'
+                                }`}>Área:</span> {selectedItem.area}</div>
+                            </div>
+                        </div>
+                        <div className={`p-5 border-t flex justify-end gap-3 ${
+                            isDarkMode 
+                                ? 'bg-black border-gray-800' 
+                                : 'bg-white border-gray-200'
+                        }`}>
+                            <button
+                                onClick={() => setShowInactiveModal(false)}
+                                className={`px-5 py-2.5 rounded-lg text-sm border transition-colors flex items-center gap-2 ${
+                                    isDarkMode 
+                                        ? 'bg-gray-900 text-white hover:bg-gray-800 border-gray-800' 
+                                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200 border-gray-300'
+                                }`}
+                            >
+                                <X className="h-4 w-4" />
+                                Cancelar
+                            </button>
+                            <button
+                                onClick={confirmMarkAsInactive}
+                                className={`px-5 py-2.5 bg-orange-600 text-white rounded-lg text-sm font-semibold flex items-center gap-2 hover:bg-orange-700 transition-colors`}
+                            >
+                                <AlertTriangle className="h-4 w-4" />
+                                Marcar como INACTIVO
+                            </button>
+                        </div>
+                    </div>
+                </div>
             )}
         </div>
     );
