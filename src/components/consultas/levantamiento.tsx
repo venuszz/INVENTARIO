@@ -13,6 +13,7 @@ import supabase from '@/app/lib/supabase/client';
 import { useRouter } from 'next/navigation';
 import { BadgeCheck } from 'lucide-react';
 import ReactDOM from 'react-dom';
+import { useTheme } from '@/context/ThemeContext';
 
 // Tipo unificado para INEA/ITEA
 interface LevMueble {
@@ -39,23 +40,22 @@ interface LevMueble {
     origen: 'INEA' | 'ITEA';
 }
 
-
 interface Message {
     type: 'success' | 'error' | 'info' | 'warning';
     text: string;
 }
 
-const ORIGEN_COLORS = {
-    INEA: 'bg-white/90 text-gray-900 border border-white/80',
-    ITEA: 'bg-white/80 text-gray-900 border border-white/70',
-};
+const getOrigenColors = (isDarkMode: boolean) => ({
+    INEA: isDarkMode ? 'bg-white/90 text-gray-900 border border-white/80' : 'bg-blue-50 text-blue-900 border border-blue-200',
+    ITEA: isDarkMode ? 'bg-white/80 text-gray-900 border border-white/70' : 'bg-green-50 text-green-900 border border-green-200',
+});
 
-const ESTATUS_COLORS = {
-    ACTIVO: 'bg-white/90 text-gray-900 border border-white/80',
-    INACTIVO: 'bg-white/80 text-gray-900 border border-white/70',
-    'NO LOCALIZADO': 'bg-white/70 text-gray-900 border border-white/60',
-    DEFAULT: 'bg-white/60 text-gray-900 border border-white/50'
-};
+const getEstatusColors = (isDarkMode: boolean) => ({
+    ACTIVO: isDarkMode ? 'bg-white/90 text-gray-900 border border-white/80' : 'bg-green-50 text-green-900 border border-green-200',
+    INACTIVO: isDarkMode ? 'bg-white/80 text-gray-900 border border-white/70' : 'bg-red-50 text-red-900 border border-red-200',
+    'NO LOCALIZADO': isDarkMode ? 'bg-white/70 text-gray-900 border border-white/60' : 'bg-yellow-50 text-yellow-900 border border-yellow-200',
+    DEFAULT: isDarkMode ? 'bg-white/60 text-gray-900 border border-white/50' : 'bg-gray-50 text-gray-900 border border-gray-200'
+});
 
 // Utilidad para limpiar texto
 function clean(str: string) {
@@ -68,6 +68,7 @@ export default function LevantamientoUnificado() {
     const [loadingProgress, setLoadingProgress] = useState({ count: 0, total: 0, message: '' });
     const role = useUserRole();
     const isAdmin = role === "admin" || role === "superadmin";
+    const { isDarkMode } = useTheme();
     const [error, setError] = useState<string | null>(null);
     const [currentPage, setCurrentPage] = useState(1);
     const [rowsPerPage, setRowsPerPage] = useState(10);
@@ -149,15 +150,16 @@ export default function LevantamientoUnificado() {
         }
     }
     function getTypeIcon(type: ActiveFilter['type']) {
+        const iconClass = isDarkMode ? 'text-white/80' : 'text-gray-600';
         switch (type) {
-            case 'id': return <Search className="h-3.5 w-3.5 text-white/80" />;
-            case 'area': return <span title="Área" className="font-medium text-white/80">A</span>;
-            case 'usufinal': return <span title="Director" className="font-medium text-white/80">D</span>;
-            case 'resguardante': return <span title="Resguardante" className="font-medium text-white/80">R</span>;
-            case 'descripcion': return <span title="Descripción" className="font-medium text-white/80">Desc</span>;
-            case 'rubro': return <span title="Rubro" className="font-medium text-white/80">Ru</span>;
-            case 'estado': return <span title="Estado" className="font-medium text-white/80">Edo</span>;
-            case 'estatus': return <span title="Estatus" className="font-medium text-white/80">Est</span>;
+            case 'id': return <Search className={`h-3.5 w-3.5 ${iconClass}`} />;
+            case 'area': return <span title="Área" className={`font-medium ${iconClass}`}>A</span>;
+            case 'usufinal': return <span title="Director" className={`font-medium ${iconClass}`}>D</span>;
+            case 'resguardante': return <span title="Resguardante" className={`font-medium ${iconClass}`}>R</span>;
+            case 'descripcion': return <span title="Descripción" className={`font-medium ${iconClass}`}>Desc</span>;
+            case 'rubro': return <span title="Rubro" className={`font-medium ${iconClass}`}>Ru</span>;
+            case 'estado': return <span title="Estado" className={`font-medium ${iconClass}`}>Edo</span>;
+            case 'estatus': return <span title="Estatus" className={`font-medium ${iconClass}`}>Est</span>;
             default: return null;
         }
     }
@@ -168,7 +170,7 @@ export default function LevantamientoUnificado() {
                 id="omnibox-suggestions"
                 role="listbox"
                 title="Sugerencias de búsqueda"
-                className={`animate-fadeInUp max-h-48 overflow-y-auto rounded-md shadow-md border border-white/10 bg-black/95 backdrop-blur-xl transition-all duration-200 ${dropdownClass}`}
+                className={`animate-fadeInUp max-h-48 overflow-y-auto rounded-md shadow-md border transition-all duration-200 ${isDarkMode ? 'border-white/10 bg-black/95' : 'border-gray-200 bg-white/95'} backdrop-blur-xl ${dropdownClass}`}
             >
                 {suggestions.map((s, i) => {
                     const isSelected = highlightedIndex === i;
@@ -182,9 +184,9 @@ export default function LevantamientoUnificado() {
                             className={`group flex items-center gap-1.5 px-2 py-1 cursor-pointer select-none text-xs
                                         transition-all duration-150 ease-in-out
                                         ${isSelected
-                                    ? `bg-white/5 text-white border-l border-l-white/40`
-                                    : 'hover:bg-white/5 text-white/70'}
-                                        border-b border-white/5 last:border-b-0`}
+                                    ? isDarkMode ? 'bg-white/5 text-white border-l border-l-white/40' : 'bg-blue-50 text-blue-900 border-l border-l-blue-400'
+                                    : isDarkMode ? 'hover:bg-white/5 text-white/70' : 'hover:bg-gray-50 text-gray-700'}
+                                        border-b ${isDarkMode ? 'border-white/5' : 'border-gray-100'} last:border-b-0`}
                             onMouseDown={e => {
                                 e.preventDefault();
                                 setActiveFilters(prev => [...prev, { term: s.value, type: s.type }]);
@@ -198,9 +200,8 @@ export default function LevantamientoUnificado() {
                             {/* Icono minimalista */}
                             <span
                                 className={`flex items-center justify-center w-5 h-5 rounded-md
-                                    transition-colors duration-200 bg-neutral-800/40
-                                    group-hover:bg-white/5 text-white/70
-                                    group-hover:text-white font-medium text-xs`}
+                                    transition-colors duration-200 font-medium text-xs
+                                    ${isDarkMode ? 'bg-neutral-800/40 group-hover:bg-white/5 text-white/70 group-hover:text-white' : 'bg-gray-100 group-hover:bg-gray-200 text-gray-600 group-hover:text-gray-800'}`}
                             >
                                 {getTypeIcon(s.type)}
                             </span>
@@ -211,8 +212,8 @@ export default function LevantamientoUnificado() {
                             </span>
 
                             {/* Etiqueta de tipo */}
-                            <span className="text-[10px] font-medium px-1.5 py-0.5 rounded-md bg-neutral-900/50 text-white/60 border border-white/10 ml-1 tracking-wide"
-                            >
+                            <span className={`text-[10px] font-medium px-1.5 py-0.5 rounded-md ml-1 tracking-wide border
+                                ${isDarkMode ? 'bg-neutral-900/50 text-white/60 border-white/10' : 'bg-gray-100 text-gray-600 border-gray-200'}`}>
                                 {getTypeLabel(s.type)}
                             </span>
                         </li>
@@ -858,24 +859,24 @@ export default function LevantamientoUnificado() {
     function renderDirectorDataModal() {
         return (
             showDirectorDataModal && !!directorToUpdate && isAdmin && (
-                <div className="fixed inset-0 z-[110] flex items-center justify-center bg-black/90 backdrop-blur-sm px-4 animate-fadeIn">
-                    <div className="bg-black border-2 border-white/30 rounded-2xl shadow-2xl w-full max-w-md overflow-hidden transition-all duration-300 transform">
+                <div className={`fixed inset-0 z-[110] flex items-center justify-center backdrop-blur-sm px-4 animate-fadeIn ${isDarkMode ? 'bg-black/90' : 'bg-black/50'}`}>
+                    <div className={`border-2 rounded-2xl shadow-2xl w-full max-w-md overflow-hidden transition-all duration-300 transform ${isDarkMode ? 'bg-black border-white/30' : 'bg-white border-yellow-200'}`}>
                         <div className="relative p-7 sm:p-8">
-                            <div className="absolute top-0 left-0 w-full h-1 bg-white/30" />
-                            <h2 className="text-2xl font-extrabold mb-2 text-white flex items-center gap-2 tracking-tight">
-                                <FileUp className="h-6 w-6 text-white" /> Completar datos del director
+                            <div className={`absolute top-0 left-0 w-full h-1 ${isDarkMode ? 'bg-white/30' : 'bg-yellow-200'}`} />
+                            <h2 className={`text-2xl font-extrabold mb-2 flex items-center gap-2 tracking-tight ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
+                                <FileUp className={`h-6 w-6 ${isDarkMode ? 'text-white' : 'text-yellow-600'}`} /> Completar datos del director
                             </h2>
-                            <p className="text-gray-300 text-base mb-6 font-medium flex items-center gap-2">
-                                <AlertCircle className="h-5 w-5 text-gray-400" />
+                            <p className={`text-base mb-6 font-medium flex items-center gap-2 ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                                <AlertCircle className={`h-5 w-5 ${isDarkMode ? 'text-gray-400' : 'text-yellow-500'}`} />
                                 El director seleccionado no tiene todos sus datos completos. Por favor, completa la información faltante.
                             </p>
                             {directorToUpdate && (
                                 <div className="flex flex-col gap-6">
                                     <div>
-                                        <label className="block text-xs uppercase tracking-wider text-gray-400 mb-1 font-bold">Nombre</label>
+                                        <label className={`block text-xs uppercase tracking-wider mb-1 font-bold ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>Nombre</label>
                                         <input
                                             type="text"
-                                            className="w-full bg-gray-900 border-2 border-white/30 focus:border-white/60 rounded-xl px-4 py-3 text-lg text-white font-semibold shadow-inner focus:outline-none transition-all duration-200 placeholder:text-gray-400/60"
+                                            className={`w-full border-2 rounded-xl px-4 py-3 text-lg font-semibold shadow-inner focus:outline-none transition-all duration-200 ${isDarkMode ? 'bg-gray-900 border-white/30 focus:border-white/60 text-white placeholder:text-gray-400/60' : 'bg-white border-yellow-300 focus:border-yellow-500 text-gray-900 placeholder:text-gray-500'}`}
                                             value={directorToUpdate.nombre ?? ''}
                                             onChange={e => setDirectorToUpdate(prev => prev ? { ...prev, nombre: e.target.value.toUpperCase() } : null)}
                                             placeholder="Ej: JUAN PÉREZ GÓMEZ"
@@ -884,10 +885,10 @@ export default function LevantamientoUnificado() {
                                         />
                                     </div>
                                     <div>
-                                        <label className="block text-xs uppercase tracking-wider text-gray-400 mb-1 font-bold">Cargo</label>
+                                        <label className={`block text-xs uppercase tracking-wider mb-1 font-bold ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>Cargo</label>
                                         <input
                                             type="text"
-                                            className="w-full bg-gray-900 border-2 border-white/30 focus:border-white/60 rounded-xl px-4 py-3 text-lg text-white font-semibold shadow-inner focus:outline-none transition-all duration-200 placeholder:text-gray-400/60"
+                                            className={`w-full border-2 rounded-xl px-4 py-3 text-lg font-semibold shadow-inner focus:outline-none transition-all duration-200 ${isDarkMode ? 'bg-gray-900 border-white/30 focus:border-white/60 text-white placeholder:text-gray-400/60' : 'bg-white border-yellow-300 focus:border-yellow-500 text-gray-900 placeholder:text-gray-500'}`}
                                             value={directorToUpdate.puesto ?? ''}
                                             onChange={e => setDirectorToUpdate(prev => prev ? { ...prev, puesto: e.target.value.toUpperCase() } : null)}
                                             placeholder="Ej: DIRECTOR, JEFE DE ÁREA..."
@@ -898,13 +899,13 @@ export default function LevantamientoUnificado() {
                             )}
                             <div className="flex justify-end gap-2 mt-8">
                                 <button
-                                    className="px-4 py-2 rounded-lg text-sm font-semibold border border-gray-700 bg-gray-900 text-gray-300 hover:bg-gray-800 transition-all duration-200 shadow"
+                                    className={`px-4 py-2 rounded-lg text-sm font-semibold border transition-all duration-200 shadow ${isDarkMode ? 'border-gray-700 bg-gray-900 text-gray-300 hover:bg-gray-800' : 'border-gray-300 bg-gray-100 text-gray-700 hover:bg-gray-200'}`}
                                     onClick={() => setShowDirectorDataModal(false)}
                                 >Cancelar</button>
                                 <button
-                                    className={`px-4 py-2 rounded-lg text-sm font-bold flex items-center gap-2 transition-all duration-200
-                            bg-white/10 text-white shadow border border-white/30
-                            ${savingDirectorData || !directorToUpdate || !(directorToUpdate.nombre || '').trim() || !(directorToUpdate.puesto || '').trim() ? 'opacity-60 cursor-not-allowed' : 'hover:bg-white/20'}`}
+                                    className={`px-4 py-2 rounded-lg text-sm font-bold flex items-center gap-2 transition-all duration-200 shadow border
+                            ${isDarkMode ? 'bg-white/10 text-white border-white/30' : 'bg-yellow-600 text-white border-yellow-600'}
+                            ${savingDirectorData || !directorToUpdate || !(directorToUpdate.nombre || '').trim() || !(directorToUpdate.puesto || '').trim() ? 'opacity-60 cursor-not-allowed' : isDarkMode ? 'hover:bg-white/20' : 'hover:bg-yellow-700'}`}
                                     onClick={() => saveDirectorData()}
                                     disabled={savingDirectorData || !directorToUpdate || !(directorToUpdate.nombre || '').trim() || !(directorToUpdate.puesto || '').trim()}
                                 >
@@ -953,14 +954,14 @@ export default function LevantamientoUnificado() {
     return (
         <>
             {renderDirectorDataModal()}
-            <div className="bg-black text-white min-h-screen p-2 sm:p-4 md:p-6 lg:p-8">
-                <div className="w-full mx-auto bg-black rounded-lg sm:rounded-xl shadow-2xl overflow-hidden border border-gray-800">
-                    <div className="bg-black p-4 sm:p-6 flex flex-col sm:flex-row justify-between items-start sm:items-center border-b border-gray-800 gap-2 sm:gap-0">
-                        <h1 className="text-xl sm:text-2xl md:text-3xl font-bold flex items-center">
-                            <span className="mr-2 sm:mr-3 bg-gray-900 text-white p-1 sm:p-2 rounded-lg border border-gray-700 text-sm sm:text-base">LEV</span>
+            <div className={`min-h-screen p-2 sm:p-4 md:p-6 lg:p-8 ${isDarkMode ? 'bg-black text-white' : 'bg-gray-50 text-gray-900'}`}>
+                <div className={`w-full mx-auto rounded-lg sm:rounded-xl shadow-2xl overflow-hidden border ${isDarkMode ? 'bg-black border-gray-800' : 'bg-white border-gray-200'}`}>
+                    <div className={`p-4 sm:p-6 flex flex-col sm:flex-row justify-between items-start sm:items-center border-b gap-2 sm:gap-0 ${isDarkMode ? 'bg-black border-gray-800' : 'bg-white border-gray-200'}`}>
+                        <h1 className={`text-xl sm:text-2xl md:text-3xl font-bold flex items-center ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
+                            <span className={`mr-2 sm:mr-3 p-1 sm:p-2 rounded-lg border text-sm sm:text-base ${isDarkMode ? 'bg-gray-900 text-white border-gray-700' : 'bg-gray-100 text-gray-900 border-gray-300'}`}>LEV</span>
                             Levantamiento de Inventario (INEA + ITEA)
                         </h1>
-                        <p className="text-gray-400 text-sm sm:text-base">Vista unificada de todos los bienes registrados</p>
+                        <p className={`text-sm sm:text-base ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>Vista unificada de todos los bienes registrados</p>
                     </div>
                     <div className="flex flex-col gap-4 p-4">
                         <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-4">
@@ -969,7 +970,7 @@ export default function LevantamientoUnificado() {
                                 <div className="w-full flex flex-col gap-2">
                                     <div className="relative flex items-center w-full">
                                         <div className="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none transition-transform duration-300 group-focus-within:scale-110">
-                                            <Search className="h-5 w-5 text-white/70 group-focus-within:text-white transition-colores duration-300" />
+                                            <Search className={`h-5 w-5 transition-colors duration-300 ${isDarkMode ? 'text-white/70 group-focus-within:text-white' : 'text-gray-400 group-focus-within:text-gray-600'}`} />
                                         </div>
                                         <input
                                             ref={inputRef}
@@ -981,15 +982,12 @@ export default function LevantamientoUnificado() {
                                             onBlur={handleInputBlur}
                                             placeholder="Buscar por ID, área, director, descripción, etc..."
                                             className={`
-                                            pl-14 pr-32 py-3 w-full bg-black/80 text-white placeholder-neutral-500
-                                            focus:outline-none focus:ring-2 focus:ring-white/50 focus:border-white/50
-                                            rounded-2xl border border-neutral-800 shadow-2xl transition-all duration-300
-                                            text-lg font-semibold tracking-wide
-                                            backdrop-blur-xl
-                                            hover:shadow-white/10
-                                            focus:scale-[1.03]
-                                            focus:bg-black/90
-                                            ${searchMatchType ? 'border-white/80 shadow-white/20' : ''}
+                                            pl-14 pr-32 py-3 w-full transition-all duration-300
+                                            text-lg font-semibold tracking-wide backdrop-blur-xl
+                                            focus:outline-none focus:ring-2 rounded-2xl shadow-2xl
+                                            ${isDarkMode 
+                                                ? 'bg-black/80 text-white placeholder-neutral-500 focus:ring-white/50 focus:border-white/50 border-neutral-800 hover:shadow-white/10 focus:scale-[1.03] focus:bg-black/90' + (searchMatchType ? ' border-white/80 shadow-white/20' : '')
+                                                : 'bg-white border-gray-300 text-gray-900 placeholder-gray-400 focus:ring-blue-500 focus:border-blue-500 hover:border-gray-400 focus:scale-[1.02]' + (searchMatchType ? ' border-blue-400 shadow-blue-100' : '')}
                                         `}
                                             title="Buscar"
                                             aria-autocomplete="list"
@@ -1006,8 +1004,8 @@ export default function LevantamientoUnificado() {
                                             {activeFilters.map((filter, index) => (
                                                 <span
                                                     key={index}
-                                                    className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium border border-white/20 shadow-sm animate-fadeIn transition-all duration-200
-                                                    bg-black/60 text-white/80 group relative hover:bg-white/5`}
+                                                    className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium border shadow-sm animate-fadeIn transition-all duration-200 group relative
+                                                    ${isDarkMode ? 'border-white/20 bg-black/60 text-white/80 hover:bg-white/5' : 'border-gray-300 bg-gray-100 text-gray-700 hover:bg-gray-200'}`}
                                                 >
                                                     <span className="mr-1">
                                                         {getTypeIcon(filter.type)}
@@ -1016,7 +1014,7 @@ export default function LevantamientoUnificado() {
                                                     <span className="ml-1 text-[10px] opacity-60 font-bold">{getTypeLabel(filter.type)}</span>
                                                     <button
                                                         onClick={() => removeFilter(index)}
-                                                        className="ml-2 p-0.5 rounded-full bg-neutral-800 hover:bg-white/20 text-neutral-400 hover:text-white transition-colores duration-200 focus:outline-none focus:ring-2 focus:ring-white/50"
+                                                        className={`ml-2 p-0.5 rounded-full transition-colors duration-200 focus:outline-none focus:ring-2 ${isDarkMode ? 'bg-neutral-800 hover:bg-white/20 text-neutral-400 hover:text-white focus:ring-white/50' : 'bg-gray-300 hover:bg-gray-400 text-gray-600 hover:text-gray-800 focus:ring-gray-500'}`}
                                                         title="Eliminar filtro"
                                                         tabIndex={0}
                                                     >
@@ -1037,7 +1035,8 @@ export default function LevantamientoUnificado() {
                                         setExportType('excel');
                                         setShowExportModal(true);
                                     }}
-                                    className="group relative px-4 py-2 bg-white text-gray-900 rounded-md font-medium flex items-center gap-2 hover:bg-white/90 transition-all duration-300 shadow-lg border border-white/80 hover:border-white"
+                                    className={`group relative px-4 py-2 rounded-md font-medium flex items-center gap-2 transition-all duration-300 shadow-lg border
+                                        ${isDarkMode ? 'bg-white text-gray-900 border-white/80 hover:bg-white/90 hover:border-white' : 'bg-blue-600 text-white border-blue-600 hover:bg-blue-700 hover:border-blue-700'}`}
                                     title="Exportar a Excel"
                                 >
                                     <FileUp className="h-4 w-4 transition-transform group-hover:scale-110 group-hover:-translate-y-0.5 duration-300" />
@@ -1062,8 +1061,12 @@ export default function LevantamientoUnificado() {
                                     className={`group relative px-4 py-2.5 rounded-lg font-medium 
                                     flex items-center gap-2.5 transition-all duration-300
                                     ${isCustomPDFEnabled
-                                            ? 'bg-gradient-to-r from-white/90 to-white/70 text-gray-900 hover:from-white hover:to-white/80 border border-white/80 hover:border-white shadow-lg shadow-white/10'
-                                            : 'bg-white/80 text-gray-900 hover:bg-white/70 border border-white/70 hover:border-white'
+                                            ? isDarkMode 
+                                                ? 'bg-gradient-to-r from-white/90 to-white/70 text-gray-900 hover:from-white hover:to-white/80 border border-white/80 hover:border-white shadow-lg shadow-white/10'
+                                                : 'bg-gradient-to-r from-green-600 to-green-500 text-white hover:from-green-700 hover:to-green-600 border border-green-600 hover:border-green-700 shadow-lg shadow-green-100'
+                                            : isDarkMode
+                                                ? 'bg-white/80 text-gray-900 hover:bg-white/70 border border-white/70 hover:border-white'
+                                                : 'bg-red-600 text-white hover:bg-red-700 border border-red-600 hover:border-red-700'
                                     }`}
                                     title={isCustomPDFEnabled ? 'Exportar PDF personalizado por área y director (solo si ambos filtros son exactos)' : 'Exportar a PDF'}
                                 >
@@ -1083,13 +1086,11 @@ export default function LevantamientoUnificado() {
                                     className={`
                                     group relative px-4 py-2.5 rounded-lg font-medium 
                                     flex items-center gap-2.5 transition-all duration-300
-                                    bg-white/70 
-                                    hover:bg-white/80
-                                    text-gray-900
-                                    border border-white/60 hover:border-white/70
-                                    shadow-lg
+                                    shadow-lg border overflow-hidden
                                     hover:scale-[1.02] active:scale-[0.98]
-                                    overflow-hidden
+                                    ${isDarkMode 
+                                        ? 'bg-white/70 hover:bg-white/80 text-gray-900 border-white/60 hover:border-white/70'
+                                        : 'bg-gray-600 hover:bg-gray-700 text-white border-gray-600 hover:border-gray-700'}
                                 `}
                                     title="Actualizar datos"
                                     disabled={loading}
@@ -1112,7 +1113,7 @@ export default function LevantamientoUnificado() {
                                     {/* Loading ripple effect */}
                                     {loading && (
                                         <span className="absolute inset-0 flex items-center justify-center">
-                                            <span className="absolute w-full h-full animate-ping rounded-lg bg-cyan-400/20"></span>
+                                            <span className={`absolute w-full h-full animate-ping rounded-lg ${isDarkMode ? 'bg-cyan-400/20' : 'bg-blue-400/20'}`}></span>
                                         </span>
                                     )}
                                 </button>
@@ -1120,56 +1121,61 @@ export default function LevantamientoUnificado() {
                         </div>
                     </div>
                     {message && (
-                        <div className={`p-3 rounded-md ${message.type === 'success' ? 'bg-green-900/50 text-green-300 border border-green-800' :
-                            message.type === 'error' ? 'bg-red-900/50 text-red-300 border border-red-800' :
-                                message.type === 'warning' ? 'bg-yellow-900/50 text-yellow-300 border border-yellow-800' :
-                                    message.type === 'info' ? 'bg-blue-900/50 text-blue-300 border border-blue-800' : ''
-                            }`}>
+                        <div className={`p-3 rounded-md border ${isDarkMode 
+                            ? message.type === 'success' ? 'bg-green-900/50 text-green-300 border-green-800' :
+                              message.type === 'error' ? 'bg-red-900/50 text-red-300 border-red-800' :
+                              message.type === 'warning' ? 'bg-yellow-900/50 text-yellow-300 border-yellow-800' :
+                              message.type === 'info' ? 'bg-blue-900/50 text-blue-300 border-blue-800' : ''
+                            : message.type === 'success' ? 'bg-green-50 text-green-800 border-green-200' :
+                              message.type === 'error' ? 'bg-red-50 text-red-800 border-red-200' :
+                              message.type === 'warning' ? 'bg-yellow-50 text-yellow-800 border-yellow-200' :
+                              message.type === 'info' ? 'bg-blue-50 text-blue-800 border-blue-200' : ''
+                        }`}>
                             {message.text}
                         </div>
                     )}
                     {showExportModal && (
-                        <div className="fixed inset-0 bg-black/90 flex items-center justify-center z-50 px-4 animate-fadeIn">
-                            <div className="bg-black rounded-2xl shadow-2xl border border-white/30 w-full max-w-md overflow-hidden transition-all duration-300 transform">
-                                <div className="relative p-6 bg-black">
-                                    <div className="absolute top-0 left-0 w-full h-1 bg-white/30"></div>
+                        <div className={`fixed inset-0 flex items-center justify-center z-50 px-4 animate-fadeIn ${isDarkMode ? 'bg-black/90' : 'bg-black/50'}`}>
+                            <div className={`rounded-2xl shadow-2xl border w-full max-w-md overflow-hidden transition-all duration-300 transform ${isDarkMode ? 'bg-black border-white/30' : 'bg-white border-gray-200'}`}>
+                                <div className={`relative p-6 ${isDarkMode ? 'bg-black' : 'bg-white'}`}>
+                                    <div className={`absolute top-0 left-0 w-full h-1 ${isDarkMode ? 'bg-white/30' : 'bg-blue-200'}`}></div>
 
                                     <button
                                         onClick={() => setShowExportModal(false)}
-                                        className="absolute top-3 right-3 p-2 rounded-full bg-black/60 hover:bg-white/10 text-white hover:text-white border border-white/30 transition-colors"
+                                        className={`absolute top-3 right-3 p-2 rounded-full border transition-colors ${isDarkMode ? 'bg-black/60 hover:bg-white/10 text-white border-white/30' : 'bg-gray-100 hover:bg-gray-200 text-gray-600 border-gray-300'}`}
                                         title="Cerrar"
                                     >
                                         <X className="h-4 w-4" />
                                     </button>
 
                                     <div className="flex flex-col items-center text-center mb-4">
-                                        <div className="p-3 rounded-full border border-white/30 bg-white/10 mb-3">
+                                        <div className={`p-3 rounded-full border mb-3 ${isDarkMode ? 'border-white/30 bg-white/10' : 'border-blue-200 bg-blue-50'}`}>
                                             {exportType === 'excel' ? (
-                                                <FileUp className="h-8 w-8 text-white" />
+                                                <FileUp className={`h-8 w-8 ${isDarkMode ? 'text-white' : 'text-blue-600'}`} />
                                             ) : (
-                                                <File className="h-8 w-8 text-white" />
+                                                <File className={`h-8 w-8 ${isDarkMode ? 'text-white' : 'text-blue-600'}`} />
                                             )}
                                         </div>
-                                        <h3 className="text-2xl font-bold text-white">
+                                        <h3 className={`text-2xl font-bold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
                                             Exportar a {exportType === 'excel' ? 'Excel' : 'PDF'}
                                         </h3>
-                                        <p className="text-gray-400 mt-2">
+                                        <p className={`mt-2 ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>
                                             Exportar los datos a un archivo {exportType === 'excel' ? 'Excel para su análisis' : 'PDF para su visualización'}
                                         </p>
                                     </div>
 
                                     <div className="space-y-5 mt-6">
-                                        <div className="rounded-lg border border-gray-800 bg-gray-900/50 p-4">
-                                            <label className="block text-xs uppercase tracking-wider text-gray-500 mb-1 font-bold">Documento a generar</label>
+                                        <div className={`rounded-lg border p-4 ${isDarkMode ? 'border-gray-800 bg-gray-900/50' : 'border-gray-200 bg-gray-50'}`}>
+                                            <label className={`block text-xs uppercase tracking-wider mb-1 font-bold ${isDarkMode ? 'text-gray-500' : 'text-gray-600'}`}>Documento a generar</label>
                                             <div className="flex items-center gap-3">
-                                                <div className="p-2 bg-white/10 rounded-lg">
+                                                <div className={`p-2 rounded-lg ${isDarkMode ? 'bg-white/10' : 'bg-blue-100'}`}>
                                                     {exportType === 'excel' ? (
-                                                        <FileUp className="h-4 w-4 text-white" />
+                                                        <FileUp className={`h-4 w-4 ${isDarkMode ? 'text-white' : 'text-blue-600'}`} />
                                                     ) : (
-                                                        <File className="h-4 w-4 text-white" />
+                                                        <File className={`h-4 w-4 ${isDarkMode ? 'text-white' : 'text-blue-600'}`} />
                                                     )}
                                                 </div>
-                                                <span className="text-white font-medium">
+                                                <span className={`font-medium ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
                                                     {`Reporte_inventario_${new Date().toISOString().slice(0, 10)}.${exportType === 'excel' ? 'xlsx' : 'pdf'}`}
                                                 </span>
                                             </div>
@@ -1179,7 +1185,7 @@ export default function LevantamientoUnificado() {
                                             <div className="w-full">
                                                 <button
                                                     onClick={handleExport}
-                                                    className="w-full py-3 px-4 font-medium rounded-lg flex items-center justify-center gap-2 transition-all transform hover:scale-[1.02] shadow-lg bg-white/20 hover:bg-white/30 text-white border border-white/30"
+                                                    className={`w-full py-3 px-4 font-medium rounded-lg flex items-center justify-center gap-2 transition-all transform hover:scale-[1.02] shadow-lg border ${isDarkMode ? 'bg-white/20 hover:bg-white/30 text-white border-white/30' : 'bg-blue-600 hover:bg-blue-700 text-white border-blue-600'}`}
                                                 >
                                                     {loading ? (
                                                         <>
@@ -1205,25 +1211,25 @@ export default function LevantamientoUnificado() {
                         </div>
                     )}
                     {showAreaPDFModal && (
-                        <div className="fixed inset-0 bg-black/90 flex items-center justify-center z-50 px-4 animate-fadeIn">
-                            <div className="bg-black rounded-2xl shadow-2xl border w-full max-w-lg overflow-hidden border-white/20">
+                        <div className={`fixed inset-0 flex items-center justify-center z-50 px-4 animate-fadeIn ${isDarkMode ? 'bg-black/90' : 'bg-black/50'}`}>
+                            <div className={`rounded-2xl shadow-2xl border w-full max-w-lg overflow-hidden ${isDarkMode ? 'bg-black border-white/20' : 'bg-white border-gray-200'}`}>
                                 <div className="p-6">
-                                    <h2 className="text-xl font-bold mb-2 text-white flex items-center gap-2">
-                                        <FileUp className="h-5 w-5 text-white" /> Exportar PDF por Área y Director
+                                    <h2 className={`text-xl font-bold mb-2 flex items-center gap-2 ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
+                                        <FileUp className={`h-5 w-5 ${isDarkMode ? 'text-white' : 'text-blue-600'}`} /> Exportar PDF por Área y Director
                                     </h2>
-                                    <div className="mb-3 flex items-center gap-2 text-xs text-gray-400">
+                                    <div className={`mb-3 flex items-center gap-2 text-xs ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>
                                         <span>Registros a exportar</span>
-                                        <span className="inline-block px-2 py-0.5 rounded-full bg-white/10 text-white font-bold shadow border border-white/30 min-w-[32px] text-center">
+                                        <span className={`inline-block px-2 py-0.5 rounded-full font-bold shadow border min-w-[32px] text-center ${isDarkMode ? 'bg-white/10 text-white border-white/30' : 'bg-blue-100 text-blue-900 border-blue-300'}`}>
                                             {getFilteredMueblesForExportPDF().length}
                                         </span>
                                     </div>
                                     <div className="mb-4">
                                         <div className="flex flex-col gap-2">
                                             <div>
-                                                <label className="block text-xs uppercase tracking-wider text-gray-400 mb-1 font-bold">Área seleccionada</label>
+                                                <label className={`block text-xs uppercase tracking-wider mb-1 font-bold ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>Área seleccionada</label>
                                                 <input
                                                     type="text"
-                                                    className="w-full bg-gray-800 border-2 border-white/30 focus:border-white/60 rounded-xl px-4 py-3 text-lg text-white font-semibold shadow-inner focus:outline-none transition-all duration-200 placeholder:text-gray-400/60"
+                                                    className={`w-full border-2 rounded-xl px-4 py-3 text-lg font-semibold shadow-inner focus:outline-none transition-all duration-200 ${isDarkMode ? 'bg-gray-800 border-white/30 focus:border-white/60 text-white placeholder:text-gray-400/60' : 'bg-gray-100 border-gray-300 focus:border-blue-500 text-gray-900 placeholder:text-gray-500'}`}
                                                     value={areaPDFTarget.area}
                                                     readOnly
                                                     title="Área seleccionada para el PDF"
@@ -1232,38 +1238,39 @@ export default function LevantamientoUnificado() {
                                             <div>
                                                 {/* Mostrar el nombre del director buscado si no se encontró exactamente */}
                                                 {areaPDFTarget.usufinal && !directorSugerido && (
-                                                    <div className="mb-3 p-3 bg-amber-900/30 border border-amber-700/50 rounded-lg">
-                                                        <p className="text-amber-200 font-medium flex items-center gap-2">
+                                                    <div className={`mb-3 p-3 border rounded-lg ${isDarkMode ? 'bg-amber-900/30 border-amber-700/50' : 'bg-amber-50 border-amber-200'}`}>
+                                                        <p className={`font-medium flex items-center gap-2 ${isDarkMode ? 'text-amber-200' : 'text-amber-800'}`}>
                                                             <AlertCircle className="h-4 w-4" />
                                                             Director buscado no encontrado
                                                         </p>
-                                                        <p className="text-amber-100/90 text-sm mt-1">
+                                                        <p className={`text-sm mt-1 ${isDarkMode ? 'text-amber-100/90' : 'text-amber-700'}`}>
                                                             &quot;{areaPDFTarget.usufinal}&quot;
                                                         </p>
                                                     </div>
                                                 )}
-                                                <label className="block text-xs uppercase tracking-wider text-gray-400 mb-1 font-bold">Buscar director</label>
+                                                <label className={`block text-xs uppercase tracking-wider mb-1 font-bold ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>Buscar director</label>
                                                 <input
                                                     type="text"
-                                                    className="w-full bg-gray-800 border-2 border-white/30 focus:border-white/60 rounded-xl px-4 py-3 text-lg text-white font-semibold shadow-inner focus:outline-none transition-all duration-200 placeholder:text-gray-400/60"
+                                                    className={`w-full border-2 rounded-xl px-4 py-3 text-lg font-semibold shadow-inner focus:outline-none transition-all duration-200 ${isDarkMode ? 'bg-gray-800 border-white/30 focus:border-white/60 text-white placeholder:text-gray-400/60' : 'bg-white border-gray-300 focus:border-blue-500 text-gray-900 placeholder:text-gray-500'}`}
                                                     placeholder="Buscar director por nombre..."
                                                     value={searchDirectorTerm || ''}
                                                     onChange={e => setSearchDirectorTerm(e.target.value)}
                                                     title="Buscar director por nombre"
                                                     autoFocus
                                                 />
-                                                <div className="max-h-48 overflow-y-auto rounded-lg border border-white/20 bg-gray-900/80 shadow-inner divide-y divide-white/10">
+                                                <div className={`max-h-48 overflow-y-auto rounded-lg border shadow-inner divide-y ${isDarkMode ? 'border-white/20 bg-gray-900/80 divide-white/10' : 'border-gray-200 bg-gray-50 divide-gray-200'}`}>
                                                     {filteredDirectorOptions.length === 0 ? (
-                                                        <div className="text-gray-400 text-sm p-3">No se encontraron directores.</div>
+                                                        <div className={`text-sm p-3 ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>No se encontraron directores.</div>
                                                     ) : (
                                                         filteredDirectorOptions.map(opt => (
                                                             <button
                                                                 key={opt.id_directorio}
-                                                                className={`w-full text-left px-4 py-2 flex flex-col gap-0.5 transition-all duration-150
-                                                            border-l-4
-                                                            ${directorSugerido && opt.id_directorio === directorSugerido.id_directorio ? 'border-white bg-white/10 text-white font-bold shadow-lg' :
-                                                                    areaDirectorForm.nombre === opt.nombre ? 'border-white/60 bg-white/5 text-white font-semibold' :
-                                                                        'border-transparent hover:bg-white/5 text-white'}
+                                                                className={`w-full text-left px-4 py-2 flex flex-col gap-0.5 transition-all duration-150 border-l-4
+                                                            ${directorSugerido && opt.id_directorio === directorSugerido.id_directorio ? 
+                                                                isDarkMode ? 'border-white bg-white/10 text-white font-bold shadow-lg' : 'border-blue-500 bg-blue-50 text-blue-900 font-bold shadow-lg' :
+                                                                areaDirectorForm.nombre === opt.nombre ? 
+                                                                    isDarkMode ? 'border-white/60 bg-white/5 text-white font-semibold' : 'border-blue-300 bg-blue-25 text-blue-800 font-semibold' :
+                                                                    isDarkMode ? 'border-transparent hover:bg-white/5 text-white' : 'border-transparent hover:bg-gray-100 text-gray-900'}
         `}
                                                                 onClick={() => {
                                                                     setAreaDirectorForm({ nombre: opt.nombre, puesto: opt.puesto });
@@ -1279,23 +1286,23 @@ export default function LevantamientoUnificado() {
                                                                 <span className="text-base font-semibold flex items-center gap-2">
                                                                     {opt.nombre}
                                                                     {directorSugerido && opt.id_directorio === directorSugerido.id_directorio && (
-                                                                        <BadgeCheck className="inline h-4 w-4 text-white ml-1" />
+                                                                        <BadgeCheck className={`inline h-4 w-4 ml-1 ${isDarkMode ? 'text-white' : 'text-blue-600'}`} />
                                                                     )}
                                                                     {areaDirectorForm.nombre === opt.nombre && (
-                                                                        <span className="ml-2 px-2 py-0.5 rounded-full bg-white/20 text-xs text-white">Seleccionado</span>
+                                                                        <span className={`ml-2 px-2 py-0.5 rounded-full text-xs ${isDarkMode ? 'bg-white/20 text-white' : 'bg-blue-200 text-blue-800'}`}>Seleccionado</span>
                                                                     )}
                                                                 </span>
-                                                                <span className="text-xs text-gray-300">{opt.puesto}</span>
+                                                                <span className={`text-xs ${isDarkMode ? 'text-gray-300' : 'text-gray-600'}`}>{opt.puesto}</span>
                                                             </button>
                                                         ))
                                                     )}
                                                 </div>
                                             </div>
                                             <div>
-                                                <label className="block text-xs uppercase tracking-wider text-gray-400 mb-1 font-bold">Puesto</label>
+                                                <label className={`block text-xs uppercase tracking-wider mb-1 font-bold ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>Puesto</label>
                                                 <input
                                                     type="text"
-                                                    className="w-full bg-gray-800 border-2 border-white/30 focus:border-white/60 rounded-xl px-4 py-3 text-lg text-white font-semibold shadow-inner focus:outline-none transition-all duration-200 placeholder:text-gray-400/60"
+                                                    className={`w-full border-2 rounded-xl px-4 py-3 text-lg font-semibold shadow-inner focus:outline-none transition-all duration-200 ${isDarkMode ? 'bg-gray-800 border-white/30 focus:border-white/60 text-white placeholder:text-gray-400/60' : 'bg-gray-100 border-gray-300 focus:border-blue-500 text-gray-900 placeholder:text-gray-500'}`}
                                                     value={areaDirectorForm.puesto || ''}
                                                     readOnly
                                                     title="Puesto del director o jefe de área"
@@ -1303,14 +1310,14 @@ export default function LevantamientoUnificado() {
                                             </div>
                                         </div>
                                     </div>
-                                    {areaPDFError && <div className="text-red-400 mb-2 text-sm">{areaPDFError}</div>}
+                                    {areaPDFError && <div className={`mb-2 text-sm ${isDarkMode ? 'text-red-400' : 'text-red-600'}`}>{areaPDFError}</div>}
                                     <div className="flex justify-end gap-2 mt-4">
                                         <button
-                                            className="px-4 py-2 rounded bg-gray-800 text-gray-300 hover:bg-gray-700 border border-gray-700"
+                                            className={`px-4 py-2 rounded border transition-colors ${isDarkMode ? 'bg-gray-800 text-gray-300 hover:bg-gray-700 border-gray-700' : 'bg-gray-200 text-gray-700 hover:bg-gray-300 border-gray-300'}`}
                                             onClick={() => setShowAreaPDFModal(false)}
                                         >Cancelar</button>
                                         <button
-                                            className="px-4 py-2 rounded bg-white/10 text-white font-bold hover:bg-white/20 border border-white/30 disabled:opacity-50"
+                                            className={`px-4 py-2 rounded font-bold border disabled:opacity-50 transition-colors ${isDarkMode ? 'bg-white/10 text-white hover:bg-white/20 border-white/30' : 'bg-blue-600 text-white hover:bg-blue-700 border-blue-600'}`}
                                             disabled={
                                                 areaPDFLoading ||
                                                 getFilteredMueblesForExportPDF().length === 0 ||
@@ -1384,19 +1391,19 @@ export default function LevantamientoUnificado() {
                             {/* Spinner de carga mejorado con contador de registros */}
 
                             {loading ? (
-                                <div className="flex flex-col items-center justify-center min-h-[300px] w-full bg-black/80 rounded-lg animate-fadeIn">
+                                <div className={`flex flex-col items-center justify-center min-h-[300px] w-full rounded-lg animate-fadeIn ${isDarkMode ? 'bg-black/80' : 'bg-gray-100'}`}>
                                     <div className="relative flex flex-col items-center justify-center gap-4 py-12">
                                         {/* Spinner animado */}
                                         <div className="relative">
                                             <span className="relative flex h-20 w-20">
-                                                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-white opacity-20"></span>
-                                                <span className="relative inline-flex rounded-full h-20 w-20 border-4 border-white border-t-transparent animate-spin"></span>
+                                                <span className={`animate-ping absolute inline-flex h-full w-full rounded-full opacity-20 ${isDarkMode ? 'bg-white' : 'bg-blue-500'}`}></span>
+                                                <span className={`relative inline-flex rounded-full h-20 w-20 border-4 border-t-transparent animate-spin ${isDarkMode ? 'border-white' : 'border-blue-500'}`}></span>
                                             </span>
                                             
                                             {/* Contador numérico en el centro del spinner */}
                                             {loadingProgress.total > 0 && (
                                                 <div className="absolute inset-0 flex items-center justify-center">
-                                                    <span className="text-sm font-mono font-bold text-white">
+                                                    <span className={`text-sm font-mono font-bold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
                                                         {Math.round((loadingProgress.count / Math.max(loadingProgress.total, 1)) * 100)}%
                                                     </span>
                                                 </div>
@@ -1405,21 +1412,21 @@ export default function LevantamientoUnificado() {
                                         
                                         {/* Mensaje de carga con efecto de typing */}
                                         <div className="flex flex-col items-center gap-1">
-                                            <span className="text-2xl font-bold text-white drop-shadow-md">
+                                            <span className={`text-2xl font-bold drop-shadow-md ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
                                                 {loadingProgress.message || "Cargando inventario..."}
                                             </span>
                                             
                                             {/* Barra de progreso */}
                                             {loadingProgress.total > 0 && (
-                                                <div className="w-64 h-2 bg-white/10 rounded-full overflow-hidden mt-2">
+                                                <div className={`w-64 h-2 rounded-full overflow-hidden mt-2 ${isDarkMode ? 'bg-white/10' : 'bg-gray-300'}`}>
                                                     <div 
-                                                        className="h-full bg-white/40 rounded-full transition-all duration-300"
+                                                        className={`h-full rounded-full transition-all duration-300 ${isDarkMode ? 'bg-white/40' : 'bg-blue-500'}`}
                                                         style={{ width: `${Math.min(100, Math.round((loadingProgress.count / loadingProgress.total) * 100))}%` }}
                                                     ></div>
                                                 </div>
                                             )}
                                             
-                                            <span className="text-sm text-gray-300 mt-2">
+                                            <span className={`text-sm mt-2 ${isDarkMode ? 'text-gray-300' : 'text-gray-600'}`}>
                                                 {loadingProgress.total > 0 
                                                     ? `${loadingProgress.count.toLocaleString()} de ${loadingProgress.total.toLocaleString()} registros` 
                                                     : "Por favor espera, esto puede tardar unos segundos."}
@@ -1428,14 +1435,14 @@ export default function LevantamientoUnificado() {
                                     </div>
                                 </div>
                             ) : error ? (
-                                <div className="flex flex-col items-center justify-center min-h-[300px] w-full bg-black/80 rounded-lg animate-fadeIn">
+                                <div className={`flex flex-col items-center justify-center min-h-[300px] w-full rounded-lg animate-fadeIn ${isDarkMode ? 'bg-black/80' : 'bg-gray-100'}`}>
                                     <div className="flex flex-col items-center gap-4 py-12">
-                                        <AlertCircle className="h-14 w-14 text-gray-400 animate-bounce" />
-                                        <span className="text-2xl font-bold text-white drop-shadow-white/30">Error al cargar los datos</span>
-                                        <span className="text-base text-gray-300 mb-2">{error}</span>
+                                        <AlertCircle className={`h-14 w-14 animate-bounce ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`} />
+                                        <span className={`text-2xl font-bold ${isDarkMode ? 'text-white drop-shadow-white/30' : 'text-gray-900'}`}>Error al cargar los datos</span>
+                                        <span className={`text-base mb-2 ${isDarkMode ? 'text-gray-300' : 'text-gray-600'}`}>{error}</span>
                                         <button
                                             onClick={() => fetchMuebles()}
-                                            className="px-6 py-3 rounded-xl bg-white/10 text-white font-bold text-lg shadow-lg border border-white/30 hover:bg-white/20 transition-all duration-200 flex items-center gap-2 mt-2"
+                                            className={`px-6 py-3 rounded-xl font-bold text-lg shadow-lg border transition-all duration-200 flex items-center gap-2 mt-2 ${isDarkMode ? 'bg-white/10 text-white border-white/30 hover:bg-white/20' : 'bg-blue-600 text-white border-blue-600 hover:bg-blue-700'}`}
                                         >
                                             <RefreshCw className="h-5 w-5 animate-spin-slow" />
                                             Reintentar
@@ -1443,14 +1450,14 @@ export default function LevantamientoUnificado() {
                                     </div>
                                 </div>
                             ) : totalFilteredCount === 0 ? (
-                                <div className="flex flex-col items-center justify-center min-h-[300px] w-full bg-black/80 rounded-lg animate-fadeIn">
+                                <div className={`flex flex-col items-center justify-center min-h-[300px] w-full rounded-lg animate-fadeIn ${isDarkMode ? 'bg-black/80' : 'bg-gray-100'}`}>
                                     <div className="flex flex-col items-center gap-4 py-12">
-                                        <Search className="h-14 w-14 text-gray-400 animate-pulse" />
-                                        <span className="text-2xl font-bold text-white drop-shadow-white/30">No se encontraron resultados</span>
-                                        <span className="text-base text-gray-300 mb-2">Intenta ajustar los filtros o la búsqueda.</span>
+                                        <Search className={`h-14 w-14 animate-pulse ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`} />
+                                        <span className={`text-2xl font-bold ${isDarkMode ? 'text-white drop-shadow-white/30' : 'text-gray-900'}`}>No se encontraron resultados</span>
+                                        <span className={`text-base mb-2 ${isDarkMode ? 'text-gray-300' : 'text-gray-600'}`}>Intenta ajustar los filtros o la búsqueda.</span>
                                         <button
                                             onClick={() => fetchMuebles()}
-                                            className="px-6 py-3 rounded-xl bg-white/10 text-white font-bold text-lg shadow-lg border border-white/30 hover:bg-white/20 transition-all duration-200 flex items-center gap-2 mt-2"
+                                            className={`px-6 py-3 rounded-xl font-bold text-lg shadow-lg border transition-all duration-200 flex items-center gap-2 mt-2 ${isDarkMode ? 'bg-white/10 text-white border-white/30 hover:bg-white/20' : 'bg-blue-600 text-white border-blue-600 hover:bg-blue-700'}`}
                                         >
                                             <RefreshCw className="h-5 w-5 animate-spin-slow" />
                                             Recargar inventario
@@ -1458,18 +1465,18 @@ export default function LevantamientoUnificado() {
                                     </div>
                                 </div>
                             ) : (
-                                <div className="bg-black rounded-lg border border-gray-800 overflow-x-auto overflow-y-auto flex flex-col flex-grow max-h-[70vh]">
-                                    <table className="min-w-full divide-y divide-gray-800">
-                                        <thead className="bg-black/80 sticky top-0 z-10 border-b border-white/10">
+                                <div className={`rounded-lg border overflow-x-auto overflow-y-auto flex flex-col flex-grow max-h-[70vh] ${isDarkMode ? 'bg-black border-gray-800' : 'bg-white border-gray-200'}`}>
+                                    <table className={`min-w-full ${isDarkMode ? 'divide-y divide-gray-800' : 'divide-y divide-gray-200'}`}>
+                                        <thead className={`sticky top-0 z-10 border-b ${isDarkMode ? 'bg-black/80 border-white/10' : 'bg-gray-50 border-gray-200'}`}>
                                             <tr>
-                                                <th className="px-4 py-3 text-left text-xs font-medium text-white uppercase tracking-wider">Origen</th>
-                                                <th className="px-4 py-3 text-left text-xs font-medium text-white uppercase tracking-wider">Resguardo</th>
+                                                <th className={`px-4 py-3 text-left text-xs font-medium uppercase tracking-wider ${isDarkMode ? 'text-white' : 'text-gray-700'}`}>Origen</th>
+                                                <th className={`px-4 py-3 text-left text-xs font-medium uppercase tracking-wider ${isDarkMode ? 'text-white' : 'text-gray-700'}`}>Resguardo</th>
                                                 <th
                                                     onClick={() => {
                                                         setSortField('id_inv');
                                                         setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
                                                     }}
-                                                    className="px-4 py-3 text-left text-xs font-medium text-white uppercase tracking-wider cursor-pointer hover:bg-white/10"
+                                                    className={`px-4 py-3 text-left text-xs font-medium uppercase tracking-wider cursor-pointer transition-colors ${isDarkMode ? 'text-white hover:bg-white/10' : 'text-gray-700 hover:bg-gray-100'}`}
                                                 >
                                                     <div className="flex items-center gap-1">ID Inventario<ArrowUpDown className="h-3 w-3" /></div>
                                                 </th>
@@ -1478,7 +1485,7 @@ export default function LevantamientoUnificado() {
                                                         setSortField('descripcion');
                                                         setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
                                                     }}
-                                                    className="px-4 py-3 text-left text-xs font-medium text-white uppercase tracking-wider cursor-pointer hover:bg-white/10"
+                                                    className={`px-4 py-3 text-left text-xs font-medium uppercase tracking-wider cursor-pointer transition-colors ${isDarkMode ? 'text-white hover:bg-white/10' : 'text-gray-700 hover:bg-gray-100'}`}
                                                 >
                                                     <div className="flex items-center gap-1">Descripción<ArrowUpDown className="h-3 w-3" /></div>
                                                 </th>
@@ -1487,7 +1494,7 @@ export default function LevantamientoUnificado() {
                                                         setSortField('area');
                                                         setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
                                                     }}
-                                                    className="px-4 py-3 text-left text-xs font-medium text-white uppercase tracking-wider cursor-pointer hover:bg-white/10"
+                                                    className={`px-4 py-3 text-left text-xs font-medium uppercase tracking-wider cursor-pointer transition-colors ${isDarkMode ? 'text-white hover:bg-white/10' : 'text-gray-700 hover:bg-gray-100'}`}
                                                 >
                                                     <div className="flex items-center gap-1">Área<ArrowUpDown className="h-3 w-3" /></div>
                                                 </th>
@@ -1496,7 +1503,7 @@ export default function LevantamientoUnificado() {
                                                         setSortField('usufinal');
                                                         setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
                                                     }}
-                                                    className="px-4 py-3 text-left text-xs font-medium text-white uppercase tracking-wider cursor-pointer hover:bg-white/10"
+                                                    className={`px-4 py-3 text-left text-xs font-medium uppercase tracking-wider cursor-pointer transition-colors ${isDarkMode ? 'text-white hover:bg-white/10' : 'text-gray-700 hover:bg-gray-100'}`}
                                                 >
                                                     <div className="flex items-center gap-1">Jefe/Director de Área<ArrowUpDown className="h-3 w-3" /></div>
                                                 </th>
@@ -1505,24 +1512,24 @@ export default function LevantamientoUnificado() {
                                                         setSortField('estatus');
                                                         setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
                                                     }}
-                                                    className="px-4 py-3 text-left text-xs font-medium text-white uppercase tracking-wider cursor-pointer hover:bg-white/10"
+                                                    className={`px-4 py-3 text-left text-xs font-medium uppercase tracking-wider cursor-pointer transition-colors ${isDarkMode ? 'text-white hover:bg-white/10' : 'text-gray-700 hover:bg-gray-100'}`}
                                                 >
                                                     <div className="flex items-center gap-1">Estatus<ArrowUpDown className="h-3 w-3" /></div>
                                                 </th>
                                             </tr>
                                         </thead>
-                                        <tbody className="bg-black/60 divide-y divide-gray-800">
+                                        <tbody className={`divide-y ${isDarkMode ? 'bg-black/60 divide-gray-800' : 'bg-white divide-gray-200'}`}>
                                             {error ? (
                                                 <tr className="h-96">
-                                                    <td colSpan={6} className="px-6 py-24 text-center text-red-400">
+                                                    <td colSpan={6} className={`px-6 py-24 text-center ${isDarkMode ? 'text-red-400' : 'text-red-600'}`}>
                                                         <AlertCircle className="h-12 w-12" />
                                                         <p className="text-lg font-medium">{error}</p>
                                                     </td>
                                                 </tr>
                                             ) : totalFilteredCount === 0 ? (
                                                 <tr className="h-96">
-                                                    <td colSpan={6} className="px-6 py-24 text-center text-gray-400">
-                                                        <Search className="h-12 w-12 text-gray-500" />
+                                                    <td colSpan={6} className={`px-6 py-24 text-center ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+                                                        <Search className={`h-12 w-12 ${isDarkMode ? 'text-gray-500' : 'text-gray-400'}`} />
                                                         <p className="text-lg font-medium">No se encontraron resultados</p>
                                                     </td>
                                                 </tr>
@@ -1530,55 +1537,53 @@ export default function LevantamientoUnificado() {
                                                 paginatedMuebles.map((item) => (
                                                     <tr
                                                         key={`${item.origen}-${item.id}`}
-                                                        className={
-                                                            `transition-colors`
-                                                        }
+                                                        className={`transition-colors ${isDarkMode ? 'hover:bg-gray-800/50' : 'hover:bg-gray-50'}`}
                                                     >
                                                         <td className="px-4 py-3 text-xs">
-                                                            <span className={`inline-flex items-center px-2.5 py-1 rounded-full font-bold ${ORIGEN_COLORS[item.origen]}`}>
+                                                            <span className={`inline-flex items-center px-2.5 py-1 rounded-full font-bold ${getOrigenColors(isDarkMode)[item.origen]}`}>
                                                                 {item.origen}
                                                             </span>
                                                         </td>
                                                         <td className="px-4 py-3 text-xs">
                                                             {foliosResguardo[item.id_inv] ? (
                                                                 <button
-                                                                    className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full font-bold bg-white/10 text-white border border-white/30 hover:bg-white/20 hover:text-white shadow-sm hover:scale-105 transition-all duration-200"
+                                                                    className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full font-bold border shadow-sm hover:scale-105 transition-all duration-200 ${isDarkMode ? 'bg-white/10 text-white border-white/30 hover:bg-white/20 hover:text-white' : 'bg-blue-50 text-blue-700 border-blue-200 hover:bg-blue-100'}`}
                                                                     title={`Ver resguardo ${foliosResguardo[item.id_inv]}`}
                                                                     onClick={() => handleFolioClick(foliosResguardo[item.id_inv]!)}
                                                                 >
-                                                                    <BadgeCheck className="h-4 w-4 mr-1 text-white/80" />
+                                                                    <BadgeCheck className={`h-4 w-4 mr-1 ${isDarkMode ? 'text-white/80' : 'text-blue-600'}`} />
                                                                     {foliosResguardo[item.id_inv]}
                                                                 </button>                                                            ) : (
-                                                                <span className="inline-flex items-center px-2.5 py-1 rounded-full font-bold bg-gray-900/60 text-gray-400 border border-gray-700">Sin resguardo</span>
+                                                                <span className={`inline-flex items-center px-2.5 py-1 rounded-full font-bold border ${isDarkMode ? 'bg-gray-900/60 text-gray-400 border-gray-700' : 'bg-gray-100 text-gray-600 border-gray-300'}`}>Sin resguardo</span>
                                                             )}
                                                         </td>
-                                                        <td className="px-4 py-3 whitespace-nowrap text-sm font-medium text-white">
+                                                        <td className={`px-4 py-3 whitespace-nowrap text-sm font-medium ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
                                                             {item.id_inv}
                                                         </td>
-                                                        <td className="px-4 py-3 text-sm text-gray-300">
+                                                        <td className={`px-4 py-3 text-sm ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>
                                                             {truncateText(item.descripcion, 40)}
                                                         </td>
-                                                        <td className="px-4 py-3 text-sm text-gray-300">
+                                                        <td className={`px-4 py-3 text-sm ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>
                                                             {truncateText(item.area, 20)}
                                                         </td>
-                                                        <td className="px-4 py-3 text-sm text-gray-300">
+                                                        <td className={`px-4 py-3 text-sm ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>
                                                             <div className="flex flex-col gap-1">
-                                                                <span className="font-medium text-white">
-                                                                    {truncateText(item.usufinal, 20) || <span className="text-gray-500">Sin director</span>}
+                                                                <span className={`font-medium ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
+                                                                    {truncateText(item.usufinal, 20) || <span className={isDarkMode ? 'text-gray-500' : 'text-gray-400'}>Sin director</span>}
                                                                 </span>
                                                                 {item.resguardante && (
-                                                                    <span className="inline-block px-2 py-0.5 text-xs font-medium bg-white/10 text-white rounded-full border border-white/20 shadow-sm">
+                                                                    <span className={`inline-block px-2 py-0.5 text-xs font-medium rounded-full border shadow-sm ${isDarkMode ? 'bg-white/10 text-white border-white/20' : 'bg-gray-100 text-gray-700 border-gray-200'}`}>
                                                                         {truncateText(item.resguardante, 20)}
                                                                     </span>
                                                                 )}
                                                             </div>
                                                         </td>
                                                         <td className="px-4 py-3 text-sm">
-                                                            <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium ${item.estatus === 'ACTIVO' ? ESTATUS_COLORS.ACTIVO :
-                                                                item.estatus === 'INACTIVO' ? ESTATUS_COLORS.INACTIVO :
-                                                                    item.estatus === 'NO LOCALIZADO' ? ESTATUS_COLORS['NO LOCALIZADO'] :
-                                                                        ESTATUS_COLORS.DEFAULT
-                                                                }`}>
+                                                            <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium ${item.estatus === 'ACTIVO' ? getEstatusColors(isDarkMode).ACTIVO :
+                                                item.estatus === 'INACTIVO' ? getEstatusColors(isDarkMode).INACTIVO :
+                                                    item.estatus === 'NO LOCALIZADO' ? getEstatusColors(isDarkMode)['NO LOCALIZADO'] :
+                                                        getEstatusColors(isDarkMode).DEFAULT
+                                                }`}>
                                                                 {item.estatus}
                                                             </span>
                                                         </td>
@@ -1592,31 +1597,31 @@ export default function LevantamientoUnificado() {
                             {/* Resumen de registros mostrados y total */}
                             <div className="flex flex-col sm:flex-row gap-3 items-center justify-between mt-4 mb-3 px-2">
                                 {/* Contador de registros con diseño mejorado */}
-                                <div className="flex items-center gap-2 bg-neutral-900/50 px-4 py-2 rounded-xl border border-neutral-800 shadow-inner">
+                                <div className={`flex items-center gap-2 px-4 py-2 rounded-xl border shadow-inner ${isDarkMode ? 'bg-neutral-900/50 border-neutral-800' : 'bg-gray-100 border-gray-200'}`}>
                                     {totalFilteredCount === 0 ? (
-                                        <span className="text-neutral-400 flex items-center gap-2">
-                                            <AlertCircle className="h-4 w-4 text-neutral-500" />
+                                        <span className={`flex items-center gap-2 ${isDarkMode ? 'text-neutral-400' : 'text-gray-600'}`}>
+                                            <AlertCircle className={`h-4 w-4 ${isDarkMode ? 'text-neutral-500' : 'text-gray-500'}`} />
                                             No hay registros para mostrar
                                         </span>
                                     ) : (
                                         <div className="flex items-center gap-2">
-                                            <span className="text-neutral-300">Mostrando</span>
-                                            <span className="px-2 py-0.5 rounded-lg bg-white/10 text-white font-mono border border-white/30">
+                                            <span className={isDarkMode ? 'text-neutral-300' : 'text-gray-700'}>Mostrando</span>
+                                            <span className={`px-2 py-0.5 rounded-lg font-mono border ${isDarkMode ? 'bg-white/10 text-white border-white/30' : 'bg-white text-gray-900 border-gray-300'}`}>
                                                 {((currentPage - 1) * rowsPerPage) + 1}–{Math.min(currentPage * rowsPerPage, totalFilteredCount)}
                                             </span>
-                                            <span className="text-neutral-300">de</span>
-                                            <span className="px-2 py-0.5 rounded-lg bg-neutral-900 text-neutral-300 font-mono border border-neutral-800">
+                                            <span className={isDarkMode ? 'text-neutral-300' : 'text-gray-700'}>de</span>
+                                            <span className={`px-2 py-0.5 rounded-lg font-mono border ${isDarkMode ? 'bg-neutral-900 text-neutral-300 border-neutral-800' : 'bg-gray-200 text-gray-700 border-gray-300'}`}>
                                                 {totalFilteredCount}
                                             </span>
-                                            <span className="text-neutral-400">registros</span>
+                                            <span className={isDarkMode ? 'text-neutral-400' : 'text-gray-600'}>registros</span>
                                             {/* Selector de filas por página */}
-                                            <span className="ml-4 text-neutral-400">|</span>
-                                            <label htmlFor="rows-per-page" className="ml-2 text-xs text-neutral-400">Filas por página:</label>
+                                            <span className={`ml-4 ${isDarkMode ? 'text-neutral-400' : 'text-gray-500'}`}>|</span>
+                                            <label htmlFor="rows-per-page" className={`ml-2 text-xs ${isDarkMode ? 'text-neutral-400' : 'text-gray-600'}`}>Filas por página:</label>
                                             <select
                                                 id="rows-per-page"
                                                 value={rowsPerPage}
                                                 onChange={e => { setRowsPerPage(Number(e.target.value)); setCurrentPage(1); }}
-                                                className="ml-1 px-2 py-1 rounded-lg bg-neutral-900 border border-neutral-700 text-white font-mono text-xs focus:outline-none focus:ring-2 focus:ring-white/50 focus:border-white/50 transition"
+                                                className={`ml-1 px-2 py-1 rounded-lg border font-mono text-xs focus:outline-none focus:ring-2 transition ${isDarkMode ? 'bg-neutral-900 border-neutral-700 text-white focus:ring-white/50 focus:border-white/50' : 'bg-white border-gray-300 text-gray-900 focus:ring-blue-500 focus:border-blue-500'}`}
                                             >
                                                 {[10, 20, 30, 50, 100].map(opt => (
                                                     <option key={opt} value={opt}>{opt}</option>
@@ -1628,14 +1633,14 @@ export default function LevantamientoUnificado() {
 
                                 {/* Indicador de página actual con animación */}
                                 {totalPages > 1 && (
-                                    <div className="flex items-center gap-2 bg-neutral-900/50 px-4 py-2 rounded-xl border border-neutral-800 shadow-inner">
-                                        <span className="text-neutral-400">Página</span>
+                                    <div className={`flex items-center gap-2 px-4 py-2 rounded-xl border shadow-inner ${isDarkMode ? 'bg-neutral-900/50 border-neutral-800' : 'bg-gray-100 border-gray-200'}`}>
+                                        <span className={isDarkMode ? 'text-neutral-400' : 'text-gray-600'}>Página</span>
                                         <div className="flex items-center gap-1.5">
-                                            <span className="px-2.5 py-0.5 rounded-lg bg-white/20 text-white font-mono font-bold border border-white/40 min-w-[2rem] text-center transition-all duration-300 hover:scale-105 hover:bg-white/30">
+                                            <span className={`px-2.5 py-0.5 rounded-lg font-mono font-bold border min-w-[2rem] text-center transition-all duration-300 hover:scale-105 ${isDarkMode ? 'bg-white/20 text-white border-white/40 hover:bg-white/30' : 'bg-blue-100 text-blue-900 border-blue-300 hover:bg-blue-200'}`}>
                                                 {currentPage}
                                             </span>
-                                            <span className="text-neutral-500">/</span>
-                                            <span className="px-2.5 py-0.5 rounded-lg bg-neutral-900 text-neutral-400 font-mono min-w-[2rem] text-center border border-neutral-800">
+                                            <span className={isDarkMode ? 'text-neutral-500' : 'text-gray-500'}>/</span>
+                                            <span className={`px-2.5 py-0.5 rounded-lg font-mono min-w-[2rem] text-center border ${isDarkMode ? 'bg-neutral-900 text-neutral-400 border-neutral-800' : 'bg-gray-200 text-gray-700 border-gray-300'}`}>
                                                 {totalPages}
                                             </span>
                                         </div>
@@ -1648,7 +1653,7 @@ export default function LevantamientoUnificado() {
                                     <button
                                         onClick={() => changePage(1)}
                                         disabled={currentPage === 1}
-                                        className="px-2 py-1 rounded-lg border border-neutral-800 bg-neutral-900 text-neutral-400 hover:text-white hover:bg-neutral-800 transition disabled:opacity-40 disabled:cursor-not-allowed"
+                                        className={`px-2 py-1 rounded-lg border transition disabled:opacity-40 disabled:cursor-not-allowed ${isDarkMode ? 'border-neutral-800 bg-neutral-900 text-neutral-400 hover:text-white hover:bg-neutral-800' : 'border-gray-300 bg-gray-100 text-gray-600 hover:text-gray-900 hover:bg-gray-200'}`}
                                         title="Primera página"
                                     >
                                         <ChevronLeft className="inline h-4 w-4 -mr-1" />
@@ -1657,7 +1662,7 @@ export default function LevantamientoUnificado() {
                                     <button
                                         onClick={() => changePage(currentPage - 1)}
                                         disabled={currentPage === 1}
-                                        className="px-2 py-1 rounded-lg border border-neutral-800 bg-neutral-900 text-neutral-400 hover:text-white hover:bg-neutral-800 transition disabled:opacity-40 disabled:cursor-not-allowed"
+                                        className={`px-2 py-1 rounded-lg border transition disabled:opacity-40 disabled:cursor-not-allowed ${isDarkMode ? 'border-neutral-800 bg-neutral-900 text-neutral-400 hover:text-white hover:bg-neutral-800' : 'border-gray-300 bg-gray-100 text-gray-600 hover:text-gray-900 hover:bg-gray-200'}`}
                                         title="Página anterior"
                                     >
                                         <ChevronLeft className="h-4 w-4" />
@@ -1675,7 +1680,7 @@ export default function LevantamientoUnificado() {
                                         }
                                         if (start > 1) {
                                             pageButtons.push(
-                                                <span key="start-ellipsis" className="px-2 text-neutral-500">...</span>
+                                                <span key="start-ellipsis" className={`px-2 ${isDarkMode ? 'text-neutral-500' : 'text-gray-500'}`}>...</span>
                                             );
                                         }
                                         for (let i = start; i <= end; i++) {
@@ -1685,8 +1690,8 @@ export default function LevantamientoUnificado() {
                                                     onClick={() => changePage(i)}
                                                     className={`mx-0.5 px-3 py-1.5 rounded-lg border text-sm font-semibold transition
                                                 ${i === currentPage
-                                                        ? 'bg-white/10 text-white border-white/30 shadow'
-                                                        : 'bg-neutral-900 text-neutral-300 border-neutral-700 hover:bg-white/5 hover:text-white hover:border-white/20'}
+                                                        ? isDarkMode ? 'bg-white/10 text-white border-white/30 shadow' : 'bg-blue-600 text-white border-blue-600 shadow'
+                                                        : isDarkMode ? 'bg-neutral-900 text-neutral-300 border-neutral-700 hover:bg-white/5 hover:text-white hover:border-white/20' : 'bg-gray-100 text-gray-700 border-gray-300 hover:bg-gray-200 hover:text-gray-900 hover:border-gray-400'}
                                             `}
                                                     aria-current={i === currentPage ? 'page' : undefined}
                                                 >
@@ -1696,7 +1701,7 @@ export default function LevantamientoUnificado() {
                                         }
                                         if (end < totalPages) {
                                             pageButtons.push(
-                                                <span key="end-ellipsis" className="px-2 text-neutral-500">...</span>
+                                                <span key="end-ellipsis" className={`px-2 ${isDarkMode ? 'text-neutral-500' : 'text-gray-500'}`}>...</span>
                                             );
                                         }
                                         return pageButtons;
@@ -1704,7 +1709,7 @@ export default function LevantamientoUnificado() {
                                     <button
                                         onClick={() => changePage(currentPage + 1)}
                                         disabled={currentPage === totalPages}
-                                        className="px-2 py-1 rounded-lg border border-neutral-800 bg-neutral-900 text-neutral-400 hover:text-white hover:bg-neutral-800 transition disabled:opacity-40 disabled:cursor-not-allowed"
+                                        className={`px-2 py-1 rounded-lg border transition disabled:opacity-40 disabled:cursor-not-allowed ${isDarkMode ? 'border-neutral-800 bg-neutral-900 text-neutral-400 hover:text-white hover:bg-neutral-800' : 'border-gray-300 bg-gray-100 text-gray-600 hover:text-gray-900 hover:bg-gray-200'}`}
                                         title="Página siguiente"
                                     >
                                         <ChevronRight className="h-4 w-4" />
@@ -1712,7 +1717,7 @@ export default function LevantamientoUnificado() {
                                     <button
                                         onClick={() => changePage(totalPages)}
                                         disabled={currentPage === totalPages}
-                                        className="px-2 py-1 rounded-lg border border-neutral-800 bg-neutral-900 text-neutral-400 hover:text-white hover:bg-neutral-800 transition disabled:opacity-40 disabled:cursor-not-allowed"
+                                        className={`px-2 py-1 rounded-lg border transition disabled:opacity-40 disabled:cursor-not-allowed ${isDarkMode ? 'border-neutral-800 bg-neutral-900 text-neutral-400 hover:text-white hover:bg-neutral-800' : 'border-gray-300 bg-gray-100 text-gray-600 hover:text-gray-900 hover:bg-gray-200'}`}
                                         title="Última página"
                                     >
                                         <ChevronRight className="inline h-4 w-4 -mr-2" />
