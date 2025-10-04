@@ -1388,83 +1388,7 @@ export default function LevantamientoUnificado() {
                     {/* Modal para completar datos del director (fucsia, moderno) se renderiza con renderDirectorDataModal() */}
                     <div className="flex flex-col lg:flex-row gap-6">
                         <div className="w-full">
-                            {/* Spinner de carga mejorado con contador de registros */}
-
-                            {loading ? (
-                                <div className={`flex flex-col items-center justify-center min-h-[300px] w-full rounded-lg animate-fadeIn ${isDarkMode ? 'bg-black/80' : 'bg-gray-100'}`}>
-                                    <div className="relative flex flex-col items-center justify-center gap-4 py-12">
-                                        {/* Spinner animado */}
-                                        <div className="relative">
-                                            <span className="relative flex h-20 w-20">
-                                                <span className={`animate-ping absolute inline-flex h-full w-full rounded-full opacity-20 ${isDarkMode ? 'bg-white' : 'bg-blue-500'}`}></span>
-                                                <span className={`relative inline-flex rounded-full h-20 w-20 border-4 border-t-transparent animate-spin ${isDarkMode ? 'border-white' : 'border-blue-500'}`}></span>
-                                            </span>
-                                            
-                                            {/* Contador numérico en el centro del spinner */}
-                                            {loadingProgress.total > 0 && (
-                                                <div className="absolute inset-0 flex items-center justify-center">
-                                                    <span className={`text-sm font-mono font-bold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
-                                                        {Math.round((loadingProgress.count / Math.max(loadingProgress.total, 1)) * 100)}%
-                                                    </span>
-                                                </div>
-                                            )}
-                                        </div>
-                                        
-                                        {/* Mensaje de carga con efecto de typing */}
-                                        <div className="flex flex-col items-center gap-1">
-                                            <span className={`text-2xl font-bold drop-shadow-md ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
-                                                {loadingProgress.message || "Cargando inventario..."}
-                                            </span>
-                                            
-                                            {/* Barra de progreso */}
-                                            {loadingProgress.total > 0 && (
-                                                <div className={`w-64 h-2 rounded-full overflow-hidden mt-2 ${isDarkMode ? 'bg-white/10' : 'bg-gray-300'}`}>
-                                                    <div 
-                                                        className={`h-full rounded-full transition-all duration-300 ${isDarkMode ? 'bg-white/40' : 'bg-blue-500'}`}
-                                                        style={{ width: `${Math.min(100, Math.round((loadingProgress.count / loadingProgress.total) * 100))}%` }}
-                                                    ></div>
-                                                </div>
-                                            )}
-                                            
-                                            <span className={`text-sm mt-2 ${isDarkMode ? 'text-gray-300' : 'text-gray-600'}`}>
-                                                {loadingProgress.total > 0 
-                                                    ? `${loadingProgress.count.toLocaleString()} de ${loadingProgress.total.toLocaleString()} registros` 
-                                                    : "Por favor espera, esto puede tardar unos segundos."}
-                                            </span>
-                                        </div>
-                                    </div>
-                                </div>
-                            ) : error ? (
-                                <div className={`flex flex-col items-center justify-center min-h-[300px] w-full rounded-lg animate-fadeIn ${isDarkMode ? 'bg-black/80' : 'bg-gray-100'}`}>
-                                    <div className="flex flex-col items-center gap-4 py-12">
-                                        <AlertCircle className={`h-14 w-14 animate-bounce ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`} />
-                                        <span className={`text-2xl font-bold ${isDarkMode ? 'text-white drop-shadow-white/30' : 'text-gray-900'}`}>Error al cargar los datos</span>
-                                        <span className={`text-base mb-2 ${isDarkMode ? 'text-gray-300' : 'text-gray-600'}`}>{error}</span>
-                                        <button
-                                            onClick={() => fetchMuebles()}
-                                            className={`px-6 py-3 rounded-xl font-bold text-lg shadow-lg border transition-all duration-200 flex items-center gap-2 mt-2 ${isDarkMode ? 'bg-white/10 text-white border-white/30 hover:bg-white/20' : 'bg-blue-600 text-white border-blue-600 hover:bg-blue-700'}`}
-                                        >
-                                            <RefreshCw className="h-5 w-5 animate-spin-slow" />
-                                            Reintentar
-                                        </button>
-                                    </div>
-                                </div>
-                            ) : totalFilteredCount === 0 ? (
-                                <div className={`flex flex-col items-center justify-center min-h-[300px] w-full rounded-lg animate-fadeIn ${isDarkMode ? 'bg-black/80' : 'bg-gray-100'}`}>
-                                    <div className="flex flex-col items-center gap-4 py-12">
-                                        <Search className={`h-14 w-14 animate-pulse ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`} />
-                                        <span className={`text-2xl font-bold ${isDarkMode ? 'text-white drop-shadow-white/30' : 'text-gray-900'}`}>No se encontraron resultados</span>
-                                        <span className={`text-base mb-2 ${isDarkMode ? 'text-gray-300' : 'text-gray-600'}`}>Intenta ajustar los filtros o la búsqueda.</span>
-                                        <button
-                                            onClick={() => fetchMuebles()}
-                                            className={`px-6 py-3 rounded-xl font-bold text-lg shadow-lg border transition-all duration-200 flex items-center gap-2 mt-2 ${isDarkMode ? 'bg-white/10 text-white border-white/30 hover:bg-white/20' : 'bg-blue-600 text-white border-blue-600 hover:bg-blue-700'}`}
-                                        >
-                                            <RefreshCw className="h-5 w-5 animate-spin-slow" />
-                                            Recargar inventario
-                                        </button>
-                                    </div>
-                                </div>
-                            ) : (
+                            {(
                                 <div className={`rounded-lg border overflow-x-auto overflow-y-auto flex flex-col flex-grow max-h-[70vh] ${isDarkMode ? 'bg-black border-gray-800' : 'bg-white border-gray-200'}`}>
                                     <table className={`min-w-full ${isDarkMode ? 'divide-y divide-gray-800' : 'divide-y divide-gray-200'}`}>
                                         <thead className={`sticky top-0 z-10 border-b ${isDarkMode ? 'bg-black/80 border-white/10' : 'bg-gray-50 border-gray-200'}`}>
@@ -1519,7 +1443,149 @@ export default function LevantamientoUnificado() {
                                             </tr>
                                         </thead>
                                         <tbody className={`divide-y ${isDarkMode ? 'bg-black/60 divide-gray-800' : 'bg-white divide-gray-200'}`}>
-                                            {error ? (
+                                            {loading ? (
+                                                <>
+                                                    {/* Skeleton rows que coinciden con la estructura real de levantamiento (7 columnas) */}
+                                                    {[...Array(rowsPerPage)].map((_, i) => (
+                                                        <tr
+                                                            key={`skeleton-${i}`}
+                                                            className={`transition-all duration-200 animate-fadeInUp ${isDarkMode
+                                                                ? 'hover:bg-gray-800'
+                                                                : 'hover:bg-gray-50'
+                                                                }`}
+                                                            style={{ 
+                                                                animationDelay: `${i * 40}ms`
+                                                            }}
+                                                        >
+                                                            {/* Origen column */}
+                                                            <td className="px-4 py-3">
+                                                                <div className={`inline-flex items-center px-2.5 py-1 rounded-full border animate-pulse ${isDarkMode
+                                                                    ? 'bg-gray-800/30 border-gray-700'
+                                                                    : 'bg-gray-100 border-gray-300'
+                                                                    }`}>
+                                                                    <div className={`h-3 w-12 rounded ${isDarkMode ? 'bg-gray-700' : 'bg-gray-300'
+                                                                        }`} />
+                                                                </div>
+                                                            </td>
+
+                                                            {/* Resguardo column */}
+                                                            <td className="px-4 py-3">
+                                                                <div className={`inline-flex items-center px-2.5 py-1 rounded-full border animate-pulse ${isDarkMode
+                                                                    ? 'bg-gray-800/30 border-gray-700'
+                                                                    : 'bg-gray-100 border-gray-300'
+                                                                    }`}>
+                                                                    <div className={`h-3 w-20 rounded ${isDarkMode ? 'bg-gray-700' : 'bg-gray-300'
+                                                                        }`} />
+                                                                </div>
+                                                            </td>
+
+                                                            {/* ID Inventario column */}
+                                                            <td className="px-4 py-3">
+                                                                <div className={`h-4 w-24 rounded animate-pulse ${isDarkMode ? 'bg-gray-800/60' : 'bg-gray-200'
+                                                                    }`} />
+                                                            </td>
+
+                                                            {/* Descripción column */}
+                                                            <td className="px-4 py-3">
+                                                                <div className="space-y-1">
+                                                                    <div className={`h-4 w-full max-w-xs rounded animate-pulse ${isDarkMode ? 'bg-gray-800/60' : 'bg-gray-200'
+                                                                        }`} />
+                                                                    <div className={`h-4 w-3/4 rounded animate-pulse ${isDarkMode ? 'bg-gray-800/40' : 'bg-gray-100'
+                                                                        }`} />
+                                                                </div>
+                                                            </td>
+
+                                                            {/* Área column */}
+                                                            <td className="px-4 py-3">
+                                                                <div className={`h-4 w-28 rounded animate-pulse ${isDarkMode ? 'bg-gray-800/60' : 'bg-gray-200'
+                                                                    }`} />
+                                                            </td>
+
+                                                            {/* Usuario Final column */}
+                                                            <td className="px-4 py-3">
+                                                                <div className="space-y-1">
+                                                                    <div className={`h-4 w-32 rounded animate-pulse ${isDarkMode ? 'bg-gray-800/60' : 'bg-gray-200'
+                                                                        }`} />
+                                                                    <div className={`inline-flex items-center px-2 py-0.5 rounded-full border animate-pulse ${isDarkMode
+                                                                        ? 'bg-gray-800/30 border-gray-700'
+                                                                        : 'bg-gray-100 border-gray-300'
+                                                                        }`}>
+                                                                        <div className={`h-3 w-16 rounded ${isDarkMode ? 'bg-gray-700' : 'bg-gray-300'
+                                                                            }`} />
+                                                                    </div>
+                                                                </div>
+                                                            </td>
+
+                                                            {/* Estatus column */}
+                                                            <td className="px-4 py-3">
+                                                                <div className={`inline-flex items-center px-2.5 py-1 rounded-full border animate-pulse ${isDarkMode
+                                                                    ? 'bg-gray-800/30 border-gray-700'
+                                                                    : 'bg-gray-100 border-gray-300'
+                                                                    }`}>
+                                                                    <div className={`h-3 w-16 rounded ${isDarkMode ? 'bg-gray-700' : 'bg-gray-300'
+                                                                        }`} />
+                                                                </div>
+                                                            </td>
+                                                        </tr>
+                                                    ))}
+                                                    {/* Overlay con progreso sobre el skeleton */}
+                                                    <tr>
+                                                        <td colSpan={7} className="relative">
+                                                            <div className={`absolute inset-0 flex items-center justify-center pointer-events-none animate-fadeInScale ${isDarkMode ? 'bg-black/60' : 'bg-white/60'
+                                                                } backdrop-blur-sm`}
+                                                                style={{
+                                                                    animationDelay: '200ms'
+                                                                }}
+                                                            >
+                                                                <div className="flex flex-col items-center gap-3 py-8">
+                                                                    {/* Spinner compacto */}
+                                                                    <div className="relative">
+                                                                        <span className="relative flex h-12 w-12">
+                                                                            <span className={`animate-ping absolute inline-flex h-full w-full rounded-full opacity-20 ${isDarkMode ? 'bg-white' : 'bg-gray-900'
+                                                                                }`}></span>
+                                                                            <span className={`relative inline-flex rounded-full h-12 w-12 border-4 border-t-transparent animate-spin ${isDarkMode ? 'border-white' : 'border-gray-900'
+                                                                                }`}></span>
+                                                                        </span>
+                                                                        {loadingProgress.total > 0 && (
+                                                                            <div className="absolute inset-0 flex items-center justify-center">
+                                                                                <span className={`text-xs font-mono font-bold ${isDarkMode ? 'text-white' : 'text-gray-900'
+                                                                                    }`}>
+                                                                                    {Math.round((loadingProgress.count / Math.max(loadingProgress.total, 1)) * 100)}%
+                                                                                </span>
+                                                                            </div>
+                                                                        )}
+                                                                    </div>
+
+                                                                    {/* Mensaje y barra de progreso */}
+                                                                    <div className="flex flex-col items-center gap-1">
+                                                                        <span className={`text-lg font-bold ${isDarkMode ? 'text-white' : 'text-gray-900'
+                                                                            }`}>
+                                                                            {loadingProgress.message || "Cargando inventario..."}
+                                                                        </span>
+
+                                                                        {loadingProgress.total > 0 && (
+                                                                            <>
+                                                                                <div className={`w-48 h-1.5 rounded-full overflow-hidden mt-1 ${isDarkMode ? 'bg-white/10' : 'bg-gray-300'
+                                                                                    }`}>
+                                                                                    <div
+                                                                                        className={`h-full rounded-full transition-all duration-300 ${isDarkMode ? 'bg-white/40' : 'bg-gray-900'
+                                                                                            }`}
+                                                                                        style={{ width: `${Math.min(100, Math.round((loadingProgress.count / loadingProgress.total) * 100))}%` }}
+                                                                                    ></div>
+                                                                                </div>
+                                                                                <span className={`text-xs mt-1 ${isDarkMode ? 'text-gray-300' : 'text-gray-600'
+                                                                                    }`}>
+                                                                                    {loadingProgress.count.toLocaleString()} de {loadingProgress.total.toLocaleString()} registros
+                                                                                </span>
+                                                                            </>
+                                                                        )}
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+                                                        </td>
+                                                    </tr>
+                                                </>
+                                            ) : error ? (
                                                 <tr className="h-96">
                                                     <td colSpan={6} className={`px-6 py-24 text-center ${isDarkMode ? 'text-red-400' : 'text-red-600'}`}>
                                                         <AlertCircle className="h-12 w-12" />

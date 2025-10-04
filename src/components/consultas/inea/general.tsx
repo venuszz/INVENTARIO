@@ -61,83 +61,7 @@ interface ActiveFilter {
     type: 'id' | 'descripcion' | 'rubro' | 'estado' | 'estatus' | 'area' | 'usufinal' | 'resguardante' | null;
 }
 
-// Componente para animar el conteo de valores
-interface AnimatedCounterProps {
-    value: number;
-    className?: string;
-    prefix?: string;
-    suffix?: string;
-    loading?: boolean;
-    isInteger?: boolean;
-}
 
-const AnimatedCounter = ({ value, className, prefix = '', suffix = '', loading = false, isInteger = false }: AnimatedCounterProps) => {
-    // Estado para el valor actual mostrado
-    const [displayValue, setDisplayValue] = useState(0);
-
-    // Referencia para el intervalo de animación
-    const intervalRef = useRef<NodeJS.Timeout | null>(null);
-
-    // Formatear el número según sea entero o decimal
-    const formatNumber = (num: number) => {
-        if (isInteger) {
-            return Math.floor(num).toLocaleString('es-MX');
-        } else {
-            return num.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-        }
-    };
-
-    // Efecto para animar el contador
-    useEffect(() => {
-        // Limpiar intervalo anterior si existe
-        if (intervalRef.current) {
-            clearInterval(intervalRef.current);
-        }
-
-        if (loading) {
-            // Durante la carga, mostrar números aleatorios
-            intervalRef.current = setInterval(() => {
-                const randomValue = isInteger ?
-                    Math.floor(Math.random() * 1000) :
-                    Math.random() * 10000;
-                setDisplayValue(randomValue);
-            }, 100);
-        } else {
-            // Animación de conteo hasta el valor final
-            const duration = 1500; // duración total en ms
-            const steps = 20; // número de pasos
-            const increment = (value - displayValue) / steps;
-            let currentStep = 0;
-
-            intervalRef.current = setInterval(() => {
-                if (currentStep >= steps) {
-                    setDisplayValue(value);
-                    if (intervalRef.current) clearInterval(intervalRef.current);
-                    return;
-                }
-
-                setDisplayValue(prev => prev + increment);
-                currentStep++;
-            }, duration / steps);
-        }
-
-        // Limpiar intervalo al desmontar
-        return () => {
-            if (intervalRef.current) {
-                clearInterval(intervalRef.current);
-            }
-        };
-    }, [value, loading, isInteger]);
-
-    return (
-        <div className={className}>
-            {prefix}
-            {formatNumber(displayValue)}
-            {suffix}
-        </div>
-    );
-};
-// ... existing code ...
 
 const ImagePreview = ({ imagePath }: { imagePath: string | null }) => {
     const [imageUrl, setImageUrl] = useState<string | null>(null);
@@ -599,20 +523,47 @@ export default function ConsultasIneaGeneral() {
     // Cambia el filtro para excluir los registros con estatus 'BAJA'
     const fetchMuebles = useCallback(async () => {
         setLoading(true);
+        setError(null);
+        setLoadingProgress({ count: 0, total: 0, message: 'Iniciando carga de registros...' });
+
         try {
+            // Primero obtenemos el conteo total para mostrar progreso
+            const { count } = await supabase
+                .from('muebles')
+                .select('*', { count: 'exact', head: true })
+                .neq('estatus', 'BAJA');
+
+            const totalInTable = count || 0;
+            setLoadingProgress({
+                count: 0,
+                total: totalInTable,
+                message: `Preparando carga de ${totalInTable.toLocaleString()} registros...`
+            });
+
             let allData: Mueble[] = [];
             let from = 0;
             const batchSize = 1000;
             let keepFetching = true;
+
             while (keepFetching) {
                 const { data, error } = await supabase
                     .from('muebles')
                     .select('*')
                     .neq('estatus', 'BAJA')
                     .range(from, from + batchSize - 1);
+
                 if (error) throw error;
+
                 if (data && data.length > 0) {
                     allData = allData.concat(data as Mueble[]);
+
+                    // Actualizar progreso
+                    setLoadingProgress({
+                        count: allData.length,
+                        total: totalInTable,
+                        message: `Cargando ${allData.length.toLocaleString()} de ${totalInTable.toLocaleString()} registros...`
+                    });
+
                     if (data.length < batchSize) {
                         keepFetching = false;
                     } else {
@@ -622,6 +573,7 @@ export default function ConsultasIneaGeneral() {
                     keepFetching = false;
                 }
             }
+
             setMuebles(allData);
             setError(null);
         } catch (error) {
@@ -1059,15 +1011,16 @@ export default function ConsultasIneaGeneral() {
 
     // --- OMNIBOX AUTOCOMPLETADO Y SUGERENCIAS ---
     function getTypeIcon(type: ActiveFilter['type']) {
+        const iconClass = isDarkMode ? 'text-white/80' : 'text-gray-600';
         switch (type) {
-            case 'id': return <span className="h-4 w-4 text-white/80 font-medium">#</span>;
-            case 'area': return <span className="h-4 w-4 text-white/80 font-medium">A</span>;
-            case 'usufinal': return <span className="h-4 w-4 text-white/80 font-medium">D</span>;
-            case 'resguardante': return <span className="h-4 w-4 text-white/80 font-medium">R</span>;
-            case 'descripcion': return <span className="h-4 w-4 text-white/80 font-medium">Desc</span>;
-            case 'rubro': return <span className="h-4 w-4 text-white/80 font-medium">Ru</span>;
-            case 'estado': return <span className="h-4 w-4 text-white/80 font-medium">Edo</span>;
-            case 'estatus': return <span className="h-4 w-4 text-white/80 font-medium">Est</span>;
+            case 'id': return <span className={`h-4 w-4 ${iconClass} font-medium`}>#</span>;
+            case 'area': return <span className={`h-4 w-4 ${iconClass} font-medium`}>A</span>;
+            case 'usufinal': return <span className={`h-4 w-4 ${iconClass} font-medium`}>D</span>;
+            case 'resguardante': return <span className={`h-4 w-4 ${iconClass} font-medium`}>R</span>;
+            case 'descripcion': return <span className={`h-4 w-4 ${iconClass} font-medium`}>Desc</span>;
+            case 'rubro': return <span className={`h-4 w-4 ${iconClass} font-medium`}>Ru</span>;
+            case 'estado': return <span className={`h-4 w-4 ${iconClass} font-medium`}>Edo</span>;
+            case 'estatus': return <span className={`h-4 w-4 ${iconClass} font-medium`}>Est</span>;
             default: return null;
         }
     }
@@ -1304,32 +1257,8 @@ export default function ConsultasIneaGeneral() {
         fetchFoliosYDetalles();
     }, [muebles]);
 
-    // Skeleton para la tabla de inventario
-    const TableSkeleton = () => (
-        <tr>
-            <td colSpan={6} className={`px-6 py-24 text-center ${isDarkMode ? 'text-gray-400' : 'text-gray-600'
-                }`}>
-                <div className="flex flex-col items-center justify-center space-y-4 animate-pulse">
-                    {[...Array(8)].map((_, i) => (
-                        <div key={i} className="flex gap-4 w-full max-w-3xl mx-auto">
-                            <div className={`h-6 w-24 rounded ${isDarkMode ? 'bg-gray-800/60' : 'bg-gray-200'
-                                }`} />
-                            <div className={`h-6 w-40 rounded ${isDarkMode ? 'bg-gray-800/60' : 'bg-gray-200'
-                                }`} />
-                            <div className={`h-6 w-32 rounded ${isDarkMode ? 'bg-gray-800/60' : 'bg-gray-200'
-                                }`} />
-                            <div className={`h-6 w-32 rounded ${isDarkMode ? 'bg-gray-800/60' : 'bg-gray-200'
-                                }`} />
-                            <div className={`h-6 w-28 rounded ${isDarkMode ? 'bg-gray-800/60' : 'bg-gray-200'
-                                }`} />
-                            <div className={`h-6 w-32 rounded ${isDarkMode ? 'bg-gray-800/60' : 'bg-gray-200'
-                                }`} />
-                        </div>
-                    ))}
-                </div>
-            </td>
-        </tr>
-    );
+    // Estado para el progreso de carga
+    const [loadingProgress, setLoadingProgress] = useState({ count: 0, total: 0, message: '' });
 
     return (
         <div className={`min-h-screen p-2 sm:p-4 md:p-6 lg:p-8 transition-colors duration-500 ${isDarkMode
@@ -1392,13 +1321,17 @@ export default function ConsultasIneaGeneral() {
                                             : 'text-gray-600 group-hover:text-gray-900'
                                             }`}>Valor Total del Inventario</h3>
                                         <div className="relative">
-                                            <AnimatedCounter
-                                                value={(activeFilters.length > 0 || searchTerm ? filteredValue : allValue)}
-                                                prefix="$"
-                                                className={`text-4xl font-bold ${isDarkMode ? 'text-white' : 'text-gray-900'
-                                                    }`}
-                                                loading={loading}
-                                            />
+                                            <div className={`text-4xl font-bold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
+                                                {loading ? (
+                                                    <div className="flex items-center gap-2">
+                                                        <span className={`inline-block h-3 w-3 rounded-full animate-pulse ${isDarkMode ? 'bg-white' : 'bg-gray-900'}`}></span>
+                                                        <span className={`inline-block h-3 w-3 rounded-full animate-pulse ${isDarkMode ? 'bg-white' : 'bg-gray-900'}`} style={{ animationDelay: '0.2s' }}></span>
+                                                        <span className={`inline-block h-3 w-3 rounded-full animate-pulse ${isDarkMode ? 'bg-white' : 'bg-gray-900'}`} style={{ animationDelay: '0.4s' }}></span>
+                                                    </div>
+                                                ) : (
+                                                    `$${(activeFilters.length > 0 || searchTerm ? filteredValue : allValue).toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+                                                )}
+                                            </div>
                                             <div className={`absolute -bottom-2 left-0 w-full h-px ${isDarkMode ? 'bg-white/30' : 'bg-gray-300'
                                                 }`}></div>
                                         </div>
@@ -1429,15 +1362,20 @@ export default function ConsultasIneaGeneral() {
                                             ? 'bg-white/5'
                                             : 'bg-gray-100'
                                             }`}></div>
-                                        <AnimatedCounter
-                                            value={activeFilters.length > 0 || searchTerm ? filteredMueblesOmni.length : muebles.length}
-                                            className={`relative text-3xl font-bold transition-all duration-500 px-6 py-3 ${isDarkMode
-                                                ? 'text-white/90 group-hover:text-white'
-                                                : 'text-gray-800 group-hover:text-gray-900'
-                                                }`}
-                                            loading={loading}
-                                            isInteger={true}
-                                        />
+                                        <div className={`relative text-3xl font-bold transition-all duration-500 px-6 py-3 ${isDarkMode
+                                            ? 'text-white/90 group-hover:text-white'
+                                            : 'text-gray-800 group-hover:text-gray-900'
+                                            }`}>
+                                            {loading ? (
+                                                <div className="flex items-center justify-center gap-2">
+                                                    <span className={`inline-block h-2.5 w-2.5 rounded-full animate-pulse ${isDarkMode ? 'bg-white' : 'bg-gray-900'}`}></span>
+                                                    <span className={`inline-block h-2.5 w-2.5 rounded-full animate-pulse ${isDarkMode ? 'bg-white' : 'bg-gray-900'}`} style={{ animationDelay: '0.2s' }}></span>
+                                                    <span className={`inline-block h-2.5 w-2.5 rounded-full animate-pulse ${isDarkMode ? 'bg-white' : 'bg-gray-900'}`} style={{ animationDelay: '0.4s' }}></span>
+                                                </div>
+                                            ) : (
+                                                (activeFilters.length > 0 || searchTerm ? filteredMueblesOmni.length : muebles.length).toLocaleString('es-MX')
+                                            )}
+                                        </div>
                                     </div>
                                 </div>
                             </div>
@@ -1631,7 +1569,127 @@ export default function ConsultasIneaGeneral() {
                                         : 'bg-white divide-gray-200'
                                         }`}>
                                         {loading ? (
-                                            <TableSkeleton />
+                                            <>
+                                                {/* Skeleton rows que coinciden con la estructura real */}
+                                                {[...Array(rowsPerPage)].map((_, i) => (
+                                                    <tr
+                                                        key={`skeleton-${i}`}
+                                                        className={`transition-all duration-200 animate-fadeInUp ${isDarkMode
+                                                            ? 'hover:bg-gray-800'
+                                                            : 'hover:bg-gray-50'
+                                                            }`}
+                                                        style={{ 
+                                                            animationDelay: `${i * 40}ms`
+                                                        }}
+                                                    >
+                                                        {/* ID Inventario column */}
+                                                        <td className="px-4 py-3">
+                                                            <div className={`h-4 w-24 rounded animate-pulse ${isDarkMode ? 'bg-gray-800/60' : 'bg-gray-200'
+                                                                }`} />
+                                                        </td>
+
+                                                        {/* Descripción column */}
+                                                        <td className="px-4 py-3">
+                                                            <div className="space-y-1">
+                                                                <div className={`h-4 w-full max-w-xs rounded animate-pulse ${isDarkMode ? 'bg-gray-800/60' : 'bg-gray-200'
+                                                                    }`} />
+                                                                <div className={`h-4 w-3/4 rounded animate-pulse ${isDarkMode ? 'bg-gray-800/40' : 'bg-gray-100'
+                                                                    }`} />
+                                                            </div>
+                                                        </td>
+
+                                                        {/* Área column */}
+                                                        <td className="px-4 py-3">
+                                                            <div className={`h-4 w-28 rounded animate-pulse ${isDarkMode ? 'bg-gray-800/60' : 'bg-gray-200'
+                                                                }`} />
+                                                        </td>
+
+                                                        {/* Director/Jefe column */}
+                                                        <td className="px-4 py-3">
+                                                            <div className={`h-4 w-32 rounded animate-pulse ${isDarkMode ? 'bg-gray-800/60' : 'bg-gray-200'
+                                                                }`} />
+                                                        </td>
+
+                                                        {/* Estado column */}
+                                                        <td className="px-4 py-3">
+                                                            <div className={`inline-flex items-center px-2.5 py-1 rounded-full border animate-pulse ${isDarkMode
+                                                                ? 'bg-gray-800/30 border-gray-700'
+                                                                : 'bg-gray-100 border-gray-300'
+                                                                }`}>
+                                                                <div className={`h-3 w-16 rounded ${isDarkMode ? 'bg-gray-700' : 'bg-gray-300'
+                                                                    }`} />
+                                                            </div>
+                                                        </td>
+
+                                                        {/* Folio Resguardo column */}
+                                                        <td className="px-4 py-3">
+                                                            <div className={`inline-flex items-center px-2.5 py-1 rounded-full border animate-pulse ${isDarkMode
+                                                                ? 'bg-gray-800/30 border-gray-700'
+                                                                : 'bg-gray-100 border-gray-300'
+                                                                }`}>
+                                                                <div className={`h-3 w-20 rounded ${isDarkMode ? 'bg-gray-700' : 'bg-gray-300'
+                                                                    }`} />
+                                                            </div>
+                                                        </td>
+                                                    </tr>
+                                                ))}
+                                                {/* Overlay con progreso sobre el skeleton */}
+                                                <tr>
+                                                    <td colSpan={6} className="relative">
+                                                        <div className={`absolute inset-0 flex items-center justify-center pointer-events-none animate-fadeInScale ${isDarkMode ? 'bg-black/60' : 'bg-white/60'
+                                                            } backdrop-blur-sm`}
+                                                            style={{
+                                                                animationDelay: '200ms'
+                                                            }}
+                                                        >
+                                                            <div className="flex flex-col items-center gap-3 py-8">
+                                                                {/* Spinner compacto */}
+                                                                <div className="relative">
+                                                                    <span className="relative flex h-12 w-12">
+                                                                        <span className={`animate-ping absolute inline-flex h-full w-full rounded-full opacity-20 ${isDarkMode ? 'bg-white' : 'bg-gray-900'
+                                                                            }`}></span>
+                                                                        <span className={`relative inline-flex rounded-full h-12 w-12 border-4 border-t-transparent animate-spin ${isDarkMode ? 'border-white' : 'border-gray-900'
+                                                                            }`}></span>
+                                                                    </span>
+                                                                    {loadingProgress.total > 0 && (
+                                                                        <div className="absolute inset-0 flex items-center justify-center">
+                                                                            <span className={`text-xs font-mono font-bold ${isDarkMode ? 'text-white' : 'text-gray-900'
+                                                                                }`}>
+                                                                                {Math.round((loadingProgress.count / Math.max(loadingProgress.total, 1)) * 100)}%
+                                                                            </span>
+                                                                        </div>
+                                                                    )}
+                                                                </div>
+
+                                                                {/* Mensaje y barra de progreso */}
+                                                                <div className="flex flex-col items-center gap-1">
+                                                                    <span className={`text-lg font-bold ${isDarkMode ? 'text-white' : 'text-gray-900'
+                                                                        }`}>
+                                                                        {loadingProgress.message || "Cargando inventario..."}
+                                                                    </span>
+
+                                                                    {loadingProgress.total > 0 && (
+                                                                        <>
+                                                                            <div className={`w-48 h-1.5 rounded-full overflow-hidden mt-1 ${isDarkMode ? 'bg-white/10' : 'bg-gray-300'
+                                                                                }`}>
+                                                                                <div
+                                                                                    className={`h-full rounded-full transition-all duration-300 ${isDarkMode ? 'bg-white/40' : 'bg-gray-900'
+                                                                                        }`}
+                                                                                    style={{ width: `${Math.min(100, Math.round((loadingProgress.count / loadingProgress.total) * 100))}%` }}
+                                                                                ></div>
+                                                                            </div>
+                                                                            <span className={`text-xs mt-1 ${isDarkMode ? 'text-gray-300' : 'text-gray-600'
+                                                                                }`}>
+                                                                                {loadingProgress.count.toLocaleString()} de {loadingProgress.total.toLocaleString()} registros
+                                                                            </span>
+                                                                        </>
+                                                                    )}
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    </td>
+                                                </tr>
+                                            </>
                                         ) : error ? (
                                             <tr className="h-96">
                                                 <td colSpan={5} className="px-6 py-24 text-center">
@@ -1686,13 +1744,13 @@ export default function ConsultasIneaGeneral() {
                                                 </td>
                                             </tr>
                                         ) : (
-                                            paginatedMuebles.map(item => {
+                                            paginatedMuebles.map((item, index) => {
                                                 const folio = item.id_inv ? foliosResguardo[item.id_inv] : undefined;
                                                 return (
                                                     <tr
                                                         key={item.id}
                                                         onClick={() => handleSelectItem(item)}
-                                                        className={`cursor-pointer transition-colors ${selectedItem?.id === item.id
+                                                        className={`cursor-pointer transition-all duration-300 animate-fadeInUp ${selectedItem?.id === item.id
                                                             ? (isDarkMode
                                                                 ? 'bg-blue-900/20 border-l-4 border-white'
                                                                 : 'bg-blue-50 border-l-4 border-blue-500'
@@ -1702,6 +1760,9 @@ export default function ConsultasIneaGeneral() {
                                                                 : 'hover:bg-gray-50'
                                                             )
                                                             }`}
+                                                        style={{ 
+                                                            animationDelay: `${index * 25}ms`
+                                                        }}
                                                     >
                                                         <td className={`px-4 py-3 whitespace-nowrap text-sm font-medium ${isDarkMode ? 'text-white' : 'text-gray-900'
                                                             }`}>
@@ -1737,7 +1798,7 @@ export default function ConsultasIneaGeneral() {
                                                                 );
                                                             })()}
                                                         </td>
-                                                        <td className={`px-4 py-3 text-sm ${isDarkMode ? 'text-gray-300' : 'text-gray-700'
+                                                        <td className={`px-4 py-3 text-sm transition-all duration-300 ${isDarkMode ? 'text-gray-300' : 'text-gray-700'
                                                             }`}>
                                                             {folio ? (
                                                                 <div className="relative">
@@ -2645,71 +2706,57 @@ export default function ConsultasIneaGeneral() {
 
                     {/* Modal para completar información del director */}
                     {showDirectorModal && (
-                        <div className={`fixed inset-0 flex items-center justify-center z-50 px-4 animate-fadeIn ${
-                            isDarkMode ? 'bg-black/90' : 'bg-black/50'
-                        }`}>
-                            <div className={`rounded-2xl shadow-2xl border w-full max-w-md overflow-hidden transition-all duration-300 transform ${
-                                isDarkMode 
-                                    ? 'bg-black border-yellow-600/30' 
-                                    : 'bg-white border-yellow-200'
+                        <div className={`fixed inset-0 flex items-center justify-center z-50 px-4 animate-fadeIn ${isDarkMode ? 'bg-black/90' : 'bg-black/50'
                             }`}>
-                                <div className={`relative p-6 ${
-                                    isDarkMode 
-                                        ? 'bg-gradient-to-b from-black to-gray-900' 
-                                        : 'bg-gradient-to-b from-yellow-50 to-white'
+                            <div className={`rounded-2xl shadow-2xl border w-full max-w-md overflow-hidden transition-all duration-300 transform ${isDarkMode
+                                ? 'bg-black border-yellow-600/30'
+                                : 'bg-white border-yellow-200'
                                 }`}>
-                                    <div className={`absolute top-0 left-0 w-full h-1 ${
-                                        isDarkMode ? 'bg-white/30' : 'bg-yellow-500'
-                                    }`}></div>
+                                <div className={`relative p-6 ${isDarkMode
+                                    ? 'bg-gradient-to-b from-black to-gray-900'
+                                    : 'bg-gradient-to-b from-yellow-50 to-white'
+                                    }`}>
+                                    <div className={`absolute top-0 left-0 w-full h-1 ${isDarkMode ? 'bg-white/30' : 'bg-yellow-500'
+                                        }`}></div>
 
                                     <div className="flex flex-col items-center text-center mb-4">
-                                        <div className={`p-3 rounded-full border mb-3 ${
-                                            isDarkMode 
-                                                ? 'bg-yellow-500/10 border-yellow-500/30' 
-                                                : 'bg-yellow-100 border-yellow-200'
-                                        }`}>
+                                        <div className={`p-3 rounded-full border mb-3 ${isDarkMode
+                                            ? 'bg-yellow-500/10 border-yellow-500/30'
+                                            : 'bg-yellow-100 border-yellow-200'
+                                            }`}>
                                             <AlertCircle className="h-8 w-8 text-yellow-500" />
                                         </div>
-                                        <h3 className={`text-2xl font-bold ${
-                                            isDarkMode ? 'text-white' : 'text-gray-900'
-                                        }`}>Información requerida</h3>
-                                        <p className={`mt-2 ${
-                                            isDarkMode ? 'text-gray-400' : 'text-gray-600'
-                                        }`}>
+                                        <h3 className={`text-2xl font-bold ${isDarkMode ? 'text-white' : 'text-gray-900'
+                                            }`}>Información requerida</h3>
+                                        <p className={`mt-2 ${isDarkMode ? 'text-gray-400' : 'text-gray-600'
+                                            }`}>
                                             Por favor complete el área del director/jefe de área seleccionado
                                         </p>
                                     </div>
 
                                     <div className="space-y-5 mt-6">
-                                        <div className={`rounded-lg border p-4 ${
-                                            isDarkMode 
-                                                ? 'border-gray-800 bg-gray-900/50' 
-                                                : 'border-gray-200 bg-gray-50'
-                                        }`}>
-                                            <label className={`flex items-center gap-2 text-sm font-medium mb-2 ${
-                                                isDarkMode ? 'text-gray-300' : 'text-gray-700'
-                                            }`}>Director/Jefe seleccionado</label>
+                                        <div className={`rounded-lg border p-4 ${isDarkMode
+                                            ? 'border-gray-800 bg-gray-900/50'
+                                            : 'border-gray-200 bg-gray-50'
+                                            }`}>
+                                            <label className={`flex items-center gap-2 text-sm font-medium mb-2 ${isDarkMode ? 'text-gray-300' : 'text-gray-700'
+                                                }`}>Director/Jefe seleccionado</label>
                                             <div className="flex items-center gap-3">
-                                                <div className={`p-2 rounded-lg ${
-                                                    isDarkMode ? 'bg-gray-800' : 'bg-yellow-100'
-                                                }`}>
-                                                    <User className={`h-4 w-4 ${
-                                                        isDarkMode ? 'text-yellow-400' : 'text-yellow-600'
-                                                    }`} />
+                                                <div className={`p-2 rounded-lg ${isDarkMode ? 'bg-gray-800' : 'bg-yellow-100'
+                                                    }`}>
+                                                    <User className={`h-4 w-4 ${isDarkMode ? 'text-yellow-400' : 'text-yellow-600'
+                                                        }`} />
                                                 </div>
-                                                <span className={`font-medium ${
-                                                    isDarkMode ? 'text-white' : 'text-gray-900'
-                                                }`}>{incompleteDirector?.nombre || 'Director'}</span>
+                                                <span className={`font-medium ${isDarkMode ? 'text-white' : 'text-gray-900'
+                                                    }`}>{incompleteDirector?.nombre || 'Director'}</span>
                                             </div>
                                         </div>
 
                                         <div>
-                                            <label className={`flex items-center gap-2 text-sm font-medium mb-2 ${
-                                                isDarkMode ? 'text-gray-300' : 'text-gray-700'
-                                            }`}>
-                                                <LayoutGrid className={`h-4 w-4 ${
-                                                    isDarkMode ? 'text-gray-400' : 'text-gray-500'
-                                                }`} />
+                                            <label className={`flex items-center gap-2 text-sm font-medium mb-2 ${isDarkMode ? 'text-gray-300' : 'text-gray-700'
+                                                }`}>
+                                                <LayoutGrid className={`h-4 w-4 ${isDarkMode ? 'text-gray-400' : 'text-gray-500'
+                                                    }`} />
                                                 Área
                                             </label>
                                             <input
@@ -2717,11 +2764,10 @@ export default function ConsultasIneaGeneral() {
                                                 value={directorFormData.area}
                                                 onChange={(e) => setDirectorFormData({ area: e.target.value })}
                                                 placeholder="Ej: Administración, Recursos Humanos, Contabilidad..."
-                                                className={`block w-full border rounded-lg py-3 px-4 focus:outline-none focus:ring-1 transition-colors ${
-                                                    isDarkMode 
-                                                        ? 'bg-gray-900 border-gray-700 text-white placeholder-gray-500 focus:border-yellow-500 focus:ring-yellow-500' 
-                                                        : 'bg-white border-gray-300 text-gray-900 placeholder-gray-400 focus:border-yellow-500 focus:ring-yellow-500'
-                                                }`}
+                                                className={`block w-full border rounded-lg py-3 px-4 focus:outline-none focus:ring-1 transition-colors ${isDarkMode
+                                                    ? 'bg-gray-900 border-gray-700 text-white placeholder-gray-500 focus:border-yellow-500 focus:ring-yellow-500'
+                                                    : 'bg-white border-gray-300 text-gray-900 placeholder-gray-400 focus:border-yellow-500 focus:ring-yellow-500'
+                                                    }`}
                                                 required
                                             />
                                             {!directorFormData.area && (
@@ -2734,18 +2780,16 @@ export default function ConsultasIneaGeneral() {
                                     </div>
                                 </div>
 
-                                <div className={`p-5 border-t flex justify-end gap-3 ${
-                                    isDarkMode 
-                                        ? 'bg-black border-gray-800' 
-                                        : 'bg-white border-gray-200'
-                                }`}>
+                                <div className={`p-5 border-t flex justify-end gap-3 ${isDarkMode
+                                    ? 'bg-black border-gray-800'
+                                    : 'bg-white border-gray-200'
+                                    }`}>
                                     <button
                                         onClick={() => setShowDirectorModal(false)}
-                                        className={`px-5 py-2.5 rounded-lg text-sm border transition-colors flex items-center gap-2 ${
-                                            isDarkMode 
-                                                ? 'bg-gray-900 text-white hover:bg-gray-800 border-gray-800' 
-                                                : 'bg-gray-100 text-gray-700 hover:bg-gray-200 border-gray-300'
-                                        }`}
+                                        className={`px-5 py-2.5 rounded-lg text-sm border transition-colors flex items-center gap-2 ${isDarkMode
+                                            ? 'bg-gray-900 text-white hover:bg-gray-800 border-gray-800'
+                                            : 'bg-gray-100 text-gray-700 hover:bg-gray-200 border-gray-300'
+                                            }`}
                                     >
                                         <X className="h-4 w-4" />
                                         Cancelar
@@ -2753,15 +2797,14 @@ export default function ConsultasIneaGeneral() {
                                     <button
                                         onClick={saveDirectorInfo}
                                         disabled={savingDirector || !directorFormData.area}
-                                        className={`px-5 py-2.5 rounded-lg text-sm flex items-center gap-2 transition-all duration-300 ${
-                                            savingDirector || !directorFormData.area
-                                                ? isDarkMode
-                                                    ? 'bg-gray-900 text-gray-500 cursor-not-allowed border border-gray-800'
-                                                    : 'bg-gray-200 text-gray-400 cursor-not-allowed border border-gray-300'
-                                                : isDarkMode
-                                                    ? 'bg-white/20 text-white font-medium hover:bg-white/30'
-                                                    : 'bg-yellow-600 text-white font-medium hover:bg-yellow-700'
-                                        }`}
+                                        className={`px-5 py-2.5 rounded-lg text-sm flex items-center gap-2 transition-all duration-300 ${savingDirector || !directorFormData.area
+                                            ? isDarkMode
+                                                ? 'bg-gray-900 text-gray-500 cursor-not-allowed border border-gray-800'
+                                                : 'bg-gray-200 text-gray-400 cursor-not-allowed border border-gray-300'
+                                            : isDarkMode
+                                                ? 'bg-white/20 text-white font-medium hover:bg-white/30'
+                                                : 'bg-yellow-600 text-white font-medium hover:bg-yellow-700'
+                                            }`}
                                     >
                                         {savingDirector ? (
                                             <RefreshCw className="h-4 w-4 animate-spin" />
@@ -2841,71 +2884,57 @@ export default function ConsultasIneaGeneral() {
 
                     {/* Modal de confirmación de baja */}
                     {showBajaModal && selectedItem && (
-                        <div className={`fixed inset-0 flex items-center justify-center z-50 px-4 animate-fadeIn ${
-                            isDarkMode ? 'bg-black/90' : 'bg-black/50'
-                        }`}>
-                            <div className={`rounded-2xl shadow-2xl border w-full max-w-md overflow-hidden transition-all duration-300 transform ${
-                                isDarkMode 
-                                    ? 'bg-black border-red-600/30' 
-                                    : 'bg-white border-red-200'
+                        <div className={`fixed inset-0 flex items-center justify-center z-50 px-4 animate-fadeIn ${isDarkMode ? 'bg-black/90' : 'bg-black/50'
                             }`}>
-                                <div className={`relative p-6 ${
-                                    isDarkMode 
-                                        ? 'bg-gradient-to-b from-black to-gray-900' 
-                                        : 'bg-gradient-to-b from-red-50 to-white'
+                            <div className={`rounded-2xl shadow-2xl border w-full max-w-md overflow-hidden transition-all duration-300 transform ${isDarkMode
+                                ? 'bg-black border-red-600/30'
+                                : 'bg-white border-red-200'
                                 }`}>
-                                    <div className={`absolute top-0 left-0 w-full h-1 ${
-                                        isDarkMode ? 'bg-white/30' : 'bg-red-500'
-                                    }`}></div>
+                                <div className={`relative p-6 ${isDarkMode
+                                    ? 'bg-gradient-to-b from-black to-gray-900'
+                                    : 'bg-gradient-to-b from-red-50 to-white'
+                                    }`}>
+                                    <div className={`absolute top-0 left-0 w-full h-1 ${isDarkMode ? 'bg-white/30' : 'bg-red-500'
+                                        }`}></div>
                                     <div className="flex flex-col items-center text-center mb-4">
-                                        <div className={`p-3 rounded-full border mb-3 ${
-                                            isDarkMode 
-                                                ? 'bg-red-500/10 border-red-500/30' 
-                                                : 'bg-red-100 border-red-200'
-                                        }`}>
+                                        <div className={`p-3 rounded-full border mb-3 ${isDarkMode
+                                            ? 'bg-red-500/10 border-red-500/30'
+                                            : 'bg-red-100 border-red-200'
+                                            }`}>
                                             <AlertTriangle className="h-8 w-8 text-red-500" />
                                         </div>
-                                        <h3 className={`text-2xl font-bold ${
-                                            isDarkMode ? 'text-white' : 'text-gray-900'
-                                        }`}>¿Dar de baja este artículo?</h3>
+                                        <h3 className={`text-2xl font-bold ${isDarkMode ? 'text-white' : 'text-gray-900'
+                                            }`}>¿Dar de baja este artículo?</h3>
                                     </div>
-                                    <div className={`rounded-lg border p-4 mb-4 ${
-                                        isDarkMode 
-                                            ? 'border-gray-800 bg-gray-900/50' 
-                                            : 'border-gray-200 bg-gray-50'
-                                    }`}>
-                                        <div className={`text-left text-sm ${
-                                            isDarkMode ? 'text-gray-300' : 'text-gray-700'
+                                    <div className={`rounded-lg border p-4 mb-4 ${isDarkMode
+                                        ? 'border-gray-800 bg-gray-900/50'
+                                        : 'border-gray-200 bg-gray-50'
                                         }`}>
-                                            <div><span className={`font-bold ${
-                                                isDarkMode ? 'text-white' : 'text-gray-900'
-                                            }`}>ID:</span> {selectedItem.id_inv}</div>
-                                            <div><span className={`font-bold ${
-                                                isDarkMode ? 'text-white' : 'text-gray-900'
-                                            }`}>Descripción:</span> {selectedItem.descripcion}</div>
-                                            <div><span className={`font-bold ${
-                                                isDarkMode ? 'text-white' : 'text-gray-900'
-                                            }`}>Área:</span> {selectedItem.area}</div>
+                                        <div className={`text-left text-sm ${isDarkMode ? 'text-gray-300' : 'text-gray-700'
+                                            }`}>
+                                            <div><span className={`font-bold ${isDarkMode ? 'text-white' : 'text-gray-900'
+                                                }`}>ID:</span> {selectedItem.id_inv}</div>
+                                            <div><span className={`font-bold ${isDarkMode ? 'text-white' : 'text-gray-900'
+                                                }`}>Descripción:</span> {selectedItem.descripcion}</div>
+                                            <div><span className={`font-bold ${isDarkMode ? 'text-white' : 'text-gray-900'
+                                                }`}>Área:</span> {selectedItem.area}</div>
                                         </div>
                                     </div>
                                     <div>
-                                        <label className={`flex items-center gap-2 text-sm font-medium mb-2 ${
-                                            isDarkMode ? 'text-gray-300' : 'text-gray-700'
-                                        }`}>
-                                            <Info className={`h-4 w-4 ${
-                                                isDarkMode ? 'text-gray-400' : 'text-gray-500'
-                                            }`} />
+                                        <label className={`flex items-center gap-2 text-sm font-medium mb-2 ${isDarkMode ? 'text-gray-300' : 'text-gray-700'
+                                            }`}>
+                                            <Info className={`h-4 w-4 ${isDarkMode ? 'text-gray-400' : 'text-gray-500'
+                                                }`} />
                                             Causa de Baja
                                         </label>
                                         <textarea
                                             value={bajaCause}
                                             onChange={(e) => setBajaCause(e.target.value)}
                                             placeholder="Ingrese la causa de baja"
-                                            className={`block w-full border rounded-lg py-3 px-4 focus:outline-none focus:ring-1 transition-colors ${
-                                                isDarkMode 
-                                                    ? 'bg-gray-900 border-gray-700 text-white placeholder-gray-500 focus:border-red-500 focus:ring-red-500' 
-                                                    : 'bg-white border-gray-300 text-gray-900 placeholder-gray-400 focus:border-red-500 focus:ring-red-500'
-                                            }`}
+                                            className={`block w-full border rounded-lg py-3 px-4 focus:outline-none focus:ring-1 transition-colors ${isDarkMode
+                                                ? 'bg-gray-900 border-gray-700 text-white placeholder-gray-500 focus:border-red-500 focus:ring-red-500'
+                                                : 'bg-white border-gray-300 text-gray-900 placeholder-gray-400 focus:border-red-500 focus:ring-red-500'
+                                                }`}
                                             rows={3}
                                             required
                                         />
@@ -2917,18 +2946,16 @@ export default function ConsultasIneaGeneral() {
                                         )}
                                     </div>
                                 </div>
-                                <div className={`p-5 border-t flex justify-end gap-3 ${
-                                    isDarkMode 
-                                        ? 'bg-black border-gray-800' 
-                                        : 'bg-white border-gray-200'
-                                }`}>
+                                <div className={`p-5 border-t flex justify-end gap-3 ${isDarkMode
+                                    ? 'bg-black border-gray-800'
+                                    : 'bg-white border-gray-200'
+                                    }`}>
                                     <button
                                         onClick={() => setShowBajaModal(false)}
-                                        className={`px-5 py-2.5 rounded-lg text-sm border transition-colors flex items-center gap-2 ${
-                                            isDarkMode 
-                                                ? 'bg-gray-900 text-white hover:bg-gray-800 border-gray-800' 
-                                                : 'bg-gray-100 text-gray-700 hover:bg-gray-200 border-gray-300'
-                                        }`}
+                                        className={`px-5 py-2.5 rounded-lg text-sm border transition-colors flex items-center gap-2 ${isDarkMode
+                                            ? 'bg-gray-900 text-white hover:bg-gray-800 border-gray-800'
+                                            : 'bg-gray-100 text-gray-700 hover:bg-gray-200 border-gray-300'
+                                            }`}
                                     >
                                         <X className="h-4 w-4" />
                                         Cancelar
@@ -2936,15 +2963,14 @@ export default function ConsultasIneaGeneral() {
                                     <button
                                         onClick={confirmBaja}
                                         disabled={!bajaCause}
-                                        className={`px-5 py-2.5 rounded-lg text-sm flex items-center gap-2 transition-all duration-300 ${
-                                            !bajaCause
-                                                ? isDarkMode
-                                                    ? 'bg-gray-900 text-gray-500 cursor-not-allowed border border-gray-800'
-                                                    : 'bg-gray-200 text-gray-400 cursor-not-allowed border border-gray-300'
-                                                : isDarkMode
-                                                    ? 'bg-white/20 text-white font-medium hover:bg-white/30'
-                                                    : 'bg-red-600 text-white font-medium hover:bg-red-700'
-                                        }`}
+                                        className={`px-5 py-2.5 rounded-lg text-sm flex items-center gap-2 transition-all duration-300 ${!bajaCause
+                                            ? isDarkMode
+                                                ? 'bg-gray-900 text-gray-500 cursor-not-allowed border border-gray-800'
+                                                : 'bg-gray-200 text-gray-400 cursor-not-allowed border border-gray-300'
+                                            : isDarkMode
+                                                ? 'bg-white/20 text-white font-medium hover:bg-white/30'
+                                                : 'bg-red-600 text-white font-medium hover:bg-red-700'
+                                            }`}
                                     >
                                         <Trash2 className="h-4 w-4" />
                                         Dar de Baja
@@ -2956,63 +2982,51 @@ export default function ConsultasIneaGeneral() {
 
                     {/* Modal de confirmación para marcar como inactivo */}
                     {showInactiveModal && selectedItem && (
-                        <div className={`fixed inset-0 flex items-center justify-center z-50 px-4 animate-fadeIn ${
-                            isDarkMode ? 'bg-black/90' : 'bg-black/50'
-                        }`}>
-                            <div className={`rounded-2xl shadow-2xl border w-full max-w-md overflow-hidden transition-all duration-300 transform ${
-                                isDarkMode 
-                                    ? 'bg-black border-orange-600/30' 
-                                    : 'bg-white border-orange-200'
+                        <div className={`fixed inset-0 flex items-center justify-center z-50 px-4 animate-fadeIn ${isDarkMode ? 'bg-black/90' : 'bg-black/50'
                             }`}>
-                                <div className={`relative p-6 ${
-                                    isDarkMode 
-                                        ? 'bg-gradient-to-b from-black to-gray-900' 
-                                        : 'bg-gradient-to-b from-orange-50 to-white'
+                            <div className={`rounded-2xl shadow-2xl border w-full max-w-md overflow-hidden transition-all duration-300 transform ${isDarkMode
+                                ? 'bg-black border-orange-600/30'
+                                : 'bg-white border-orange-200'
                                 }`}>
+                                <div className={`relative p-6 ${isDarkMode
+                                    ? 'bg-gradient-to-b from-black to-gray-900'
+                                    : 'bg-gradient-to-b from-orange-50 to-white'
+                                    }`}>
                                     <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-orange-500/60 via-orange-400 to-orange-500/60"></div>
                                     <div className="flex flex-col items-center text-center mb-4">
-                                        <div className={`p-3 rounded-full border mb-3 ${
-                                            isDarkMode 
-                                                ? 'bg-orange-500/10 border-orange-500/30' 
-                                                : 'bg-orange-100 border-orange-200'
-                                        }`}>
+                                        <div className={`p-3 rounded-full border mb-3 ${isDarkMode
+                                            ? 'bg-orange-500/10 border-orange-500/30'
+                                            : 'bg-orange-100 border-orange-200'
+                                            }`}>
                                             <AlertTriangle className="h-8 w-8 text-orange-500" />
                                         </div>
-                                        <h3 className={`text-2xl font-bold ${
-                                            isDarkMode ? 'text-white' : 'text-gray-900'
-                                        }`}>¿Marcar como INACTIVO?</h3>
-                                        <p className={`mt-2 ${
-                                            isDarkMode ? 'text-gray-400' : 'text-gray-600'
-                                        }`}>El artículo será marcado como <span className="text-orange-500 font-semibold">INACTIVO</span> en el inventario.</p>
+                                        <h3 className={`text-2xl font-bold ${isDarkMode ? 'text-white' : 'text-gray-900'
+                                            }`}>¿Marcar como INACTIVO?</h3>
+                                        <p className={`mt-2 ${isDarkMode ? 'text-gray-400' : 'text-gray-600'
+                                            }`}>El artículo será marcado como <span className="text-orange-500 font-semibold">INACTIVO</span> en el inventario.</p>
                                     </div>
-                                    <div className={`rounded-lg border p-4 mb-4 text-left text-sm ${
-                                        isDarkMode 
-                                            ? 'border-gray-800 bg-gray-900/50 text-gray-300' 
-                                            : 'border-gray-200 bg-gray-50 text-gray-700'
-                                    }`}>
-                                        <div><span className={`font-bold ${
-                                            isDarkMode ? 'text-white' : 'text-gray-900'
-                                        }`}>ID:</span> {selectedItem.id_inv}</div>
-                                        <div><span className={`font-bold ${
-                                            isDarkMode ? 'text-white' : 'text-gray-900'
-                                        }`}>Descripción:</span> {selectedItem.descripcion}</div>
-                                        <div><span className={`font-bold ${
-                                            isDarkMode ? 'text-white' : 'text-gray-900'
-                                        }`}>Área:</span> {selectedItem.area}</div>
+                                    <div className={`rounded-lg border p-4 mb-4 text-left text-sm ${isDarkMode
+                                        ? 'border-gray-800 bg-gray-900/50 text-gray-300'
+                                        : 'border-gray-200 bg-gray-50 text-gray-700'
+                                        }`}>
+                                        <div><span className={`font-bold ${isDarkMode ? 'text-white' : 'text-gray-900'
+                                            }`}>ID:</span> {selectedItem.id_inv}</div>
+                                        <div><span className={`font-bold ${isDarkMode ? 'text-white' : 'text-gray-900'
+                                            }`}>Descripción:</span> {selectedItem.descripcion}</div>
+                                        <div><span className={`font-bold ${isDarkMode ? 'text-white' : 'text-gray-900'
+                                            }`}>Área:</span> {selectedItem.area}</div>
                                     </div>
                                 </div>
-                                <div className={`p-5 border-t flex justify-end gap-3 ${
-                                    isDarkMode 
-                                        ? 'bg-black border-gray-800' 
-                                        : 'bg-white border-gray-200'
-                                }`}>
+                                <div className={`p-5 border-t flex justify-end gap-3 ${isDarkMode
+                                    ? 'bg-black border-gray-800'
+                                    : 'bg-white border-gray-200'
+                                    }`}>
                                     <button
                                         onClick={() => setShowInactiveModal(false)}
-                                        className={`px-5 py-2.5 rounded-lg text-sm border transition-colors flex items-center gap-2 ${
-                                            isDarkMode 
-                                                ? 'bg-gray-900 text-white hover:bg-gray-800 border-gray-800' 
-                                                : 'bg-gray-100 text-gray-700 hover:bg-gray-200 border-gray-300'
-                                        }`}
+                                        className={`px-5 py-2.5 rounded-lg text-sm border transition-colors flex items-center gap-2 ${isDarkMode
+                                            ? 'bg-gray-900 text-white hover:bg-gray-800 border-gray-800'
+                                            : 'bg-gray-100 text-gray-700 hover:bg-gray-200 border-gray-300'
+                                            }`}
                                     >
                                         <X className="h-4 w-4" />
                                         Cancelar
