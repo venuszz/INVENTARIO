@@ -215,3 +215,39 @@ body, * {
   scrollbar-width: thin;
   scrollbar-color: rgba(255, 255, 255, 0.2) transparent;
 }
+
+/* Animaciones para el popover de indexación */
+@keyframes fadeInRight {
+  from {
+    opacity: 0;
+    transform: translateX(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: -1000px 0;
+  }
+  100% {
+    background-position: 1000px 0;
+  }
+}
+
+.animate-fadeInRight {
+  animation: fadeInRight 0.4s ease-out;
+}
+
+.animate-shimmer {
+  background: linear-gradient(
+    90deg,
+    currentColor 0%,
+    rgba(255, 255, 255, 0.5) 50%,
+    currentColor 100%
+  );
+  background-size: 1000px 100%;
+  animation: shimmer 2s infinite linear;
+}

@@ -4,7 +4,7 @@ import { generatePDF } from '@/components/consultas/PDFLevantamiento';
 import { generatePDF as generatePDFPerArea } from '@/components/consultas/PDFLevantamientoPerArea';
 import { useUserRole } from "@/hooks/useUserRole";
 import React from 'react';
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import {
     Search, RefreshCw, ChevronLeft, ChevronRight,
     ArrowUpDown, AlertCircle, X, FileUp, File
@@ -14,6 +14,8 @@ import { useRouter } from 'next/navigation';
 import { BadgeCheck } from 'lucide-react';
 import ReactDOM from 'react-dom';
 import { useTheme } from '@/context/ThemeContext';
+import { useIneaIndexation } from '@/context/IneaIndexationContext';
+import { useIteaIndexation } from '@/context/IteaIndexationContext';
 
 // Tipo unificado para INEA/ITEA
 interface LevMueble {
@@ -63,13 +65,24 @@ function clean(str: string) {
 }
 
 export default function LevantamientoUnificado() {
-    const [muebles, setMuebles] = useState<LevMueble[]>([]);
-    const [loading, setLoading] = useState(false);
-    const [loadingProgress, setLoadingProgress] = useState({ count: 0, total: 0, message: '' });
+    // Usar los contextos de indexación
+    const ineaContext = useIneaIndexation();
+    const iteaContext = useIteaIndexation();
+    
+    // Combinar datos de ambos contextos
+    const muebles = useMemo(() => {
+        const ineaData = ineaContext.data.map(item => ({ ...item, origen: 'INEA' as const }));
+        const iteaData = iteaContext.muebles.map(item => ({ ...item, origen: 'ITEA' as const }));
+        return [...ineaData, ...iteaData];
+    }, [ineaContext.data, iteaContext.muebles]);
+    
+    // Estado de carga combinado
+    const loading = ineaContext.isIndexing || iteaContext.isIndexing;
+    const error = ineaContext.error || iteaContext.error;
+    
     const role = useUserRole();
     const isAdmin = role === "admin" || role === "superadmin";
     const { isDarkMode } = useTheme();
-    const [error, setError] = useState<string | null>(null);
     const [currentPage, setCurrentPage] = useState(1);
     const [rowsPerPage, setRowsPerPage] = useState(10);
     const [showDirectorDataModal, setShowDirectorDataModal] = useState(false);
@@ -457,7 +470,6 @@ export default function LevantamientoUnificado() {
             // Elimino la obtención de estados, estatus, áreas, rubros, formadq, resguardantes
         } catch (error) {
             console.error('Error al cargar opciones de filtro:', error);
-            setError('Error al cargar opciones de filtro');
         }
     }, []);
 
@@ -466,13 +478,11 @@ export default function LevantamientoUnificado() {
     // Función para manejar la exportación
     const handleExport = async () => {
         try {
-            setLoading(true);
             // Usar los datos filtrados actualmente en la tabla
             const exportData = filteredMuebles;
 
             if (!exportData || exportData.length === 0) {
                 setMessage({ type: 'error', text: 'No hay datos para exportar.' });
-                setLoading(false);
                 return;
             }
 
@@ -534,86 +544,20 @@ export default function LevantamientoUnificado() {
         } catch (error) {
             console.error('Error al exportar:', error);
             setMessage({ type: 'error', text: 'Error al generar el archivo.' });
-        } finally {
-            setLoading(false);
         }
     };
 
-    // Modificar fetchMuebles para traer todos los datos de ambas tablas sin paginación backend
-    const fetchMuebles = useCallback(async () => {
-        setLoading(true);
-        setError(null);
-        setLoadingProgress({ count: 0, total: 0, message: 'Iniciando carga de registros...' });
-        
-        try {
-            // Helper para traer todos los datos en lotes grandes
-            const fetchAllRows = async (table: 'muebles' | 'mueblesitea') => {
-                let allRows: LevMueble[] = [];
-                let from = 0;
-                const pageSize = 1000;
-                let keepGoing = true;
-                
-                // Primero obtenemos el conteo total para mostrar progreso
-                const { count } = await supabase.from(table).select('*', { count: 'exact', head: true });
-                const totalInTable = count || 0;
-                setLoadingProgress(prev => ({
-                    count: prev.count,
-                    total: prev.total + totalInTable,
-                    message: `Preparando carga de ${prev.total + totalInTable} registros...`
-                }));
-                
-                while (keepGoing) {
-                    const { data, error } = await supabase.from(table).select('*').range(from, from + pageSize - 1);
-                    if (error) throw error;
-                    if (data && data.length > 0) {
-                        allRows = allRows.concat(data);
-                        
-                        // Actualizar progreso
-                        setLoadingProgress(prev => ({
-                            count: prev.count + data.length,
-                            total: prev.total,
-                            message: `Cargando ${prev.count + data.length} de ${prev.total} registros...`
-                        }));
-                        
-                        if (data.length < pageSize) {
-                            keepGoing = false;
-                        } else {
-                            from += pageSize;
-                        }
-                    } else {
-                        keepGoing = false;
-                    }
-                }
-                return allRows;
-            };
-            
-            // Traer todos los datos de ambas tablas
-            setLoadingProgress(prev => ({ ...prev, message: 'Conectando con la base de datos...' }));
-            const [ineaRows, iteaRows] = await Promise.all([
-                fetchAllRows('muebles'),
-                fetchAllRows('mueblesitea')
-            ]);
-            
-            // Combinar y procesar los resultados
-            setLoadingProgress(prev => ({ ...prev, message: 'Procesando datos...' }));
-            const allData = [
-                ...ineaRows.map(item => ({ ...item, origen: 'INEA' as const })),
-                ...iteaRows.map(item => ({ ...item, origen: 'ITEA' as const }))
-            ];
-            setMuebles(allData);
-        } catch (error) {
-            console.error('Error al cargar muebles:', error);
-            setError('Error al cargar los datos. Por favor, intente nuevamente.');
-            setMuebles([]);
-        } finally {
-            setLoading(false);
-        }
-    }, []);
+    // Función para reindexar ambos contextos
+    const handleReindex = useCallback(async () => {
+        await Promise.all([
+            ineaContext.reindex(),
+            iteaContext.reindex()
+        ]);
+    }, [ineaContext, iteaContext]);
 
     useEffect(() => {
         fetchFilterOptions();
-        fetchMuebles();
-    }, [fetchFilterOptions, fetchMuebles]);
+    }, [fetchFilterOptions]);
 
     useEffect(() => {
         if (message) {
@@ -643,7 +587,7 @@ export default function LevantamientoUnificado() {
 
     const router = useRouter();
     // Estado para folios de resguardo por id_inv
-    const [foliosResguardo, setFoliosResguardo] = useState<{ [id_inv: string]: string | null }>({});
+    const [foliosResguardo, setFoliosResguardo] = useState<{ [id_inv: string]: string }>({});
 
     // Buscar folio de resguardo para los artículos mostrados
     useEffect(() => {
@@ -1077,12 +1021,14 @@ export default function LevantamientoUnificado() {
                                                 PDF Personalizado
                                                 <span className="ml-1 px-1.5 py-0.5 text-xs bg-white/20 rounded-full border border-white/30 text-gray-900 font-semibold">Área+Director</span>
                                             </>
-                                        ) : 'PDF'}
+                                        ) : (
+                                            'PDF'
+                                        )}
                                     </span>
                                 </button>
                                 {/* Refresh Button */}
                                 <button
-                                    onClick={() => { setLoading(true); fetchMuebles(); }}
+                                    onClick={handleReindex}
                                     className={`
                                     group relative px-4 py-2.5 rounded-lg font-medium 
                                     flex items-center gap-2.5 transition-all duration-300
@@ -1090,7 +1036,8 @@ export default function LevantamientoUnificado() {
                                     hover:scale-[1.02] active:scale-[0.98]
                                     ${isDarkMode 
                                         ? 'bg-white/70 hover:bg-white/80 text-gray-900 border-white/60 hover:border-white/70'
-                                        : 'bg-gray-600 hover:bg-gray-700 text-white border-gray-600 hover:border-gray-700'}
+                                        : 'bg-gray-600 hover:bg-gray-700 text-white border-gray-600 hover:border-gray-700'
+                                    }
                                 `}
                                     title="Actualizar datos"
                                     disabled={loading}
@@ -1149,7 +1096,7 @@ export default function LevantamientoUnificado() {
                                     </button>
 
                                     <div className="flex flex-col items-center text-center mb-4">
-                                        <div className={`p-3 rounded-full border mb-3 ${isDarkMode ? 'border-white/30 bg-white/10' : 'border-blue-200 bg-blue-50'}`}>
+                                        <div className={`p-3 rounded-full border mb-3 ${isDarkMode ? 'border-white/30 bg-white/10' : 'bg-blue-200 bg-blue-50'}`}>
                                             {exportType === 'excel' ? (
                                                 <FileUp className={`h-8 w-8 ${isDarkMode ? 'text-white' : 'text-blue-600'}`} />
                                             ) : (
@@ -1401,35 +1348,20 @@ export default function LevantamientoUnificado() {
                                             </span>
                                             
                                             {/* Contador numérico en el centro del spinner */}
-                                            {loadingProgress.total > 0 && (
-                                                <div className="absolute inset-0 flex items-center justify-center">
-                                                    <span className={`text-sm font-mono font-bold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
-                                                        {Math.round((loadingProgress.count / Math.max(loadingProgress.total, 1)) * 100)}%
-                                                    </span>
-                                                </div>
-                                            )}
+                                            <div className="absolute inset-0 flex items-center justify-center">
+                                                <span className={`text-sm font-mono font-bold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
+                                                    Cargando inventario...
+                                                </span>
+                                            </div>
                                         </div>
                                         
                                         {/* Mensaje de carga con efecto de typing */}
                                         <div className="flex flex-col items-center gap-1">
                                             <span className={`text-2xl font-bold drop-shadow-md ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
-                                                {loadingProgress.message || "Cargando inventario..."}
+                                                Cargando inventario...
                                             </span>
-                                            
-                                            {/* Barra de progreso */}
-                                            {loadingProgress.total > 0 && (
-                                                <div className={`w-64 h-2 rounded-full overflow-hidden mt-2 ${isDarkMode ? 'bg-white/10' : 'bg-gray-300'}`}>
-                                                    <div 
-                                                        className={`h-full rounded-full transition-all duration-300 ${isDarkMode ? 'bg-white/40' : 'bg-blue-500'}`}
-                                                        style={{ width: `${Math.min(100, Math.round((loadingProgress.count / loadingProgress.total) * 100))}%` }}
-                                                    ></div>
-                                                </div>
-                                            )}
-                                            
                                             <span className={`text-sm mt-2 ${isDarkMode ? 'text-gray-300' : 'text-gray-600'}`}>
-                                                {loadingProgress.total > 0 
-                                                    ? `${loadingProgress.count.toLocaleString()} de ${loadingProgress.total.toLocaleString()} registros` 
-                                                    : "Por favor espera, esto puede tardar unos segundos."}
+                                                Por favor espera, esto puede tardar unos segundos.
                                             </span>
                                         </div>
                                     </div>
@@ -1441,7 +1373,7 @@ export default function LevantamientoUnificado() {
                                         <span className={`text-2xl font-bold ${isDarkMode ? 'text-white drop-shadow-white/30' : 'text-gray-900'}`}>Error al cargar los datos</span>
                                         <span className={`text-base mb-2 ${isDarkMode ? 'text-gray-300' : 'text-gray-600'}`}>{error}</span>
                                         <button
-                                            onClick={() => fetchMuebles()}
+                                            onClick={handleReindex}
                                             className={`px-6 py-3 rounded-xl font-bold text-lg shadow-lg border transition-all duration-200 flex items-center gap-2 mt-2 ${isDarkMode ? 'bg-white/10 text-white border-white/30 hover:bg-white/20' : 'bg-blue-600 text-white border-blue-600 hover:bg-blue-700'}`}
                                         >
                                             <RefreshCw className="h-5 w-5 animate-spin-slow" />
@@ -1456,7 +1388,7 @@ export default function LevantamientoUnificado() {
                                         <span className={`text-2xl font-bold ${isDarkMode ? 'text-white drop-shadow-white/30' : 'text-gray-900'}`}>No se encontraron resultados</span>
                                         <span className={`text-base mb-2 ${isDarkMode ? 'text-gray-300' : 'text-gray-600'}`}>Intenta ajustar los filtros o la búsqueda.</span>
                                         <button
-                                            onClick={() => fetchMuebles()}
+                                            onClick={handleReindex}
                                             className={`px-6 py-3 rounded-xl font-bold text-lg shadow-lg border transition-all duration-200 flex items-center gap-2 mt-2 ${isDarkMode ? 'bg-white/10 text-white border-white/30 hover:bg-white/20' : 'bg-blue-600 text-white border-blue-600 hover:bg-blue-700'}`}
                                         >
                                             <RefreshCw className="h-5 w-5 animate-spin-slow" />
@@ -1545,15 +1477,16 @@ export default function LevantamientoUnificado() {
                                                             </span>
                                                         </td>
                                                         <td className="px-4 py-3 text-xs">
-                                                            {foliosResguardo[item.id_inv] ? (
+                                                            {item.id_inv && foliosResguardo[item.id_inv as string] ? (
                                                                 <button
                                                                     className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full font-bold border shadow-sm hover:scale-105 transition-all duration-200 ${isDarkMode ? 'bg-white/10 text-white border-white/30 hover:bg-white/20 hover:text-white' : 'bg-blue-50 text-blue-700 border-blue-200 hover:bg-blue-100'}`}
-                                                                    title={`Ver resguardo ${foliosResguardo[item.id_inv]}`}
-                                                                    onClick={() => handleFolioClick(foliosResguardo[item.id_inv]!)}
+                                                                    title={`Ver resguardo ${foliosResguardo[item.id_inv as string]}`}
+                                                                    onClick={() => handleFolioClick(foliosResguardo[item.id_inv as string])}
                                                                 >
                                                                     <BadgeCheck className={`h-4 w-4 mr-1 ${isDarkMode ? 'text-white/80' : 'text-blue-600'}`} />
-                                                                    {foliosResguardo[item.id_inv]}
-                                                                </button>                                                            ) : (
+                                                                    {foliosResguardo[item.id_inv as string]}
+                                                                </button>
+                                                            ) : (
                                                                 <span className={`inline-flex items-center px-2.5 py-1 rounded-full font-bold border ${isDarkMode ? 'bg-gray-900/60 text-gray-400 border-gray-700' : 'bg-gray-100 text-gray-600 border-gray-300'}`}>Sin resguardo</span>
                                                             )}
                                                         </td>

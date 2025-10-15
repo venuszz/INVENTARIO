@@ -12,6 +12,7 @@ import RoleGuard from "@/components/roleGuard";
 import { useNotifications } from '@/hooks/useNotifications';
 import { useTheme } from '@/context/ThemeContext';
 import { useRouter } from 'next/navigation';
+import { useIteaIndexation } from '@/context/IteaIndexationContext';
 
 // Utility function to format date strings as 'DD/MM/YYYY'
 function formatDate(dateString: string | null | undefined): string {
@@ -29,7 +30,7 @@ interface Mueble {
     id_inv: string | null;
     rubro: string | null;
     descripcion: string | null;
-    valor: string | null;
+    valor: number | null;
     f_adq: string | null;
     formadq: string | null;
     proveedor: string | null;
@@ -40,7 +41,7 @@ interface Mueble {
     estado: string | null;
     estatus: string | null;
     area: string | null;
-    usufinal: string;
+    usufinal: string | null;
     fechabaja: string | null;
     causadebaja: string | null;
     resguardante: string | null;
@@ -72,83 +73,6 @@ interface Message {
     type: 'success' | 'error' | 'info' | 'warning';
     text: string;
 }
-
-// Componente para animar el conteo de valores
-interface AnimatedCounterProps {
-    value: number;
-    className?: string;
-    prefix?: string;
-    suffix?: string;
-    loading?: boolean;
-    isInteger?: boolean;
-}
-
-const AnimatedCounter = ({ value, className, prefix = '', suffix = '', loading = false, isInteger = false }: AnimatedCounterProps) => {
-    // Estado para el valor actual mostrado
-    const [displayValue, setDisplayValue] = useState(0);
-    
-    // Referencia para el intervalo de animación
-    const intervalRef = useRef<NodeJS.Timeout | null>(null);
-    
-    // Formatear el número según sea entero o decimal
-    const formatNumber = (num: number) => {
-        if (isInteger) {
-            return Math.floor(num).toLocaleString('es-MX');
-        } else {
-            return num.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-        }
-    };
-    
-    // Efecto para animar el contador
-    useEffect(() => {
-        // Limpiar intervalo anterior si existe
-        if (intervalRef.current) {
-            clearInterval(intervalRef.current);
-        }
-        
-        if (loading) {
-            // Durante la carga, mostrar números aleatorios
-            intervalRef.current = setInterval(() => {
-                const randomValue = isInteger ? 
-                    Math.floor(Math.random() * 1000) : 
-                    Math.random() * 10000;
-                setDisplayValue(randomValue);
-            }, 100);
-        } else {
-            // Animación de conteo hasta el valor final
-            const duration = 1500; // duración total en ms
-            const steps = 20; // número de pasos
-            const increment = (value - displayValue) / steps;
-            let currentStep = 0;
-            
-            intervalRef.current = setInterval(() => {
-                if (currentStep >= steps) {
-                    setDisplayValue(value);
-                    if (intervalRef.current) clearInterval(intervalRef.current);
-                    return;
-                }
-                
-                setDisplayValue(prev => prev + increment);
-                currentStep++;
-            }, duration / steps);
-        }
-        
-        // Limpiar intervalo al desmontar
-        return () => {
-            if (intervalRef.current) {
-                clearInterval(intervalRef.current);
-            }
-        };
-    }, [value, loading, isInteger]);
-    
-    return (
-        <div className={className}>
-            {prefix}
-            {formatNumber(displayValue)}
-            {suffix}
-        </div>
-    );
-};
 
 const ImagePreview = ({ imagePath }: { imagePath: string | null }) => {
     const [imageUrl, setImageUrl] = useState<string | null>(null);
@@ -248,9 +172,9 @@ interface ActiveFilter {
 }
 
 export default function ConsultasIteaGeneral() {
-    const [muebles, setMuebles] = useState<Mueble[]>([]);
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState<string | null>(null);
+    // Usar el contexto de indexación de ITEA
+    const { muebles, isIndexing: loading, error, reindex } = useIteaIndexation();
+    
     const [imageFile, setImageFile] = useState<File | null>(null);
     const [imagePreview, setImagePreview] = useState<string | null>(null);
     const [uploading, setUploading] = useState(false);
@@ -508,42 +432,6 @@ export default function ConsultasIteaGeneral() {
         }
     };
 
-    // Reemplaza fetchMuebles para traer todos los muebles sin paginación y sin límite de 1000
-    const fetchMuebles = useCallback(async () => {
-        setLoading(true);
-        try {
-            let allData: Mueble[] = [];
-            let from = 0;
-            const batchSize = 1000;
-            let keepFetching = true;
-            while (keepFetching) {
-                const { data, error } = await supabase
-                    .from('mueblesitea')
-                    .select('*')
-                    .range(from, from + batchSize - 1);
-                if (error) throw error;
-                if (data && data.length > 0) {
-                    allData = allData.concat(data as Mueble[]);
-                    if (data.length < batchSize) {
-                        keepFetching = false;
-                    } else {
-                        from += batchSize;
-                    }
-                } else {
-                    keepFetching = false;
-                }
-            }
-            setMuebles(allData);
-            setError(null);
-        } catch (error) {
-            console.error('Error fetching data:', error);
-            setError('Error al cargar los datos. Por favor, intente nuevamente.');
-            setMuebles([]);
-        } finally {
-            setLoading(false);
-        }
-    }, []);
-
     const uploadImage = async (muebleId: number) => {
         if (!imageFile) return null;
 
@@ -575,13 +463,13 @@ export default function ConsultasIteaGeneral() {
         const file = e.target.files?.[0];
         if (file) {
             if (file.size > 5 * 1024 * 1024) {
-                setError('El archivo es demasiado grande. Máximo 5MB.');
+                setMessage({ type: 'error', text: 'El archivo es demasiado grande. Máximo 5MB.' });
                 return;
             }
 
             const validTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
             if (!validTypes.includes(file.type)) {
-                setError('Formato no válido. Use JPG, PNG, GIF o WebP');
+                setMessage({ type: 'error', text: 'Formato no válido. Use JPG, PNG, GIF o WebP' });
                 return;
             }
 
@@ -597,8 +485,8 @@ export default function ConsultasIteaGeneral() {
     useEffect(() => {
         fetchDirectores();
         fetchFilterOptions();
-        fetchMuebles();
-    }, [fetchDirectores, fetchFilterOptions, fetchMuebles]);
+        // Los datos se cargan automáticamente desde el contexto al iniciar
+    }, [fetchDirectores, fetchFilterOptions]);
 
     // 2. useEffect para resetear página igual que inea
     useEffect(() => {
@@ -643,7 +531,6 @@ export default function ConsultasIteaGeneral() {
     const saveChanges = async () => {
         if (!editFormData) return;
 
-        setLoading(true);
         setUploading(true);
 
         try {
@@ -663,7 +550,7 @@ export default function ConsultasIteaGeneral() {
             // Notificación de edición
             await createNotification({
                 title: `Artículo editado (ID: ${editFormData.id_inv})`,
-                description: `El artículo "${editFormData.descripcion}" fue editado. Cambios guardados por el usuario current.`,
+                description: `El artículo "${editFormData.descripcion}" fue editado. Cambios guardados por el usuario actual.`,
                 type: 'info',
                 category: 'inventario',
                 device: 'web',
@@ -671,7 +558,7 @@ export default function ConsultasIteaGeneral() {
                 data: { changes: [`Edición de artículo: ${editFormData.id_inv}`], affectedTables: ['mueblesitea'] }
             });
 
-            fetchMuebles();
+            // El contexto actualizará automáticamente via realtime
             setSelectedItem({ ...editFormData, image_path: imagePath });
             setIsEditing(false);
             setEditFormData(null);
@@ -679,7 +566,7 @@ export default function ConsultasIteaGeneral() {
             setImagePreview(null);
         } catch (error) {
             console.error('Error al guardar cambios:', error);
-            setError('Error al guardar los cambios. Por favor, intente nuevamente.');
+            setMessage({ type: 'error', text: 'Error al guardar los cambios. Por favor, intente nuevamente.' });
 
             // Notificación de error
             await createNotification({
@@ -692,7 +579,6 @@ export default function ConsultasIteaGeneral() {
                 data: { affectedTables: ['mueblesitea'] }
             });
         } finally {
-            setLoading(false);
             setUploading(false);
         }
     };
@@ -705,7 +591,6 @@ export default function ConsultasIteaGeneral() {
     const confirmMarkAsInactive = async () => {
         if (!selectedItem) return;
         setShowInactiveModal(false);
-        setLoading(true);
         try {
             const { error } = await supabase
                 .from('mueblesitea')
@@ -717,7 +602,7 @@ export default function ConsultasIteaGeneral() {
             // Notificación de inactivación
             await createNotification({
                 title: `Artículo marcado como INACTIVO (ID: ${selectedItem.id_inv})`,
-                description: `El artículo "${selectedItem.descripcion}" fue marcado como INACTIVO por el usuario current.`,
+                description: `El artículo "${selectedItem.descripcion}" fue marcado como INACTIVO por el usuario actual.`,
                 type: 'warning',
                 category: 'inventario',
                 device: 'web',
@@ -725,7 +610,7 @@ export default function ConsultasIteaGeneral() {
                 data: { changes: [`Inactivación de artículo: ${selectedItem.id_inv}`], affectedTables: ['mueblesitea'] }
             });
 
-            fetchMuebles();
+            // El contexto actualizará automáticamente via realtime
             setSelectedItem(null);
             setMessage({
                 type: 'success',
@@ -748,8 +633,6 @@ export default function ConsultasIteaGeneral() {
                 importance: 'high',
                 data: { affectedTables: ['mueblesitea'] }
             });
-        } finally {
-            setLoading(false);
         }
     };
 
@@ -761,8 +644,7 @@ export default function ConsultasIteaGeneral() {
     const confirmBaja = async () => {
         if (!selectedItem || !bajaCause) return;
         setShowBajaModal(false);
-        setLoading(true);
-        try {
+        try{
             const today = '2025-04-27'; // Fecha actual
             const { error } = await supabase
                 .from('mueblesitea')
@@ -801,7 +683,7 @@ export default function ConsultasIteaGeneral() {
                 data: { changes: [`Baja de artículo: ${selectedItem.id_inv}`], affectedTables: ['mueblesitea', 'deprecated'] }
             });
 
-            fetchMuebles();
+            // El contexto actualizará automáticamente via realtime
             setSelectedItem(null);
             setMessage({ type: 'success', text: 'Artículo dado de baja correctamente' });
             setBajaCause('');
@@ -819,8 +701,6 @@ export default function ConsultasIteaGeneral() {
                 importance: 'high',
                 data: { affectedTables: ['mueblesitea', 'deprecated'] }
             });
-        } finally {
-            setLoading(false);
         }
     };
 
@@ -849,7 +729,7 @@ export default function ConsultasIteaGeneral() {
                 newData.id_inv = value;
                 break;
             case 'valor':
-                newData.valor = value;
+                newData.valor = value ? parseFloat(value) : null;
                 break;
             case 'rubro':
             case 'descripcion':
@@ -1021,8 +901,8 @@ export default function ConsultasIteaGeneral() {
         .slice((currentPage - 1) * rowsPerPage, currentPage * rowsPerPage);
 
     // Calcular totales directamente
-    const filteredValue = filteredMueblesOmni.reduce((acc, item) => acc + (parseFloat(item.valor || '0') || 0), 0);
-    const allValue = muebles.reduce((acc, item) => acc + (parseFloat(item.valor || '0') || 0), 0);
+    const filteredValue = filteredMueblesOmni.reduce((acc, item) => acc + (item.valor !== null && item.valor !== undefined ? Number(item.valor) : 0), 0);
+    const allValue = muebles.reduce((acc, item) => acc + (item.valor !== null && item.valor !== undefined ? Number(item.valor) : 0), 0);
     const getMainContainerClass = () => {
         return selectedItem
             ? "grid grid-cols-1 lg:grid-cols-2 gap-6 h-full flex-1"
@@ -1311,12 +1191,9 @@ export default function ConsultasIteaGeneral() {
                                     <div className="flex flex-col">
                                         <h3 className={`text-sm font-medium mb-1 transition-colors ${isDarkMode ? 'text-gray-400 group-hover:text-white' : 'text-gray-600 group-hover:text-gray-900'}`}>Valor Total del Inventario</h3>
                                         <div className="relative">
-                                            <AnimatedCounter 
-                                            value={(activeFilters.length > 0 || searchTerm ? filteredValue : allValue)} 
-                                            prefix="$" 
-                                            className={`text-4xl font-bold ${isDarkMode ? 'text-white' : 'text-gray-900'}`} 
-                                            loading={loading}
-                                        />
+                                            <div className={`text-4xl font-bold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
+                                                ${(activeFilters.length > 0 || searchTerm ? filteredValue : allValue).toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                            </div>
                                             <div className={`absolute -bottom-2 left-0 w-full h-px ${isDarkMode ? 'bg-white/50' : 'bg-gray-400/50'}`}></div>
                                         </div>
                                         <p className={`text-sm mt-2 transition-colors ${isDarkMode ? 'text-gray-500 group-hover:text-gray-400' : 'text-gray-600 group-hover:text-gray-700'}`}>
@@ -1333,12 +1210,9 @@ export default function ConsultasIteaGeneral() {
                                 <div className="text-center">
                                     <p className={`text-sm mb-2 transition-colors ${isDarkMode ? 'text-gray-400 group-hover:text-white' : 'text-gray-600 group-hover:text-gray-900'}`}>Artículos Registrados</p>
                                     <div className="relative">
-                                        <AnimatedCounter 
-                                        value={activeFilters.length > 0 || searchTerm ? filteredMueblesOmni.length : muebles.length} 
-                                        className={`relative text-3xl font-bold transition-all duration-500 px-6 py-3 ${isDarkMode ? 'text-white' : 'text-gray-900'}`} 
-                                        loading={loading}
-                                        isInteger={true}
-                                    />
+                                        <div className={`relative text-3xl font-bold transition-all duration-500 px-6 py-3 ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
+                                            {(activeFilters.length > 0 || searchTerm ? filteredMueblesOmni.length : muebles.length).toLocaleString('es-MX')}
+                                        </div>
                                     </div>
                                 </div>
                             </div>
@@ -1372,7 +1246,7 @@ export default function ConsultasIteaGeneral() {
                                         <button
                                             onClick={saveCurrentFilter}
                                             disabled={!searchTerm || !searchMatchType}
-                                            className={`px-2 py-1 rounded-lg border flex items-center gap-1 transition-all duration-200 ${searchTerm && searchMatchType
+                                            className={`px-2 py-1 rounded-lg border transition-all duration-200 flex items-center gap-2 shadow-md ${searchTerm && searchMatchType
                                                 ? (isDarkMode ? 'bg-white/10 hover:bg-white/15 border-white/30 text-white/90' : 'bg-blue-50 hover:bg-blue-100 border-blue-300 text-blue-700')
                                                 : (isDarkMode ? 'bg-white/5 border-white/20 text-white/40 cursor-not-allowed' : 'bg-gray-50 border-gray-200 text-gray-400 cursor-not-allowed')
                                                 }`}
@@ -1411,7 +1285,8 @@ export default function ConsultasIteaGeneral() {
                                                     className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ml-1 transition-all duration-200 ${isDarkMode ? 'bg-white/10 border border-white/30 text-white/90 hover:bg-white/15' : 'bg-blue-50 border border-blue-300 text-blue-700 hover:bg-blue-100'}`}
                                                     title="Limpiar todos los filtros"
                                                 >
-                                                    <X className="h-3 w-3 mr-1" /> Limpiar
+                                                    <X className="h-4 w-4" />
+                                                    Limpiar
                                                 </button>
                                             )}
                                         </div>
@@ -1420,9 +1295,9 @@ export default function ConsultasIteaGeneral() {
                                 {/* Aquí puedes dejar el botón de actualizar y otros controles a la derecha si los tienes */}
                                 <div className="flex items-center gap-2 mt-4 md:mt-0">
                                     <button
-                                        onClick={fetchMuebles}
+                                        onClick={reindex}
                                         className={`px-4 py-2 rounded-lg border transition-all duration-200 flex items-center gap-2 shadow-md ${isDarkMode ? 'border-gray-700 bg-black text-white hover:bg-gray-800' : 'border-gray-300 bg-white text-gray-900 hover:bg-gray-50'}`}
-                                        title="Actualizar datos"
+                                        title="Recargar datos desde la base de datos"
                                     >
                                         <RefreshCw className="h-4 w-4 animate-spin-slow" />
                                         Actualizar
@@ -1466,7 +1341,7 @@ export default function ConsultasIteaGeneral() {
                                                         <p className="text-lg font-medium">Error al cargar datos</p>
                                                         <p className={`text-sm max-w-lg mx-auto mb-2 ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>{error}</p>
                                                         <button
-                                                            onClick={fetchMuebles}
+                                                            onClick={reindex}
                                                             className={`px-4 py-2 rounded-md text-sm transition-colors ${isDarkMode ? 'bg-gray-800 text-gray-300 hover:bg-gray-700' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'}`}
                                                         >
                                                             Intentar nuevamente

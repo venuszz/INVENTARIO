@@ -10,6 +10,7 @@ import { useUserRole } from "@/hooks/useUserRole";
 import RoleGuard from "@/components/roleGuard";
 import { useNotifications } from '@/hooks/useNotifications';
 import { useTheme } from '@/context/ThemeContext';
+import { useIneaIndexation } from '@/context/IneaIndexationContext';
 
 interface Mueble {
     id: number;
@@ -60,84 +61,6 @@ interface ActiveFilter {
     term: string;
     type: 'id' | 'descripcion' | 'rubro' | 'estado' | 'estatus' | 'area' | 'usufinal' | 'resguardante' | null;
 }
-
-// Componente para animar el conteo de valores
-interface AnimatedCounterProps {
-    value: number;
-    className?: string;
-    prefix?: string;
-    suffix?: string;
-    loading?: boolean;
-    isInteger?: boolean;
-}
-
-const AnimatedCounter = ({ value, className, prefix = '', suffix = '', loading = false, isInteger = false }: AnimatedCounterProps) => {
-    // Estado para el valor actual mostrado
-    const [displayValue, setDisplayValue] = useState(0);
-
-    // Referencia para el intervalo de animación
-    const intervalRef = useRef<NodeJS.Timeout | null>(null);
-
-    // Formatear el número según sea entero o decimal
-    const formatNumber = (num: number) => {
-        if (isInteger) {
-            return Math.floor(num).toLocaleString('es-MX');
-        } else {
-            return num.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-        }
-    };
-
-    // Efecto para animar el contador
-    useEffect(() => {
-        // Limpiar intervalo anterior si existe
-        if (intervalRef.current) {
-            clearInterval(intervalRef.current);
-        }
-
-        if (loading) {
-            // Durante la carga, mostrar números aleatorios
-            intervalRef.current = setInterval(() => {
-                const randomValue = isInteger ?
-                    Math.floor(Math.random() * 1000) :
-                    Math.random() * 10000;
-                setDisplayValue(randomValue);
-            }, 100);
-        } else {
-            // Animación de conteo hasta el valor final
-            const duration = 1500; // duración total en ms
-            const steps = 20; // número de pasos
-            const increment = (value - displayValue) / steps;
-            let currentStep = 0;
-
-            intervalRef.current = setInterval(() => {
-                if (currentStep >= steps) {
-                    setDisplayValue(value);
-                    if (intervalRef.current) clearInterval(intervalRef.current);
-                    return;
-                }
-
-                setDisplayValue(prev => prev + increment);
-                currentStep++;
-            }, duration / steps);
-        }
-
-        // Limpiar intervalo al desmontar
-        return () => {
-            if (intervalRef.current) {
-                clearInterval(intervalRef.current);
-            }
-        };
-    }, [value, loading, isInteger]);
-
-    return (
-        <div className={className}>
-            {prefix}
-            {formatNumber(displayValue)}
-            {suffix}
-        </div>
-    );
-};
-// ... existing code ...
 
 const ImagePreview = ({ imagePath }: { imagePath: string | null }) => {
     const [imageUrl, setImageUrl] = useState<string | null>(null);
@@ -259,9 +182,10 @@ function getStatusBadgeColors(status: string | null | undefined) {
 }
 
 export default function ConsultasIneaGeneral() {
-    const [muebles, setMuebles] = useState<Mueble[]>([]);
-    const [loading, setLoading] = useState(true);
+    // Usar el contexto de indexación en lugar de estado local
+    const { data: muebles, isIndexing, reindex } = useIneaIndexation();
     const [error, setError] = useState<string | null>(null);
+    const loading = isIndexing;
     const [imageFile, setImageFile] = useState<File | null>(null);
     const [imagePreview, setImagePreview] = useState<string | null>(null);
     const [uploading, setUploading] = useState(false);
@@ -531,7 +455,6 @@ export default function ConsultasIneaGeneral() {
     const confirmBaja = async () => {
         if (!selectedItem || !bajaCause) return;
         setShowBajaModal(false);
-        setLoading(true);
         try {
             // Obtener la fecha local en formato YYYY-MM-DD
             const todayDate = new Date();
@@ -575,7 +498,7 @@ export default function ConsultasIneaGeneral() {
                 data: { changes: [`Baja de artículo: ${selectedItem.id_inv}`], affectedTables: ['muebles', 'deprecated'] }
             });
 
-            fetchMuebles();
+            // El contexto actualizará automáticamente via realtime
             setSelectedItem(null);
             setMessage({ type: 'success', text: 'Artículo dado de baja correctamente' });
         } catch (error) {
@@ -591,47 +514,11 @@ export default function ConsultasIneaGeneral() {
                 importance: 'high',
                 data: { affectedTables: ['muebles', 'deprecated'] }
             });
-        } finally {
-            setLoading(false);
         }
     };
 
-    // Cambia el filtro para excluir los registros con estatus 'BAJA'
-    const fetchMuebles = useCallback(async () => {
-        setLoading(true);
-        try {
-            let allData: Mueble[] = [];
-            let from = 0;
-            const batchSize = 1000;
-            let keepFetching = true;
-            while (keepFetching) {
-                const { data, error } = await supabase
-                    .from('muebles')
-                    .select('*')
-                    .neq('estatus', 'BAJA')
-                    .range(from, from + batchSize - 1);
-                if (error) throw error;
-                if (data && data.length > 0) {
-                    allData = allData.concat(data as Mueble[]);
-                    if (data.length < batchSize) {
-                        keepFetching = false;
-                    } else {
-                        from += batchSize;
-                    }
-                } else {
-                    keepFetching = false;
-                }
-            }
-            setMuebles(allData);
-            setError(null);
-        } catch (error) {
-            console.error('Error fetching data:', error);
-            setError('Error al cargar los datos. Por favor, intente nuevamente.');
-            setMuebles([]);
-        } finally {
-            setLoading(false);
-        }
-    }, []);
+    // Los datos ahora se cargan automáticamente desde el contexto
+    // Ya no necesitamos fetchMuebles, usamos reindex para refrescar manualmente
 
     const fetchFilterOptions = useCallback(async () => {
         try {
@@ -733,8 +620,8 @@ export default function ConsultasIneaGeneral() {
         fetchDirectorio();
         fetchFilterOptions(); // para selects de edición
         fetchUniqueFilterOptions(); // para filtros de la tabla
-        fetchMuebles();
-    }, [fetchDirectorio, fetchFilterOptions, fetchUniqueFilterOptions, fetchMuebles]);
+        // Los datos se cargan automáticamente desde el contexto al iniciar
+    }, [fetchDirectorio, fetchFilterOptions, fetchUniqueFilterOptions]);
 
     useEffect(() => {
         setCurrentPage(1);
@@ -770,7 +657,6 @@ export default function ConsultasIneaGeneral() {
     const saveChanges = async () => {
         if (!editFormData) return;
 
-        setLoading(true);
         setUploading(true);
 
         try {
@@ -798,7 +684,7 @@ export default function ConsultasIneaGeneral() {
                 data: { changes: [`Edición de artículo: ${editFormData.id_inv}`], affectedTables: ['muebles'] }
             });
 
-            fetchMuebles();
+            // El contexto actualizará automáticamente via realtime
             setSelectedItem({ ...editFormData, image_path: imagePath });
             setIsEditing(false);
             setEditFormData(null);
@@ -825,25 +711,23 @@ export default function ConsultasIneaGeneral() {
                 data: { affectedTables: ['muebles'] }
             });
         } finally {
-            setLoading(false);
             setUploading(false);
         }
     };
 
     const markAsInactive = async () => {
-        if (!selectedItem) return;
-        setShowInactiveModal(true);
-    };
+    if (!selectedItem) return;
+    setShowInactiveModal(true);
+};
 
-    const confirmMarkAsInactive = async () => {
-        if (!selectedItem) return;
-        setShowInactiveModal(false);
-        setLoading(true);
-        try {
-            const { error } = await supabase
-                .from('muebles')
-                .update({ estatus: 'INACTIVO' })
-                .eq('id', selectedItem.id);
+const confirmMarkAsInactive = async () => {
+    if (!selectedItem) return;
+    setShowInactiveModal(false);
+    try {
+        const { error } = await supabase
+            .from('muebles')
+            .update({ estatus: 'INACTIVO' })
+            .eq('id', selectedItem.id);
 
             if (error) throw error;
 
@@ -858,7 +742,7 @@ export default function ConsultasIneaGeneral() {
                 data: { changes: [`Inactivación de artículo: ${selectedItem.id_inv}`], affectedTables: ['muebles'] }
             });
 
-            fetchMuebles();
+            // El contexto actualizará automáticamente via realtime
             setSelectedItem(null);
             setMessage({
                 type: 'success',
@@ -880,8 +764,6 @@ export default function ConsultasIneaGeneral() {
                 importance: 'high',
                 data: { affectedTables: ['muebles'] }
             });
-        } finally {
-            setLoading(false);
         }
     };
 
@@ -1392,13 +1274,9 @@ export default function ConsultasIneaGeneral() {
                                             : 'text-gray-600 group-hover:text-gray-900'
                                             }`}>Valor Total del Inventario</h3>
                                         <div className="relative">
-                                            <AnimatedCounter
-                                                value={(activeFilters.length > 0 || searchTerm ? filteredValue : allValue)}
-                                                prefix="$"
-                                                className={`text-4xl font-bold ${isDarkMode ? 'text-white' : 'text-gray-900'
-                                                    }`}
-                                                loading={loading}
-                                            />
+                                            <div className={`text-4xl font-bold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
+                                                ${(activeFilters.length > 0 || searchTerm ? filteredValue : allValue).toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                            </div>
                                             <div className={`absolute -bottom-2 left-0 w-full h-px ${isDarkMode ? 'bg-white/30' : 'bg-gray-300'
                                                 }`}></div>
                                         </div>
@@ -1429,15 +1307,12 @@ export default function ConsultasIneaGeneral() {
                                             ? 'bg-white/5'
                                             : 'bg-gray-100'
                                             }`}></div>
-                                        <AnimatedCounter
-                                            value={activeFilters.length > 0 || searchTerm ? filteredMueblesOmni.length : muebles.length}
-                                            className={`relative text-3xl font-bold transition-all duration-500 px-6 py-3 ${isDarkMode
+                                        <div className={`relative text-3xl font-bold transition-all duration-500 px-6 py-3 ${isDarkMode
                                                 ? 'text-white/90 group-hover:text-white'
                                                 : 'text-gray-800 group-hover:text-gray-900'
-                                                }`}
-                                            loading={loading}
-                                            isInteger={true}
-                                        />
+                                                }`}>
+                                            {(activeFilters.length > 0 || searchTerm ? filteredMueblesOmni.length : muebles.length).toLocaleString('es-MX')}
+                                        </div>
                                     </div>
                                 </div>
                             </div>
@@ -1537,12 +1412,12 @@ export default function ConsultasIneaGeneral() {
                                 </div>
                                 <div className="flex items-center gap-2 mt-4 md:mt-0">
                                     <button
-                                        onClick={fetchMuebles}
+                                        onClick={reindex}
                                         className={`px-4 py-2 rounded-lg border transition-all duration-200 flex items-center gap-2 shadow-md ${isDarkMode
                                             ? 'border-white/30 bg-white/10 text-white hover:bg-white/20'
                                             : 'border-gray-300 bg-gray-50 text-gray-700 hover:bg-gray-100'
                                             }`}
-                                        title="Actualizar datos"
+                                        title="Recargar datos desde la base de datos"
                                     >
                                         <RefreshCw className="h-4 w-4 animate-spin-slow" />
                                         Actualizar
@@ -1642,7 +1517,7 @@ export default function ConsultasIneaGeneral() {
                                                         <p className={`text-sm max-w-lg mx-auto mb-2 ${isDarkMode ? 'text-gray-400' : 'text-gray-600'
                                                             }`}>{error}</p>
                                                         <button
-                                                            onClick={fetchMuebles}
+                                                            onClick={reindex}
                                                             className={`px-4 py-2 rounded-md text-sm transition-colors ${isDarkMode
                                                                 ? 'bg-gray-800 text-gray-300 hover:bg-gray-700'
                                                                 : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
