@@ -1,4 +1,5 @@
 import Obsoletos from "@/components/consultas/itea/obsoletos";
+import { Suspense } from "react";
 import { Metadata } from "next";
 
 export const metadata: Metadata = {
@@ -9,7 +10,9 @@ export const metadata: Metadata = {
 export default function Add() {
     return (
         <div className="max-h-full overflow-auto">
-            <Obsoletos />
-        </div>            
+            <Suspense>
+                <Obsoletos />
+            </Suspense>
+        </div>
     )
 }

@@ -6,6 +6,8 @@ import { SpeedInsights } from '@vercel/speed-insights/next';
 import { ThemeProvider } from "@/context/ThemeContext";
 import { IneaIndexationProvider } from "@/context/IneaIndexationContext";
 import { IteaIndexationProvider } from "@/context/IteaIndexationContext";
+import { IneaObsoletosIndexationProvider } from "@/context/IneaObsoletosIndexationContext";
+import { IteaObsoletosIndexationProvider } from "@/context/IteaObsoletosIndexationContext";
 import IndexationPopover from "@/components/IndexationPopover";
 
 const geistSans = Geist({
@@ -41,14 +43,18 @@ export default function RootLayout({
         <ThemeProvider>
           <IneaIndexationProvider>
             <IteaIndexationProvider>
-              <div>
-                <HeaderContainer />
-              </div>
-              <main className="flex-1 overflow-hidden">
-                {children}
-                <SpeedInsights />
-              </main>
-              <IndexationPopover />
+              <IneaObsoletosIndexationProvider>
+                <IteaObsoletosIndexationProvider>
+                  <div>
+                    <HeaderContainer />
+                  </div>
+                  <main className="flex-1 overflow-hidden">
+                    {children}
+                    <SpeedInsights />
+                  </main>
+                  <IndexationPopover />
+                </IteaObsoletosIndexationProvider>
+              </IneaObsoletosIndexationProvider>
             </IteaIndexationProvider>
           </IneaIndexationProvider>
         </ThemeProvider>

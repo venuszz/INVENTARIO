@@ -11,6 +11,7 @@ import RoleGuard from "@/components/roleGuard";
 import { useNotifications } from '@/hooks/useNotifications';
 import { useTheme } from '@/context/ThemeContext';
 import { useIneaIndexation } from '@/context/IneaIndexationContext';
+import { useSearchParams } from 'next/navigation';
 
 interface Mueble {
     id: number;
@@ -184,6 +185,7 @@ function getStatusBadgeColors(status: string | null | undefined) {
 export default function ConsultasIneaGeneral() {
     // Usar el contexto de indexación en lugar de estado local
     const { data: muebles, isIndexing, reindex } = useIneaIndexation();
+    const searchParams = useSearchParams();
     const [error, setError] = useState<string | null>(null);
     const loading = isIndexing;
     const [imageFile, setImageFile] = useState<File | null>(null);
@@ -626,6 +628,26 @@ export default function ConsultasIneaGeneral() {
     useEffect(() => {
         setCurrentPage(1);
     }, [searchTerm, filters, sortField, sortDirection, rowsPerPage]);
+
+    // Detectar parámetro id en URL y abrir detalles automáticamente
+    useEffect(() => {
+        const idParam = searchParams.get('id');
+        if (idParam && muebles.length > 0) {
+            const itemId = parseInt(idParam, 10);
+            const item = muebles.find(m => m.id === itemId);
+            if (item) {
+                setSelectedItem(item);
+                setIsEditing(false);
+                setEditFormData(null);
+                // Scroll al detalle si es necesario
+                setTimeout(() => {
+                    if (detailRef.current) {
+                        detailRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                    }
+                }, 100);
+            }
+        }
+    }, [searchParams, muebles]);
 
     const handleSelectItem = (item: Mueble) => {
         setSelectedItem(item);

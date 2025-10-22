@@ -1,4 +1,5 @@
 import General from "@/components/consultas/itea/general"
+import { Suspense } from "react";
 import { Metadata } from "next";
 
 export const metadata: Metadata = {
@@ -9,7 +10,9 @@ export const metadata: Metadata = {
 export default function Add() {
     return (
         <div className="max-h-[calc(100vh-4rem)] overflow-auto">
-            <General />
-        </div>            
+            <Suspense>
+                <General />
+            </Suspense>
+        </div>
     )
 }

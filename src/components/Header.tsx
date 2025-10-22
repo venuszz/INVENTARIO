@@ -10,7 +10,8 @@ import supabase from '@/app/lib/supabase/client';
 import RoleGuard from "@/components/roleGuard";
 import NotificationsPanel from './NotificationCenter';
 import { useNotifications } from '@/hooks/useNotifications';
-import { useTheme } from "@/context/ThemeContext"
+import { useTheme } from "@/context/ThemeContext";
+import GlobalSearch from './GlobalSearch';
 
 
 type MenuItem = {
@@ -125,6 +126,16 @@ export default function NavigationBar() {
         };
     }, [showLogoutModal]);
 
+    const handleMenuHover = (menu: string | null) => {
+        setOpenMenu(menu);
+        if (!menu) setOpenSubmenu(null);
+    };
+
+    const handleSubmenuHover = (submenu: string | null) => {
+        setOpenSubmenu(submenu);
+    };
+
+    // Funciones para menú móvil (click)
     const toggleMenu = (menu: string) => {
         setOpenMenu(openMenu === menu ? null : menu);
         setOpenSubmenu(null);
@@ -286,10 +297,13 @@ export default function NavigationBar() {
                     <div className="flex-1 flex justify-center">
                         <div className="hidden md:flex md:space-x-1">
                             <RoleGuard roles={["admin", "superadmin"]} userRole={userData.rol}>
-                                <div className="relative">
+                                <div 
+                                    className="relative"
+                                    onMouseEnter={() => handleMenuHover("Inventario")}
+                                    onMouseLeave={() => handleMenuHover(null)}
+                                >
                                     <button
-                                        onClick={() => toggleMenu("Inventario")}
-                                        className={`flex items-center px-4 py-2 rounded-md transition-all duration-300 ease-in-out transform ${isActive("/inventario")
+                                        className={`flex items-center px-4 py-2 rounded-md transition-all duration-500 ease-in-out transform ${isActive("/inventario")
                                             ? isDarkMode ? 'text-white bg-white/10 border border-white/20 scale-105' : 'text-gray-900 bg-gray-100 border border-gray-300 scale-105'
                                             : isDarkMode
                                                 ? `text-gray-300 hover:text-white hover:scale-105 ${pathname === '/' ? 'hover:bg-white/10' : 'hover:bg-gray-800'}`
@@ -298,10 +312,10 @@ export default function NavigationBar() {
                                     >
                                         <span className="mr-2"><Database className="w-4 h-4" /></span>
                                         Inventario
-                                        <ChevronDown className={`ml-1 w-3 h-3 transition-transform duration-300 ${openMenu === "Inventario" ? 'rotate-180' : ''}`} />
+                                        <ChevronDown className={`ml-1 w-3 h-3 transition-transform duration-500 ease-in-out ${openMenu === "Inventario" ? 'rotate-180' : ''}`} />
                                     </button>
                                     {openMenu === "Inventario" && (
-                                        <div className={`absolute left-0 mt-1 w-56 rounded-md ${pathname === '/' ? (isDarkMode ? 'bg-black/20 border-white/20 backdrop-blur-md' : 'bg-white/20 border-gray-200/30 backdrop-blur-md') : (isDarkMode ? 'bg-black border-white/10' : 'bg-white border-gray-200')} shadow-lg z-20 border animate-in slide-in-from-top-2 fade-in duration-200`}>
+                                        <div className={`absolute left-0 mt-1 w-56 rounded-md ${pathname === '/' ? (isDarkMode ? 'bg-black/20 border-white/20 backdrop-blur-md' : 'bg-white/20 border-gray-200/30 backdrop-blur-md') : (isDarkMode ? 'bg-black border-white/10' : 'bg-white border-gray-200')} shadow-lg z-20 border animate-in slide-in-from-top-2 fade-in duration-300`}>
                                             <div className="py-1">
                                                 <RoleGuard roles={["admin", "superadmin"]} userRole={userData.rol}>
                                                     <Link
@@ -323,12 +337,16 @@ export default function NavigationBar() {
                                 </div>
                             </RoleGuard>
                             {menuItems.slice(1, 4).map((item) => (
-                                <div key={item.title} className="relative">
+                                <div 
+                                    key={item.title} 
+                                    className="relative"
+                                    onMouseEnter={() => handleMenuHover(item.title)}
+                                    onMouseLeave={() => handleMenuHover(null)}
+                                >
                                     {item.submenu ? (
                                         <>
                                             <button
-                                                onClick={() => toggleMenu(item.title)}
-                                                className={`flex items-center px-4 py-2 rounded-md transition-all duration-300 ease-in-out transform ${isActive(item.path)
+                                                className={`flex items-center px-4 py-2 rounded-md transition-all duration-500 ease-in-out transform ${isActive(item.path)
                                                     ? isDarkMode ? 'text-white bg-white/10 border border-white/20 scale-105' : 'text-gray-900 bg-gray-100 border border-gray-300 scale-105'
                                                     : isDarkMode
                                                         ? `text-gray-300 hover:text-white hover:scale-105 ${pathname === '/' ? 'hover:bg-white/10' : 'hover:bg-gray-800'}`
@@ -337,18 +355,21 @@ export default function NavigationBar() {
                                             >
                                                 <span className="mr-2">{item.icon}</span>
                                                 {item.title}
-                                                <ChevronDown className={`ml-1 w-3 h-3 transition-transform duration-300 ${openMenu === item.title ? 'rotate-180' : ''}`} />
+                                                <ChevronDown className={`ml-1 w-3 h-3 transition-transform duration-500 ease-in-out ${openMenu === item.title ? 'rotate-180' : ''}`} />
                                             </button>
                                             {openMenu === item.title && (
-                                                <div className={`absolute left-0 mt-1 w-56 rounded-md ${pathname === '/' ? (isDarkMode ? 'bg-black/20 border-white/20 backdrop-blur-md' : 'bg-white/20 border-gray-200/30 backdrop-blur-md') : (isDarkMode ? 'bg-black border-white/10' : 'bg-white border-gray-200')} shadow-lg z-20 border animate-in slide-in-from-top-2 fade-in duration-200`}>
+                                                <div className={`absolute left-0 mt-1 w-56 rounded-md ${pathname === '/' ? (isDarkMode ? 'bg-black/20 border-white/20 backdrop-blur-md' : 'bg-white/20 border-gray-200/30 backdrop-blur-md') : (isDarkMode ? 'bg-black border-white/10' : 'bg-white border-gray-200')} shadow-lg z-20 border animate-in slide-in-from-top-2 fade-in duration-300`}>
                                                     <div className="py-1">
                                                         {item.submenu.map((subItem) => (
                                                             <div key={subItem.title}>
                                                                 {subItem.children ? (
-                                                                    <div className="relative">
+                                                                    <div 
+                                                                        className="relative"
+                                                                        onMouseEnter={() => handleSubmenuHover(`${item.title}-${subItem.title}`)}
+                                                                        onMouseLeave={() => handleSubmenuHover(null)}
+                                                                    >
                                                                         <button
-                                                                            onClick={(e) => toggleSubmenu(`${item.title}-${subItem.title}`, e)}
-                                                                            className={`flex justify-between w-full px-4 py-2 text-sm transition-all duration-200 ${isActive(subItem.path)
+                                                                            className={`flex justify-between w-full px-4 py-2 text-sm transition-all duration-300 ${isActive(subItem.path)
                                                                                 ? isDarkMode ? 'text-white bg-white/10 border-r-2 border-white' : 'text-gray-900 bg-gray-100 border-r-2 border-gray-900'
                                                                                 : isDarkMode
                                                                                     ? `text-gray-300 hover:text-white hover:translate-x-1 ${pathname === '/' ? 'hover:bg-white/10' : 'hover:bg-gray-800'}`
@@ -359,7 +380,7 @@ export default function NavigationBar() {
                                                                             <ChevronRight className="w-3 h-3" />
                                                                         </button>
                                                                         {openSubmenu === `${item.title}-${subItem.title}` && (
-                                                                            <div className={`absolute left-full top-0 w-56 rounded-md ${pathname === '/' ? (isDarkMode ? 'bg-black/20 border-white/20 backdrop-blur-md' : 'bg-white/20 border-gray-200/30 backdrop-blur-md') : (isDarkMode ? 'bg-black border-white/10' : 'bg-white border-gray-200')} shadow-lg z-30 border animate-in slide-in-from-left-2 fade-in duration-200`}>
+                                                                            <div className={`absolute left-full top-0 w-56 rounded-md ${pathname === '/' ? (isDarkMode ? 'bg-black/20 border-white/20 backdrop-blur-md' : 'bg-white/20 border-gray-200/30 backdrop-blur-md') : (isDarkMode ? 'bg-black border-white/10' : 'bg-white border-gray-200')} shadow-lg z-30 border animate-in slide-in-from-left-2 fade-in duration-300`}>
                                                                                 <div className="py-1">
                                                                                     {subItem.children.map((child) => (
                                                                                         <Link
@@ -419,7 +440,7 @@ export default function NavigationBar() {
                                         <Link
                                             href={item.path}
                                             onClick={closeAll}
-                                            className={`flex items-center px-4 py-2 rounded-md transition-all duration-300 ease-in-out transform ${isActive(item.path)
+                                            className={`flex items-center px-4 py-2 rounded-md transition-all duration-500 ease-in-out transform ${isActive(item.path)
                                                 ? 'text-white bg-white/10 border border-white/20 scale-105'
                                                 : 'text-gray-300 hover:text-white hover:bg-gray-800 hover:scale-105'
                                                 }`}
@@ -431,10 +452,13 @@ export default function NavigationBar() {
                                 </div>
                             ))}
                             <RoleGuard roles={["admin", "superadmin"]} userRole={userData.rol}>
-                                <div className="relative">
+                                <div 
+                                    className="relative"
+                                    onMouseEnter={() => handleMenuHover("Administración")}
+                                    onMouseLeave={() => handleMenuHover(null)}
+                                >
                                     <button
-                                        onClick={() => toggleMenu("Administración")}
-                                        className={`flex items-center px-4 py-2 rounded-md transition-all duration-300 ease-in-out transform ${isActive("/admin")
+                                        className={`flex items-center px-4 py-2 rounded-md transition-all duration-500 ease-in-out transform ${isActive("/admin")
                                             ? isDarkMode ? 'text-white bg-white/10 border border-white/20 scale-105' : 'text-gray-900 bg-gray-100 border border-gray-300 scale-105'
                                             : isDarkMode
                                                 ? `text-gray-300 hover:text-white hover:scale-105 ${pathname === '/' ? 'hover:bg-white/10' : 'hover:bg-gray-800'}`
@@ -443,10 +467,10 @@ export default function NavigationBar() {
                                     >
                                         <span className="mr-2"><Settings className="w-4 h-4" /></span>
                                         Administración
-                                        <ChevronDown className={`ml-1 w-3 h-3 transition-transform duration-300 ${openMenu === "Administración" ? 'rotate-180' : ''}`} />
+                                        <ChevronDown className={`ml-1 w-3 h-3 transition-transform duration-500 ease-in-out ${openMenu === "Administración" ? 'rotate-180' : ''}`} />
                                     </button>
                                     {openMenu === "Administración" && (
-                                        <div className={`absolute left-0 mt-1 w-56 rounded-md ${pathname === '/' ? (isDarkMode ? 'bg-black/20 border-white/20 backdrop-blur-md' : 'bg-white/20 border-gray-200/30 backdrop-blur-md') : (isDarkMode ? 'bg-black border-white/10' : 'bg-white border-gray-200')} shadow-lg z-20 border animate-in slide-in-from-top-2 fade-in duration-200`}>
+                                        <div className={`absolute left-0 mt-1 w-56 rounded-md ${pathname === '/' ? (isDarkMode ? 'bg-black/20 border-white/20 backdrop-blur-md' : 'bg-white/20 border-gray-200/30 backdrop-blur-md') : (isDarkMode ? 'bg-black border-white/10' : 'bg-white border-gray-200')} shadow-lg z-20 border animate-in slide-in-from-top-2 fade-in duration-300`}>
                                             <div className="py-1">
                                                 <Link
                                                     href="/admin/areas"
@@ -478,6 +502,13 @@ export default function NavigationBar() {
                                 </div>
                             </RoleGuard>
                         </div>
+                    </div>
+
+                    {/* Search Bar - After Menus (se oculta cuando isHeaderExpanded) */}
+                    <div className={`hidden md:flex items-center ml-4 transition-all duration-500 ease-in-out ${
+                        isHeaderExpanded ? 'opacity-0 scale-95 pointer-events-none' : 'opacity-100 scale-100'
+                    }`}>
+                        <GlobalSearch />
                     </div>
 
                     {/* Right side - Action buttons */}

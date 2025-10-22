@@ -12,6 +12,8 @@ import { useUserRole } from "@/hooks/useUserRole";
 import RoleGuard from "@/components/roleGuard";
 import { useNotifications } from '@/hooks/useNotifications';
 import { useTheme } from '@/context/ThemeContext';
+import { useSearchParams } from 'next/navigation';
+import { useIneaObsoletosIndexation } from '@/context/IneaObsoletosIndexationContext';
 
 interface Mueble {
     id: number;
@@ -224,6 +226,8 @@ const ImagePreview = ({ imagePath }: { imagePath: string | null }) => {
 };
 
 export default function ConsultasIneaBajas() {
+    const searchParams = useSearchParams();
+    const { reindex: reindexObsoletos } = useIneaObsoletosIndexation();
     const [muebles, setMuebles] = useState<Mueble[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
@@ -508,6 +512,8 @@ export default function ConsultasIneaBajas() {
                 data: { changes: [`Reactivación de artículo: ${selectedItem.id_inv}`], affectedTables: ['muebles'] }
             });
             fetchMuebles();
+            // Reindexar obsoletos para actualizar la búsqueda global
+            await reindexObsoletos();
             setSelectedItem(null);
             setMessage({ type: 'success', text: 'Artículo reactivado correctamente' });
         } catch {
@@ -785,6 +791,26 @@ export default function ConsultasIneaBajas() {
     useEffect(() => {
         setCurrentPage(1);
     }, [searchTerm, filters, sortField, sortDirection, rowsPerPage]);
+
+    // Detectar parámetro id en URL y abrir detalles automáticamente (solo una vez)
+    useEffect(() => {
+        const idParam = searchParams.get('id');
+        if (idParam && muebles.length > 0 && !selectedItem) {
+            const itemId = parseInt(idParam, 10);
+            const item = muebles.find(m => m.id === itemId);
+            if (item) {
+                setSelectedItem(item);
+                setIsEditing(false);
+                setEditFormData(null);
+                // Scroll al detalle si es necesario
+                setTimeout(() => {
+                    if (detailRef.current) {
+                        detailRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                    }
+                }, 100);
+            }
+        }
+    }, [searchParams, muebles.length]);
 
     const handleSelectItem = (item: Mueble) => {
         setSelectedItem(item);

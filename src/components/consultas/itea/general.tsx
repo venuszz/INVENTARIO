@@ -11,7 +11,7 @@ import { useUserRole } from "@/hooks/useUserRole";
 import RoleGuard from "@/components/roleGuard";
 import { useNotifications } from '@/hooks/useNotifications';
 import { useTheme } from '@/context/ThemeContext';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useIteaIndexation } from '@/context/IteaIndexationContext';
 
 // Utility function to format date strings as 'DD/MM/YYYY'
@@ -174,6 +174,7 @@ interface ActiveFilter {
 export default function ConsultasIteaGeneral() {
     // Usar el contexto de indexación de ITEA
     const { muebles, isIndexing: loading, error, reindex } = useIteaIndexation();
+    const searchParams = useSearchParams();
     
     const [imageFile, setImageFile] = useState<File | null>(null);
     const [imagePreview, setImagePreview] = useState<string | null>(null);
@@ -492,6 +493,26 @@ export default function ConsultasIteaGeneral() {
     useEffect(() => {
         setCurrentPage(1);
     }, [searchTerm, filters, sortField, sortDirection, rowsPerPage]);
+
+    // Detectar parámetro id en URL y abrir detalles automáticamente
+    useEffect(() => {
+        const idParam = searchParams.get('id');
+        if (idParam && muebles.length > 0) {
+            const itemId = parseInt(idParam, 10);
+            const item = muebles.find(m => m.id === itemId);
+            if (item) {
+                setSelectedItem(item);
+                setIsEditing(false);
+                setEditFormData(null);
+                // Scroll al detalle si es necesario
+                setTimeout(() => {
+                    if (detailRef.current) {
+                        detailRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                    }
+                }, 100);
+            }
+        }
+    }, [searchParams, muebles]);
 
     const handleSelectItem = (item: Mueble) => {
         setSelectedItem(item);

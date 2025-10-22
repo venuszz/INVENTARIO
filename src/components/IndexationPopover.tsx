@@ -1,13 +1,17 @@
 "use client"
 import { useIneaIndexation } from '@/context/IneaIndexationContext';
 import { useIteaIndexation } from '@/context/IteaIndexationContext';
+import { useIneaObsoletosIndexation } from '@/context/IneaObsoletosIndexationContext';
+import { useIteaObsoletosIndexation } from '@/context/IteaObsoletosIndexationContext';
 import { useTheme } from '@/context/ThemeContext';
-import { Loader2, CheckCircle2, Database, Activity, ChevronDown, ChevronUp } from 'lucide-react';
+import { CheckCircle2, Database, AlertCircle, ChevronDown, ChevronUp, Sparkles } from 'lucide-react';
 import { useState, useEffect } from 'react';
 
 export default function IndexationPopover() {
     const ineaState = useIneaIndexation();
     const iteaState = useIteaIndexation();
+    const ineaObsState = useIneaObsoletosIndexation();
+    const iteaObsState = useIteaObsoletosIndexation();
     const { isDarkMode } = useTheme();
     const [isExpanded, setIsExpanded] = useState(false);
     const [isVisible, setIsVisible] = useState(false);
@@ -16,19 +20,21 @@ export default function IndexationPopover() {
     // Determinar si están completos
     const isIneaComplete = ineaState.isComplete || (ineaState.progress >= ineaState.total && ineaState.total > 0);
     const isIteaComplete = iteaState.isComplete || (iteaState.progress >= iteaState.total && iteaState.total > 0);
-    const isBothComplete = isIneaComplete && isIteaComplete;
+    const isIneaObsComplete = !ineaObsState.isIndexing && ineaObsState.data.length >= 0;
+    const isIteaObsComplete = !iteaObsState.isIndexing && iteaObsState.data.length >= 0;
+    const isAllComplete = isIneaComplete && isIteaComplete && isIneaObsComplete && isIteaObsComplete;
 
-    // Calcular progreso total combinado
-    const totalProgress = ineaState.progress + iteaState.progress;
-    const totalItems = ineaState.total + iteaState.total;
+    // Calcular progreso total combinado (incluyendo obsoletos)
+    const totalProgress = ineaState.progress + iteaState.progress + ineaObsState.data.length + iteaObsState.data.length;
+    const totalItems = ineaState.total + iteaState.total + ineaObsState.data.length + iteaObsState.data.length;
     const combinedPercentage = totalItems > 0 ? Math.round((totalProgress / totalItems) * 100) : 0;
 
     // Determinar estado visual
     const getStatus = () => {
-        if (ineaState.error || iteaState.error) return 'error';
-        if (isBothComplete) return 'complete';
-        if (ineaState.isIndexing || iteaState.isIndexing) return 'indexing';
-        if (ineaState.progress > 0 || iteaState.progress > 0) return 'loading';
+        if (ineaState.error || iteaState.error || ineaObsState.error || iteaObsState.error) return 'error';
+        if (isAllComplete) return 'complete';
+        if (ineaState.isIndexing || iteaState.isIndexing || ineaObsState.isIndexing || iteaObsState.isIndexing) return 'indexing';
+        if (ineaState.progress > 0 || iteaState.progress > 0 || ineaObsState.data.length > 0 || iteaObsState.data.length > 0) return 'loading';
         return 'ready';
     };
 
@@ -38,11 +44,13 @@ export default function IndexationPopover() {
     useEffect(() => {
         const hasActivity = 
             ineaState.isIndexing || ineaState.progress > 0 || ineaState.error !== null ||
-            iteaState.isIndexing || iteaState.progress > 0 || iteaState.error !== null;
+            iteaState.isIndexing || iteaState.progress > 0 || iteaState.error !== null ||
+            ineaObsState.isIndexing || ineaObsState.data.length > 0 || ineaObsState.error !== null ||
+            iteaObsState.isIndexing || iteaObsState.data.length > 0 || iteaObsState.error !== null;
         setIsVisible(hasActivity);
 
-        // Ocultar después de 3 segundos si ambos están completos
-        if (isBothComplete && !ineaState.isIndexing && !iteaState.isIndexing) {
+        // Ocultar después de 3 segundos si todos están completos
+        if (isAllComplete && !ineaState.isIndexing && !iteaState.isIndexing && !ineaObsState.isIndexing && !iteaObsState.isIndexing) {
             const timer = setTimeout(() => {
                 setShouldHide(true);
             }, 3000);
@@ -50,42 +58,55 @@ export default function IndexationPopover() {
         } else {
             setShouldHide(false);
         }
-    }, [ineaState.isIndexing, ineaState.progress, ineaState.error, iteaState.isIndexing, iteaState.progress, iteaState.error, isBothComplete]);
+    }, [ineaState.isIndexing, ineaState.progress, ineaState.error, iteaState.isIndexing, iteaState.progress, iteaState.error, ineaObsState.isIndexing, ineaObsState.data.length, ineaObsState.error, iteaObsState.isIndexing, iteaObsState.data.length, iteaObsState.error, isAllComplete]);
 
     // No mostrar si no hay actividad o debe ocultarse
     if (!isVisible || shouldHide) return null;
 
-    // Componente de barra de progreso
-    const ProgressBar = ({ progress, total, color }: { progress: number; total: number; color: string }) => {
+    // Componente de barra de progreso mejorada
+    const ProgressBar = ({ progress, total, color, gradient }: { progress: number; total: number; color: string; gradient: string }) => {
         const percent = total > 0 ? (progress / total) * 100 : 0;
         return (
-            <div className={`relative w-full h-1.5 rounded-full overflow-hidden ${
-                isDarkMode ? 'bg-white/10' : 'bg-gray-200'
+            <div className={`relative w-full h-2 rounded-full overflow-hidden ${
+                isDarkMode ? 'bg-white/5' : 'bg-gray-100'
             }`}>
                 <div
-                    className={`h-full transition-all duration-500 ease-in-out ${color} ${
-                        status === 'indexing' ? 'animate-shimmer' : ''
-                    }`}
+                    className={`h-full transition-all duration-700 ease-out ${gradient} relative overflow-hidden`}
                     style={{ width: `${percent}%` }}
-                />
+                >
+                    {status === 'indexing' && (
+                        <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent animate-shimmer" />
+                    )}
+                </div>
             </div>
         );
     };
 
-    // Ícono según estado
+    // Ícono según estado con mejor diseño
     const StatusIcon = () => {
-        const iconClass = "w-4 h-4 transition-colors duration-300";
         switch (status) {
             case 'error':
-                return <Activity className={`${iconClass} text-red-500`} />;
+                return (
+                    <div className="relative">
+                        <AlertCircle className="w-5 h-5 text-red-500" />
+                    </div>
+                );
             case 'complete':
-                return <CheckCircle2 className={`${iconClass} text-emerald-500`} />;
+                return (
+                    <div className="relative">
+                        <CheckCircle2 className="w-5 h-5 text-emerald-500" />
+                        <div className="absolute inset-0 bg-emerald-500/20 rounded-full animate-ping" />
+                    </div>
+                );
             case 'indexing':
-                return <Loader2 className={`${iconClass} text-blue-500 animate-spin`} />;
-            case 'loading':
-                return <Database className={`${iconClass} ${isDarkMode ? 'text-blue-400' : 'text-blue-600'}`} />;
+                return (
+                    <div className="relative flex items-center justify-center">
+                        <Sparkles className="w-5 h-5 text-blue-500 animate-pulse" />
+                        <div className="absolute inset-0 bg-blue-500/20 rounded-full animate-ping" />
+                    </div>
+                );
             default:
-                return <Database className={`${iconClass} ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`} />;
+                return <Database className={`w-5 h-5 ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`} />;
         }
     };
 
@@ -93,81 +114,95 @@ export default function IndexationPopover() {
     const statusText = () => {
         switch (status) {
             case 'error':
-                return 'Error';
+                return 'Error en indexación';
             case 'complete':
-                return 'Completo';
+                return 'Indexación completa';
             case 'indexing':
-                return 'Indexando';
+                return 'Indexando datos';
             default:
-                return 'Cargando';
+                return 'Cargando datos';
         }
     };
 
     return (
         <div
-            className={`fixed bottom-6 right-6 z-50 backdrop-blur-2xl shadow-2xl transition-all duration-500 ease-in-out ${
-                isExpanded ? 'w-80 rounded-2xl' : 'w-52 rounded-3xl'
-            } animate-fadeInRight ${
+            className={`fixed bottom-6 right-6 z-50 backdrop-blur-xl shadow-2xl transition-all duration-500 ease-in-out ${
+                isExpanded ? 'w-96' : 'w-80'
+            } rounded-2xl animate-fadeInRight ${
                 isDarkMode 
-                    ? 'bg-black/90 border border-white/20' 
-                    : 'bg-white/95 border border-gray-200'
+                    ? 'bg-gradient-to-br from-gray-900/95 via-gray-900/90 to-gray-800/95 border border-white/10' 
+                    : 'bg-gradient-to-br from-white/98 via-white/95 to-gray-50/98 border border-gray-200/50'
             }`}
         >
-            {/* Indicador de actividad pulsante */}
-            {status === 'indexing' && (
-                <div className="absolute -top-1 -right-1 w-3 h-3 bg-blue-500 rounded-full animate-pulse shadow-lg" />
-            )}
+            {/* Efecto de brillo superior */}
+            <div className={`absolute top-0 left-0 right-0 h-px ${
+                status === 'complete' ? 'bg-gradient-to-r from-transparent via-emerald-500 to-transparent' :
+                status === 'indexing' ? 'bg-gradient-to-r from-transparent via-blue-500 to-transparent animate-pulse' :
+                status === 'error' ? 'bg-gradient-to-r from-transparent via-red-500 to-transparent' :
+                'bg-gradient-to-r from-transparent via-gray-500 to-transparent'
+            }`} />
 
-            {/* Header compacto */}
+            {/* Header mejorado */}
             <button
                 onClick={() => setIsExpanded(!isExpanded)}
-                className={`w-full px-4 py-3 flex items-center gap-3 transition-all duration-300 rounded-t-2xl ${
-                    isDarkMode ? 'hover:bg-white/5' : 'hover:bg-gray-100'
+                className={`w-full px-5 py-4 flex items-center gap-4 transition-all duration-300 rounded-t-2xl group ${
+                    isDarkMode ? 'hover:bg-white/5' : 'hover:bg-gray-50'
                 }`}
             >
-                <StatusIcon />
-                <span className={`flex-1 text-sm font-medium text-left transition-colors duration-300 ${
-                    isDarkMode ? 'text-white' : 'text-gray-900'
+                <div className="flex items-center justify-center">
+                    <StatusIcon />
+                </div>
+                
+                <div className="flex-1 flex flex-col items-start gap-1">
+                    <span className={`text-sm font-semibold transition-colors duration-300 ${
+                        isDarkMode ? 'text-white' : 'text-gray-900'
+                    }`}>
+                        {statusText()}
+                    </span>
+                    {status === 'indexing' && (
+                        <span className={`text-xs font-medium tabular-nums transition-colors duration-300 ${
+                            isDarkMode ? 'text-blue-400' : 'text-blue-600'
+                        }`}>
+                            {combinedPercentage}% completado
+                        </span>
+                    )}
+                </div>
+
+                <div className={`transition-all duration-300 ${
+                    isDarkMode ? 'text-white/40 group-hover:text-white/60' : 'text-gray-400 group-hover:text-gray-600'
                 }`}>
-                    {statusText()}
-                </span>
-                {status === 'indexing' && (
-                    <span className={`text-xs tabular-nums transition-colors duration-300 ${
-                        isDarkMode ? 'text-white/60' : 'text-gray-500'
-                    }`}>{combinedPercentage}%</span>
-                )}
-                {isExpanded ? (
-                    <ChevronUp className={`w-4 h-4 transition-all duration-300 ${
-                        isDarkMode ? 'text-white/60' : 'text-gray-500'
-                    }`} />
-                ) : (
-                    <ChevronDown className={`w-4 h-4 transition-all duration-300 ${
-                        isDarkMode ? 'text-white/60' : 'text-gray-500'
-                    }`} />
-                )}
+                    {isExpanded ? <ChevronUp className="w-5 h-5" /> : <ChevronDown className="w-5 h-5" />}
+                </div>
             </button>
 
-            {/* Barra de progreso en header cuando está colapsado */}
+            {/* Barra de progreso principal cuando está colapsado */}
             {!isExpanded && status === 'indexing' && (
-                <div className="px-4 pb-3 transition-all duration-500">
-                    <ProgressBar progress={totalProgress} total={totalItems} color="bg-gradient-to-r from-blue-500 to-purple-500" />
+                <div className="px-5 pb-4">
+                    <ProgressBar 
+                        progress={totalProgress} 
+                        total={totalItems} 
+                        color="bg-gradient-to-r from-blue-500 to-purple-500"
+                        gradient="bg-gradient-to-r from-blue-500 via-purple-500 to-blue-500"
+                    />
                 </div>
             )}
 
-            {/* Contenido expandible */}
+            {/* Contenido expandible mejorado */}
             {isExpanded && (
-                <div className="px-4 pb-4 space-y-4 animate-fadeIn">
+                <div className="px-5 pb-5 space-y-5 animate-fadeIn">
                     {/* Progreso de INEA */}
-                    <div className="space-y-2 transition-all duration-300">
-                        <div className="flex items-center justify-between text-xs">
-                            <div className="flex items-center gap-2">
-                                <div className="w-1.5 h-1.5 rounded-full bg-blue-500 transition-all duration-300" />
-                                <span className={`font-medium transition-colors duration-300 ${
-                                    isDarkMode ? 'text-white/80' : 'text-gray-700'
+                    <div className="space-y-2.5">
+                        <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-2.5">
+                                <div className={`w-2 h-2 rounded-full ${
+                                    isIneaComplete ? 'bg-emerald-500 animate-pulse' : 'bg-blue-500'
+                                }`} />
+                                <span className={`text-sm font-semibold transition-colors duration-300 ${
+                                    isDarkMode ? 'text-white' : 'text-gray-900'
                                 }`}>INEA</span>
                             </div>
-                            <span className={`tabular-nums transition-colors duration-300 ${
-                                isDarkMode ? 'text-white/60' : 'text-gray-500'
+                            <span className={`text-xs font-medium tabular-nums transition-colors duration-300 ${
+                                isDarkMode ? 'text-white/60' : 'text-gray-600'
                             }`}>
                                 {ineaState.progress.toLocaleString()} / {ineaState.total.toLocaleString()}
                             </span>
@@ -176,20 +211,23 @@ export default function IndexationPopover() {
                             progress={ineaState.progress}
                             total={ineaState.total}
                             color={isIneaComplete ? 'bg-emerald-500' : 'bg-blue-500'}
+                            gradient={isIneaComplete ? 'bg-gradient-to-r from-emerald-500 to-emerald-400' : 'bg-gradient-to-r from-blue-500 to-blue-400'}
                         />
                     </div>
 
                     {/* Progreso de ITEA */}
-                    <div className="space-y-2 transition-all duration-300">
-                        <div className="flex items-center justify-between text-xs">
-                            <div className="flex items-center gap-2">
-                                <div className="w-1.5 h-1.5 rounded-full bg-purple-500 transition-all duration-300" />
-                                <span className={`font-medium transition-colors duration-300 ${
-                                    isDarkMode ? 'text-white/80' : 'text-gray-700'
+                    <div className="space-y-2.5">
+                        <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-2.5">
+                                <div className={`w-2 h-2 rounded-full ${
+                                    isIteaComplete ? 'bg-emerald-500 animate-pulse' : 'bg-purple-500'
+                                }`} />
+                                <span className={`text-sm font-semibold transition-colors duration-300 ${
+                                    isDarkMode ? 'text-white' : 'text-gray-900'
                                 }`}>ITEA</span>
                             </div>
-                            <span className={`tabular-nums transition-colors duration-300 ${
-                                isDarkMode ? 'text-white/60' : 'text-gray-500'
+                            <span className={`text-xs font-medium tabular-nums transition-colors duration-300 ${
+                                isDarkMode ? 'text-white/60' : 'text-gray-600'
                             }`}>
                                 {iteaState.progress.toLocaleString()} / {iteaState.total.toLocaleString()}
                             </span>
@@ -198,59 +236,142 @@ export default function IndexationPopover() {
                             progress={iteaState.progress}
                             total={iteaState.total}
                             color={isIteaComplete ? 'bg-emerald-500' : 'bg-purple-500'}
+                            gradient={isIteaComplete ? 'bg-gradient-to-r from-emerald-500 to-emerald-400' : 'bg-gradient-to-r from-purple-500 to-purple-400'}
                         />
                     </div>
 
-                    {/* Resumen */}
-                    <div className={`pt-2 border-t transition-all duration-300 ${
+                    {/* Progreso de Obsoletos INEA */}
+                    <div className="space-y-2.5">
+                        <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-2.5">
+                                <div className={`w-2 h-2 rounded-full ${
+                                    isIneaObsComplete ? 'bg-emerald-500 animate-pulse' : 'bg-orange-500'
+                                }`} />
+                                <span className={`text-sm font-semibold transition-colors duration-300 ${
+                                    isDarkMode ? 'text-white' : 'text-gray-900'
+                                }`}>INEA Obsoletos</span>
+                            </div>
+                            <span className={`text-xs font-medium tabular-nums transition-colors duration-300 ${
+                                isDarkMode ? 'text-white/60' : 'text-gray-600'
+                            }`}>
+                                {ineaObsState.data.length.toLocaleString()}
+                            </span>
+                        </div>
+                        <ProgressBar
+                            progress={ineaObsState.data.length}
+                            total={ineaObsState.data.length}
+                            color={isIneaObsComplete ? 'bg-emerald-500' : 'bg-orange-500'}
+                            gradient={isIneaObsComplete ? 'bg-gradient-to-r from-emerald-500 to-emerald-400' : 'bg-gradient-to-r from-orange-500 to-orange-400'}
+                        />
+                    </div>
+
+                    {/* Progreso de Obsoletos ITEA */}
+                    <div className="space-y-2.5">
+                        <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-2.5">
+                                <div className={`w-2 h-2 rounded-full ${
+                                    isIteaObsComplete ? 'bg-emerald-500 animate-pulse' : 'bg-red-500'
+                                }`} />
+                                <span className={`text-sm font-semibold transition-colors duration-300 ${
+                                    isDarkMode ? 'text-white' : 'text-gray-900'
+                                }`}>ITEA Obsoletos</span>
+                            </div>
+                            <span className={`text-xs font-medium tabular-nums transition-colors duration-300 ${
+                                isDarkMode ? 'text-white/60' : 'text-gray-600'
+                            }`}>
+                                {iteaObsState.data.length.toLocaleString()}
+                            </span>
+                        </div>
+                        <ProgressBar
+                            progress={iteaObsState.data.length}
+                            total={iteaObsState.data.length}
+                            color={isIteaObsComplete ? 'bg-emerald-500' : 'bg-red-500'}
+                            gradient={isIteaObsComplete ? 'bg-gradient-to-r from-emerald-500 to-emerald-400' : 'bg-gradient-to-r from-red-500 to-red-400'}
+                        />
+                    </div>
+
+                    {/* Resumen mejorado */}
+                    <div className={`pt-4 border-t transition-all duration-300 ${
                         isDarkMode ? 'border-white/10' : 'border-gray-200'
                     }`}>
-                        <div className={`text-xs space-y-1 transition-colors duration-300 ${
-                            isDarkMode ? 'text-white/60' : 'text-gray-500'
-                        }`}>
-                            <div className="flex justify-between">
-                                <span>Total:</span>
-                                <span className={`tabular-nums transition-colors duration-300 ${
-                                    isDarkMode ? 'text-white/80' : 'text-gray-700'
+                        <div className="space-y-2">
+                            <div className="flex items-center justify-between">
+                                <span className={`text-xs font-medium ${
+                                    isDarkMode ? 'text-white/50' : 'text-gray-500'
+                                }`}>Total de registros</span>
+                                <span className={`text-sm font-bold tabular-nums ${
+                                    isDarkMode ? 'text-white' : 'text-gray-900'
                                 }`}>
                                     {totalProgress.toLocaleString()} / {totalItems.toLocaleString()}
                                 </span>
                             </div>
-                            <div className="flex justify-between">
-                                <span>Estado:</span>
-                                <span className={`transition-colors duration-300 ${
-                                    isDarkMode ? 'text-white/80' : 'text-gray-700'
+                            <div className="flex items-center justify-between">
+                                <span className={`text-xs font-medium ${
+                                    isDarkMode ? 'text-white/50' : 'text-gray-500'
+                                }`}>Estado del sistema</span>
+                                <span className={`text-sm font-bold ${
+                                    isAllComplete 
+                                        ? 'text-emerald-500' 
+                                        : status === 'error' 
+                                            ? 'text-red-500' 
+                                            : isDarkMode ? 'text-blue-400' : 'text-blue-600'
                                 }`}>
-                                    {isBothComplete ? 'Completo' : 'Cargando'}
+                                    {isAllComplete ? '✓ Completo' : status === 'error' ? '✕ Error' : '⟳ Cargando'}
                                 </span>
                             </div>
                         </div>
                     </div>
 
-                    {/* Mensajes de error si existen */}
+                    {/* Mensajes de error mejorados */}
                     {ineaState.error && (
-                        <div className={`px-3 py-2 rounded-lg border transition-all duration-300 ${
+                        <div className={`px-4 py-3 rounded-xl border transition-all duration-300 ${
                             isDarkMode 
-                                ? 'bg-red-500/20 border-red-500/30' 
+                                ? 'bg-red-500/10 border-red-500/30 backdrop-blur-sm' 
                                 : 'bg-red-50 border-red-200'
                         }`}>
-                            <p className={`text-xs transition-colors duration-300 ${
-                                isDarkMode ? 'text-red-400' : 'text-red-600'
+                            <p className={`text-xs font-medium transition-colors duration-300 ${
+                                isDarkMode ? 'text-red-400' : 'text-red-700'
                             }`}>
                                 <span className="font-bold">INEA:</span> {ineaState.error}
                             </p>
                         </div>
                     )}
                     {iteaState.error && (
-                        <div className={`px-3 py-2 rounded-lg border transition-all duration-300 ${
+                        <div className={`px-4 py-3 rounded-xl border transition-all duration-300 ${
                             isDarkMode 
-                                ? 'bg-red-500/20 border-red-500/30' 
+                                ? 'bg-red-500/10 border-red-500/30 backdrop-blur-sm' 
                                 : 'bg-red-50 border-red-200'
                         }`}>
-                            <p className={`text-xs transition-colors duration-300 ${
-                                isDarkMode ? 'text-red-400' : 'text-red-600'
+                            <p className={`text-xs font-medium transition-colors duration-300 ${
+                                isDarkMode ? 'text-red-400' : 'text-red-700'
                             }`}>
                                 <span className="font-bold">ITEA:</span> {iteaState.error}
+                            </p>
+                        </div>
+                    )}
+                    {ineaObsState.error && (
+                        <div className={`px-4 py-3 rounded-xl border transition-all duration-300 ${
+                            isDarkMode 
+                                ? 'bg-red-500/10 border-red-500/30 backdrop-blur-sm' 
+                                : 'bg-red-50 border-red-200'
+                        }`}>
+                            <p className={`text-xs font-medium transition-colors duration-300 ${
+                                isDarkMode ? 'text-red-400' : 'text-red-700'
+                            }`}>
+                                <span className="font-bold">INEA Obsoletos:</span> {ineaObsState.error}
+                            </p>
+                        </div>
+                    )}
+                    {iteaObsState.error && (
+                        <div className={`px-4 py-3 rounded-xl border transition-all duration-300 ${
+                            isDarkMode 
+                                ? 'bg-red-500/10 border-red-500/30 backdrop-blur-sm' 
+                                : 'bg-red-50 border-red-200'
+                        }`}>
+                            <p className={`text-xs font-medium transition-colors duration-300 ${
+                                isDarkMode ? 'text-red-400' : 'text-red-700'
+                            }`}>
+                                <span className="font-bold">ITEA Obsoletos:</span> {iteaObsState.error}
                             </p>
                         </div>
                     )}
