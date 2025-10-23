@@ -1,4 +1,5 @@
 import ConsultarBajas from "@/components/resguardos/consultarBajas"
+import { Suspense } from "react";
 import { Metadata } from "next";
 
 export const metadata: Metadata = {
@@ -9,7 +10,9 @@ export const metadata: Metadata = {
 export default function Page() {
     return (
         <div className="w-full h-full overflow-auto">
-            <ConsultarBajas />
+            <Suspense>
+                <ConsultarBajas />
+            </Suspense>
         </div>
     )
 }

@@ -1,11 +1,13 @@
 "use client"
 import { useState, useEffect, useMemo, useRef } from 'react';
-import { Search, X, ChevronRight } from 'lucide-react';
+import { Search, X, ChevronRight, FileText, Archive } from 'lucide-react';
 import { useTheme } from '@/context/ThemeContext';
 import { useIneaIndexation } from '@/context/IneaIndexationContext';
 import { useIteaIndexation } from '@/context/IteaIndexationContext';
 import { useIneaObsoletosIndexation } from '@/context/IneaObsoletosIndexationContext';
 import { useIteaObsoletosIndexation } from '@/context/IteaObsoletosIndexationContext';
+import { useResguardosIndexation } from '@/context/ResguardosIndexationContext';
+import { useResguardosBajasIndexation } from '@/context/ResguardosBajasIndexationContext';
 import { usePathname, useRouter } from 'next/navigation';
 
 interface SearchResult {
@@ -18,7 +20,19 @@ interface SearchResult {
     estado: string | null;
     estatus: string | null;
     resguardante: string | null;
-    origen: 'INEA' | 'ITEA' | 'INEA_OBS' | 'ITEA_OBS';
+    origen: 'INEA' | 'ITEA' | 'INEA_OBS' | 'ITEA_OBS' | 'RESGUARDO' | 'RESGUARDO_BAJA';
+    // Campos específicos para resguardos
+    folio?: string | null;
+    folio_resguardo?: string | null;
+    folio_baja?: string | null;
+    f_resguardo?: string | null;
+    f_baja?: string | null;
+    dir_area?: string | null;
+    area_resguardo?: string | null;
+    usufinal?: string | null;
+    num_inventario?: string | null;
+    condicion?: string | null;
+    motivo_baja?: string | null;
 }
 
 export default function GlobalSearch() {
@@ -29,6 +43,8 @@ export default function GlobalSearch() {
     const iteaContext = useIteaIndexation();
     const ineaObsContext = useIneaObsoletosIndexation();
     const iteaObsContext = useIteaObsoletosIndexation();
+    const resguardosContext = useResguardosIndexation();
+    const resguardosBajasContext = useResguardosBajasIndexation();
     
     const [searchTerm, setSearchTerm] = useState('');
     const [isExpanded, setIsExpanded] = useState(false);
@@ -89,8 +105,53 @@ export default function GlobalSearch() {
             origen: 'ITEA_OBS' as const
         }));
 
-        return [...ineaData, ...iteaData, ...ineaObsData, ...iteaObsData];
-    }, [ineaContext.data, iteaContext.muebles, ineaObsContext.data, iteaObsContext.data]);
+        // Agregar datos de resguardos
+        const resguardosData: SearchResult[] = resguardosContext.resguardos.map(item => ({
+            id: item.id,
+            id_inv: item.num_inventario,
+            descripcion: item.descripcion,
+            rubro: item.rubro,
+            valor: null,
+            area: item.area_resguardo,
+            estado: item.condicion,
+            estatus: null,
+            resguardante: item.usufinal,
+            origen: 'RESGUARDO' as const,
+            folio: item.folio,
+            f_resguardo: item.f_resguardo,
+            dir_area: item.dir_area,
+            area_resguardo: item.area_resguardo,
+            usufinal: item.usufinal,
+            num_inventario: item.num_inventario,
+            condicion: item.condicion
+        }));
+
+        // Agregar datos de resguardos de bajas
+        const resguardosBajasData: SearchResult[] = resguardosBajasContext.resguardosBajas.map(item => ({
+            id: item.id,
+            id_inv: item.num_inventario,
+            descripcion: item.descripcion,
+            rubro: item.rubro,
+            valor: null,
+            area: item.area_resguardo,
+            estado: item.condicion,
+            estatus: null,
+            resguardante: item.usufinal,
+            origen: 'RESGUARDO_BAJA' as const,
+            folio_resguardo: item.folio_resguardo,
+            folio_baja: item.folio_baja,
+            f_resguardo: item.f_resguardo,
+            f_baja: item.f_baja,
+            dir_area: item.dir_area,
+            area_resguardo: item.area_resguardo,
+            usufinal: item.usufinal,
+            num_inventario: item.num_inventario,
+            condicion: item.condicion,
+            motivo_baja: item.motivo_baja
+        }));
+
+        return [...ineaData, ...iteaData, ...ineaObsData, ...iteaObsData, ...resguardosData, ...resguardosBajasData];
+    }, [ineaContext.data, iteaContext.muebles, ineaObsContext.data, iteaObsContext.data, resguardosContext.resguardos, resguardosBajasContext.resguardosBajas]);
 
     // Búsqueda en tiempo real
     const searchResults = useMemo(() => {
@@ -106,7 +167,17 @@ export default function GlobalSearch() {
                 item.area?.toLowerCase().includes(term) ||
                 item.estado?.toLowerCase().includes(term) ||
                 item.estatus?.toLowerCase().includes(term) ||
-                item.resguardante?.toLowerCase().includes(term)
+                item.resguardante?.toLowerCase().includes(term) ||
+                // Campos específicos de resguardos
+                item.folio?.toLowerCase().includes(term) ||
+                item.folio_resguardo?.toLowerCase().includes(term) ||
+                item.folio_baja?.toLowerCase().includes(term) ||
+                item.dir_area?.toLowerCase().includes(term) ||
+                item.area_resguardo?.toLowerCase().includes(term) ||
+                item.usufinal?.toLowerCase().includes(term) ||
+                item.num_inventario?.toLowerCase().includes(term) ||
+                item.condicion?.toLowerCase().includes(term) ||
+                item.motivo_baja?.toLowerCase().includes(term)
             );
         }).slice(0, 50); // Limitar a 50 resultados
     }, [searchTerm, allData]);
@@ -116,6 +187,8 @@ export default function GlobalSearch() {
     const iteaResults = searchResults.filter(r => r.origen === 'ITEA');
     const ineaObsResults = searchResults.filter(r => r.origen === 'INEA_OBS');
     const iteaObsResults = searchResults.filter(r => r.origen === 'ITEA_OBS');
+    const resguardosResults = searchResults.filter(r => r.origen === 'RESGUARDO');
+    const resguardosBajasResults = searchResults.filter(r => r.origen === 'RESGUARDO_BAJA');
 
     // Cerrar al hacer clic fuera
     useEffect(() => {
@@ -150,6 +223,12 @@ export default function GlobalSearch() {
             router.push(`/consultas/inea/obsoletos?id=${result.id}`);
         } else if (result.origen === 'ITEA_OBS') {
             router.push(`/consultas/itea/obsoletos?id=${result.id}`);
+        } else if (result.origen === 'RESGUARDO') {
+            // Para resguardos, usar el folio para navegar
+            router.push(`/resguardos/consultar?folio=${result.folio}`);
+        } else if (result.origen === 'RESGUARDO_BAJA') {
+            // Para resguardos de bajas, usar el folio_resguardo para navegar
+            router.push(`/resguardos/consultar/bajas?folio=${result.folio_resguardo}`);
         }
         // Limpiar búsqueda y cerrar
         setSearchTerm('');
@@ -192,6 +271,7 @@ export default function GlobalSearch() {
                 {searchTerm && (
                     <button
                         onClick={handleClear}
+                        title="Limpiar búsqueda"
                         className={`flex-shrink-0 transition-colors duration-200 ${
                             isDarkMode ? 'text-gray-400 hover:text-white' : 'text-gray-500 hover:text-gray-900'
                         }`}
@@ -477,6 +557,162 @@ export default function GlobalSearch() {
                                     }`}>
                                         Mostrando primeros 50 resultados
                                     </p>
+                                </div>
+                            )}
+
+                            {/* Resultados Resguardos */}
+                            {resguardosResults.length > 0 && (
+                                <div className="space-y-1">
+                                    <div className={`flex items-center justify-between px-2.5 py-1.5 rounded-lg ${
+                                        isDarkMode ? 'bg-green-500/5' : 'bg-green-50/50'
+                                    }`}>
+                                        <span className={`text-[9px] font-bold tracking-widest uppercase ${
+                                            isDarkMode ? 'text-green-400/80' : 'text-green-600/80'
+                                        }`}>
+                                            Resguardos
+                                        </span>
+                                        <span className={`text-[8px] font-medium px-1.5 py-0.5 rounded-full ${
+                                            isDarkMode ? 'bg-green-500/10 text-green-400/60' : 'bg-green-100 text-green-600/60'
+                                        }`}>
+                                            {resguardosResults.length}
+                                        </span>
+                                    </div>
+                                    <div className="space-y-0.5">
+                                        {resguardosResults.map((result, index) => (
+                                            <div
+                                                key={`resguardo-${result.id}`}
+                                                onClick={() => handleResultClick(result)}
+                                                style={{ animationDelay: `${index * 30}ms` }}
+                                                className={`group px-2.5 py-2 rounded-lg transition-all duration-500 cursor-pointer animate-in fade-in-0 slide-in-from-left-1 ${
+                                                    isDarkMode 
+                                                        ? 'hover:bg-green-500/5 hover:shadow-lg hover:shadow-green-500/5 active:scale-[0.98]' 
+                                                        : 'hover:bg-green-50/80 hover:shadow-md hover:shadow-green-100 active:scale-[0.98]'
+                                                }`}
+                                            >
+                                                <div className="flex items-center justify-between gap-2.5">
+                                                    <div className="flex-1 min-w-0 space-y-1">
+                                                        <div className="flex items-center gap-2">
+                                                            <FileText className={`w-3 h-3 ${isDarkMode ? 'text-green-400' : 'text-green-600'}`} />
+                                                            <span className={`text-[10px] font-mono font-bold transition-colors duration-300 ${
+                                                                isDarkMode ? 'text-green-400 group-hover:text-green-300' : 'text-green-600 group-hover:text-green-700'
+                                                            }`}>
+                                                                {result.folio}
+                                                            </span>
+                                                            {result.area_resguardo && (
+                                                                <span className={`text-[8px] px-1.5 py-0.5 rounded-full font-medium ${
+                                                                    isDarkMode ? 'bg-white/5 text-gray-500' : 'bg-gray-100 text-gray-600'
+                                                                }`}>
+                                                                    {result.area_resguardo}
+                                                                </span>
+                                                            )}
+                                                        </div>
+                                                        <p className={`text-[9px] leading-relaxed truncate transition-colors duration-300 ${
+                                                            isDarkMode ? 'text-gray-500 group-hover:text-gray-400' : 'text-gray-600 group-hover:text-gray-700'
+                                                        }`}>
+                                                            {result.descripcion || 'Sin descripción'}
+                                                        </p>
+                                                        <div className="flex items-center gap-2 text-[8px]">
+                                                            {result.dir_area && (
+                                                                <span className={`px-1.5 py-0.5 rounded-full ${
+                                                                    isDarkMode ? 'bg-white/5 text-gray-500' : 'bg-gray-100 text-gray-600'
+                                                                }`}>
+                                                                    {result.dir_area}
+                                                                </span>
+                                                            )}
+                                                            {result.usufinal && (
+                                                                <span className={`px-1.5 py-0.5 rounded-full ${
+                                                                    isDarkMode ? 'bg-white/5 text-gray-500' : 'bg-gray-100 text-gray-600'
+                                                                }`}>
+                                                                    {result.usufinal}
+                                                                </span>
+                                                            )}
+                                                        </div>
+                                                    </div>
+                                                    <ChevronRight className={`w-3.5 h-3.5 flex-shrink-0 transition-all duration-500 ease-out ${
+                                                        isDarkMode ? 'text-gray-700 group-hover:text-green-400 group-hover:scale-110' : 'text-gray-300 group-hover:text-green-600 group-hover:scale-110'
+                                                    } group-hover:translate-x-1`} />
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* Resultados Resguardos de Bajas */}
+                            {resguardosBajasResults.length > 0 && (
+                                <div className="space-y-1">
+                                    <div className={`flex items-center justify-between px-2.5 py-1.5 rounded-lg ${
+                                        isDarkMode ? 'bg-gray-500/5' : 'bg-gray-50/50'
+                                    }`}>
+                                        <span className={`text-[9px] font-bold tracking-widest uppercase ${
+                                            isDarkMode ? 'text-gray-400/80' : 'text-gray-600/80'
+                                        }`}>
+                                            Resguardos de Bajas
+                                        </span>
+                                        <span className={`text-[8px] font-medium px-1.5 py-0.5 rounded-full ${
+                                            isDarkMode ? 'bg-gray-500/10 text-gray-400/60' : 'bg-gray-100 text-gray-600/60'
+                                        }`}>
+                                            {resguardosBajasResults.length}
+                                        </span>
+                                    </div>
+                                    <div className="space-y-0.5">
+                                        {resguardosBajasResults.map((result, index) => (
+                                            <div
+                                                key={`resguardo-baja-${result.id}`}
+                                                onClick={() => handleResultClick(result)}
+                                                style={{ animationDelay: `${index * 30}ms` }}
+                                                className={`group px-2.5 py-2 rounded-lg transition-all duration-500 cursor-pointer animate-in fade-in-0 slide-in-from-left-1 ${
+                                                    isDarkMode 
+                                                        ? 'hover:bg-gray-500/5 hover:shadow-lg hover:shadow-gray-500/5 active:scale-[0.98]' 
+                                                        : 'hover:bg-gray-50/80 hover:shadow-md hover:shadow-gray-100 active:scale-[0.98]'
+                                                }`}
+                                            >
+                                                <div className="flex items-center justify-between gap-2.5">
+                                                    <div className="flex-1 min-w-0 space-y-1">
+                                                        <div className="flex items-center gap-2">
+                                                            <Archive className={`w-3 h-3 ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`} />
+                                                            <span className={`text-[10px] font-mono font-bold transition-colors duration-300 ${
+                                                                isDarkMode ? 'text-gray-400 group-hover:text-gray-300' : 'text-gray-600 group-hover:text-gray-700'
+                                                            }`}>
+                                                                {result.folio_baja}
+                                                            </span>
+                                                            {result.area_resguardo && (
+                                                                <span className={`text-[8px] px-1.5 py-0.5 rounded-full font-medium ${
+                                                                    isDarkMode ? 'bg-white/5 text-gray-500' : 'bg-gray-100 text-gray-600'
+                                                                }`}>
+                                                                    {result.area_resguardo}
+                                                                </span>
+                                                            )}
+                                                        </div>
+                                                        <p className={`text-[9px] leading-relaxed truncate transition-colors duration-300 ${
+                                                            isDarkMode ? 'text-gray-500 group-hover:text-gray-400' : 'text-gray-600 group-hover:text-gray-700'
+                                                        }`}>
+                                                            {result.descripcion || 'Sin descripción'}
+                                                        </p>
+                                                        <div className="flex items-center gap-2 text-[8px]">
+                                                            {result.folio_resguardo && (
+                                                                <span className={`px-1.5 py-0.5 rounded-full ${
+                                                                    isDarkMode ? 'bg-white/5 text-gray-500' : 'bg-gray-100 text-gray-600'
+                                                                }`}>
+                                                                    Resguardo: {result.folio_resguardo}
+                                                                </span>
+                                                            )}
+                                                            {result.dir_area && (
+                                                                <span className={`px-1.5 py-0.5 rounded-full ${
+                                                                    isDarkMode ? 'bg-white/5 text-gray-500' : 'bg-gray-100 text-gray-600'
+                                                                }`}>
+                                                                    {result.dir_area}
+                                                                </span>
+                                                            )}
+                                                        </div>
+                                                    </div>
+                                                    <ChevronRight className={`w-3.5 h-3.5 flex-shrink-0 transition-all duration-500 ease-out ${
+                                                        isDarkMode ? 'text-gray-700 group-hover:text-gray-400 group-hover:scale-110' : 'text-gray-300 group-hover:text-gray-600 group-hover:scale-110'
+                                                    } group-hover:translate-x-1`} />
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
                                 </div>
                             )}
                         </div>

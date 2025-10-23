@@ -3,6 +3,8 @@ import { useIneaIndexation } from '@/context/IneaIndexationContext';
 import { useIteaIndexation } from '@/context/IteaIndexationContext';
 import { useIneaObsoletosIndexation } from '@/context/IneaObsoletosIndexationContext';
 import { useIteaObsoletosIndexation } from '@/context/IteaObsoletosIndexationContext';
+import { useResguardosIndexation } from '@/context/ResguardosIndexationContext';
+import { useResguardosBajasIndexation } from '@/context/ResguardosBajasIndexationContext';
 import { useTheme } from '@/context/ThemeContext';
 import { CheckCircle2, Database, AlertCircle, ChevronDown, ChevronUp, Sparkles } from 'lucide-react';
 import { useState, useEffect } from 'react';
@@ -12,6 +14,8 @@ export default function IndexationPopover() {
     const iteaState = useIteaIndexation();
     const ineaObsState = useIneaObsoletosIndexation();
     const iteaObsState = useIteaObsoletosIndexation();
+    const resguardosState = useResguardosIndexation();
+    const resguardosBajasState = useResguardosBajasIndexation();
     const { isDarkMode } = useTheme();
     const [isExpanded, setIsExpanded] = useState(false);
     const [isVisible, setIsVisible] = useState(false);
@@ -22,19 +26,21 @@ export default function IndexationPopover() {
     const isIteaComplete = iteaState.isComplete || (iteaState.progress >= iteaState.total && iteaState.total > 0);
     const isIneaObsComplete = !ineaObsState.isIndexing && ineaObsState.data.length >= 0;
     const isIteaObsComplete = !iteaObsState.isIndexing && iteaObsState.data.length >= 0;
-    const isAllComplete = isIneaComplete && isIteaComplete && isIneaObsComplete && isIteaObsComplete;
+    const isResguardosComplete = !resguardosState.loading && resguardosState.progress === 100;
+    const isResguardosBajasComplete = !resguardosBajasState.loading && resguardosBajasState.progress === 100;
+    const isAllComplete = isIneaComplete && isIteaComplete && isIneaObsComplete && isIteaObsComplete && isResguardosComplete && isResguardosBajasComplete;
 
-    // Calcular progreso total combinado (incluyendo obsoletos)
-    const totalProgress = ineaState.progress + iteaState.progress + ineaObsState.data.length + iteaObsState.data.length;
-    const totalItems = ineaState.total + iteaState.total + ineaObsState.data.length + iteaObsState.data.length;
+    // Calcular progreso total combinado (incluyendo obsoletos y resguardos)
+    const totalProgress = ineaState.progress + iteaState.progress + ineaObsState.data.length + iteaObsState.data.length + resguardosState.resguardos.length + resguardosBajasState.resguardosBajas.length;
+    const totalItems = ineaState.total + iteaState.total + ineaObsState.data.length + iteaObsState.data.length + resguardosState.resguardos.length + resguardosBajasState.resguardosBajas.length;
     const combinedPercentage = totalItems > 0 ? Math.round((totalProgress / totalItems) * 100) : 0;
 
     // Determinar estado visual
     const getStatus = () => {
         if (ineaState.error || iteaState.error || ineaObsState.error || iteaObsState.error) return 'error';
         if (isAllComplete) return 'complete';
-        if (ineaState.isIndexing || iteaState.isIndexing || ineaObsState.isIndexing || iteaObsState.isIndexing) return 'indexing';
-        if (ineaState.progress > 0 || iteaState.progress > 0 || ineaObsState.data.length > 0 || iteaObsState.data.length > 0) return 'loading';
+        if (ineaState.isIndexing || iteaState.isIndexing || ineaObsState.isIndexing || iteaObsState.isIndexing || resguardosState.loading || resguardosBajasState.loading) return 'indexing';
+        if (ineaState.progress > 0 || iteaState.progress > 0 || ineaObsState.data.length > 0 || iteaObsState.data.length > 0 || resguardosState.resguardos.length > 0 || resguardosBajasState.resguardosBajas.length > 0) return 'loading';
         return 'ready';
     };
 
@@ -46,11 +52,13 @@ export default function IndexationPopover() {
             ineaState.isIndexing || ineaState.progress > 0 || ineaState.error !== null ||
             iteaState.isIndexing || iteaState.progress > 0 || iteaState.error !== null ||
             ineaObsState.isIndexing || ineaObsState.data.length > 0 || ineaObsState.error !== null ||
-            iteaObsState.isIndexing || iteaObsState.data.length > 0 || iteaObsState.error !== null;
+            iteaObsState.isIndexing || iteaObsState.data.length > 0 || iteaObsState.error !== null ||
+            resguardosState.loading || resguardosState.resguardos.length > 0 ||
+            resguardosBajasState.loading || resguardosBajasState.resguardosBajas.length > 0;
         setIsVisible(hasActivity);
 
         // Ocultar después de 3 segundos si todos están completos
-        if (isAllComplete && !ineaState.isIndexing && !iteaState.isIndexing && !ineaObsState.isIndexing && !iteaObsState.isIndexing) {
+        if (isAllComplete && !ineaState.isIndexing && !iteaState.isIndexing && !ineaObsState.isIndexing && !iteaObsState.isIndexing && !resguardosState.loading && !resguardosBajasState.loading) {
             const timer = setTimeout(() => {
                 setShouldHide(true);
             }, 3000);
@@ -58,7 +66,7 @@ export default function IndexationPopover() {
         } else {
             setShouldHide(false);
         }
-    }, [ineaState.isIndexing, ineaState.progress, ineaState.error, iteaState.isIndexing, iteaState.progress, iteaState.error, ineaObsState.isIndexing, ineaObsState.data.length, ineaObsState.error, iteaObsState.isIndexing, iteaObsState.data.length, iteaObsState.error, isAllComplete]);
+    }, [ineaState.isIndexing, ineaState.progress, ineaState.error, iteaState.isIndexing, iteaState.progress, iteaState.error, ineaObsState.isIndexing, ineaObsState.data.length, ineaObsState.error, iteaObsState.isIndexing, iteaObsState.data.length, iteaObsState.error, resguardosState.loading, resguardosState.resguardos.length, resguardosBajasState.loading, resguardosBajasState.resguardosBajas.length, isAllComplete]);
 
     // No mostrar si no hay actividad o debe ocultarse
     if (!isVisible || shouldHide) return null;
@@ -287,6 +295,56 @@ export default function IndexationPopover() {
                             total={iteaObsState.data.length}
                             color={isIteaObsComplete ? 'bg-emerald-500' : 'bg-red-500'}
                             gradient={isIteaObsComplete ? 'bg-gradient-to-r from-emerald-500 to-emerald-400' : 'bg-gradient-to-r from-red-500 to-red-400'}
+                        />
+                    </div>
+
+                    {/* Progreso de Resguardos */}
+                    <div className="space-y-2.5">
+                        <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-2.5">
+                                <div className={`w-2 h-2 rounded-full ${
+                                    isResguardosComplete ? 'bg-emerald-500 animate-pulse' : 'bg-cyan-500'
+                                }`} />
+                                <span className={`text-sm font-semibold transition-colors duration-300 ${
+                                    isDarkMode ? 'text-white' : 'text-gray-900'
+                                }`}>Resguardos</span>
+                            </div>
+                            <span className={`text-xs font-medium tabular-nums transition-colors duration-300 ${
+                                isDarkMode ? 'text-white/60' : 'text-gray-600'
+                            }`}>
+                                {resguardosState.resguardos.length.toLocaleString()}
+                            </span>
+                        </div>
+                        <ProgressBar
+                            progress={resguardosState.resguardos.length}
+                            total={resguardosState.resguardos.length}
+                            color={isResguardosComplete ? 'bg-emerald-500' : 'bg-cyan-500'}
+                            gradient={isResguardosComplete ? 'bg-gradient-to-r from-emerald-500 to-emerald-400' : 'bg-gradient-to-r from-cyan-500 to-cyan-400'}
+                        />
+                    </div>
+
+                    {/* Progreso de Resguardos Bajas */}
+                    <div className="space-y-2.5">
+                        <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-2.5">
+                                <div className={`w-2 h-2 rounded-full ${
+                                    isResguardosBajasComplete ? 'bg-emerald-500 animate-pulse' : 'bg-pink-500'
+                                }`} />
+                                <span className={`text-sm font-semibold transition-colors duration-300 ${
+                                    isDarkMode ? 'text-white' : 'text-gray-900'
+                                }`}>Resguardos Bajas</span>
+                            </div>
+                            <span className={`text-xs font-medium tabular-nums transition-colors duration-300 ${
+                                isDarkMode ? 'text-white/60' : 'text-gray-600'
+                            }`}>
+                                {resguardosBajasState.resguardosBajas.length.toLocaleString()}
+                            </span>
+                        </div>
+                        <ProgressBar
+                            progress={resguardosBajasState.resguardosBajas.length}
+                            total={resguardosBajasState.resguardosBajas.length}
+                            color={isResguardosBajasComplete ? 'bg-emerald-500' : 'bg-pink-500'}
+                            gradient={isResguardosBajasComplete ? 'bg-gradient-to-r from-emerald-500 to-emerald-400' : 'bg-gradient-to-r from-pink-500 to-pink-400'}
                         />
                     </div>
 

@@ -15,6 +15,8 @@ import { generateResguardoPDF } from './ResguardoPDFReport';
 import { useUserRole } from "@/hooks/useUserRole";
 import { useNotifications } from '@/hooks/useNotifications';
 import { useTheme } from '@/context/ThemeContext';
+import { useIneaIndexation } from '@/context/IneaIndexationContext';
+import { useIteaIndexation } from '@/context/IteaIndexationContext';
 
 interface Mueble {
     id: number;
@@ -120,6 +122,8 @@ function getColorClass(value: string | null | undefined, isDarkMode: boolean) {
 }
 
 export default function CrearResguardos() {
+    const { data: ineaData } = useIneaIndexation();
+    const { muebles: iteaData } = useIteaIndexation();
     const [allMuebles, setAllMuebles] = useState<Mueble[]>([]);
     const [directorio, setDirectorio] = useState<Directorio[]>([]);
     const [selectedMuebles, setSelectedMuebles] = useState<Mueble[]>([]);
@@ -314,17 +318,13 @@ export default function CrearResguardos() {
     useEffect(() => {
         const fetchData = async () => {
             try {
-                const [directorioResult, firmasResult, allMueblesInea, allMueblesItea] = await Promise.all([
+                const [directorioResult, firmasResult] = await Promise.all([
                     supabase.from('directorio').select('*'),
-                    supabase.from('firmas').select('*').order('id', { ascending: true }),
-                    supabase.from('muebles').select('area,usufinal').eq('estatus', 'ACTIVO'),
-                    supabase.from('mueblesitea').select('area,usufinal').eq('estatus', 'ACTIVO')
+                    supabase.from('firmas').select('*').order('id', { ascending: true })
                 ]);
 
                 if (directorioResult.error) throw directorioResult.error;
                 if (firmasResult.error) throw firmasResult.error;
-                if (allMueblesInea.error) throw allMueblesInea.error;
-                if (allMueblesItea.error) throw allMueblesItea.error;
 
                 setDirectorio(directorioResult.data || []);
 
@@ -393,13 +393,10 @@ export default function CrearResguardos() {
                 (resguardados || []).map(r => `${r.num_inventario}-${r.descripcion}-${r.rubro}-${r.condicion}-${r.area_resguardo}`.toLowerCase())
             );
 
-            const [dataInea, dataItea] = await Promise.all([
-                fetchAllRows('muebles', {}),
-                fetchAllRows('mueblesitea', { estatus: 'ACTIVO' })
-            ]);
-            let combinedData = [
-                ...((Array.isArray(dataInea) ? dataInea as Mueble[] : [] as Mueble[]).map((item: Mueble) => ({ ...item, origen: 'INEA' }))),
-                ...((Array.isArray(dataItea) ? dataItea as Mueble[] : [] as Mueble[]).map((item: Mueble) => ({ ...item, origen: 'ITEA' }))),
+            // Usar datos indexados en lugar de consultar la base de datos
+            let combinedData: Mueble[] = [
+                ...(ineaData.map((item: Mueble) => ({ ...item, origen: 'INEA' as const }))),
+                ...(iteaData.filter((item: Mueble) => item.estatus === 'ACTIVO').map((item: Mueble) => ({ ...item, origen: 'ITEA' as const }))),
             ];
 
             combinedData = combinedData.filter(item => {
@@ -421,7 +418,7 @@ export default function CrearResguardos() {
         } finally {
             setLoading(false);
         }
-    }, []);
+    }, [ineaData, iteaData]);
 
     useEffect(() => {
         fetchData(sortField, sortDirection);

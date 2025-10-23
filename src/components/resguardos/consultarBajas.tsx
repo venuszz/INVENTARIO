@@ -12,6 +12,8 @@ import { useUserRole } from "@/hooks/useUserRole";
 import RoleGuard from "@/components/roleGuard";
 import { useNotifications } from '@/hooks/useNotifications';
 import { useTheme } from '@/context/ThemeContext';
+import { useResguardosBajasIndexation } from '@/context/ResguardosBajasIndexationContext';
+import { useSearchParams } from 'next/navigation';
 
 interface ResguardoBaja {
     id: number;
@@ -73,6 +75,7 @@ interface PdfDataBaja {
 }
 
 const ConsultarBajasResguardos = () => {
+    useResguardosBajasIndexation();
     const [bajas, setBajas] = useState<ResguardoBaja[]>([]);
     const [selectedBaja, setSelectedBaja] = useState<ResguardoBajaDetalle | null>(null);
     const [loading, setLoading] = useState(false);
@@ -102,6 +105,8 @@ const ConsultarBajasResguardos = () => {
     } | null>(null);
     const { createNotification } = useNotifications();
     const { isDarkMode } = useTheme();
+    const searchParams = useSearchParams();
+    const [folioParamLoading, setFolioParamLoading] = useState(false);
 
     const fetchBajas = useCallback(async () => {
         setLoading(true);
@@ -250,6 +255,11 @@ const ConsultarBajasResguardos = () => {
                 };
 
                 setSelectedBaja(detalles);
+            } else {
+                // No se encontraron datos para el folio
+                setError(`No se encontraron bajas para el folio: ${folioResguardo}`);
+                setSelectedBaja(null);
+                setGroupedItems({});
             }
         } catch (err) {
             setError('Error al cargar los detalles de la baja');
@@ -378,6 +388,27 @@ const ConsultarBajasResguardos = () => {
     useEffect(() => {
         fetchBajas();
     }, [fetchBajas]);
+
+    // Mostrar resguardo de baja automáticamente si hay ?folio=XXX
+    useEffect(() => {
+        const folioParam = searchParams?.get('folio');
+        if (folioParam) {
+            setFolioParamLoading(true);
+            fetchBajaDetails(folioParam)
+                .then(() => {
+                    // Scroll al detalle después de cargar
+                    if (detailRef.current) {
+                        detailRef.current.scrollIntoView({ behavior: 'smooth' });
+                    }
+                })
+                .catch((error) => {
+                    console.error('Error en fetchBajaDetails:', error);
+                })
+                .finally(() => {
+                    setFolioParamLoading(false);
+                });
+        }
+    }, [searchParams]);
 
     const totalPages = Math.ceil(totalCount / rowsPerPage);
     const foliosUnicos = Array.from(new Map(bajas.map(r => [r.folio_resguardo, r])).values());
@@ -557,6 +588,15 @@ const ConsultarBajasResguardos = () => {
             ? 'bg-black text-white'
             : 'bg-gradient-to-br from-gray-50 via-white to-gray-100 text-gray-900'
             }`}>
+            {/* Si está cargando el folio por param, mostrar loader sobre el panel derecho */}
+            {folioParamLoading && (
+                <div className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center">
+                    <div className="flex flex-col items-center gap-2">
+                        <span className="text-white animate-pulse text-lg font-bold">Cargando folio...</span>
+                        <div className="h-10 w-10 border-4 border-white border-t-transparent rounded-full animate-spin"></div>
+                    </div>
+                </div>
+            )}
             <div className={`w-full mx-auto rounded-lg sm:rounded-xl shadow-2xl overflow-hidden transition-all duration-500 transform border ${isDarkMode
                 ? 'bg-black border-gray-800'
                 : 'bg-white border-gray-200'

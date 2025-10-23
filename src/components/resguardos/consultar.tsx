@@ -12,8 +12,9 @@ import { generateResguardoPDF } from './ResguardoPDFReport';
 import { useUserRole } from "@/hooks/useUserRole";
 import RoleGuard from "@/components/roleGuard";
 import { useNotifications } from '@/hooks/useNotifications';
-import { useSearchParams } from 'next/navigation';
 import { useTheme } from '@/context/ThemeContext';
+import { useResguardosIndexation } from '@/context/ResguardosIndexationContext';
+import { useSearchParams } from 'next/navigation';
 
 interface Resguardo {
     id: number;
@@ -135,6 +136,7 @@ const limpiarDatosArticulo = async (
 };
 
 export default function ConsultarResguardos({ folioParam }: { folioParam?: string | null }) {
+    useResguardosIndexation();
     const [resguardos, setResguardos] = useState<Resguardo[]>([]);
     const [selectedResguardo, setSelectedResguardo] = useState<ResguardoDetalle | null>(null);
     const [loading, setLoading] = useState(false);
@@ -485,7 +487,7 @@ export default function ConsultarResguardos({ folioParam }: { folioParam?: strin
     };
 
     // Fetch resguardos by folio
-    const fetchResguardoDetails = async (folio: string, specificResguardante?: string) => {
+    const fetchResguardoDetails = useCallback(async (folio: string, specificResguardante?: string) => {
         setLoading(true);
         try {
             let query = supabase
@@ -550,6 +552,11 @@ export default function ConsultarResguardos({ folioParam }: { folioParam?: strin
                         detailRef.current?.scrollIntoView({ behavior: 'smooth' });
                     }, 100);
                 }
+            } else {
+                // No se encontraron datos para el folio
+                setError(`No se encontraron resguardos para el folio: ${folio}`);
+                setSelectedResguardo(null);
+                setPdfData(null);
             }
         } catch (err) {
             setError('Error al cargar los detalles del resguardo');
@@ -557,7 +564,7 @@ export default function ConsultarResguardos({ folioParam }: { folioParam?: strin
         } finally {
             setLoading(false);
         }
-    };
+    }, []);
 
     // Eliminar todos los artículos de un resguardo (por folio)
     const handleDeleteAll = async () => {
@@ -782,27 +789,24 @@ export default function ConsultarResguardos({ folioParam }: { folioParam?: strin
 
     // Mostrar resguardo automáticamente si hay ?folio=XXX
     useEffect(() => {
-        const folioParam = searchParams?.get('folio');
-        if (folioParam) {
-            fetchResguardoDetails(folioParam);
-        }
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [searchParams]);
-
-    // Buscar y mostrar el detalle del folio si viene por prop
-    useEffect(() => {
-        if (folioParam) {
+        const folio = folioParam ?? searchParams?.get('folio');
+        if (folio) {
             setFolioParamLoading(true);
-            fetchResguardoDetails(folioParam)
+            fetchResguardoDetails(folio)
                 .then(() => {
                     // Scroll al detalle después de cargar
                     if (detailRef.current) {
                         detailRef.current.scrollIntoView({ behavior: 'smooth' });
                     }
                 })
-                .finally(() => setFolioParamLoading(false));
+                .catch((error) => {
+                    console.error('Error en fetchResguardoDetails:', error);
+                })
+                .finally(() => {
+                    setFolioParamLoading(false);
+                });
         }
-    }, [folioParam]);
+    }, [folioParam, searchParams, fetchResguardoDetails]);
 
     // Calculate total pages
     const totalPages = Math.ceil(totalCount / rowsPerPage);

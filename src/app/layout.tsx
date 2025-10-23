@@ -8,6 +8,8 @@ import { IneaIndexationProvider } from "@/context/IneaIndexationContext";
 import { IteaIndexationProvider } from "@/context/IteaIndexationContext";
 import { IneaObsoletosIndexationProvider } from "@/context/IneaObsoletosIndexationContext";
 import { IteaObsoletosIndexationProvider } from "@/context/IteaObsoletosIndexationContext";
+import { ResguardosIndexationProvider } from "@/context/ResguardosIndexationContext";
+import { ResguardosBajasIndexationProvider } from "@/context/ResguardosBajasIndexationContext";
 import IndexationPopover from "@/components/IndexationPopover";
 
 const geistSans = Geist({
@@ -45,14 +47,18 @@ export default function RootLayout({
             <IteaIndexationProvider>
               <IneaObsoletosIndexationProvider>
                 <IteaObsoletosIndexationProvider>
-                  <div>
-                    <HeaderContainer />
-                  </div>
-                  <main className="flex-1 overflow-hidden">
-                    {children}
-                    <SpeedInsights />
-                  </main>
-                  <IndexationPopover />
+                  <ResguardosIndexationProvider>
+                    <ResguardosBajasIndexationProvider>
+                      <div>
+                        <HeaderContainer />
+                      </div>
+                      <main className="flex-1 overflow-hidden">
+                        {children}
+                        <SpeedInsights />
+                      </main>
+                      <IndexationPopover />
+                    </ResguardosBajasIndexationProvider>
+                  </ResguardosIndexationProvider>
                 </IteaObsoletosIndexationProvider>
               </IneaObsoletosIndexationProvider>
             </IteaIndexationProvider>
