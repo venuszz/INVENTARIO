@@ -13,7 +13,7 @@ const protectedRoutes = [
     '/admin',
 ]
 
-export async function middleware(request: NextRequest) {
+export async function proxy(request: NextRequest) {
     const { pathname } = request.nextUrl
 
     const isPathProtected = protectedRoutes.some((path) =>
