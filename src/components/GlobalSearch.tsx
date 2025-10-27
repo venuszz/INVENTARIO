@@ -281,83 +281,97 @@ export default function GlobalSearch() {
                 )}
             </div>
 
-            {/* Resultados de búsqueda - Ultra Minimalista */}
+            {/* Resultados de búsqueda - Diseño Mejorado */}
             {showResults && (
-                <div className={`absolute top-full right-0 mt-1.5 w-[380px] max-h-[420px] overflow-y-auto rounded-xl shadow-2xl border transition-all duration-300 ${
+                <div className={`absolute top-full right-0 mt-2 w-[420px] max-h-[500px] overflow-y-auto rounded-2xl shadow-2xl border transition-all duration-300 ${
                     isDarkMode 
-                        ? 'bg-black/95 border-white/5 backdrop-blur-3xl' 
-                        : 'bg-white/95 border-gray-200/30 backdrop-blur-3xl'
-                } animate-in slide-in-from-top-2 fade-in-0 duration-300 scrollbar-thin ${isDarkMode ? 'scrollbar-thumb-white/5 scrollbar-track-transparent hover:scrollbar-thumb-white/10' : 'scrollbar-thumb-gray-200 scrollbar-track-transparent hover:scrollbar-thumb-gray-300'}`}>
+                        ? 'bg-gradient-to-b from-black/98 to-black/95 border-white/10 backdrop-blur-3xl' 
+                        : 'bg-gradient-to-b from-white/98 to-white/95 border-gray-200/50 backdrop-blur-3xl'
+                } animate-in slide-in-from-top-4 fade-in-0 zoom-in-95 duration-300 scrollbar-thin ${
+                    isDarkMode 
+                        ? 'scrollbar-thumb-white/10 scrollbar-track-transparent hover:scrollbar-thumb-white/20' 
+                        : 'scrollbar-thumb-gray-300 scrollbar-track-transparent hover:scrollbar-thumb-gray-400'
+                }`}>
                     {searchResults.length === 0 ? (
-                        <div className="p-8 text-center">
-                            <div className={`w-12 h-12 mx-auto mb-3 rounded-full flex items-center justify-center ${
-                                isDarkMode ? 'bg-white/5' : 'bg-gray-100'
+                        <div className="p-12 text-center animate-in fade-in-0 zoom-in-95 duration-500">
+                            <div className={`w-16 h-16 mx-auto mb-4 rounded-2xl flex items-center justify-center transition-all duration-500 ${
+                                isDarkMode ? 'bg-white/5 shadow-lg shadow-white/5' : 'bg-gray-100 shadow-lg shadow-gray-200'
                             }`}>
-                                <Search className={`w-5 h-5 ${
+                                <Search className={`w-7 h-7 transition-all duration-500 ${
                                     isDarkMode ? 'text-gray-600' : 'text-gray-400'
                                 }`} />
                             </div>
-                            <p className={`text-xs font-medium ${
-                                isDarkMode ? 'text-gray-500' : 'text-gray-600'
+                            <p className={`text-sm font-semibold mb-1 ${
+                                isDarkMode ? 'text-gray-400' : 'text-gray-600'
                             }`}>
                                 Sin resultados
                             </p>
+                            <p className={`text-xs ${
+                                isDarkMode ? 'text-gray-600' : 'text-gray-500'
+                            }`}>
+                                Intenta con otros términos de búsqueda
+                            </p>
                         </div>
                     ) : (
-                        <div className="p-2.5 space-y-2.5">
+                        <div className="p-3 space-y-3">
                             {/* Resultados INEA */}
                             {ineaResults.length > 0 && (
-                                <div className="space-y-1">
-                                    <div className={`flex items-center justify-between px-2.5 py-1.5 rounded-lg ${
-                                        isDarkMode ? 'bg-blue-500/5' : 'bg-blue-50/50'
-                                    }`}>
-                                        <span className={`text-[9px] font-bold tracking-widest uppercase ${
-                                            isDarkMode ? 'text-blue-400/80' : 'text-blue-600/80'
-                                        }`}>
-                                            INEA
-                                        </span>
-                                        <span className={`text-[8px] font-medium px-1.5 py-0.5 rounded-full ${
-                                            isDarkMode ? 'bg-blue-500/10 text-blue-400/60' : 'bg-blue-100 text-blue-600/60'
+                                <div className="space-y-1.5 animate-in fade-in-0 slide-in-from-top-2 duration-300">
+                                    <div className={`flex items-center justify-between px-3 py-2 rounded-xl ${
+                                        isDarkMode ? 'bg-gradient-to-r from-blue-500/10 to-blue-500/5' : 'bg-gradient-to-r from-blue-50 to-blue-50/50'
+                                    } backdrop-blur-sm`}>
+                                        <div className="flex items-center gap-2">
+                                            <div className={`w-1.5 h-1.5 rounded-full ${
+                                                isDarkMode ? 'bg-blue-400' : 'bg-blue-600'
+                                            } animate-pulse`}></div>
+                                            <span className={`text-[10px] font-bold tracking-wider uppercase ${
+                                                isDarkMode ? 'text-blue-400' : 'text-blue-600'
+                                            }`}>
+                                                INEA
+                                            </span>
+                                        </div>
+                                        <span className={`text-[9px] font-bold px-2 py-1 rounded-full ${
+                                            isDarkMode ? 'bg-blue-500/20 text-blue-300' : 'bg-blue-200 text-blue-700'
                                         }`}>
                                             {ineaResults.length}
                                         </span>
                                     </div>
-                                    <div className="space-y-0.5">
+                                    <div className="space-y-1">
                                         {ineaResults.map((result, index) => (
                                             <div
                                                 key={`inea-${result.id}`}
                                                 onClick={() => handleResultClick(result)}
-                                                style={{ animationDelay: `${index * 30}ms` }}
-                                                className={`group px-2.5 py-2 rounded-lg transition-all duration-500 cursor-pointer animate-in fade-in-0 slide-in-from-left-1 ${
+                                                style={{ animationDelay: `${index * 40}ms` }}
+                                                className={`group px-3 py-2.5 rounded-xl transition-all duration-300 cursor-pointer animate-in fade-in-0 slide-in-from-left-2 ${
                                                     isDarkMode 
-                                                        ? 'hover:bg-blue-500/5 hover:shadow-lg hover:shadow-blue-500/5 active:scale-[0.98]' 
-                                                        : 'hover:bg-blue-50/80 hover:shadow-md hover:shadow-blue-100 active:scale-[0.98]'
+                                                        ? 'hover:bg-blue-500/10 hover:shadow-lg hover:shadow-blue-500/10 active:scale-[0.97] border border-transparent hover:border-blue-500/20' 
+                                                        : 'hover:bg-blue-50 hover:shadow-lg hover:shadow-blue-100/50 active:scale-[0.97] border border-transparent hover:border-blue-200'
                                                 }`}
                                             >
-                                                <div className="flex items-center justify-between gap-2.5">
-                                                    <div className="flex-1 min-w-0 space-y-1">
-                                                        <div className="flex items-center gap-2">
-                                                            <span className={`text-[10px] font-mono font-bold transition-colors duration-300 ${
+                                                <div className="flex items-center justify-between gap-3">
+                                                    <div className="flex-1 min-w-0 space-y-1.5">
+                                                        <div className="flex items-center gap-2 flex-wrap">
+                                                            <span className={`text-xs font-mono font-bold transition-all duration-300 ${
                                                                 isDarkMode ? 'text-blue-400 group-hover:text-blue-300' : 'text-blue-600 group-hover:text-blue-700'
                                                             }`}>
                                                                 {result.id_inv}
                                                             </span>
                                                             {result.area && (
-                                                                <span className={`text-[8px] px-1.5 py-0.5 rounded-full font-medium ${
-                                                                    isDarkMode ? 'bg-white/5 text-gray-500' : 'bg-gray-100 text-gray-600'
+                                                                <span className={`text-[9px] px-2 py-0.5 rounded-full font-semibold transition-all duration-300 ${
+                                                                    isDarkMode ? 'bg-white/5 text-gray-400 group-hover:bg-white/10' : 'bg-gray-100 text-gray-600 group-hover:bg-gray-200'
                                                                 }`}>
                                                                     {result.area}
                                                                 </span>
                                                             )}
                                                         </div>
-                                                        <p className={`text-[9px] leading-relaxed truncate transition-colors duration-300 ${
-                                                            isDarkMode ? 'text-gray-500 group-hover:text-gray-400' : 'text-gray-600 group-hover:text-gray-700'
+                                                        <p className={`text-[10px] leading-relaxed truncate transition-colors duration-300 ${
+                                                            isDarkMode ? 'text-gray-400 group-hover:text-gray-300' : 'text-gray-600 group-hover:text-gray-700'
                                                         }`}>
                                                             {result.descripcion || 'Sin descripción'}
                                                         </p>
                                                     </div>
-                                                    <ChevronRight className={`w-3.5 h-3.5 flex-shrink-0 transition-all duration-500 ease-out ${
-                                                        isDarkMode ? 'text-gray-700 group-hover:text-blue-400 group-hover:scale-110' : 'text-gray-300 group-hover:text-blue-600 group-hover:scale-110'
+                                                    <ChevronRight className={`w-4 h-4 flex-shrink-0 transition-all duration-300 ease-out ${
+                                                        isDarkMode ? 'text-gray-700 group-hover:text-blue-400 group-hover:scale-125' : 'text-gray-300 group-hover:text-blue-600 group-hover:scale-125'
                                                     } group-hover:translate-x-1`} />
                                                 </div>
                                             </div>
@@ -368,57 +382,62 @@ export default function GlobalSearch() {
 
                             {/* Resultados ITEA */}
                             {iteaResults.length > 0 && (
-                                <div className="space-y-1">
-                                    <div className={`flex items-center justify-between px-2.5 py-1.5 rounded-lg ${
-                                        isDarkMode ? 'bg-purple-500/5' : 'bg-purple-50/50'
-                                    }`}>
-                                        <span className={`text-[9px] font-bold tracking-widest uppercase ${
-                                            isDarkMode ? 'text-purple-400/80' : 'text-purple-600/80'
-                                        }`}>
-                                            ITEA
-                                        </span>
-                                        <span className={`text-[8px] font-medium px-1.5 py-0.5 rounded-full ${
-                                            isDarkMode ? 'bg-purple-500/10 text-purple-400/60' : 'bg-purple-100 text-purple-600/60'
+                                <div className="space-y-1.5 animate-in fade-in-0 slide-in-from-top-2 duration-300" style={{ animationDelay: '50ms' }}>
+                                    <div className={`flex items-center justify-between px-3 py-2 rounded-xl ${
+                                        isDarkMode ? 'bg-gradient-to-r from-purple-500/10 to-purple-500/5' : 'bg-gradient-to-r from-purple-50 to-purple-50/50'
+                                    } backdrop-blur-sm`}>
+                                        <div className="flex items-center gap-2">
+                                            <div className={`w-1.5 h-1.5 rounded-full ${
+                                                isDarkMode ? 'bg-purple-400' : 'bg-purple-600'
+                                            } animate-pulse`}></div>
+                                            <span className={`text-[10px] font-bold tracking-wider uppercase ${
+                                                isDarkMode ? 'text-purple-400' : 'text-purple-600'
+                                            }`}>
+                                                ITEA
+                                            </span>
+                                        </div>
+                                        <span className={`text-[9px] font-bold px-2 py-1 rounded-full ${
+                                            isDarkMode ? 'bg-purple-500/20 text-purple-300' : 'bg-purple-200 text-purple-700'
                                         }`}>
                                             {iteaResults.length}
                                         </span>
                                     </div>
-                                    <div className="space-y-0.5">
+                                    <div className="space-y-1">
                                         {iteaResults.map((result, index) => (
                                             <div
                                                 key={`itea-${result.id}`}
                                                 onClick={() => handleResultClick(result)}
-                                                style={{ animationDelay: `${index * 30}ms` }}
-                                                className={`group px-2.5 py-2 rounded-lg transition-all duration-500 cursor-pointer animate-in fade-in-0 slide-in-from-left-1 ${
+                                                style={{ animationDelay: `${index * 40}ms` }}
+                                                className={`group px-3 py-2.5 rounded-xl transition-all duration-300 cursor-pointer animate-in fade-in-0 slide-in-from-left-2 ${
                                                     isDarkMode 
-                                                        ? 'hover:bg-purple-500/5 hover:shadow-lg hover:shadow-purple-500/5 active:scale-[0.98]' 
-                                                        : 'hover:bg-purple-50/80 hover:shadow-md hover:shadow-purple-100 active:scale-[0.98]'
+                                                        ? 'hover:bg-purple-500/10 hover:shadow-lg hover:shadow-purple-500/10 active:scale-[0.97] border border-transparent hover:border-purple-500/20' 
+                                                        : 'hover:bg-purple-50 hover:shadow-lg hover:shadow-purple-100/50 active:scale-[0.97] border border-transparent hover:border-purple-200'
                                                 }`}
                                             >
-                                                <div className="flex items-center justify-between gap-2.5">
-                                                    <div className="flex-1 min-w-0 space-y-1">
-                                                        <div className="flex items-center gap-2">
-                                                            <span className={`text-[10px] font-mono font-bold transition-colors duration-300 ${
+                                                <div className="flex items-center justify-between gap-3">
+                                                    <div className="flex-1 min-w-0 space-y-1.5">
+                                                        <div className="flex items-center gap-2 flex-wrap">
+                                                            <span className={`text-xs font-mono font-bold transition-all duration-300 ${
                                                                 isDarkMode ? 'text-purple-400 group-hover:text-purple-300' : 'text-purple-600 group-hover:text-purple-700'
                                                             }`}>
                                                                 {result.id_inv}
                                                             </span>
                                                             {result.area && (
-                                                                <span className={`text-[8px] px-1.5 py-0.5 rounded-full font-medium ${
-                                                                    isDarkMode ? 'bg-white/5 text-gray-500' : 'bg-gray-100 text-gray-600'
+                                                                <span className={`text-[9px] px-2 py-0.5 rounded-full font-semibold transition-all duration-300 ${
+                                                                    isDarkMode ? 'bg-white/5 text-gray-400 group-hover:bg-white/10' : 'bg-gray-100 text-gray-600 group-hover:bg-gray-200'
                                                                 }`}>
                                                                     {result.area}
                                                                 </span>
                                                             )}
                                                         </div>
-                                                        <p className={`text-[9px] leading-relaxed truncate transition-colors duration-300 ${
-                                                            isDarkMode ? 'text-gray-500 group-hover:text-gray-400' : 'text-gray-600 group-hover:text-gray-700'
+                                                        <p className={`text-[10px] leading-relaxed truncate transition-colors duration-300 ${
+                                                            isDarkMode ? 'text-gray-400 group-hover:text-gray-300' : 'text-gray-600 group-hover:text-gray-700'
                                                         }`}>
                                                             {result.descripcion || 'Sin descripción'}
                                                         </p>
                                                     </div>
-                                                    <ChevronRight className={`w-3.5 h-3.5 flex-shrink-0 transition-all duration-500 ease-out ${
-                                                        isDarkMode ? 'text-gray-700 group-hover:text-purple-400 group-hover:scale-110' : 'text-gray-300 group-hover:text-purple-600 group-hover:scale-110'
+                                                    <ChevronRight className={`w-4 h-4 flex-shrink-0 transition-all duration-300 ease-out ${
+                                                        isDarkMode ? 'text-gray-700 group-hover:text-purple-400 group-hover:scale-125' : 'text-gray-300 group-hover:text-purple-600 group-hover:scale-125'
                                                     } group-hover:translate-x-1`} />
                                                 </div>
                                             </div>
@@ -429,57 +448,62 @@ export default function GlobalSearch() {
 
                             {/* Resultados INEA Obsoletos */}
                             {ineaObsResults.length > 0 && (
-                                <div className="space-y-1">
-                                    <div className={`flex items-center justify-between px-2.5 py-1.5 rounded-lg ${
-                                        isDarkMode ? 'bg-orange-500/5' : 'bg-orange-50/50'
-                                    }`}>
-                                        <span className={`text-[9px] font-bold tracking-widest uppercase ${
-                                            isDarkMode ? 'text-orange-400/80' : 'text-orange-600/80'
-                                        }`}>
-                                            INEA Obsoletos
-                                        </span>
-                                        <span className={`text-[8px] font-medium px-1.5 py-0.5 rounded-full ${
-                                            isDarkMode ? 'bg-orange-500/10 text-orange-400/60' : 'bg-orange-100 text-orange-600/60'
+                                <div className="space-y-1.5 animate-in fade-in-0 slide-in-from-top-2 duration-300" style={{ animationDelay: '100ms' }}>
+                                    <div className={`flex items-center justify-between px-3 py-2 rounded-xl ${
+                                        isDarkMode ? 'bg-gradient-to-r from-orange-500/10 to-orange-500/5' : 'bg-gradient-to-r from-orange-50 to-orange-50/50'
+                                    } backdrop-blur-sm`}>
+                                        <div className="flex items-center gap-2">
+                                            <div className={`w-1.5 h-1.5 rounded-full ${
+                                                isDarkMode ? 'bg-orange-400' : 'bg-orange-600'
+                                            } animate-pulse`}></div>
+                                            <span className={`text-[10px] font-bold tracking-wider uppercase ${
+                                                isDarkMode ? 'text-orange-400' : 'text-orange-600'
+                                            }`}>
+                                                INEA Obsoletos
+                                            </span>
+                                        </div>
+                                        <span className={`text-[9px] font-bold px-2 py-1 rounded-full ${
+                                            isDarkMode ? 'bg-orange-500/20 text-orange-300' : 'bg-orange-200 text-orange-700'
                                         }`}>
                                             {ineaObsResults.length}
                                         </span>
                                     </div>
-                                    <div className="space-y-0.5">
+                                    <div className="space-y-1">
                                         {ineaObsResults.map((result, index) => (
                                             <div
                                                 key={`inea-obs-${result.id}`}
                                                 onClick={() => handleResultClick(result)}
-                                                style={{ animationDelay: `${index * 30}ms` }}
-                                                className={`group px-2.5 py-2 rounded-lg transition-all duration-500 cursor-pointer animate-in fade-in-0 slide-in-from-left-1 ${
+                                                style={{ animationDelay: `${index * 40}ms` }}
+                                                className={`group px-3 py-2.5 rounded-xl transition-all duration-300 cursor-pointer animate-in fade-in-0 slide-in-from-left-2 ${
                                                     isDarkMode 
-                                                        ? 'hover:bg-orange-500/5 hover:shadow-lg hover:shadow-orange-500/5 active:scale-[0.98]' 
-                                                        : 'hover:bg-orange-50/80 hover:shadow-md hover:shadow-orange-100 active:scale-[0.98]'
+                                                        ? 'hover:bg-orange-500/10 hover:shadow-lg hover:shadow-orange-500/10 active:scale-[0.97] border border-transparent hover:border-orange-500/20' 
+                                                        : 'hover:bg-orange-50 hover:shadow-lg hover:shadow-orange-100/50 active:scale-[0.97] border border-transparent hover:border-orange-200'
                                                 }`}
                                             >
-                                                <div className="flex items-center justify-between gap-2.5">
-                                                    <div className="flex-1 min-w-0 space-y-1">
-                                                        <div className="flex items-center gap-2">
-                                                            <span className={`text-[10px] font-mono font-bold transition-colors duration-300 ${
+                                                <div className="flex items-center justify-between gap-3">
+                                                    <div className="flex-1 min-w-0 space-y-1.5">
+                                                        <div className="flex items-center gap-2 flex-wrap">
+                                                            <span className={`text-xs font-mono font-bold transition-all duration-300 ${
                                                                 isDarkMode ? 'text-orange-400 group-hover:text-orange-300' : 'text-orange-600 group-hover:text-orange-700'
                                                             }`}>
                                                                 {result.id_inv}
                                                             </span>
                                                             {result.area && (
-                                                                <span className={`text-[8px] px-1.5 py-0.5 rounded-full font-medium ${
-                                                                    isDarkMode ? 'bg-white/5 text-gray-500' : 'bg-gray-100 text-gray-600'
+                                                                <span className={`text-[9px] px-2 py-0.5 rounded-full font-semibold transition-all duration-300 ${
+                                                                    isDarkMode ? 'bg-white/5 text-gray-400 group-hover:bg-white/10' : 'bg-gray-100 text-gray-600 group-hover:bg-gray-200'
                                                                 }`}>
                                                                     {result.area}
                                                                 </span>
                                                             )}
                                                         </div>
-                                                        <p className={`text-[9px] leading-relaxed truncate transition-colors duration-300 ${
-                                                            isDarkMode ? 'text-gray-500 group-hover:text-gray-400' : 'text-gray-600 group-hover:text-gray-700'
+                                                        <p className={`text-[10px] leading-relaxed truncate transition-colors duration-300 ${
+                                                            isDarkMode ? 'text-gray-400 group-hover:text-gray-300' : 'text-gray-600 group-hover:text-gray-700'
                                                         }`}>
                                                             {result.descripcion || 'Sin descripción'}
                                                         </p>
                                                     </div>
-                                                    <ChevronRight className={`w-3.5 h-3.5 flex-shrink-0 transition-all duration-500 ease-out ${
-                                                        isDarkMode ? 'text-gray-700 group-hover:text-orange-400 group-hover:scale-110' : 'text-gray-300 group-hover:text-orange-600 group-hover:scale-110'
+                                                    <ChevronRight className={`w-4 h-4 flex-shrink-0 transition-all duration-300 ease-out ${
+                                                        isDarkMode ? 'text-gray-700 group-hover:text-orange-400 group-hover:scale-125' : 'text-gray-300 group-hover:text-orange-600 group-hover:scale-125'
                                                     } group-hover:translate-x-1`} />
                                                 </div>
                                             </div>
@@ -490,57 +514,62 @@ export default function GlobalSearch() {
 
                             {/* Resultados ITEA Obsoletos */}
                             {iteaObsResults.length > 0 && (
-                                <div className="space-y-1">
-                                    <div className={`flex items-center justify-between px-2.5 py-1.5 rounded-lg ${
-                                        isDarkMode ? 'bg-red-500/5' : 'bg-red-50/50'
-                                    }`}>
-                                        <span className={`text-[9px] font-bold tracking-widest uppercase ${
-                                            isDarkMode ? 'text-red-400/80' : 'text-red-600/80'
-                                        }`}>
-                                            ITEA Obsoletos
-                                        </span>
-                                        <span className={`text-[8px] font-medium px-1.5 py-0.5 rounded-full ${
-                                            isDarkMode ? 'bg-red-500/10 text-red-400/60' : 'bg-red-100 text-red-600/60'
+                                <div className="space-y-1.5 animate-in fade-in-0 slide-in-from-top-2 duration-300" style={{ animationDelay: '150ms' }}>
+                                    <div className={`flex items-center justify-between px-3 py-2 rounded-xl ${
+                                        isDarkMode ? 'bg-gradient-to-r from-red-500/10 to-red-500/5' : 'bg-gradient-to-r from-red-50 to-red-50/50'
+                                    } backdrop-blur-sm`}>
+                                        <div className="flex items-center gap-2">
+                                            <div className={`w-1.5 h-1.5 rounded-full ${
+                                                isDarkMode ? 'bg-red-400' : 'bg-red-600'
+                                            } animate-pulse`}></div>
+                                            <span className={`text-[10px] font-bold tracking-wider uppercase ${
+                                                isDarkMode ? 'text-red-400' : 'text-red-600'
+                                            }`}>
+                                                ITEA Obsoletos
+                                            </span>
+                                        </div>
+                                        <span className={`text-[9px] font-bold px-2 py-1 rounded-full ${
+                                            isDarkMode ? 'bg-red-500/20 text-red-300' : 'bg-red-200 text-red-700'
                                         }`}>
                                             {iteaObsResults.length}
                                         </span>
                                     </div>
-                                    <div className="space-y-0.5">
+                                    <div className="space-y-1">
                                         {iteaObsResults.map((result, index) => (
                                             <div
                                                 key={`itea-obs-${result.id}`}
                                                 onClick={() => handleResultClick(result)}
-                                                style={{ animationDelay: `${index * 30}ms` }}
-                                                className={`group px-2.5 py-2 rounded-lg transition-all duration-500 cursor-pointer animate-in fade-in-0 slide-in-from-left-1 ${
+                                                style={{ animationDelay: `${index * 40}ms` }}
+                                                className={`group px-3 py-2.5 rounded-xl transition-all duration-300 cursor-pointer animate-in fade-in-0 slide-in-from-left-2 ${
                                                     isDarkMode 
-                                                        ? 'hover:bg-red-500/5 hover:shadow-lg hover:shadow-red-500/5 active:scale-[0.98]' 
-                                                        : 'hover:bg-red-50/80 hover:shadow-md hover:shadow-red-100 active:scale-[0.98]'
+                                                        ? 'hover:bg-red-500/10 hover:shadow-lg hover:shadow-red-500/10 active:scale-[0.97] border border-transparent hover:border-red-500/20' 
+                                                        : 'hover:bg-red-50 hover:shadow-lg hover:shadow-red-100/50 active:scale-[0.97] border border-transparent hover:border-red-200'
                                                 }`}
                                             >
-                                                <div className="flex items-center justify-between gap-2.5">
-                                                    <div className="flex-1 min-w-0 space-y-1">
-                                                        <div className="flex items-center gap-2">
-                                                            <span className={`text-[10px] font-mono font-bold transition-colors duration-300 ${
+                                                <div className="flex items-center justify-between gap-3">
+                                                    <div className="flex-1 min-w-0 space-y-1.5">
+                                                        <div className="flex items-center gap-2 flex-wrap">
+                                                            <span className={`text-xs font-mono font-bold transition-all duration-300 ${
                                                                 isDarkMode ? 'text-red-400 group-hover:text-red-300' : 'text-red-600 group-hover:text-red-700'
                                                             }`}>
                                                                 {result.id_inv}
                                                             </span>
                                                             {result.area && (
-                                                                <span className={`text-[8px] px-1.5 py-0.5 rounded-full font-medium ${
-                                                                    isDarkMode ? 'bg-white/5 text-gray-500' : 'bg-gray-100 text-gray-600'
+                                                                <span className={`text-[9px] px-2 py-0.5 rounded-full font-semibold transition-all duration-300 ${
+                                                                    isDarkMode ? 'bg-white/5 text-gray-400 group-hover:bg-white/10' : 'bg-gray-100 text-gray-600 group-hover:bg-gray-200'
                                                                 }`}>
                                                                     {result.area}
                                                                 </span>
                                                             )}
                                                         </div>
-                                                        <p className={`text-[9px] leading-relaxed truncate transition-colors duration-300 ${
-                                                            isDarkMode ? 'text-gray-500 group-hover:text-gray-400' : 'text-gray-600 group-hover:text-gray-700'
+                                                        <p className={`text-[10px] leading-relaxed truncate transition-colors duration-300 ${
+                                                            isDarkMode ? 'text-gray-400 group-hover:text-gray-300' : 'text-gray-600 group-hover:text-gray-700'
                                                         }`}>
                                                             {result.descripcion || 'Sin descripción'}
                                                         </p>
                                                     </div>
-                                                    <ChevronRight className={`w-3.5 h-3.5 flex-shrink-0 transition-all duration-500 ease-out ${
-                                                        isDarkMode ? 'text-gray-700 group-hover:text-red-400 group-hover:scale-110' : 'text-gray-300 group-hover:text-red-600 group-hover:scale-110'
+                                                    <ChevronRight className={`w-4 h-4 flex-shrink-0 transition-all duration-300 ease-out ${
+                                                        isDarkMode ? 'text-gray-700 group-hover:text-red-400 group-hover:scale-125' : 'text-gray-300 group-hover:text-red-600 group-hover:scale-125'
                                                     } group-hover:translate-x-1`} />
                                                 </div>
                                             </div>
@@ -549,87 +578,83 @@ export default function GlobalSearch() {
                                 </div>
                             )}
 
-                            {/* Footer minimalista */}
-                            {searchResults.length === 50 && (
-                                <div className="pt-2 text-center">
-                                    <p className={`text-[9px] ${
-                                        isDarkMode ? 'text-gray-600' : 'text-gray-500'
-                                    }`}>
-                                        Mostrando primeros 50 resultados
-                                    </p>
-                                </div>
-                            )}
-
                             {/* Resultados Resguardos */}
                             {resguardosResults.length > 0 && (
-                                <div className="space-y-1">
-                                    <div className={`flex items-center justify-between px-2.5 py-1.5 rounded-lg ${
-                                        isDarkMode ? 'bg-green-500/5' : 'bg-green-50/50'
-                                    }`}>
-                                        <span className={`text-[9px] font-bold tracking-widest uppercase ${
-                                            isDarkMode ? 'text-green-400/80' : 'text-green-600/80'
-                                        }`}>
-                                            Resguardos
-                                        </span>
-                                        <span className={`text-[8px] font-medium px-1.5 py-0.5 rounded-full ${
-                                            isDarkMode ? 'bg-green-500/10 text-green-400/60' : 'bg-green-100 text-green-600/60'
+                                <div className="space-y-1.5 animate-in fade-in-0 slide-in-from-top-2 duration-300" style={{ animationDelay: '200ms' }}>
+                                    <div className={`flex items-center justify-between px-3 py-2 rounded-xl ${
+                                        isDarkMode ? 'bg-gradient-to-r from-green-500/10 to-green-500/5' : 'bg-gradient-to-r from-green-50 to-green-50/50'
+                                    } backdrop-blur-sm`}>
+                                        <div className="flex items-center gap-2">
+                                            <div className={`w-1.5 h-1.5 rounded-full ${
+                                                isDarkMode ? 'bg-green-400' : 'bg-green-600'
+                                            } animate-pulse`}></div>
+                                            <span className={`text-[10px] font-bold tracking-wider uppercase ${
+                                                isDarkMode ? 'text-green-400' : 'text-green-600'
+                                            }`}>
+                                                Resguardos
+                                            </span>
+                                        </div>
+                                        <span className={`text-[9px] font-bold px-2 py-1 rounded-full ${
+                                            isDarkMode ? 'bg-green-500/20 text-green-300' : 'bg-green-200 text-green-700'
                                         }`}>
                                             {resguardosResults.length}
                                         </span>
                                     </div>
-                                    <div className="space-y-0.5">
+                                    <div className="space-y-1">
                                         {resguardosResults.map((result, index) => (
                                             <div
                                                 key={`resguardo-${result.id}`}
                                                 onClick={() => handleResultClick(result)}
-                                                style={{ animationDelay: `${index * 30}ms` }}
-                                                className={`group px-2.5 py-2 rounded-lg transition-all duration-500 cursor-pointer animate-in fade-in-0 slide-in-from-left-1 ${
+                                                style={{ animationDelay: `${index * 40}ms` }}
+                                                className={`group px-3 py-2.5 rounded-xl transition-all duration-300 cursor-pointer animate-in fade-in-0 slide-in-from-left-2 ${
                                                     isDarkMode 
-                                                        ? 'hover:bg-green-500/5 hover:shadow-lg hover:shadow-green-500/5 active:scale-[0.98]' 
-                                                        : 'hover:bg-green-50/80 hover:shadow-md hover:shadow-green-100 active:scale-[0.98]'
+                                                        ? 'hover:bg-green-500/10 hover:shadow-lg hover:shadow-green-500/10 active:scale-[0.97] border border-transparent hover:border-green-500/20' 
+                                                        : 'hover:bg-green-50 hover:shadow-lg hover:shadow-green-100/50 active:scale-[0.97] border border-transparent hover:border-green-200'
                                                 }`}
                                             >
-                                                <div className="flex items-center justify-between gap-2.5">
-                                                    <div className="flex-1 min-w-0 space-y-1">
-                                                        <div className="flex items-center gap-2">
-                                                            <FileText className={`w-3 h-3 ${isDarkMode ? 'text-green-400' : 'text-green-600'}`} />
-                                                            <span className={`text-[10px] font-mono font-bold transition-colors duration-300 ${
+                                                <div className="flex items-center justify-between gap-3">
+                                                    <div className="flex-1 min-w-0 space-y-1.5">
+                                                        <div className="flex items-center gap-2 flex-wrap">
+                                                            <FileText className={`w-3.5 h-3.5 ${isDarkMode ? 'text-green-400' : 'text-green-600'}`} />
+                                                            <span className={`text-xs font-mono font-bold transition-all duration-300 ${
                                                                 isDarkMode ? 'text-green-400 group-hover:text-green-300' : 'text-green-600 group-hover:text-green-700'
                                                             }`}>
                                                                 {result.folio}
                                                             </span>
                                                             {result.area_resguardo && (
-                                                                <span className={`text-[8px] px-1.5 py-0.5 rounded-full font-medium ${
-                                                                    isDarkMode ? 'bg-white/5 text-gray-500' : 'bg-gray-100 text-gray-600'
+                                                                <span className={`text-[9px] px-2 py-0.5 rounded-full font-semibold transition-all duration-300 ${
+                                                                    isDarkMode ? 'bg-white/5 text-gray-400 group-hover:bg-white/10' : 'bg-gray-100 text-gray-600 group-hover:bg-gray-200'
                                                                 }`}>
                                                                     {result.area_resguardo}
                                                                 </span>
                                                             )}
                                                         </div>
-                                                        <p className={`text-[9px] leading-relaxed truncate transition-colors duration-300 ${
-                                                            isDarkMode ? 'text-gray-500 group-hover:text-gray-400' : 'text-gray-600 group-hover:text-gray-700'
+                                                        <p className={`text-[10px] leading-relaxed truncate transition-colors duration-300 ${
+                                                            isDarkMode ? 'text-gray-400 group-hover:text-gray-300' : 'text-gray-600 group-hover:text-gray-700'
                                                         }`}>
                                                             {result.descripcion || 'Sin descripción'}
                                                         </p>
-                                                        <div className="flex items-center gap-2 text-[8px]">
-                                                            {result.dir_area && (
-                                                                <span className={`px-1.5 py-0.5 rounded-full ${
-                                                                    isDarkMode ? 'bg-white/5 text-gray-500' : 'bg-gray-100 text-gray-600'
-                                                                }`}>
-                                                                    {result.dir_area}
-                                                                </span>
-                                                            )}
-                                                            {result.usufinal && (
-                                                                <span className={`px-1.5 py-0.5 rounded-full ${
-                                                                    isDarkMode ? 'bg-white/5 text-gray-500' : 'bg-gray-100 text-gray-600'
-                                                                }`}>
-                                                                    {result.usufinal}
-                                                                </span>
-                                                            )}
-                                                        </div>
+                                                        {(result.dir_area || result.usufinal) && (
+                                                            <div className="flex items-center gap-1.5 text-[9px] flex-wrap">
+                                                                {result.dir_area && (
+                                                                    <span className={`px-2 py-0.5 rounded-full transition-all duration-300 ${
+                                                                        isDarkMode ? 'bg-white/5 text-gray-500 group-hover:bg-white/10' : 'bg-gray-100 text-gray-600 group-hover:bg-gray-200'
+                                                                    }`}>
+                                                                        {result.dir_area}
+                                                                    </span>
+                                                                )}
+                                                                {result.usufinal && (
+                                                                    <span className={`px-2 py-0.5 rounded-full transition-all duration-300 ${
+                                                                        isDarkMode ? 'bg-white/5 text-gray-500 group-hover:bg-white/10' : 'bg-gray-100 text-gray-600 group-hover:bg-gray-200'
+                                                                    }`}>
+                                                                        {result.usufinal}
+                                                                    </span>
+                                                                )}
+                                                            </div>
+                                                        )}
                                                     </div>
-                                                    <ChevronRight className={`w-3.5 h-3.5 flex-shrink-0 transition-all duration-500 ease-out ${
-                                                        isDarkMode ? 'text-gray-700 group-hover:text-green-400 group-hover:scale-110' : 'text-gray-300 group-hover:text-green-600 group-hover:scale-110'
+                                                    <ChevronRight className={`w-4 h-4 flex-shrink-0 transition-all duration-300 ease-out ${
+                                                        isDarkMode ? 'text-gray-700 group-hover:text-green-400 group-hover:scale-125' : 'text-gray-300 group-hover:text-green-600 group-hover:scale-125'
                                                     } group-hover:translate-x-1`} />
                                                 </div>
                                             </div>
@@ -640,78 +665,103 @@ export default function GlobalSearch() {
 
                             {/* Resultados Resguardos de Bajas */}
                             {resguardosBajasResults.length > 0 && (
-                                <div className="space-y-1">
-                                    <div className={`flex items-center justify-between px-2.5 py-1.5 rounded-lg ${
-                                        isDarkMode ? 'bg-gray-500/5' : 'bg-gray-50/50'
-                                    }`}>
-                                        <span className={`text-[9px] font-bold tracking-widest uppercase ${
-                                            isDarkMode ? 'text-gray-400/80' : 'text-gray-600/80'
-                                        }`}>
-                                            Resguardos de Bajas
-                                        </span>
-                                        <span className={`text-[8px] font-medium px-1.5 py-0.5 rounded-full ${
-                                            isDarkMode ? 'bg-gray-500/10 text-gray-400/60' : 'bg-gray-100 text-gray-600/60'
+                                <div className="space-y-1.5 animate-in fade-in-0 slide-in-from-top-2 duration-300" style={{ animationDelay: '250ms' }}>
+                                    <div className={`flex items-center justify-between px-3 py-2 rounded-xl ${
+                                        isDarkMode ? 'bg-gradient-to-r from-gray-500/10 to-gray-500/5' : 'bg-gradient-to-r from-gray-50 to-gray-50/50'
+                                    } backdrop-blur-sm`}>
+                                        <div className="flex items-center gap-2">
+                                            <div className={`w-1.5 h-1.5 rounded-full ${
+                                                isDarkMode ? 'bg-gray-400' : 'bg-gray-600'
+                                            } animate-pulse`}></div>
+                                            <span className={`text-[10px] font-bold tracking-wider uppercase ${
+                                                isDarkMode ? 'text-gray-400' : 'text-gray-600'
+                                            }`}>
+                                                Resguardos de Bajas
+                                            </span>
+                                        </div>
+                                        <span className={`text-[9px] font-bold px-2 py-1 rounded-full ${
+                                            isDarkMode ? 'bg-gray-500/20 text-gray-300' : 'bg-gray-200 text-gray-700'
                                         }`}>
                                             {resguardosBajasResults.length}
                                         </span>
                                     </div>
-                                    <div className="space-y-0.5">
+                                    <div className="space-y-1">
                                         {resguardosBajasResults.map((result, index) => (
                                             <div
                                                 key={`resguardo-baja-${result.id}`}
                                                 onClick={() => handleResultClick(result)}
-                                                style={{ animationDelay: `${index * 30}ms` }}
-                                                className={`group px-2.5 py-2 rounded-lg transition-all duration-500 cursor-pointer animate-in fade-in-0 slide-in-from-left-1 ${
+                                                style={{ animationDelay: `${index * 40}ms` }}
+                                                className={`group px-3 py-2.5 rounded-xl transition-all duration-300 cursor-pointer animate-in fade-in-0 slide-in-from-left-2 ${
                                                     isDarkMode 
-                                                        ? 'hover:bg-gray-500/5 hover:shadow-lg hover:shadow-gray-500/5 active:scale-[0.98]' 
-                                                        : 'hover:bg-gray-50/80 hover:shadow-md hover:shadow-gray-100 active:scale-[0.98]'
+                                                        ? 'hover:bg-gray-500/10 hover:shadow-lg hover:shadow-gray-500/10 active:scale-[0.97] border border-transparent hover:border-gray-500/20' 
+                                                        : 'hover:bg-gray-50 hover:shadow-lg hover:shadow-gray-100/50 active:scale-[0.97] border border-transparent hover:border-gray-200'
                                                 }`}
                                             >
-                                                <div className="flex items-center justify-between gap-2.5">
-                                                    <div className="flex-1 min-w-0 space-y-1">
-                                                        <div className="flex items-center gap-2">
-                                                            <Archive className={`w-3 h-3 ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`} />
-                                                            <span className={`text-[10px] font-mono font-bold transition-colors duration-300 ${
+                                                <div className="flex items-center justify-between gap-3">
+                                                    <div className="flex-1 min-w-0 space-y-1.5">
+                                                        <div className="flex items-center gap-2 flex-wrap">
+                                                            <Archive className={`w-3.5 h-3.5 ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`} />
+                                                            <span className={`text-xs font-mono font-bold transition-all duration-300 ${
                                                                 isDarkMode ? 'text-gray-400 group-hover:text-gray-300' : 'text-gray-600 group-hover:text-gray-700'
                                                             }`}>
                                                                 {result.folio_baja}
                                                             </span>
                                                             {result.area_resguardo && (
-                                                                <span className={`text-[8px] px-1.5 py-0.5 rounded-full font-medium ${
-                                                                    isDarkMode ? 'bg-white/5 text-gray-500' : 'bg-gray-100 text-gray-600'
+                                                                <span className={`text-[9px] px-2 py-0.5 rounded-full font-semibold transition-all duration-300 ${
+                                                                    isDarkMode ? 'bg-white/5 text-gray-400 group-hover:bg-white/10' : 'bg-gray-100 text-gray-600 group-hover:bg-gray-200'
                                                                 }`}>
                                                                     {result.area_resguardo}
                                                                 </span>
                                                             )}
                                                         </div>
-                                                        <p className={`text-[9px] leading-relaxed truncate transition-colors duration-300 ${
-                                                            isDarkMode ? 'text-gray-500 group-hover:text-gray-400' : 'text-gray-600 group-hover:text-gray-700'
+                                                        <p className={`text-[10px] leading-relaxed truncate transition-colors duration-300 ${
+                                                            isDarkMode ? 'text-gray-400 group-hover:text-gray-300' : 'text-gray-600 group-hover:text-gray-700'
                                                         }`}>
                                                             {result.descripcion || 'Sin descripción'}
                                                         </p>
-                                                        <div className="flex items-center gap-2 text-[8px]">
-                                                            {result.folio_resguardo && (
-                                                                <span className={`px-1.5 py-0.5 rounded-full ${
-                                                                    isDarkMode ? 'bg-white/5 text-gray-500' : 'bg-gray-100 text-gray-600'
-                                                                }`}>
-                                                                    Resguardo: {result.folio_resguardo}
-                                                                </span>
-                                                            )}
-                                                            {result.dir_area && (
-                                                                <span className={`px-1.5 py-0.5 rounded-full ${
-                                                                    isDarkMode ? 'bg-white/5 text-gray-500' : 'bg-gray-100 text-gray-600'
-                                                                }`}>
-                                                                    {result.dir_area}
-                                                                </span>
-                                                            )}
-                                                        </div>
+                                                        {(result.folio_resguardo || result.dir_area) && (
+                                                            <div className="flex items-center gap-1.5 text-[9px] flex-wrap">
+                                                                {result.folio_resguardo && (
+                                                                    <span className={`px-2 py-0.5 rounded-full transition-all duration-300 ${
+                                                                        isDarkMode ? 'bg-white/5 text-gray-500 group-hover:bg-white/10' : 'bg-gray-100 text-gray-600 group-hover:bg-gray-200'
+                                                                    }`}>
+                                                                        Resguardo: {result.folio_resguardo}
+                                                                    </span>
+                                                                )}
+                                                                {result.dir_area && (
+                                                                    <span className={`px-2 py-0.5 rounded-full transition-all duration-300 ${
+                                                                        isDarkMode ? 'bg-white/5 text-gray-500 group-hover:bg-white/10' : 'bg-gray-100 text-gray-600 group-hover:bg-gray-200'
+                                                                    }`}>
+                                                                        {result.dir_area}
+                                                                    </span>
+                                                                )}
+                                                            </div>
+                                                        )}
                                                     </div>
-                                                    <ChevronRight className={`w-3.5 h-3.5 flex-shrink-0 transition-all duration-500 ease-out ${
-                                                        isDarkMode ? 'text-gray-700 group-hover:text-gray-400 group-hover:scale-110' : 'text-gray-300 group-hover:text-gray-600 group-hover:scale-110'
+                                                    <ChevronRight className={`w-4 h-4 flex-shrink-0 transition-all duration-300 ease-out ${
+                                                        isDarkMode ? 'text-gray-700 group-hover:text-gray-400 group-hover:scale-125' : 'text-gray-300 group-hover:text-gray-600 group-hover:scale-125'
                                                     } group-hover:translate-x-1`} />
                                                 </div>
                                             </div>
                                         ))}
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* Footer mejorado */}
+                            {searchResults.length === 50 && (
+                                <div className={`pt-2 pb-1 text-center animate-in fade-in-0 duration-500`} style={{ animationDelay: '300ms' }}>
+                                    <div className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-full ${
+                                        isDarkMode ? 'bg-white/5' : 'bg-gray-100'
+                                    }`}>
+                                        <div className={`w-1 h-1 rounded-full ${
+                                            isDarkMode ? 'bg-gray-600' : 'bg-gray-400'
+                                        } animate-pulse`}></div>
+                                        <p className={`text-[10px] font-medium ${
+                                            isDarkMode ? 'text-gray-500' : 'text-gray-600'
+                                        }`}>
+                                            Mostrando primeros 50 resultados
+                                        </p>
                                     </div>
                                 </div>
                             )}

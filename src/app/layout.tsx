@@ -10,6 +10,7 @@ import { IneaObsoletosIndexationProvider } from "@/context/IneaObsoletosIndexati
 import { IteaObsoletosIndexationProvider } from "@/context/IteaObsoletosIndexationContext";
 import { ResguardosIndexationProvider } from "@/context/ResguardosIndexationContext";
 import { ResguardosBajasIndexationProvider } from "@/context/ResguardosBajasIndexationContext";
+import { InactivityProvider } from "@/context/InactivityContext";
 import IndexationPopover from "@/components/IndexationPopover";
 
 const geistSans = Geist({
@@ -43,26 +44,28 @@ export default function RootLayout({
         className={`${geistSans.variable} ${geistMono.variable} antialiased flex flex-col h-screen`}
       >
         <ThemeProvider>
-          <IneaIndexationProvider>
-            <IteaIndexationProvider>
-              <IneaObsoletosIndexationProvider>
-                <IteaObsoletosIndexationProvider>
-                  <ResguardosIndexationProvider>
-                    <ResguardosBajasIndexationProvider>
-                      <div>
-                        <HeaderContainer />
-                      </div>
-                      <main className="flex-1 overflow-hidden">
-                        {children}
-                        <SpeedInsights />
-                      </main>
-                      <IndexationPopover />
-                    </ResguardosBajasIndexationProvider>
-                  </ResguardosIndexationProvider>
-                </IteaObsoletosIndexationProvider>
-              </IneaObsoletosIndexationProvider>
-            </IteaIndexationProvider>
-          </IneaIndexationProvider>
+          <InactivityProvider>
+            <IneaIndexationProvider>
+              <IteaIndexationProvider>
+                <IneaObsoletosIndexationProvider>
+                  <IteaObsoletosIndexationProvider>
+                    <ResguardosIndexationProvider>
+                      <ResguardosBajasIndexationProvider>
+                        <div>
+                          <HeaderContainer />
+                        </div>
+                        <main className="flex-1 overflow-hidden">
+                          {children}
+                          <SpeedInsights />
+                        </main>
+                        <IndexationPopover />
+                      </ResguardosBajasIndexationProvider>
+                    </ResguardosIndexationProvider>
+                  </IteaObsoletosIndexationProvider>
+                </IneaObsoletosIndexationProvider>
+              </IteaIndexationProvider>
+            </IneaIndexationProvider>
+          </InactivityProvider>
         </ThemeProvider>
       </body>
     </html>
