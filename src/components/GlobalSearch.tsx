@@ -35,7 +35,11 @@ interface SearchResult {
     motivo_baja?: string | null;
 }
 
-export default function GlobalSearch() {
+interface GlobalSearchProps {
+    onExpandChange?: (isExpanded: boolean) => void;
+}
+
+export default function GlobalSearch({ onExpandChange }: GlobalSearchProps) {
     const { isDarkMode } = useTheme();
     const pathname = usePathname();
     const router = useRouter();
@@ -189,6 +193,11 @@ export default function GlobalSearch() {
     const iteaObsResults = searchResults.filter(r => r.origen === 'ITEA_OBS');
     const resguardosResults = searchResults.filter(r => r.origen === 'RESGUARDO');
     const resguardosBajasResults = searchResults.filter(r => r.origen === 'RESGUARDO_BAJA');
+
+    // Notificar cambios de expansión al componente padre
+    useEffect(() => {
+        onExpandChange?.(isExpanded);
+    }, [isExpanded, onExpandChange]);
 
     // Cerrar al hacer clic fuera
     useEffect(() => {

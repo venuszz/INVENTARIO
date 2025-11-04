@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { usePathname } from 'next/navigation';
@@ -65,9 +65,51 @@ export default function NavigationBar() {
     const [modalPosition, setModalPosition] = useState({ x: 0, y: 0 });
     const [popoverPosition, setPopoverPosition] = useState<'top' | 'bottom'>('bottom');
     const [isHeaderExpanded, setIsHeaderExpanded] = useState(false);
+    const [isSearchExpanded, setIsSearchExpanded] = useState(false);
+    const [logoShouldHide, setLogoShouldHide] = useState(false);
+    const [searchBarShouldHide, setSearchBarShouldHide] = useState(false);
     const handleLogout = useCerrarSesion();
     const { notifications, doNotDisturb } = useNotifications();
     const unreadCount = notifications.filter(n => !n.is_read && !n.data?.is_deleted).length;
+
+    // Refs para detectar colisiones
+    const logoRef = useRef<HTMLDivElement>(null);
+    const menuContainerRef = useRef<HTMLDivElement>(null);
+    const searchBarRef = useRef<HTMLDivElement>(null);
+    const actionButtonsRef = useRef<HTMLDivElement>(null);
+    const actionButtonsContainerRef = useRef<HTMLDivElement>(null);
+
+    // Gestionar visibilidad de elementos
+    useEffect(() => {
+        const checkCollisions = () => {
+            const searchRect = searchBarRef.current?.getBoundingClientRect();
+            const actionButtonsContainerRect = actionButtonsContainerRef.current?.getBoundingClientRect();
+
+            let searchBarHasCollision = false;
+
+            // Ocultar barra de búsqueda si no hay espacio cuando el menú de botones está abierto
+            if (isHeaderExpanded && searchRect && actionButtonsContainerRect) {
+                const availableSpace = actionButtonsContainerRect.left - searchRect.right;
+                if (availableSpace < 20) {
+                    searchBarHasCollision = true;
+                }
+            }
+
+            // Ocultar logo cuando se expande la búsqueda o los botones
+            const shouldHideLogo = isSearchExpanded || isHeaderExpanded;
+
+            setLogoShouldHide(shouldHideLogo);
+            setSearchBarShouldHide(searchBarHasCollision);
+        };
+
+        const timer = setTimeout(checkCollisions, 50);
+        window.addEventListener('resize', checkCollisions);
+        
+        return () => {
+            clearTimeout(timer);
+            window.removeEventListener('resize', checkCollisions);
+        };
+    }, [openMenu, openSubmenu, isSearchExpanded, isHeaderExpanded]);
 
     // Efecto para actualizar el estado cuando cambia doNotDisturb
     useEffect(() => {
@@ -133,6 +175,22 @@ export default function NavigationBar() {
 
     const handleSubmenuHover = (submenu: string | null) => {
         setOpenSubmenu(submenu);
+    };
+
+    // Manejar expansión de botones de acción
+    const handleHeaderExpand = (expanded: boolean) => {
+        if (expanded && isSearchExpanded) {
+            setIsSearchExpanded(false);
+        }
+        setIsHeaderExpanded(expanded);
+    };
+
+    // Manejar expansión de búsqueda
+    const handleSearchExpand = (expanded: boolean) => {
+        if (expanded && isHeaderExpanded) {
+            setIsHeaderExpanded(false);
+        }
+        setIsSearchExpanded(expanded);
     };
 
     // Funciones para menú móvil (click)
@@ -279,22 +337,29 @@ export default function NavigationBar() {
                 <div className="flex items-center h-16 relative">
                     {/* Left side - Logo */}
                     <div className="flex items-center">
-                        <div className="flex-shrink-0 flex items-center">
-                            <Link href="/" onClick={closeAll} className="hover:opacity-80 transition-opacity duration-300">
-                                <Image
-                                    src={isDarkMode ? "/images/ITEA_logo.svg" : "/images/ITEA_logo_negro.svg"}
-                                    alt="Logo ITEA"
-                                    width={40}
-                                    height={40}
-                                    className="h-10 w-auto"
-                                    priority
-                                />
-                            </Link>
+                        <div 
+                            ref={logoRef}
+                            className={`flex items-center transition-all duration-300 ease-in-out ${
+                                logoShouldHide ? 'opacity-0 scale-90 pointer-events-none' : 'opacity-100 scale-100'
+                            }`}
+                        >
+                            <div className="flex-shrink-0 flex items-center">
+                                <Link href="/" onClick={closeAll} className="hover:opacity-80 transition-opacity duration-300">
+                                    <Image
+                                        src={isDarkMode ? "/images/ITEA_logo.svg" : "/images/ITEA_logo_negro.svg"}
+                                        alt="Logo ITEA"
+                                        width={40}
+                                        height={40}
+                                        className="h-10 w-auto"
+                                        priority
+                                    />
+                                </Link>
+                            </div>
                         </div>
                     </div>
 
                     {/* Center - Navigation Menus */}
-                    <div className="flex-1 flex justify-center">
+                    <div ref={menuContainerRef} className="flex-1 flex justify-center relative z-10">
                         <div className="hidden md:flex md:space-x-1">
                             <RoleGuard roles={["admin", "superadmin"]} userRole={userData.rol}>
                                 <div 
@@ -315,7 +380,7 @@ export default function NavigationBar() {
                                         <ChevronDown className={`ml-1 w-3 h-3 transition-transform duration-500 ease-in-out ${openMenu === "Inventario" ? 'rotate-180' : ''}`} />
                                     </button>
                                     {openMenu === "Inventario" && (
-                                        <div className={`absolute left-0 mt-1 w-56 rounded-md ${pathname === '/' ? (isDarkMode ? 'bg-black/20 border-white/20 backdrop-blur-md' : 'bg-white/20 border-gray-200/30 backdrop-blur-md') : (isDarkMode ? 'bg-black border-white/10' : 'bg-white border-gray-200')} shadow-lg z-20 border animate-in slide-in-from-top-2 fade-in duration-300`}>
+                                        <div data-dropdown="true" className={`absolute left-0 mt-1 w-56 rounded-md ${pathname === '/' ? (isDarkMode ? 'bg-black/20 border-white/20 backdrop-blur-md' : 'bg-white/20 border-gray-200/30 backdrop-blur-md') : (isDarkMode ? 'bg-black border-white/10' : 'bg-white border-gray-200')} shadow-lg z-20 border animate-in slide-in-from-top-2 fade-in duration-300`}>
                                             <div className="py-1">
                                                 <RoleGuard roles={["admin", "superadmin"]} userRole={userData.rol}>
                                                     <Link
@@ -358,7 +423,7 @@ export default function NavigationBar() {
                                                 <ChevronDown className={`ml-1 w-3 h-3 transition-transform duration-500 ease-in-out ${openMenu === item.title ? 'rotate-180' : ''}`} />
                                             </button>
                                             {openMenu === item.title && (
-                                                <div className={`absolute left-0 mt-1 w-56 rounded-md ${pathname === '/' ? (isDarkMode ? 'bg-black/20 border-white/20 backdrop-blur-md' : 'bg-white/20 border-gray-200/30 backdrop-blur-md') : (isDarkMode ? 'bg-black border-white/10' : 'bg-white border-gray-200')} shadow-lg z-20 border animate-in slide-in-from-top-2 fade-in duration-300`}>
+                                                <div data-dropdown="true" className={`absolute left-0 mt-1 w-56 rounded-md ${pathname === '/' ? (isDarkMode ? 'bg-black/20 border-white/20 backdrop-blur-md' : 'bg-white/20 border-gray-200/30 backdrop-blur-md') : (isDarkMode ? 'bg-black border-white/10' : 'bg-white border-gray-200')} shadow-lg z-20 border animate-in slide-in-from-top-2 fade-in duration-300`}>
                                                     <div className="py-1">
                                                         {item.submenu.map((subItem) => (
                                                             <div key={subItem.title}>
@@ -380,7 +445,7 @@ export default function NavigationBar() {
                                                                             <ChevronRight className="w-3 h-3" />
                                                                         </button>
                                                                         {openSubmenu === `${item.title}-${subItem.title}` && (
-                                                                            <div className={`absolute left-full top-0 w-56 rounded-md ${pathname === '/' ? (isDarkMode ? 'bg-black/20 border-white/20 backdrop-blur-md' : 'bg-white/20 border-gray-200/30 backdrop-blur-md') : (isDarkMode ? 'bg-black border-white/10' : 'bg-white border-gray-200')} shadow-lg z-30 border animate-in slide-in-from-left-2 fade-in duration-300`}>
+                                                                            <div data-dropdown="true" className={`absolute left-full top-0 w-56 rounded-md ${pathname === '/' ? (isDarkMode ? 'bg-black/20 border-white/20 backdrop-blur-md' : 'bg-white/20 border-gray-200/30 backdrop-blur-md') : (isDarkMode ? 'bg-black border-white/10' : 'bg-white border-gray-200')} shadow-lg z-30 border animate-in slide-in-from-left-2 fade-in duration-300`}>
                                                                                 <div className="py-1">
                                                                                     {subItem.children.map((child) => (
                                                                                         <Link
@@ -470,7 +535,7 @@ export default function NavigationBar() {
                                         <ChevronDown className={`ml-1 w-3 h-3 transition-transform duration-500 ease-in-out ${openMenu === "Administración" ? 'rotate-180' : ''}`} />
                                     </button>
                                     {openMenu === "Administración" && (
-                                        <div className={`absolute left-0 mt-1 w-56 rounded-md ${pathname === '/' ? (isDarkMode ? 'bg-black/20 border-white/20 backdrop-blur-md' : 'bg-white/20 border-gray-200/30 backdrop-blur-md') : (isDarkMode ? 'bg-black border-white/10' : 'bg-white border-gray-200')} shadow-lg z-20 border animate-in slide-in-from-top-2 fade-in duration-300`}>
+                                        <div data-dropdown="true" className={`absolute left-0 mt-1 w-56 rounded-md ${pathname === '/' ? (isDarkMode ? 'bg-black/20 border-white/20 backdrop-blur-md' : 'bg-white/20 border-gray-200/30 backdrop-blur-md') : (isDarkMode ? 'bg-black border-white/10' : 'bg-white border-gray-200')} shadow-lg z-20 border animate-in slide-in-from-top-2 fade-in duration-300`}>
                                             <div className="py-1">
                                                 <Link
                                                     href="/admin/areas"
@@ -504,26 +569,32 @@ export default function NavigationBar() {
                         </div>
                     </div>
 
-                    {/* Search Bar - After Menus (se oculta cuando isHeaderExpanded) */}
-                    <div className={`hidden md:flex items-center ml-4 transition-all duration-500 ease-in-out ${
-                        isHeaderExpanded ? 'opacity-0 scale-95 pointer-events-none' : 'opacity-100 scale-100'
-                    }`}>
-                        <GlobalSearch />
+                    {/* Search Bar - After Menus */}
+                    <div 
+                        ref={searchBarRef} 
+                        className={`hidden md:flex items-center ml-4 transition-all duration-300 ease-in-out ${
+                            searchBarShouldHide ? 'opacity-0 scale-90 pointer-events-none' : 'opacity-100 scale-100'
+                        }`}
+                    >
+                        <GlobalSearch onExpandChange={handleSearchExpand} />
                     </div>
 
                     {/* Right side - Action buttons */}
-                    <div className="hidden md:flex items-center h-full">
+                    <div ref={actionButtonsContainerRef} className="hidden md:flex items-center h-full ml-auto">
                         {/* Hover trigger area for expanding buttons */}
                         <div
                             className="flex items-center h-full"
-                            onMouseEnter={() => setIsHeaderExpanded(true)}
-                            onMouseLeave={() => setIsHeaderExpanded(false)}
+                            onMouseEnter={() => handleHeaderExpand(true)}
+                            onMouseLeave={() => handleHeaderExpand(false)}
                         >
                             {/* Collapsible buttons container */}
-                            <div className={`flex items-center transition-all duration-500 ease-in-out overflow-hidden ${isHeaderExpanded
-                                    ? 'max-w-96 opacity-100 translate-x-0'
-                                    : 'max-w-0 opacity-0 -translate-x-8'
-                                }`}>
+                            <div 
+                                ref={actionButtonsRef}
+                                className={`flex items-center transition-all duration-500 ease-in-out overflow-hidden ${isHeaderExpanded
+                                    ? 'max-w-96 opacity-100'
+                                    : 'max-w-0 opacity-0'
+                                }`}
+                            >
                                 <div className="flex items-center space-x-2 pr-2">
                                     <RoleGuard roles={["superadmin"]} userRole={userData.rol}>
                                         <Link
