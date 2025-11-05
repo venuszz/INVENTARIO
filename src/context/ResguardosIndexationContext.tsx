@@ -1,6 +1,7 @@
 "use client";
 import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
 import supabase from '@/app/lib/supabase/client';
+import Cookies from 'js-cookie';
 
 interface Resguardo {
     id: number;
@@ -71,6 +72,14 @@ export const ResguardosIndexationProvider: React.FC<{ children: React.ReactNode 
     }, []);
 
     useEffect(() => {
+        // Verificar si el usuario está autenticado
+        const userData = Cookies.get('userData');
+        if (!userData) {
+            // No está autenticado, no inicializar
+            setLoading(false);
+            return;
+        }
+
         fetchResguardos();
 
         // Setup realtime subscription

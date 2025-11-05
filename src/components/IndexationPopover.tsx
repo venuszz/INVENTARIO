@@ -6,10 +6,12 @@ import { useIteaObsoletosIndexation } from '@/context/IteaObsoletosIndexationCon
 import { useResguardosIndexation } from '@/context/ResguardosIndexationContext';
 import { useResguardosBajasIndexation } from '@/context/ResguardosBajasIndexationContext';
 import { useTheme } from '@/context/ThemeContext';
-import { CheckCircle2, Database, AlertCircle, ChevronDown, ChevronUp, Sparkles } from 'lucide-react';
+import { CheckCircle2, Loader2, AlertCircle, ChevronDown } from 'lucide-react';
 import { useState, useEffect } from 'react';
+import { usePathname } from 'next/navigation';
 
 export default function IndexationPopover() {
+    const pathname = usePathname();
     const ineaState = useIneaIndexation();
     const iteaState = useIteaIndexation();
     const ineaObsState = useIneaObsoletosIndexation();
@@ -30,7 +32,7 @@ export default function IndexationPopover() {
     const isResguardosBajasComplete = !resguardosBajasState.loading && resguardosBajasState.progress === 100;
     const isAllComplete = isIneaComplete && isIteaComplete && isIneaObsComplete && isIteaObsComplete && isResguardosComplete && isResguardosBajasComplete;
 
-    // Calcular progreso total combinado (incluyendo obsoletos y resguardos)
+    // Calcular progreso total combinado
     const totalProgress = ineaState.progress + iteaState.progress + ineaObsState.data.length + iteaObsState.data.length + resguardosState.resguardos.length + resguardosBajasState.resguardosBajas.length;
     const totalItems = ineaState.total + iteaState.total + ineaObsState.data.length + iteaObsState.data.length + resguardosState.resguardos.length + resguardosBajasState.resguardosBajas.length;
     const combinedPercentage = totalItems > 0 ? Math.round((totalProgress / totalItems) * 100) : 0;
@@ -68,53 +70,37 @@ export default function IndexationPopover() {
         }
     }, [ineaState.isIndexing, ineaState.progress, ineaState.error, iteaState.isIndexing, iteaState.progress, iteaState.error, ineaObsState.isIndexing, ineaObsState.data.length, ineaObsState.error, iteaObsState.isIndexing, iteaObsState.data.length, iteaObsState.error, resguardosState.loading, resguardosState.resguardos.length, resguardosBajasState.loading, resguardosBajasState.resguardosBajas.length, isAllComplete]);
 
-    // No mostrar si no hay actividad o debe ocultarse
-    if (!isVisible || shouldHide) return null;
+    // No mostrar en la página de login o si no hay actividad o debe ocultarse
+    if (pathname === '/login' || !isVisible || shouldHide) return null;
 
-    // Componente de barra de progreso mejorada
-    const ProgressBar = ({ progress, total, color, gradient }: { progress: number; total: number; color: string; gradient: string }) => {
+    // Componente de barra de progreso minimalista
+    const ProgressBar = ({ progress, total }: { progress: number; total: number }) => {
         const percent = total > 0 ? (progress / total) * 100 : 0;
         return (
-            <div className={`relative w-full h-2 rounded-full overflow-hidden ${
-                isDarkMode ? 'bg-white/5' : 'bg-gray-100'
+            <div className={`relative w-full h-1 rounded-full overflow-hidden ${
+                isDarkMode ? 'bg-white/10' : 'bg-gray-200'
             }`}>
                 <div
-                    className={`h-full transition-all duration-700 ease-out ${gradient} relative overflow-hidden`}
+                    className={`h-full transition-all duration-500 ease-out ${
+                        isDarkMode ? 'bg-white' : 'bg-gray-900'
+                    }`}
                     style={{ width: `${percent}%` }}
-                >
-                    {status === 'indexing' && (
-                        <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent animate-shimmer" />
-                    )}
-                </div>
+                />
             </div>
         );
     };
 
-    // Ícono según estado con mejor diseño
+    // Ícono según estado minimalista
     const StatusIcon = () => {
         switch (status) {
             case 'error':
-                return (
-                    <div className="relative">
-                        <AlertCircle className="w-5 h-5 text-red-500" />
-                    </div>
-                );
+                return <AlertCircle className="w-4 h-4 text-red-500" />;
             case 'complete':
-                return (
-                    <div className="relative">
-                        <CheckCircle2 className="w-5 h-5 text-emerald-500" />
-                        <div className="absolute inset-0 bg-emerald-500/20 rounded-full animate-ping" />
-                    </div>
-                );
+                return <CheckCircle2 className="w-4 h-4 text-emerald-500" />;
             case 'indexing':
-                return (
-                    <div className="relative flex items-center justify-center">
-                        <Sparkles className="w-5 h-5 text-blue-500 animate-pulse" />
-                        <div className="absolute inset-0 bg-blue-500/20 rounded-full animate-ping" />
-                    </div>
-                );
+                return <Loader2 className="w-4 h-4 animate-spin" />;
             default:
-                return <Database className={`w-5 h-5 ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`} />;
+                return <Loader2 className="w-4 h-4" />;
         }
     };
 
@@ -122,319 +108,205 @@ export default function IndexationPopover() {
     const statusText = () => {
         switch (status) {
             case 'error':
-                return 'Error en indexación';
+                return 'Error';
             case 'complete':
-                return 'Indexación completa';
+                return 'Completo';
             case 'indexing':
-                return 'Indexando datos';
+                return 'Indexando';
             default:
-                return 'Cargando datos';
+                return 'Cargando';
         }
     };
 
     return (
         <div
-            className={`fixed bottom-6 right-6 z-50 backdrop-blur-xl shadow-2xl transition-all duration-500 ease-in-out ${
-                isExpanded ? 'w-96' : 'w-80'
-            } rounded-2xl animate-fadeInRight ${
+            className={`fixed bottom-6 right-6 z-50 backdrop-blur-md shadow-lg transition-all duration-300 ease-out ${
+                isExpanded ? 'w-80' : 'w-64'
+            } rounded-xl ${
                 isDarkMode 
-                    ? 'bg-gradient-to-br from-gray-900/95 via-gray-900/90 to-gray-800/95 border border-white/10' 
-                    : 'bg-gradient-to-br from-white/98 via-white/95 to-gray-50/98 border border-gray-200/50'
+                    ? 'bg-black/80 border border-white/10' 
+                    : 'bg-white/90 border border-gray-200'
             }`}
+            style={{
+                animation: 'slideInUp 0.3s ease-out'
+            }}
         >
-            {/* Efecto de brillo superior */}
-            <div className={`absolute top-0 left-0 right-0 h-px ${
-                status === 'complete' ? 'bg-gradient-to-r from-transparent via-emerald-500 to-transparent' :
-                status === 'indexing' ? 'bg-gradient-to-r from-transparent via-blue-500 to-transparent animate-pulse' :
-                status === 'error' ? 'bg-gradient-to-r from-transparent via-red-500 to-transparent' :
-                'bg-gradient-to-r from-transparent via-gray-500 to-transparent'
-            }`} />
-
-            {/* Header mejorado */}
+            {/* Header minimalista */}
             <button
                 onClick={() => setIsExpanded(!isExpanded)}
-                className={`w-full px-5 py-4 flex items-center gap-4 transition-all duration-300 rounded-t-2xl group ${
-                    isDarkMode ? 'hover:bg-white/5' : 'hover:bg-gray-50'
+                className={`w-full px-4 py-3 flex items-center gap-3 transition-all duration-200 rounded-t-xl ${
+                    isDarkMode ? 'hover:bg-white/5' : 'hover:bg-gray-100/50'
                 }`}
             >
-                <div className="flex items-center justify-center">
-                    <StatusIcon />
-                </div>
+                <StatusIcon />
                 
-                <div className="flex-1 flex flex-col items-start gap-1">
-                    <span className={`text-sm font-semibold transition-colors duration-300 ${
+                <div className="flex-1 flex items-center justify-between">
+                    <span className={`text-sm font-medium ${
                         isDarkMode ? 'text-white' : 'text-gray-900'
                     }`}>
                         {statusText()}
                     </span>
                     {status === 'indexing' && (
-                        <span className={`text-xs font-medium tabular-nums transition-colors duration-300 ${
-                            isDarkMode ? 'text-blue-400' : 'text-blue-600'
+                        <span className={`text-xs tabular-nums ${
+                            isDarkMode ? 'text-white/60' : 'text-gray-500'
                         }`}>
-                            {combinedPercentage}% completado
+                            {combinedPercentage}%
                         </span>
                     )}
                 </div>
 
-                <div className={`transition-all duration-300 ${
-                    isDarkMode ? 'text-white/40 group-hover:text-white/60' : 'text-gray-400 group-hover:text-gray-600'
-                }`}>
-                    {isExpanded ? <ChevronUp className="w-5 h-5" /> : <ChevronDown className="w-5 h-5" />}
-                </div>
+                <ChevronDown className={`w-4 h-4 transition-transform duration-200 ${
+                    isExpanded ? 'rotate-180' : ''
+                } ${isDarkMode ? 'text-white/40' : 'text-gray-400'}`} />
             </button>
 
             {/* Barra de progreso principal cuando está colapsado */}
             {!isExpanded && status === 'indexing' && (
-                <div className="px-5 pb-4">
+                <div className="px-4 pb-3">
                     <ProgressBar 
                         progress={totalProgress} 
-                        total={totalItems} 
-                        color="bg-gradient-to-r from-blue-500 to-purple-500"
-                        gradient="bg-gradient-to-r from-blue-500 via-purple-500 to-blue-500"
+                        total={totalItems}
                     />
                 </div>
             )}
 
-            {/* Contenido expandible mejorado */}
+            {/* Contenido expandible minimalista */}
             {isExpanded && (
-                <div className="px-5 pb-5 space-y-5 animate-fadeIn">
+                <div className="px-4 pb-4 space-y-3">
                     {/* Progreso de INEA */}
-                    <div className="space-y-2.5">
+                    <div className="space-y-1.5">
                         <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-2.5">
-                                <div className={`w-2 h-2 rounded-full ${
-                                    isIneaComplete ? 'bg-emerald-500 animate-pulse' : 'bg-blue-500'
-                                }`} />
-                                <span className={`text-sm font-semibold transition-colors duration-300 ${
-                                    isDarkMode ? 'text-white' : 'text-gray-900'
-                                }`}>INEA</span>
-                            </div>
-                            <span className={`text-xs font-medium tabular-nums transition-colors duration-300 ${
-                                isDarkMode ? 'text-white/60' : 'text-gray-600'
+                            <span className={`text-xs font-medium ${
+                                isDarkMode ? 'text-white/80' : 'text-gray-700'
+                            }`}>INEA</span>
+                            <span className={`text-xs tabular-nums ${
+                                isDarkMode ? 'text-white/50' : 'text-gray-500'
                             }`}>
                                 {ineaState.progress.toLocaleString()} / {ineaState.total.toLocaleString()}
                             </span>
                         </div>
-                        <ProgressBar
-                            progress={ineaState.progress}
-                            total={ineaState.total}
-                            color={isIneaComplete ? 'bg-emerald-500' : 'bg-blue-500'}
-                            gradient={isIneaComplete ? 'bg-gradient-to-r from-emerald-500 to-emerald-400' : 'bg-gradient-to-r from-blue-500 to-blue-400'}
-                        />
+                        <ProgressBar progress={ineaState.progress} total={ineaState.total} />
                     </div>
 
                     {/* Progreso de ITEA */}
-                    <div className="space-y-2.5">
+                    <div className="space-y-1.5">
                         <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-2.5">
-                                <div className={`w-2 h-2 rounded-full ${
-                                    isIteaComplete ? 'bg-emerald-500 animate-pulse' : 'bg-purple-500'
-                                }`} />
-                                <span className={`text-sm font-semibold transition-colors duration-300 ${
-                                    isDarkMode ? 'text-white' : 'text-gray-900'
-                                }`}>ITEA</span>
-                            </div>
-                            <span className={`text-xs font-medium tabular-nums transition-colors duration-300 ${
-                                isDarkMode ? 'text-white/60' : 'text-gray-600'
+                            <span className={`text-xs font-medium ${
+                                isDarkMode ? 'text-white/80' : 'text-gray-700'
+                            }`}>ITEA</span>
+                            <span className={`text-xs tabular-nums ${
+                                isDarkMode ? 'text-white/50' : 'text-gray-500'
                             }`}>
                                 {iteaState.progress.toLocaleString()} / {iteaState.total.toLocaleString()}
                             </span>
                         </div>
-                        <ProgressBar
-                            progress={iteaState.progress}
-                            total={iteaState.total}
-                            color={isIteaComplete ? 'bg-emerald-500' : 'bg-purple-500'}
-                            gradient={isIteaComplete ? 'bg-gradient-to-r from-emerald-500 to-emerald-400' : 'bg-gradient-to-r from-purple-500 to-purple-400'}
-                        />
+                        <ProgressBar progress={iteaState.progress} total={iteaState.total} />
                     </div>
 
                     {/* Progreso de Obsoletos INEA */}
-                    <div className="space-y-2.5">
+                    <div className="space-y-1.5">
                         <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-2.5">
-                                <div className={`w-2 h-2 rounded-full ${
-                                    isIneaObsComplete ? 'bg-emerald-500 animate-pulse' : 'bg-orange-500'
-                                }`} />
-                                <span className={`text-sm font-semibold transition-colors duration-300 ${
-                                    isDarkMode ? 'text-white' : 'text-gray-900'
-                                }`}>INEA Obsoletos</span>
-                            </div>
-                            <span className={`text-xs font-medium tabular-nums transition-colors duration-300 ${
-                                isDarkMode ? 'text-white/60' : 'text-gray-600'
+                            <span className={`text-xs font-medium ${
+                                isDarkMode ? 'text-white/80' : 'text-gray-700'
+                            }`}>INEA Obsoletos</span>
+                            <span className={`text-xs tabular-nums ${
+                                isDarkMode ? 'text-white/50' : 'text-gray-500'
                             }`}>
                                 {ineaObsState.data.length.toLocaleString()}
                             </span>
                         </div>
-                        <ProgressBar
-                            progress={ineaObsState.data.length}
-                            total={ineaObsState.data.length}
-                            color={isIneaObsComplete ? 'bg-emerald-500' : 'bg-orange-500'}
-                            gradient={isIneaObsComplete ? 'bg-gradient-to-r from-emerald-500 to-emerald-400' : 'bg-gradient-to-r from-orange-500 to-orange-400'}
-                        />
+                        <ProgressBar progress={ineaObsState.data.length} total={ineaObsState.data.length} />
                     </div>
 
                     {/* Progreso de Obsoletos ITEA */}
-                    <div className="space-y-2.5">
+                    <div className="space-y-1.5">
                         <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-2.5">
-                                <div className={`w-2 h-2 rounded-full ${
-                                    isIteaObsComplete ? 'bg-emerald-500 animate-pulse' : 'bg-red-500'
-                                }`} />
-                                <span className={`text-sm font-semibold transition-colors duration-300 ${
-                                    isDarkMode ? 'text-white' : 'text-gray-900'
-                                }`}>ITEA Obsoletos</span>
-                            </div>
-                            <span className={`text-xs font-medium tabular-nums transition-colors duration-300 ${
-                                isDarkMode ? 'text-white/60' : 'text-gray-600'
+                            <span className={`text-xs font-medium ${
+                                isDarkMode ? 'text-white/80' : 'text-gray-700'
+                            }`}>ITEA Obsoletos</span>
+                            <span className={`text-xs tabular-nums ${
+                                isDarkMode ? 'text-white/50' : 'text-gray-500'
                             }`}>
                                 {iteaObsState.data.length.toLocaleString()}
                             </span>
                         </div>
-                        <ProgressBar
-                            progress={iteaObsState.data.length}
-                            total={iteaObsState.data.length}
-                            color={isIteaObsComplete ? 'bg-emerald-500' : 'bg-red-500'}
-                            gradient={isIteaObsComplete ? 'bg-gradient-to-r from-emerald-500 to-emerald-400' : 'bg-gradient-to-r from-red-500 to-red-400'}
-                        />
+                        <ProgressBar progress={iteaObsState.data.length} total={iteaObsState.data.length} />
                     </div>
 
                     {/* Progreso de Resguardos */}
-                    <div className="space-y-2.5">
+                    <div className="space-y-1.5">
                         <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-2.5">
-                                <div className={`w-2 h-2 rounded-full ${
-                                    isResguardosComplete ? 'bg-emerald-500 animate-pulse' : 'bg-cyan-500'
-                                }`} />
-                                <span className={`text-sm font-semibold transition-colors duration-300 ${
-                                    isDarkMode ? 'text-white' : 'text-gray-900'
-                                }`}>Resguardos</span>
-                            </div>
-                            <span className={`text-xs font-medium tabular-nums transition-colors duration-300 ${
-                                isDarkMode ? 'text-white/60' : 'text-gray-600'
+                            <span className={`text-xs font-medium ${
+                                isDarkMode ? 'text-white/80' : 'text-gray-700'
+                            }`}>Resguardos</span>
+                            <span className={`text-xs tabular-nums ${
+                                isDarkMode ? 'text-white/50' : 'text-gray-500'
                             }`}>
                                 {resguardosState.resguardos.length.toLocaleString()}
                             </span>
                         </div>
-                        <ProgressBar
-                            progress={resguardosState.resguardos.length}
-                            total={resguardosState.resguardos.length}
-                            color={isResguardosComplete ? 'bg-emerald-500' : 'bg-cyan-500'}
-                            gradient={isResguardosComplete ? 'bg-gradient-to-r from-emerald-500 to-emerald-400' : 'bg-gradient-to-r from-cyan-500 to-cyan-400'}
-                        />
+                        <ProgressBar progress={resguardosState.resguardos.length} total={resguardosState.resguardos.length} />
                     </div>
 
                     {/* Progreso de Resguardos Bajas */}
-                    <div className="space-y-2.5">
+                    <div className="space-y-1.5">
                         <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-2.5">
-                                <div className={`w-2 h-2 rounded-full ${
-                                    isResguardosBajasComplete ? 'bg-emerald-500 animate-pulse' : 'bg-pink-500'
-                                }`} />
-                                <span className={`text-sm font-semibold transition-colors duration-300 ${
-                                    isDarkMode ? 'text-white' : 'text-gray-900'
-                                }`}>Resguardos Bajas</span>
-                            </div>
-                            <span className={`text-xs font-medium tabular-nums transition-colors duration-300 ${
-                                isDarkMode ? 'text-white/60' : 'text-gray-600'
+                            <span className={`text-xs font-medium ${
+                                isDarkMode ? 'text-white/80' : 'text-gray-700'
+                            }`}>Resguardos Bajas</span>
+                            <span className={`text-xs tabular-nums ${
+                                isDarkMode ? 'text-white/50' : 'text-gray-500'
                             }`}>
                                 {resguardosBajasState.resguardosBajas.length.toLocaleString()}
                             </span>
                         </div>
-                        <ProgressBar
-                            progress={resguardosBajasState.resguardosBajas.length}
-                            total={resguardosBajasState.resguardosBajas.length}
-                            color={isResguardosBajasComplete ? 'bg-emerald-500' : 'bg-pink-500'}
-                            gradient={isResguardosBajasComplete ? 'bg-gradient-to-r from-emerald-500 to-emerald-400' : 'bg-gradient-to-r from-pink-500 to-pink-400'}
-                        />
+                        <ProgressBar progress={resguardosBajasState.resguardosBajas.length} total={resguardosBajasState.resguardosBajas.length} />
                     </div>
 
-                    {/* Resumen mejorado */}
-                    <div className={`pt-4 border-t transition-all duration-300 ${
+                    {/* Resumen minimalista */}
+                    <div className={`pt-3 mt-2 border-t ${
                         isDarkMode ? 'border-white/10' : 'border-gray-200'
                     }`}>
-                        <div className="space-y-2">
-                            <div className="flex items-center justify-between">
-                                <span className={`text-xs font-medium ${
-                                    isDarkMode ? 'text-white/50' : 'text-gray-500'
-                                }`}>Total de registros</span>
-                                <span className={`text-sm font-bold tabular-nums ${
-                                    isDarkMode ? 'text-white' : 'text-gray-900'
-                                }`}>
-                                    {totalProgress.toLocaleString()} / {totalItems.toLocaleString()}
-                                </span>
-                            </div>
-                            <div className="flex items-center justify-between">
-                                <span className={`text-xs font-medium ${
-                                    isDarkMode ? 'text-white/50' : 'text-gray-500'
-                                }`}>Estado del sistema</span>
-                                <span className={`text-sm font-bold ${
-                                    isAllComplete 
-                                        ? 'text-emerald-500' 
-                                        : status === 'error' 
-                                            ? 'text-red-500' 
-                                            : isDarkMode ? 'text-blue-400' : 'text-blue-600'
-                                }`}>
-                                    {isAllComplete ? '✓ Completo' : status === 'error' ? '✕ Error' : '⟳ Cargando'}
-                                </span>
-                            </div>
+                        <div className="flex items-center justify-between">
+                            <span className={`text-xs ${
+                                isDarkMode ? 'text-white/50' : 'text-gray-500'
+                            }`}>Total</span>
+                            <span className={`text-xs font-medium tabular-nums ${
+                                isDarkMode ? 'text-white' : 'text-gray-900'
+                            }`}>
+                                {totalProgress.toLocaleString()} / {totalItems.toLocaleString()}
+                            </span>
                         </div>
                     </div>
 
-                    {/* Mensajes de error mejorados */}
-                    {ineaState.error && (
-                        <div className={`px-4 py-3 rounded-xl border transition-all duration-300 ${
+                    {/* Mensajes de error minimalistas */}
+                    {(ineaState.error || iteaState.error || ineaObsState.error || iteaObsState.error) && (
+                        <div className={`px-3 py-2 rounded-lg text-xs ${
                             isDarkMode 
-                                ? 'bg-red-500/10 border-red-500/30 backdrop-blur-sm' 
-                                : 'bg-red-50 border-red-200'
+                                ? 'bg-red-500/10 text-red-400' 
+                                : 'bg-red-50 text-red-700'
                         }`}>
-                            <p className={`text-xs font-medium transition-colors duration-300 ${
-                                isDarkMode ? 'text-red-400' : 'text-red-700'
-                            }`}>
-                                <span className="font-bold">INEA:</span> {ineaState.error}
-                            </p>
-                        </div>
-                    )}
-                    {iteaState.error && (
-                        <div className={`px-4 py-3 rounded-xl border transition-all duration-300 ${
-                            isDarkMode 
-                                ? 'bg-red-500/10 border-red-500/30 backdrop-blur-sm' 
-                                : 'bg-red-50 border-red-200'
-                        }`}>
-                            <p className={`text-xs font-medium transition-colors duration-300 ${
-                                isDarkMode ? 'text-red-400' : 'text-red-700'
-                            }`}>
-                                <span className="font-bold">ITEA:</span> {iteaState.error}
-                            </p>
-                        </div>
-                    )}
-                    {ineaObsState.error && (
-                        <div className={`px-4 py-3 rounded-xl border transition-all duration-300 ${
-                            isDarkMode 
-                                ? 'bg-red-500/10 border-red-500/30 backdrop-blur-sm' 
-                                : 'bg-red-50 border-red-200'
-                        }`}>
-                            <p className={`text-xs font-medium transition-colors duration-300 ${
-                                isDarkMode ? 'text-red-400' : 'text-red-700'
-                            }`}>
-                                <span className="font-bold">INEA Obsoletos:</span> {ineaObsState.error}
-                            </p>
-                        </div>
-                    )}
-                    {iteaObsState.error && (
-                        <div className={`px-4 py-3 rounded-xl border transition-all duration-300 ${
-                            isDarkMode 
-                                ? 'bg-red-500/10 border-red-500/30 backdrop-blur-sm' 
-                                : 'bg-red-50 border-red-200'
-                        }`}>
-                            <p className={`text-xs font-medium transition-colors duration-300 ${
-                                isDarkMode ? 'text-red-400' : 'text-red-700'
-                            }`}>
-                                <span className="font-bold">ITEA Obsoletos:</span> {iteaObsState.error}
-                            </p>
+                            {ineaState.error && <div>INEA: {ineaState.error}</div>}
+                            {iteaState.error && <div>ITEA: {iteaState.error}</div>}
+                            {ineaObsState.error && <div>INEA Obs: {ineaObsState.error}</div>}
+                            {iteaObsState.error && <div>ITEA Obs: {iteaObsState.error}</div>}
                         </div>
                     )}
                 </div>
             )}
+
+            <style jsx>{`
+                @keyframes slideInUp {
+                    from {
+                        opacity: 0;
+                        transform: translateY(20px);
+                    }
+                    to {
+                        opacity: 1;
+                        transform: translateY(0);
+                    }
+                }
+            `}</style>
         </div>
     );
 }
