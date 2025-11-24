@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { usePathname } from 'next/navigation';
@@ -9,9 +9,9 @@ import { useRouter } from 'next/navigation';
 import supabase from '@/app/lib/supabase/client';
 import RoleGuard from "@/components/roleGuard";
 import NotificationsPanel from './NotificationCenter';
+import NotificationsUnderConstruction from './NotificationsUnderConstruction';
 import { useNotifications } from '@/hooks/useNotifications';
-import { useTheme } from "@/context/ThemeContext";
-import GlobalSearch from './GlobalSearch';
+import { useTheme } from "@/context/ThemeContext"
 
 
 type MenuItem = {
@@ -60,56 +60,20 @@ export default function NavigationBar() {
     const [openMenu, setOpenMenu] = useState<string | null>(null);
     const [openSubmenu, setOpenSubmenu] = useState<string | null>(null);
     const [notificationsOpen, setNotificationsOpen] = useState(false);
+    const [isClosingNotifications, setIsClosingNotifications] = useState(false);
     const [userData, setUserData] = useState<{ firstName?: string; lastName?: string; username?: string; email?: string; rol?: string }>({});
     const [showLogoutModal, setShowLogoutModal] = useState(false);
     const [modalPosition, setModalPosition] = useState({ x: 0, y: 0 });
     const [popoverPosition, setPopoverPosition] = useState<'top' | 'bottom'>('bottom');
+
+    // New state for notifications popover
+    const [notifPosition, setNotifPosition] = useState({ x: 0, y: 0 });
+    const [notifPopoverPos, setNotifPopoverPos] = useState<'top' | 'bottom'>('bottom');
+
     const [isHeaderExpanded, setIsHeaderExpanded] = useState(false);
-    const [isSearchExpanded, setIsSearchExpanded] = useState(false);
-    const [logoShouldHide, setLogoShouldHide] = useState(false);
-    const [searchBarShouldHide, setSearchBarShouldHide] = useState(false);
     const handleLogout = useCerrarSesion();
     const { notifications, doNotDisturb } = useNotifications();
     const unreadCount = notifications.filter(n => !n.is_read && !n.data?.is_deleted).length;
-
-    // Refs para detectar colisiones
-    const logoRef = useRef<HTMLDivElement>(null);
-    const menuContainerRef = useRef<HTMLDivElement>(null);
-    const searchBarRef = useRef<HTMLDivElement>(null);
-    const actionButtonsRef = useRef<HTMLDivElement>(null);
-    const actionButtonsContainerRef = useRef<HTMLDivElement>(null);
-
-    // Gestionar visibilidad de elementos
-    useEffect(() => {
-        const checkCollisions = () => {
-            const searchRect = searchBarRef.current?.getBoundingClientRect();
-            const actionButtonsContainerRect = actionButtonsContainerRef.current?.getBoundingClientRect();
-
-            let searchBarHasCollision = false;
-
-            // Ocultar barra de búsqueda si no hay espacio cuando el menú de botones está abierto
-            if (isHeaderExpanded && searchRect && actionButtonsContainerRect) {
-                const availableSpace = actionButtonsContainerRect.left - searchRect.right;
-                if (availableSpace < 20) {
-                    searchBarHasCollision = true;
-                }
-            }
-
-            // Ocultar logo cuando se expande la búsqueda o los botones
-            const shouldHideLogo = isSearchExpanded || isHeaderExpanded;
-
-            setLogoShouldHide(shouldHideLogo);
-            setSearchBarShouldHide(searchBarHasCollision);
-        };
-
-        const timer = setTimeout(checkCollisions, 50);
-        window.addEventListener('resize', checkCollisions);
-        
-        return () => {
-            clearTimeout(timer);
-            window.removeEventListener('resize', checkCollisions);
-        };
-    }, [openMenu, openSubmenu, isSearchExpanded, isHeaderExpanded]);
 
     // Efecto para actualizar el estado cuando cambia doNotDisturb
     useEffect(() => {
@@ -160,40 +124,17 @@ export default function NavigationBar() {
             if (showLogoutModal && !(event.target as HTMLElement).closest('.popover-content')) {
                 setShowLogoutModal(false);
             }
+            if (notificationsOpen && !(event.target as HTMLElement).closest('.notif-popover-content') && !(event.target as HTMLElement).closest('.notification-trigger')) {
+                setNotificationsOpen(false);
+            }
         };
 
         document.addEventListener('mousedown', handleClickOutside);
         return () => {
             document.removeEventListener('mousedown', handleClickOutside);
         };
-    }, [showLogoutModal]);
+    }, [showLogoutModal, notificationsOpen]);
 
-    const handleMenuHover = (menu: string | null) => {
-        setOpenMenu(menu);
-        if (!menu) setOpenSubmenu(null);
-    };
-
-    const handleSubmenuHover = (submenu: string | null) => {
-        setOpenSubmenu(submenu);
-    };
-
-    // Manejar expansión de botones de acción
-    const handleHeaderExpand = (expanded: boolean) => {
-        if (expanded && isSearchExpanded) {
-            setIsSearchExpanded(false);
-        }
-        setIsHeaderExpanded(expanded);
-    };
-
-    // Manejar expansión de búsqueda
-    const handleSearchExpand = (expanded: boolean) => {
-        if (expanded && isHeaderExpanded) {
-            setIsHeaderExpanded(false);
-        }
-        setIsSearchExpanded(expanded);
-    };
-
-    // Funciones para menú móvil (click)
     const toggleMenu = (menu: string) => {
         setOpenMenu(openMenu === menu ? null : menu);
         setOpenSubmenu(null);
@@ -249,6 +190,51 @@ export default function NavigationBar() {
         setModalPosition({ x, y });
         setPopoverPosition(position);
         setShowLogoutModal(true);
+    };
+
+    const handleNotificationsClick = (event: React.MouseEvent) => {
+        if (notificationsOpen) {
+            setIsClosingNotifications(true);
+            setTimeout(() => {
+                setNotificationsOpen(false);
+                setIsClosingNotifications(false);
+            }, 300);
+            return;
+        }
+
+        const button = event.currentTarget;
+        const rect = button.getBoundingClientRect();
+        const windowWidth = window.innerWidth;
+        const windowHeight = window.innerHeight;
+
+        // Configuración del popover
+        const POPOVER_WIDTH = 320; // Width in pixels
+        const MARGIN = 24; // Increased margin
+
+        // Posición inicial: intentamos centrarlo con el botón
+        let x = rect.left + rect.width / 2;
+        let y = rect.bottom + 16; // Un poco más de espacio vertical
+        let position: 'top' | 'bottom' = 'bottom';
+
+        // Ajuste horizontal inteligente
+        // Si se sale por la derecha
+        if (x + POPOVER_WIDTH / 2 > windowWidth - MARGIN) {
+            x = windowWidth - POPOVER_WIDTH / 2 - MARGIN;
+        }
+        // Si se sale por la izquierda
+        else if (x - POPOVER_WIDTH / 2 < MARGIN) {
+            x = POPOVER_WIDTH / 2 + MARGIN;
+        }
+
+        // Ajuste vertical
+        if (y + 500 > windowHeight - MARGIN) { // Altura estimada del popover
+            y = rect.top - 16;
+            position = 'top';
+        }
+
+        setNotifPosition({ x, y });
+        setNotifPopoverPos(position);
+        setNotificationsOpen(true);
     };
 
     const confirmLogout = async () => {
@@ -337,38 +323,28 @@ export default function NavigationBar() {
                 <div className="flex items-center h-16 relative">
                     {/* Left side - Logo */}
                     <div className="flex items-center">
-                        <div 
-                            ref={logoRef}
-                            className={`flex items-center transition-all duration-300 ease-in-out ${
-                                logoShouldHide ? 'opacity-0 scale-90 pointer-events-none' : 'opacity-100 scale-100'
-                            }`}
-                        >
-                            <div className="flex-shrink-0 flex items-center">
-                                <Link href="/" onClick={closeAll} className="hover:opacity-80 transition-opacity duration-300">
-                                    <Image
-                                        src={isDarkMode ? "/images/ITEA_logo.svg" : "/images/ITEA_logo_negro.svg"}
-                                        alt="Logo ITEA"
-                                        width={40}
-                                        height={40}
-                                        className="h-10 w-auto"
-                                        priority
-                                    />
-                                </Link>
-                            </div>
+                        <div className="flex-shrink-0 flex items-center">
+                            <Link href="/" onClick={closeAll} className="hover:opacity-80 transition-opacity duration-300">
+                                <Image
+                                    src={isDarkMode ? "/images/ITEA_logo.svg" : "/images/ITEA_logo_negro.svg"}
+                                    alt="Logo ITEA"
+                                    width={40}
+                                    height={40}
+                                    className="h-10 w-auto"
+                                    priority
+                                />
+                            </Link>
                         </div>
                     </div>
 
                     {/* Center - Navigation Menus */}
-                    <div ref={menuContainerRef} className="flex-1 flex justify-center relative z-10">
+                    <div className="flex-1 flex justify-center">
                         <div className="hidden md:flex md:space-x-1">
                             <RoleGuard roles={["admin", "superadmin"]} userRole={userData.rol}>
-                                <div 
-                                    className="relative"
-                                    onMouseEnter={() => handleMenuHover("Inventario")}
-                                    onMouseLeave={() => handleMenuHover(null)}
-                                >
+                                <div className="relative">
                                     <button
-                                        className={`flex items-center px-4 py-2 rounded-md transition-all duration-500 ease-in-out transform ${isActive("/inventario")
+                                        onClick={() => toggleMenu("Inventario")}
+                                        className={`flex items-center px-4 py-2 rounded-md transition-all duration-300 ease-in-out transform ${isActive("/inventario")
                                             ? isDarkMode ? 'text-white bg-white/10 border border-white/20 scale-105' : 'text-gray-900 bg-gray-100 border border-gray-300 scale-105'
                                             : isDarkMode
                                                 ? `text-gray-300 hover:text-white hover:scale-105 ${pathname === '/' ? 'hover:bg-white/10' : 'hover:bg-gray-800'}`
@@ -377,10 +353,10 @@ export default function NavigationBar() {
                                     >
                                         <span className="mr-2"><Database className="w-4 h-4" /></span>
                                         Inventario
-                                        <ChevronDown className={`ml-1 w-3 h-3 transition-transform duration-500 ease-in-out ${openMenu === "Inventario" ? 'rotate-180' : ''}`} />
+                                        <ChevronDown className={`ml-1 w-3 h-3 transition-transform duration-300 ${openMenu === "Inventario" ? 'rotate-180' : ''}`} />
                                     </button>
                                     {openMenu === "Inventario" && (
-                                        <div data-dropdown="true" className={`absolute left-0 mt-1 w-56 rounded-md ${pathname === '/' ? (isDarkMode ? 'bg-black/20 border-white/20 backdrop-blur-md' : 'bg-white/20 border-gray-200/30 backdrop-blur-md') : (isDarkMode ? 'bg-black border-white/10' : 'bg-white border-gray-200')} shadow-lg z-20 border animate-in slide-in-from-top-2 fade-in duration-300`}>
+                                        <div className={`absolute left-0 mt-1 w-56 rounded-md ${pathname === '/' ? (isDarkMode ? 'bg-black/20 border-white/20 backdrop-blur-md' : 'bg-white/20 border-gray-200/30 backdrop-blur-md') : (isDarkMode ? 'bg-black border-white/10' : 'bg-white border-gray-200')} shadow-lg z-20 border animate-in slide-in-from-top-2 fade-in duration-200`}>
                                             <div className="py-1">
                                                 <RoleGuard roles={["admin", "superadmin"]} userRole={userData.rol}>
                                                     <Link
@@ -402,16 +378,12 @@ export default function NavigationBar() {
                                 </div>
                             </RoleGuard>
                             {menuItems.slice(1, 4).map((item) => (
-                                <div 
-                                    key={item.title} 
-                                    className="relative"
-                                    onMouseEnter={() => handleMenuHover(item.title)}
-                                    onMouseLeave={() => handleMenuHover(null)}
-                                >
+                                <div key={item.title} className="relative">
                                     {item.submenu ? (
                                         <>
                                             <button
-                                                className={`flex items-center px-4 py-2 rounded-md transition-all duration-500 ease-in-out transform ${isActive(item.path)
+                                                onClick={() => toggleMenu(item.title)}
+                                                className={`flex items-center px-4 py-2 rounded-md transition-all duration-300 ease-in-out transform ${isActive(item.path)
                                                     ? isDarkMode ? 'text-white bg-white/10 border border-white/20 scale-105' : 'text-gray-900 bg-gray-100 border border-gray-300 scale-105'
                                                     : isDarkMode
                                                         ? `text-gray-300 hover:text-white hover:scale-105 ${pathname === '/' ? 'hover:bg-white/10' : 'hover:bg-gray-800'}`
@@ -420,21 +392,18 @@ export default function NavigationBar() {
                                             >
                                                 <span className="mr-2">{item.icon}</span>
                                                 {item.title}
-                                                <ChevronDown className={`ml-1 w-3 h-3 transition-transform duration-500 ease-in-out ${openMenu === item.title ? 'rotate-180' : ''}`} />
+                                                <ChevronDown className={`ml-1 w-3 h-3 transition-transform duration-300 ${openMenu === item.title ? 'rotate-180' : ''}`} />
                                             </button>
                                             {openMenu === item.title && (
-                                                <div data-dropdown="true" className={`absolute left-0 mt-1 w-56 rounded-md ${pathname === '/' ? (isDarkMode ? 'bg-black/20 border-white/20 backdrop-blur-md' : 'bg-white/20 border-gray-200/30 backdrop-blur-md') : (isDarkMode ? 'bg-black border-white/10' : 'bg-white border-gray-200')} shadow-lg z-20 border animate-in slide-in-from-top-2 fade-in duration-300`}>
+                                                <div className={`absolute left-0 mt-1 w-56 rounded-md ${pathname === '/' ? (isDarkMode ? 'bg-black/20 border-white/20 backdrop-blur-md' : 'bg-white/20 border-gray-200/30 backdrop-blur-md') : (isDarkMode ? 'bg-black border-white/10' : 'bg-white border-gray-200')} shadow-lg z-20 border animate-in slide-in-from-top-2 fade-in duration-200`}>
                                                     <div className="py-1">
                                                         {item.submenu.map((subItem) => (
                                                             <div key={subItem.title}>
                                                                 {subItem.children ? (
-                                                                    <div 
-                                                                        className="relative"
-                                                                        onMouseEnter={() => handleSubmenuHover(`${item.title}-${subItem.title}`)}
-                                                                        onMouseLeave={() => handleSubmenuHover(null)}
-                                                                    >
+                                                                    <div className="relative">
                                                                         <button
-                                                                            className={`flex justify-between w-full px-4 py-2 text-sm transition-all duration-300 ${isActive(subItem.path)
+                                                                            onClick={(e) => toggleSubmenu(`${item.title}-${subItem.title}`, e)}
+                                                                            className={`flex justify-between w-full px-4 py-2 text-sm transition-all duration-200 ${isActive(subItem.path)
                                                                                 ? isDarkMode ? 'text-white bg-white/10 border-r-2 border-white' : 'text-gray-900 bg-gray-100 border-r-2 border-gray-900'
                                                                                 : isDarkMode
                                                                                     ? `text-gray-300 hover:text-white hover:translate-x-1 ${pathname === '/' ? 'hover:bg-white/10' : 'hover:bg-gray-800'}`
@@ -445,7 +414,7 @@ export default function NavigationBar() {
                                                                             <ChevronRight className="w-3 h-3" />
                                                                         </button>
                                                                         {openSubmenu === `${item.title}-${subItem.title}` && (
-                                                                            <div data-dropdown="true" className={`absolute left-full top-0 w-56 rounded-md ${pathname === '/' ? (isDarkMode ? 'bg-black/20 border-white/20 backdrop-blur-md' : 'bg-white/20 border-gray-200/30 backdrop-blur-md') : (isDarkMode ? 'bg-black border-white/10' : 'bg-white border-gray-200')} shadow-lg z-30 border animate-in slide-in-from-left-2 fade-in duration-300`}>
+                                                                            <div className={`absolute left-full top-0 w-56 rounded-md ${pathname === '/' ? (isDarkMode ? 'bg-black/20 border-white/20 backdrop-blur-md' : 'bg-white/20 border-gray-200/30 backdrop-blur-md') : (isDarkMode ? 'bg-black border-white/10' : 'bg-white border-gray-200')} shadow-lg z-30 border animate-in slide-in-from-left-2 fade-in duration-200`}>
                                                                                 <div className="py-1">
                                                                                     {subItem.children.map((child) => (
                                                                                         <Link
@@ -505,7 +474,7 @@ export default function NavigationBar() {
                                         <Link
                                             href={item.path}
                                             onClick={closeAll}
-                                            className={`flex items-center px-4 py-2 rounded-md transition-all duration-500 ease-in-out transform ${isActive(item.path)
+                                            className={`flex items-center px-4 py-2 rounded-md transition-all duration-300 ease-in-out transform ${isActive(item.path)
                                                 ? 'text-white bg-white/10 border border-white/20 scale-105'
                                                 : 'text-gray-300 hover:text-white hover:bg-gray-800 hover:scale-105'
                                                 }`}
@@ -517,13 +486,10 @@ export default function NavigationBar() {
                                 </div>
                             ))}
                             <RoleGuard roles={["admin", "superadmin"]} userRole={userData.rol}>
-                                <div 
-                                    className="relative"
-                                    onMouseEnter={() => handleMenuHover("Administración")}
-                                    onMouseLeave={() => handleMenuHover(null)}
-                                >
+                                <div className="relative">
                                     <button
-                                        className={`flex items-center px-4 py-2 rounded-md transition-all duration-500 ease-in-out transform ${isActive("/admin")
+                                        onClick={() => toggleMenu("Administración")}
+                                        className={`flex items-center px-4 py-2 rounded-md transition-all duration-300 ease-in-out transform ${isActive("/admin")
                                             ? isDarkMode ? 'text-white bg-white/10 border border-white/20 scale-105' : 'text-gray-900 bg-gray-100 border border-gray-300 scale-105'
                                             : isDarkMode
                                                 ? `text-gray-300 hover:text-white hover:scale-105 ${pathname === '/' ? 'hover:bg-white/10' : 'hover:bg-gray-800'}`
@@ -532,10 +498,10 @@ export default function NavigationBar() {
                                     >
                                         <span className="mr-2"><Settings className="w-4 h-4" /></span>
                                         Administración
-                                        <ChevronDown className={`ml-1 w-3 h-3 transition-transform duration-500 ease-in-out ${openMenu === "Administración" ? 'rotate-180' : ''}`} />
+                                        <ChevronDown className={`ml-1 w-3 h-3 transition-transform duration-300 ${openMenu === "Administración" ? 'rotate-180' : ''}`} />
                                     </button>
                                     {openMenu === "Administración" && (
-                                        <div data-dropdown="true" className={`absolute left-0 mt-1 w-56 rounded-md ${pathname === '/' ? (isDarkMode ? 'bg-black/20 border-white/20 backdrop-blur-md' : 'bg-white/20 border-gray-200/30 backdrop-blur-md') : (isDarkMode ? 'bg-black border-white/10' : 'bg-white border-gray-200')} shadow-lg z-20 border animate-in slide-in-from-top-2 fade-in duration-300`}>
+                                        <div className={`absolute left-0 mt-1 w-56 rounded-md ${pathname === '/' ? (isDarkMode ? 'bg-black/20 border-white/20 backdrop-blur-md' : 'bg-white/20 border-gray-200/30 backdrop-blur-md') : (isDarkMode ? 'bg-black border-white/10' : 'bg-white border-gray-200')} shadow-lg z-20 border animate-in slide-in-from-top-2 fade-in duration-200`}>
                                             <div className="py-1">
                                                 <Link
                                                     href="/admin/areas"
@@ -569,39 +535,26 @@ export default function NavigationBar() {
                         </div>
                     </div>
 
-                    {/* Search Bar - After Menus */}
-                    <div 
-                        ref={searchBarRef} 
-                        className={`hidden md:flex items-center ml-4 transition-all duration-300 ease-in-out ${
-                            searchBarShouldHide ? 'opacity-0 scale-90 pointer-events-none' : 'opacity-100 scale-100'
-                        }`}
-                    >
-                        <GlobalSearch onExpandChange={handleSearchExpand} />
-                    </div>
-
                     {/* Right side - Action buttons */}
-                    <div ref={actionButtonsContainerRef} className="hidden md:flex items-center h-full ml-auto">
+                    <div className="hidden md:flex items-center h-full">
                         {/* Hover trigger area for expanding buttons */}
                         <div
                             className="flex items-center h-full"
-                            onMouseEnter={() => handleHeaderExpand(true)}
-                            onMouseLeave={() => handleHeaderExpand(false)}
+                            onMouseEnter={() => setIsHeaderExpanded(true)}
+                            onMouseLeave={() => setIsHeaderExpanded(false)}
                         >
                             {/* Collapsible buttons container */}
-                            <div 
-                                ref={actionButtonsRef}
-                                className={`flex items-center transition-all duration-500 ease-in-out overflow-hidden ${isHeaderExpanded
-                                    ? 'max-w-96 opacity-100'
-                                    : 'max-w-0 opacity-0'
-                                }`}
-                            >
+                            <div className={`flex items-center transition-all duration-500 ease-in-out overflow-hidden ${isHeaderExpanded
+                                ? 'max-w-96 opacity-100 translate-x-0'
+                                : 'max-w-0 opacity-0 -translate-x-8'
+                                }`}>
                                 <div className="flex items-center space-x-2 pr-2">
                                     <RoleGuard roles={["superadmin"]} userRole={userData.rol}>
                                         <Link
                                             href="/register"
                                             className={`p-2 rounded-full transition-all duration-200 hover:scale-110 ${isDarkMode
-                                                    ? 'text-gray-300 hover:text-white hover:bg-gray-800'
-                                                    : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
+                                                ? 'text-gray-300 hover:text-white hover:bg-gray-800'
+                                                : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
                                                 }`}
                                             title="Añadir usuario"
                                         >
@@ -612,8 +565,8 @@ export default function NavigationBar() {
                                         <Link
                                             href="/dashboard"
                                             className={`p-2 rounded-full transition-all duration-200 hover:scale-110 ${pathname === '/dashboard'
-                                                    ? isDarkMode ? 'text-white bg-white/10 border border-white/20' : 'text-gray-900 bg-gray-100 border border-gray-300'
-                                                    : isDarkMode ? 'text-gray-300 hover:text-white hover:bg-gray-800' : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
+                                                ? isDarkMode ? 'text-white bg-white/10 border border-white/20' : 'text-gray-900 bg-gray-100 border border-gray-300'
+                                                : isDarkMode ? 'text-gray-300 hover:text-white hover:bg-gray-800' : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
                                                 }`}
                                             title="Dashboard"
                                         >
@@ -623,8 +576,8 @@ export default function NavigationBar() {
                                     <button
                                         onClick={toggleDarkMode}
                                         className={`p-2 rounded-full transition-all duration-200 hover:scale-110 ${isDarkMode
-                                                ? 'text-gray-300 hover:text-white hover:bg-gray-800'
-                                                : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
+                                            ? 'text-gray-300 hover:text-white hover:bg-gray-800'
+                                            : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
                                             }`}
                                         aria-label="Cambiar modo de color"
                                         title={isDarkMode ? "Cambiar a modo claro" : "Cambiar a modo oscuro"}
@@ -640,15 +593,15 @@ export default function NavigationBar() {
 
                             {/* Hover trigger indicator - Minimalist */}
                             <div className={`flex items-center justify-center transition-all duration-500 ease-in-out ${isHeaderExpanded
-                                    ? 'w-2 h-6 opacity-30'
-                                    : 'w-6 h-6 opacity-70 hover:opacity-100'
+                                ? 'w-2 h-6 opacity-30'
+                                : 'w-6 h-6 opacity-70 hover:opacity-100'
                                 } ${isDarkMode
                                     ? 'hover:bg-gray-800/30'
                                     : 'hover:bg-gray-200/30'
                                 } rounded-full`}>
                                 <div className={`transition-all duration-300 ${isHeaderExpanded
-                                        ? 'w-0.5 h-3 bg-current rounded-full'
-                                        : 'flex space-x-0.5'
+                                    ? 'w-0.5 h-3 bg-current rounded-full'
+                                    : 'flex space-x-0.5'
                                     }`}>
                                     {!isHeaderExpanded && (
                                         <>
@@ -669,10 +622,10 @@ export default function NavigationBar() {
                             }`}>
                             <RoleGuard roles={["superadmin", "admin"]} userRole={userData.rol}>
                                 <button
-                                    onClick={() => setNotificationsOpen(true)}
-                                    className={`p-2 rounded-full relative transition-all duration-200 hover:scale-110 ${isDarkMode
-                                            ? 'text-gray-300 hover:text-white hover:bg-gray-800'
-                                            : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
+                                    onClick={handleNotificationsClick}
+                                    className={`notification-trigger p-2 rounded-full relative transition-all duration-200 hover:scale-110 ${isDarkMode
+                                        ? 'text-gray-300 hover:text-white hover:bg-gray-800'
+                                        : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
                                         }`}
                                     title={doNotDisturb ? "Modo No Molestar activo" : "Notificaciones"}
                                 >
@@ -698,8 +651,8 @@ export default function NavigationBar() {
                             <button
                                 onClick={initiateLogout}
                                 className={`p-2 rounded-full transition-all duration-200 hover:scale-110 ${isDarkMode
-                                        ? 'text-gray-300 hover:text-white hover:bg-gray-800'
-                                        : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
+                                    ? 'text-gray-300 hover:text-white hover:bg-gray-800'
+                                    : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
                                     }`}
                                 title='Cerrar sesión'
                             >
@@ -927,12 +880,27 @@ export default function NavigationBar() {
                 </div>
             )}
 
-            {/* Notifications Panel */}
+            {/* Notifications Popover */}
             {notificationsOpen && (
-                <div className="fixed inset-0 z-50 overflow-hidden">
-                    <div className="absolute inset-0 bg-black/50 backdrop-blur-sm animate-in fade-in duration-200" onClick={() => setNotificationsOpen(false)} />
-                    <div className="absolute right-0 top-0 h-full animate-in slide-in-from-right-4 duration-300">
-                        <NotificationsPanel />
+                <div
+                    className={`fixed z-50 ${isClosingNotifications ? 'animate-out fade-out slide-out-to-top-2 duration-300 ease-in' : 'animate-in fade-in slide-in-from-top-2 duration-300 ease-out'}`}
+                    style={{
+                        position: 'fixed',
+                        top: `${notifPosition.y}px`,
+                        left: `${notifPosition.x}px`,
+                        transform: 'translateX(-50%)',
+                    }}
+                >
+                    <div
+                        className={`notif-popover-content ${isDarkMode ? 'bg-black/95 border-white/10' : 'bg-white/95 border-gray-200'} backdrop-blur-md rounded-2xl border shadow-2xl overflow-hidden w-[320px] h-[500px] flex flex-col transition-all duration-300 ease-out`}
+                        data-position={notifPopoverPos}
+                        style={{
+                            marginTop: notifPopoverPos === 'bottom' ? '8px' : undefined,
+                            marginBottom: notifPopoverPos === 'top' ? '8px' : undefined,
+                            transform: notifPopoverPos === 'top' ? 'translateY(-100%)' : undefined,
+                        }}
+                    >
+                        <NotificationsUnderConstruction />
                     </div>
                 </div>
             )}
