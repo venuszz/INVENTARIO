@@ -58,82 +58,7 @@ interface Message {
     text: string;
 }
 
-// Componente para animar el conteo de valores
-interface AnimatedCounterProps {
-    value: number;
-    className?: string;
-    prefix?: string;
-    suffix?: string;
-    loading?: boolean;
-    isInteger?: boolean;
-}
 
-const AnimatedCounter = ({ value, className, prefix = '', suffix = '', loading = false, isInteger = false }: AnimatedCounterProps) => {
-    // Estado para el valor actual mostrado
-    const [displayValue, setDisplayValue] = useState(0);
-    
-    // Referencia para el intervalo de animación
-    const intervalRef = useRef<NodeJS.Timeout | null>(null);
-    
-    // Formatear el número según sea entero o decimal
-    const formatNumber = (num: number) => {
-        if (isInteger) {
-            return Math.floor(num).toLocaleString('es-MX');
-        } else {
-            return num.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-        }
-    };
-    
-    // Efecto para animar el contador
-    useEffect(() => {
-        // Limpiar intervalo anterior si existe
-        if (intervalRef.current) {
-            clearInterval(intervalRef.current);
-        }
-        
-        if (loading) {
-            // Durante la carga, mostrar números aleatorios
-            intervalRef.current = setInterval(() => {
-                const randomValue = isInteger ? 
-                    Math.floor(Math.random() * 1000) : 
-                    Math.random() * 10000;
-                setDisplayValue(randomValue);
-            }, 100);
-        } else {
-            // Animación de conteo hasta el valor final
-            const duration = 1500; // duración total en ms
-            const steps = 20; // número de pasos
-            const increment = (value - displayValue) / steps;
-            let currentStep = 0;
-            
-            intervalRef.current = setInterval(() => {
-                if (currentStep >= steps) {
-                    setDisplayValue(value);
-                    if (intervalRef.current) clearInterval(intervalRef.current);
-                    return;
-                }
-                
-                setDisplayValue(prev => prev + increment);
-                currentStep++;
-            }, duration / steps);
-        }
-        
-        // Limpiar intervalo al desmontar
-        return () => {
-            if (intervalRef.current) {
-                clearInterval(intervalRef.current);
-            }
-        };
-    }, [value, loading, isInteger]);
-    
-    return (
-        <div className={className}>
-            {prefix}
-            {formatNumber(displayValue)}
-            {suffix}
-        </div>
-    );
-};
 
 const ImagePreview = ({ imagePath }: { imagePath: string | null }) => {
     const [imageUrl, setImageUrl] = useState<string | null>(null);
@@ -1109,12 +1034,17 @@ export default function ConsultasIteaBajas() {
                                     <div className="flex flex-col">
                                         <h3 className={`text-sm font-medium mb-1 transition-colors ${isDarkMode ? 'text-gray-400 group-hover:text-white' : 'text-gray-600 group-hover:text-gray-900'}`}>Valor Total de Bajas</h3>
                                         <div className="relative">
-                                            <AnimatedCounter 
-                                                value={totalValue} 
-                                                prefix="$" 
-                                                className={`text-4xl font-bold ${isDarkMode ? 'text-white' : 'text-gray-900'}`} 
-                                                loading={loading}
-                                            />
+                                            <div className={`text-4xl font-bold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
+                                                {loading ? (
+                                                    <div className="flex items-center gap-2">
+                                                        <span className={`inline-block h-3 w-3 rounded-full animate-pulse ${isDarkMode ? 'bg-white' : 'bg-gray-900'}`}></span>
+                                                        <span className={`inline-block h-3 w-3 rounded-full animate-pulse ${isDarkMode ? 'bg-white' : 'bg-gray-900'}`} style={{ animationDelay: '0.2s' }}></span>
+                                                        <span className={`inline-block h-3 w-3 rounded-full animate-pulse ${isDarkMode ? 'bg-white' : 'bg-gray-900'}`} style={{ animationDelay: '0.4s' }}></span>
+                                                    </div>
+                                                ) : (
+                                                    `$${totalValue.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+                                                )}
+                                            </div>
                                             <div className={`absolute -bottom-2 left-0 w-full h-px ${isDarkMode ? 'bg-white/30' : 'bg-gray-300'}`}></div>
                                         </div>
                                         <p className={`text-sm mt-2 transition-colors ${isDarkMode ? 'text-gray-500 group-hover:text-gray-400' : 'text-gray-500 group-hover:text-gray-600'}`}>
@@ -1132,12 +1062,17 @@ export default function ConsultasIteaBajas() {
                                     <p className={`text-sm mb-2 transition-colors ${isDarkMode ? 'text-gray-400 group-hover:text-white' : 'text-gray-600 group-hover:text-gray-900'}`}>Artículos Dados de Baja</p>
                                     <div className="relative">
                                         <div className={`absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500 rounded-xl ${isDarkMode ? 'bg-white/5' : 'bg-gray-200/50'}`}></div>
-                                        <AnimatedCounter 
-                                            value={filteredCount} 
-                                            className={`relative text-3xl font-bold transition-all duration-500 px-6 py-3 ${isDarkMode ? 'text-white/90 group-hover:text-white' : 'text-gray-800 group-hover:text-gray-900'}`} 
-                                            loading={loading}
-                                            isInteger={true}
-                                        />
+                                        <div className={`relative text-3xl font-bold transition-all duration-500 px-6 py-3 ${isDarkMode ? 'text-white/90 group-hover:text-white' : 'text-gray-800 group-hover:text-gray-900'}`}>
+                                            {loading ? (
+                                                <div className="flex items-center justify-center gap-2">
+                                                    <span className={`inline-block h-2.5 w-2.5 rounded-full animate-pulse ${isDarkMode ? 'bg-white' : 'bg-gray-900'}`}></span>
+                                                    <span className={`inline-block h-2.5 w-2.5 rounded-full animate-pulse ${isDarkMode ? 'bg-white' : 'bg-gray-900'}`} style={{ animationDelay: '0.2s' }}></span>
+                                                    <span className={`inline-block h-2.5 w-2.5 rounded-full animate-pulse ${isDarkMode ? 'bg-white' : 'bg-gray-900'}`} style={{ animationDelay: '0.4s' }}></span>
+                                                </div>
+                                            ) : (
+                                                filteredCount.toLocaleString('es-MX')
+                                            )}
+                                        </div>
                                     </div>
                                 </div>
                             </div>

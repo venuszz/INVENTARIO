@@ -114,13 +114,13 @@ export default function RegistroBienesForm() {
 
     // Helper function for input styling
     const getInputClasses = (fieldName: string, hasError: boolean = false) => {
-        const baseClasses = "w-full border rounded-lg p-2 sm:p-3 focus:ring focus:ring-opacity-50 transition-all text-sm sm:text-base";
+        const baseClasses = "w-full border rounded-lg p-2 sm:p-3 focus:ring focus:ring-opacity-50 transition-all text-sm sm:text-base placeholder-gray-400";
         const errorClasses = hasError ? "border-red-500" : "";
         const themeClasses = isDarkMode
-            ? "bg-black border-gray-700 text-white focus:border-white focus:ring-gray-700"
-            : "bg-white border-gray-300 text-gray-900 focus:border-blue-500 focus:ring-blue-200";
+            ? "bg-black border-gray-700 text-white focus:border-white focus:ring-gray-700 placeholder-gray-500"
+            : "bg-white border-gray-300 text-gray-900 focus:border-blue-500 focus:ring-blue-200 placeholder-gray-400";
 
-        return `${baseClasses} ${errorClasses || themeClasses}`;
+        return `${baseClasses} ${errorClasses} ${themeClasses}`;
     };
 
     const getLabelClasses = () => {
@@ -558,7 +558,7 @@ export default function RegistroBienesForm() {
         formSections.forEach((section, index) => {
             section.classList.toggle('active', index + 1 === currentStep);
         });
-    }, [currentStep]);
+    }, [currentStep, isDarkMode]);
 
     const isFieldValid = (fieldName: string): boolean => {
         if (!touched[fieldName]) return true;
@@ -677,8 +677,8 @@ export default function RegistroBienesForm() {
                 </div>
 
                 <form onSubmit={handleSubmit} className="flex flex-col h-full">
-                    {/* Contenedor con scroll para los inputs - ALTURA FORZADA PARA TESTING */}
-                    <div className={`px-2 sm:px-4 md:px-6 py-4 sm:py-6 overflow-y-scroll bg-red-100/10 ${isDarkMode ? 'scrollbar-thumb-gray-600 scrollbar-track-gray-800' : 'scrollbar-thumb-gray-400 scrollbar-track-gray-100'}`} style={{ height: '50vh', minHeight: '200px', maxHeight: '50vh' }}>
+                    {/* Contenedor con scroll para los inputs */}
+                    <div className={`px-2 sm:px-4 md:px-6 py-4 sm:py-6 overflow-y-scroll transition-colors duration-500 ${isDarkMode ? 'bg-black scrollbar-thumb-gray-600 scrollbar-track-gray-800' : 'bg-white scrollbar-thumb-gray-400 scrollbar-track-gray-100'}`} style={{ height: '50vh', minHeight: '200px', maxHeight: '50vh' }}>
                         {/* Paso 1: Información Básica */}
                         <div className={`form-section transition-all duration-500 ${currentStep === 1 ? 'block' : 'hidden'}`}>
                             <h2 className={`text-lg sm:text-xl font-semibold mb-4 sm:mb-6 border-b pb-2 transition-colors duration-500 ${isDarkMode ? 'text-white border-gray-800' : 'text-gray-900 border-gray-200'
@@ -695,12 +695,10 @@ export default function RegistroBienesForm() {
                                             value={formData.id_inv}
                                             onChange={handleChange}
                                             onBlur={handleBlur}
-                                            className={`w-full border rounded-lg p-2 sm:p-3 focus:ring focus:ring-opacity-50 transition-all text-sm sm:text-base ${!isFieldValid('id_inv')
-                                                ? 'border-red-500'
-                                                : isDarkMode
-                                                    ? 'bg-black border-gray-700 text-white focus:border-white focus:ring-gray-700'
-                                                    : 'bg-white border-gray-300 text-gray-900 focus:border-blue-500 focus:ring-blue-200'
-                                                }`}
+                                            className={`w-full border rounded-lg p-2 sm:p-3 focus:ring focus:ring-opacity-50 transition-all text-sm sm:text-base placeholder-gray-400 ${isDarkMode
+                                                ? 'bg-black border-gray-700 text-white focus:border-white focus:ring-gray-700 placeholder-gray-500'
+                                                : 'bg-white border-gray-300 text-gray-900 focus:border-blue-500 focus:ring-blue-200 placeholder-gray-400'
+                                                } ${!isFieldValid('id_inv') ? 'border-red-500' : ''}`}
                                             required
                                             placeholder="Ej. INV-2023-001"
                                         />
@@ -718,12 +716,10 @@ export default function RegistroBienesForm() {
                                             onChange={handleChange}
                                             onBlur={handleBlur}
                                             title='Seleccionar Rubro'
-                                            className={`w-full border rounded-lg p-2 sm:p-3 focus:ring focus:ring-opacity-50 transition-all text-sm sm:text-base ${!isFieldValid('rubro')
-                                                ? 'border-red-500'
-                                                : isDarkMode
-                                                    ? 'bg-black border-gray-700 text-white focus:border-white focus:ring-gray-700'
-                                                    : 'bg-white border-gray-300 text-gray-900 focus:border-blue-500 focus:ring-blue-200'
-                                                }`}
+                                            className={`w-full border rounded-lg p-2 sm:p-3 focus:ring focus:ring-opacity-50 transition-all text-sm sm:text-base ${isDarkMode
+                                                ? 'bg-black border-gray-700 text-white focus:border-white focus:ring-gray-700'
+                                                : 'bg-white border-gray-300 text-gray-900 focus:border-blue-500 focus:ring-blue-200'
+                                                } ${!isFieldValid('rubro') ? 'border-red-500' : ''}`}
                                             required
                                         >
                                             <option value="">Seleccionar Rubro</option>
@@ -736,7 +732,6 @@ export default function RegistroBienesForm() {
                                         )}
                                     </div>
                                 </div>
-
                                 <div className="space-y-2 sm:space-y-4">
                                     <div>
                                         <label className={`block mb-1 text-sm sm:text-base font-medium transition-colors duration-500 ${isDarkMode ? 'text-white' : 'text-gray-700'
@@ -754,12 +749,10 @@ export default function RegistroBienesForm() {
                                                     const formatted = formData.valor ? formatCurrency(formData.valor) : '';
                                                     setFormData(prev => ({ ...prev, valor: formatted.replace('MX$', '').trim() }));
                                                 }}
-                                                className={`w-full border rounded-lg p-2 sm:p-3 pl-8 focus:ring focus:ring-opacity-50 transition-all text-sm sm:text-base ${!isFieldValid('valor')
-                                                    ? 'border-red-500'
-                                                    : isDarkMode
-                                                        ? 'bg-black border-gray-700 text-white focus:border-white focus:ring-gray-700'
-                                                        : 'bg-white border-gray-300 text-gray-900 focus:border-blue-500 focus:ring-blue-200'
-                                                    }`}
+                                                className={`w-full border rounded-lg p-2 sm:p-3 pl-8 focus:ring focus:ring-opacity-50 transition-all text-sm sm:text-base placeholder-gray-400 ${isDarkMode
+                                                    ? 'bg-black border-gray-700 text-white focus:border-white focus:ring-gray-700 placeholder-gray-500'
+                                                    : 'bg-white border-gray-300 text-gray-900 focus:border-blue-500 focus:ring-blue-200 placeholder-gray-400'
+                                                    } ${!isFieldValid('valor') ? 'border-red-500' : ''}`}
                                                 placeholder="0.00"
                                             />
                                         </div>

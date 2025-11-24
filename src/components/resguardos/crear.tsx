@@ -108,7 +108,7 @@ const colorPaletteLight = [
 
 function getColorClass(value: string | null | undefined, isDarkMode: boolean) {
     if (!value) {
-        return isDarkMode 
+        return isDarkMode
             ? 'bg-gray-900/20 text-gray-300 border border-gray-900 hover:bg-gray-900/30'
             : 'bg-gray-100 text-gray-600 border border-gray-400 hover:bg-gray-200';
     }
@@ -1139,29 +1139,84 @@ export default function CrearResguardos() {
 
     // Skeleton para la tabla de muebles
     const TableSkeleton = () => (
-        <tr>
-            <td colSpan={6} className={`px-6 py-24 text-center ${isDarkMode ? 'text-gray-400' : 'text-gray-600'
-                }`}>
-                <div className="flex flex-col items-center justify-center space-y-4 animate-pulse">
-                    {[...Array(8)].map((_, i) => (
-                        <div key={i} className="flex gap-4 w-full max-w-3xl mx-auto">
-                            <div className={`h-6 w-10 rounded ${isDarkMode ? 'bg-gray-800/60' : 'bg-gray-200'
-                                }`} />
-                            <div className={`h-6 w-32 rounded ${isDarkMode ? 'bg-gray-800/60' : 'bg-gray-200'
-                                }`} />
-                            <div className={`h-6 w-40 rounded ${isDarkMode ? 'bg-gray-800/60' : 'bg-gray-200'
-                                }`} />
-                            <div className={`h-6 w-28 rounded ${isDarkMode ? 'bg-gray-800/60' : 'bg-gray-200'
-                                }`} />
-                            <div className={`h-6 w-28 rounded ${isDarkMode ? 'bg-gray-800/60' : 'bg-gray-200'
-                                }`} />
-                            <div className={`h-6 w-16 rounded ${isDarkMode ? 'bg-gray-800/60' : 'bg-gray-200'
+        <>
+            {[...Array(rowsPerPage)].map((_, i) => (
+                <tr
+                    key={i}
+                    className={`group transition-all duration-200 border-l-2 ${isDarkMode
+                        ? 'hover:bg-gray-900/40 border-transparent'
+                        : 'hover:bg-gray-50 border-transparent'
+                        }`}
+                    style={{ animationDelay: `${i * 50}ms` }}
+                >
+                    {/* Checkbox column */}
+                    <td className="px-2 py-4">
+                        <div className="flex justify-center">
+                            <div className={`h-5 w-5 rounded-md border animate-pulse ${isDarkMode
+                                ? 'border-gray-700 bg-gray-800/30'
+                                : 'border-gray-300 bg-gray-200'
                                 }`} />
                         </div>
-                    ))}
-                </div>
-            </td>
-        </tr>
+                    </td>
+
+                    {/* ID Inventario column */}
+                    <td className="px-4 py-4">
+                        <div className="flex flex-col space-y-2">
+                            <div className={`h-4 w-24 rounded animate-pulse ${isDarkMode ? 'bg-gray-800/60' : 'bg-gray-200'
+                                }`} />
+                            <div className={`h-3 w-32 rounded animate-pulse ${isDarkMode ? 'bg-gray-800/40' : 'bg-gray-100'
+                                }`} />
+                            <div className={`h-4 w-16 rounded-full animate-pulse ${isDarkMode ? 'bg-gray-800/50' : 'bg-gray-200'
+                                }`} />
+                        </div>
+                    </td>
+
+                    {/* Descripción column */}
+                    <td className="px-4 py-4">
+                        <div className="space-y-1">
+                            <div className={`h-4 w-full max-w-xs rounded animate-pulse ${isDarkMode ? 'bg-gray-800/60' : 'bg-gray-200'
+                                }`} />
+                            <div className={`h-4 w-3/4 rounded animate-pulse ${isDarkMode ? 'bg-gray-800/40' : 'bg-gray-100'
+                                }`} />
+                        </div>
+                    </td>
+
+                    {/* Área column */}
+                    <td className="px-4 py-4">
+                        <div className={`inline-flex items-center px-2.5 py-1 rounded-full border animate-pulse ${isDarkMode
+                            ? 'bg-gray-800/30 border-gray-700'
+                            : 'bg-gray-100 border-gray-300'
+                            }`}>
+                            <div className={`h-3 w-24 rounded ${isDarkMode ? 'bg-gray-700' : 'bg-gray-300'
+                                }`} />
+                        </div>
+                    </td>
+
+                    {/* Responsable column */}
+                    <td className="px-4 py-4">
+                        <div className={`inline-flex items-center px-2.5 py-1 rounded-full border gap-1 animate-pulse ${isDarkMode
+                            ? 'bg-gray-800/30 border-gray-700'
+                            : 'bg-gray-100 border-gray-300'
+                            }`}>
+                            <User className={`h-3.5 w-3.5 ${isDarkMode ? 'text-gray-600' : 'text-gray-400'}`} />
+                            <div className={`h-3 w-28 rounded ${isDarkMode ? 'bg-gray-700' : 'bg-gray-300'
+                                }`} />
+                        </div>
+                    </td>
+
+                    {/* Estado column */}
+                    <td className="px-4 py-4">
+                        <div className={`inline-flex items-center px-2.5 py-1 rounded-full border animate-pulse ${isDarkMode
+                            ? 'bg-gray-800/30 border-gray-700'
+                            : 'bg-gray-100 border-gray-300'
+                            }`}>
+                            <div className={`h-3 w-8 rounded ${isDarkMode ? 'bg-gray-700' : 'bg-gray-300'
+                                }`} />
+                        </div>
+                    </td>
+                </tr>
+            ))}
+        </>
     );
 
     // Sugerencia de área para el director seleccionado
@@ -1612,11 +1667,11 @@ export default function CrearResguardos() {
                                                                     {mueble.rubro}
                                                                 </div>
                                                                 <div className={`text-[10px] font-mono px-2 py-0.5 rounded-full border inline-block w-fit transition-all duration-300
-                                                                    ${mueble.origen === 'INEA' ? 
+                                                                    ${mueble.origen === 'INEA' ?
                                                                         (isDarkMode ? 'bg-gray-900/30 text-white border-white group-hover:bg-gray-900/40' : 'bg-blue-100 text-blue-800 border-blue-400 group-hover:bg-blue-200') :
-                                                                        mueble.origen === 'ITEA' ? 
-                                                                        (isDarkMode ? 'bg-pink-900/30 text-pink-200 border-pink-700 group-hover:bg-pink-900/40' : 'bg-pink-100 text-pink-800 border-pink-400 group-hover:bg-pink-200') :
-                                                                        (isDarkMode ? 'bg-gray-900/40 text-gray-400 border-gray-800 group-hover:bg-gray-900/60' : 'bg-gray-100 text-gray-600 border-gray-400 group-hover:bg-gray-200')}`}
+                                                                        mueble.origen === 'ITEA' ?
+                                                                            (isDarkMode ? 'bg-pink-900/30 text-pink-200 border-pink-700 group-hover:bg-pink-900/40' : 'bg-pink-100 text-pink-800 border-pink-400 group-hover:bg-pink-200') :
+                                                                            (isDarkMode ? 'bg-gray-900/40 text-gray-400 border-gray-800 group-hover:bg-gray-900/60' : 'bg-gray-100 text-gray-600 border-gray-400 group-hover:bg-gray-200')}`}
                                                                 >
                                                                     {mueble.origen}
                                                                 </div>
@@ -1645,15 +1700,15 @@ export default function CrearResguardos() {
                                                         </td>
                                                         <td className="px-4 py-4">
                                                             <div className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border transform group-hover:scale-105 transition-all duration-300
-                                                                ${mueble.estado === 'B' ? 
+                                                                ${mueble.estado === 'B' ?
                                                                     (isDarkMode ? 'bg-green-900/20 text-green-300 border-green-900 group-hover:bg-green-900/30' : 'bg-green-100 text-green-800 border-green-400 group-hover:bg-green-200') :
-                                                                    mueble.estado === 'R' ? 
-                                                                    (isDarkMode ? 'bg-yellow-900/20 text-yellow-300 border-yellow-900 group-hover:bg-yellow-900/30' : 'bg-yellow-100 text-yellow-800 border-yellow-400 group-hover:bg-yellow-200') :
-                                                                        mueble.estado === 'M' ? 
-                                                                        (isDarkMode ? 'bg-red-900/20 text-red-300 border-red-900 group-hover:bg-red-900/30' : 'bg-red-100 text-red-800 border-red-400 group-hover:bg-red-200') :
-                                                                            mueble.estado === 'N' ? 
-                                                                            (isDarkMode ? 'bg-gray-900/20 text-white border-gray-900 group-hover:bg-gray-900/30' : 'bg-gray-100 text-gray-800 border-gray-400 group-hover:bg-gray-200') :
-                                                                            (isDarkMode ? 'bg-gray-900/20 text-gray-300 border-gray-900 group-hover:bg-gray-900/30' : 'bg-gray-100 text-gray-600 border-gray-400 group-hover:bg-gray-200')}`}
+                                                                    mueble.estado === 'R' ?
+                                                                        (isDarkMode ? 'bg-yellow-900/20 text-yellow-300 border-yellow-900 group-hover:bg-yellow-900/30' : 'bg-yellow-100 text-yellow-800 border-yellow-400 group-hover:bg-yellow-200') :
+                                                                        mueble.estado === 'M' ?
+                                                                            (isDarkMode ? 'bg-red-900/20 text-red-300 border-red-900 group-hover:bg-red-900/30' : 'bg-red-100 text-red-800 border-red-400 group-hover:bg-red-200') :
+                                                                            mueble.estado === 'N' ?
+                                                                                (isDarkMode ? 'bg-gray-900/20 text-white border-gray-900 group-hover:bg-gray-900/30' : 'bg-gray-100 text-gray-800 border-gray-400 group-hover:bg-gray-200') :
+                                                                                (isDarkMode ? 'bg-gray-900/20 text-gray-300 border-gray-900 group-hover:bg-gray-900/30' : 'bg-gray-100 text-gray-600 border-gray-400 group-hover:bg-gray-200')}`}
                                                             >
                                                                 {mueble.estado}
                                                             </div>
@@ -1956,15 +2011,15 @@ export default function CrearResguardos() {
                                                         {mueble.id_inv}
                                                     </div>
                                                     <div className={`inline-flex items-center px-1.5 py-0.5 rounded-full text-xs font-medium 
-                                                        ${mueble.estado === 'B' ? 
+                                                        ${mueble.estado === 'B' ?
                                                             (isDarkMode ? 'bg-green-900/20 text-green-300 border border-green-900' : 'bg-green-100 text-green-800 border border-green-400') :
-                                                            mueble.estado === 'R' ? 
-                                                            (isDarkMode ? 'bg-yellow-900/20 text-yellow-300 border border-yellow-900' : 'bg-yellow-100 text-yellow-800 border border-yellow-400') :
-                                                                mueble.estado === 'M' ? 
-                                                                (isDarkMode ? 'bg-red-900/20 text-red-300 border border-red-900' : 'bg-red-100 text-red-800 border border-red-400') :
-                                                                    mueble.estado === 'N' ? 
-                                                                    (isDarkMode ? 'bg-blue-900/20 text-blue-300 border border-blue-900' : 'bg-blue-100 text-blue-800 border border-blue-400') :
-                                                                    (isDarkMode ? 'bg-gray-900/20 text-gray-300 border border-gray-900' : 'bg-gray-100 text-gray-600 border border-gray-400')}`}>
+                                                            mueble.estado === 'R' ?
+                                                                (isDarkMode ? 'bg-yellow-900/20 text-yellow-300 border border-yellow-900' : 'bg-yellow-100 text-yellow-800 border border-yellow-400') :
+                                                                mueble.estado === 'M' ?
+                                                                    (isDarkMode ? 'bg-red-900/20 text-red-300 border border-red-900' : 'bg-red-100 text-red-800 border border-red-400') :
+                                                                    mueble.estado === 'N' ?
+                                                                        (isDarkMode ? 'bg-blue-900/20 text-blue-300 border border-blue-900' : 'bg-blue-100 text-blue-800 border border-blue-400') :
+                                                                        (isDarkMode ? 'bg-gray-900/20 text-gray-300 border border-gray-900' : 'bg-gray-100 text-gray-600 border border-gray-400')}`}>
                                                         {mueble.estado}
                                                     </div>
                                                 </div>
@@ -1978,11 +2033,11 @@ export default function CrearResguardos() {
                                                     {mueble.rubro}
                                                 </div>
                                                 <div className={`text-[10px] mt-1 font-mono px-2 py-0.5 rounded-full border inline-block
-                                                    ${mueble.origen === 'INEA' ? 
+                                                    ${mueble.origen === 'INEA' ?
                                                         (isDarkMode ? 'bg-blue-900/30 text-blue-300 border-blue-700' : 'bg-blue-100 text-blue-800 border-blue-400') :
-                                                        mueble.origen === 'ITEA' ? 
-                                                        (isDarkMode ? 'bg-pink-900/30 text-pink-200 border-pink-700' : 'bg-pink-100 text-pink-800 border-pink-400') :
-                                                        (isDarkMode ? 'bg-gray-900/40 text-gray-400 border-gray-800' : 'bg-gray-100 text-gray-600 border-gray-400')}`}
+                                                        mueble.origen === 'ITEA' ?
+                                                            (isDarkMode ? 'bg-pink-900/30 text-pink-200 border-pink-700' : 'bg-pink-100 text-pink-800 border-pink-400') :
+                                                            (isDarkMode ? 'bg-gray-900/40 text-gray-400 border-gray-800' : 'bg-gray-100 text-gray-600 border-gray-400')}`}
                                                 >
                                                     {mueble.origen}
                                                 </div>
