@@ -93,24 +93,24 @@ const colorPaletteDark = [
 ];
 
 const colorPaletteLight = [
-    'bg-gray-100 text-gray-800 border-gray-400 hover:bg-gray-200 transition-colors',
-    'bg-green-100 text-green-800 border-green-400 hover:bg-green-200 transition-colors',
-    'bg-yellow-100 text-yellow-800 border-yellow-400 hover:bg-yellow-200 transition-colors',
-    'bg-purple-100 text-purple-800 border-purple-400 hover:bg-purple-200 transition-colors',
-    'bg-pink-100 text-pink-800 border-pink-400 hover:bg-pink-200 transition-colors',
-    'bg-red-100 text-red-800 border-red-400 hover:bg-red-200 transition-colors',
-    'bg-cyan-100 text-cyan-800 border-cyan-400 hover:bg-cyan-200 transition-colors',
-    'bg-orange-100 text-orange-800 border-orange-400 hover:bg-orange-200 transition-colors',
-    'bg-teal-100 text-teal-800 border-teal-400 hover:bg-teal-200 transition-colors',
-    'bg-indigo-100 text-indigo-800 border-indigo-400 hover:bg-indigo-200 transition-colors',
-    'bg-gray-100 text-gray-700 border-gray-400 hover:bg-gray-200 transition-colors',
+    'bg-gray-200 text-gray-900 border-gray-600 hover:bg-gray-300 transition-colors',
+    'bg-green-200 text-green-900 border-green-600 hover:bg-green-300 transition-colors',
+    'bg-yellow-200 text-yellow-900 border-yellow-600 hover:bg-yellow-300 transition-colors',
+    'bg-purple-200 text-purple-900 border-purple-600 hover:bg-purple-300 transition-colors',
+    'bg-pink-200 text-pink-900 border-pink-600 hover:bg-pink-300 transition-colors',
+    'bg-red-200 text-red-900 border-red-600 hover:bg-red-300 transition-colors',
+    'bg-cyan-200 text-cyan-900 border-cyan-600 hover:bg-cyan-300 transition-colors',
+    'bg-orange-200 text-orange-900 border-orange-600 hover:bg-orange-300 transition-colors',
+    'bg-teal-200 text-teal-900 border-teal-600 hover:bg-teal-300 transition-colors',
+    'bg-indigo-200 text-indigo-900 border-indigo-600 hover:bg-indigo-300 transition-colors',
+    'bg-gray-200 text-gray-900 border-gray-600 hover:bg-gray-300 transition-colors',
 ];
 
 function getColorClass(value: string | null | undefined, isDarkMode: boolean) {
     if (!value) {
         return isDarkMode
             ? 'bg-gray-900/20 text-gray-300 border border-gray-900 hover:bg-gray-900/30'
-            : 'bg-gray-100 text-gray-600 border border-gray-400 hover:bg-gray-200';
+            : 'bg-gray-200 text-gray-900 border border-gray-600 hover:bg-gray-300';
     }
     let hash = 0;
     for (let i = 0; i < value.length; i++) {
