@@ -223,18 +223,18 @@ export const generatePDF = async ({ data, columns, title, fileName, firmas = [] 
             const ineaAspectRatio = ineaImage.width / ineaImage.height;
             const iteaAspectRatio = iteaImage.width / iteaImage.height;
             const ineaHeight = maxImageHeight;
-            const iteaHeight = maxImageHeight;
+            const iteaHeight = 35; // Aumentado de 28 a 35
             const ineaWidth = ineaHeight * ineaAspectRatio;
             const iteaWidth = iteaHeight * iteaAspectRatio;
             page.drawImage(ineaImage, {
                 x: margin,
-                y: yPos - maxImageHeight,
+                y: yPos - ineaHeight,
                 width: ineaWidth,
                 height: ineaHeight,
             });
             page.drawImage(iteaImage, {
                 x: pageWidth - margin - iteaWidth,
-                y: yPos - maxImageHeight,
+                y: yPos - iteaHeight,
                 width: iteaWidth,
                 height: iteaHeight,
             });

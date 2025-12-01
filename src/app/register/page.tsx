@@ -262,9 +262,9 @@ export default function RegisterPage() {
                                             : 'bg-white/60 border border-blue-200/30'
                                         }`}>
                                         <img
-                                            src={isDarkMode ? "/images/ITEA_logo.svg" : "/images/ITEA_logo_negro.svg"}
+                                            src={isDarkMode ? "/images/ITEA_logo.png" : "/images/ITEA_logo_negro.svg"}
                                             alt="Logo ITEA"
-                                            className="h-20 w-auto object-contain"
+                                            className="h-28 w-auto object-contain"
                                         />
                                     </div>
                                 </div>

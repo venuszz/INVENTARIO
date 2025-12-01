@@ -338,7 +338,7 @@ export async function generateResguardoPDF(data: PdfData) {
         const iteaAspectRatio = iteaImage.width / iteaImage.height;
         const maxImageHeight = 28;
         const ineaHeight = maxImageHeight;
-        const iteaHeight = maxImageHeight;
+        const iteaHeight = 35; // Aumentado de 28 a 35
         const ineaWidth = ineaHeight * ineaAspectRatio;
         const iteaWidth = iteaHeight * iteaAspectRatio;
 
