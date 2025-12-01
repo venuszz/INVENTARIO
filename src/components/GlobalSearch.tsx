@@ -292,11 +292,11 @@ export default function GlobalSearch({ onExpandChange }: GlobalSearchProps) {
 
             {/* Resultados de búsqueda - Diseño Mejorado */}
             {showResults && (
-                <div className={`absolute top-full right-0 mt-2 w-[420px] max-h-[500px] overflow-y-auto rounded-2xl shadow-2xl border transition-all duration-300 ${
+                <div className={`absolute top-full right-0 mt-2 w-[320px] h-[500px] rounded-2xl shadow-2xl border transition-all duration-300 overflow-y-auto ${
                     isDarkMode 
-                        ? 'bg-gradient-to-b from-black/98 to-black/95 border-white/10 backdrop-blur-3xl' 
-                        : 'bg-gradient-to-b from-white/98 to-white/95 border-gray-200/50 backdrop-blur-3xl'
-                } animate-in slide-in-from-top-4 fade-in-0 zoom-in-95 duration-300 scrollbar-thin ${
+                        ? 'bg-black/95 border-white/10 backdrop-blur-md' 
+                        : 'bg-white/95 border-gray-200 backdrop-blur-md'
+                } animate-in slide-in-from-top-2 fade-in duration-300 scrollbar-thin ${
                     isDarkMode 
                         ? 'scrollbar-thumb-white/10 scrollbar-track-transparent hover:scrollbar-thumb-white/20' 
                         : 'scrollbar-thumb-gray-300 scrollbar-track-transparent hover:scrollbar-thumb-gray-400'
@@ -322,7 +322,7 @@ export default function GlobalSearch({ onExpandChange }: GlobalSearchProps) {
                             </p>
                         </div>
                     ) : (
-                        <div className="p-3 space-y-3">
+                        <div className="p-2 space-y-2">
                             {/* Resultados INEA */}
                             {ineaResults.length > 0 && (
                                 <div className="space-y-1.5 animate-in fade-in-0 slide-in-from-top-2 duration-300">

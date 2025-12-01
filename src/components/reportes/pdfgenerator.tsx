@@ -30,7 +30,7 @@ export const generatePDF = async ({ data, columns, title, fileName, firmas = [] 
     // Cargar y embedear las imágenes
     const ineaImageBytes = await fetch('/images/INEA NACIONAL.png').then(res => res.arrayBuffer());
     const iteaImageBytes = await fetch('/images/LOGO-ITEA.png').then(res => res.arrayBuffer());
-    
+
     const ineaImage = await pdfDoc.embedPng(ineaImageBytes);
     const iteaImage = await pdfDoc.embedPng(iteaImageBytes);
 
@@ -65,19 +65,19 @@ export const generatePDF = async ({ data, columns, title, fileName, firmas = [] 
                     lines.push(currentLine);
                     currentLine = '';
                 }
-                
+
                 let remainingWord = word;
                 while (remainingWord !== '') {
                     let i = 1;
                     // Encontrar la porción más larga que cabe en el ancho
-                    while (i <= remainingWord.length && 
-                            font.widthOfTextAtSize(remainingWord.slice(0, i), fontSize) <= maxWidth) {
+                    while (i <= remainingWord.length &&
+                        font.widthOfTextAtSize(remainingWord.slice(0, i), fontSize) <= maxWidth) {
                         i++;
                     }
                     i--; // Retroceder al último carácter que cabía
-                    
+
                     if (i === 0) i = 1; // Asegurar que al menos un carácter se incluya
-                    
+
                     lines.push(remainingWord.slice(0, i));
                     remainingWord = remainingWord.slice(i);
                 }
@@ -93,11 +93,11 @@ export const generatePDF = async ({ data, columns, title, fileName, firmas = [] 
                 currentLine = word;
             }
         }
-        
+
         if (currentLine !== '') {
             lines.push(currentLine);
         }
-        
+
         return lines;
     };
 
@@ -247,23 +247,23 @@ export const generatePDF = async ({ data, columns, title, fileName, firmas = [] 
             const maxImageHeight = 50;
             const ineaAspectRatio = ineaImage.width / ineaImage.height;
             const iteaAspectRatio = iteaImage.width / iteaImage.height;
-            
+
             const ineaHeight = maxImageHeight;
-            const iteaHeight = maxImageHeight;
+            const iteaHeight = maxImageHeight; // Mismo tamaño que el logo izquierdo
             const ineaWidth = ineaHeight * ineaAspectRatio;
             const iteaWidth = iteaHeight * iteaAspectRatio;
 
             // Dibujar las imágenes
             page.drawImage(ineaImage, {
                 x: margin,
-                y: yPos - maxImageHeight,
+                y: yPos - ineaHeight,
                 width: ineaWidth,
                 height: ineaHeight,
             });
 
             page.drawImage(iteaImage, {
                 x: pageWidth - margin - iteaWidth,
-                y: yPos - maxImageHeight,
+                y: yPos - iteaHeight, // Misma posición vertical que el logo izquierdo
                 width: iteaWidth,
                 height: iteaHeight,
             });
@@ -293,7 +293,7 @@ export const generatePDF = async ({ data, columns, title, fileName, firmas = [] 
 
             // Obtener la información de la última firma (la que está a la derecha)
             const directoraFirma = firmas[firmas.length - 1];
-            
+
             // Formatear la fecha actual en español
             const fecha = new Date();
             const dia = fecha.getDate();
@@ -365,7 +365,7 @@ export const generatePDF = async ({ data, columns, title, fileName, firmas = [] 
                     lines.forEach((line, lineIndex) => {
                         const lineX = xPos + centerTextInCell(line.trim(), colWidth, regularFont, fontSize);
                         const lineY = yPos - verticalPadding - (fontSize + 4) - (lineIndex * (fontSize + 2)) - ((rowHeight - (verticalPadding * 2) - ((lines.length * (fontSize + 2)))) / 2);
-                        
+
                         page.drawText(normalizeText(line.trim()), {
                             x: lineX,
                             y: lineY,
@@ -384,7 +384,7 @@ export const generatePDF = async ({ data, columns, title, fileName, firmas = [] 
                     lines.forEach((line, lineIndex) => {
                         const lineX = xPos + centerTextInCell(line.trim(), colWidth, regularFont, fontSize);
                         const lineY = yPos - verticalPadding - (fontSize + 4) - (lineIndex * (fontSize + 2)) - ((rowHeight - (verticalPadding * 2) - ((lines.length * (fontSize + 2)))) / 2);
-                        
+
                         page.drawText(normalizeText(line.trim()), {
                             x: lineX,
                             y: lineY,
@@ -400,7 +400,7 @@ export const generatePDF = async ({ data, columns, title, fileName, firmas = [] 
                     lines.forEach((line, lineIndex) => {
                         const lineX = xPos + centerTextInCell(line.trim(), colWidth, regularFont, fontSize);
                         const lineY = yPos - verticalPadding - (fontSize + 4) - (lineIndex * (fontSize + 2)) - ((rowHeight - (verticalPadding * 2) - ((lines.length * (fontSize + 2)))) / 2);
-                        
+
                         page.drawText(normalizeText(line.trim()), {
                             x: lineX,
                             y: lineY,
@@ -420,7 +420,7 @@ export const generatePDF = async ({ data, columns, title, fileName, firmas = [] 
         // Agregar pie de página con número de página
         const pageText = `PÁGINA ${pageIndex + 1} DE ${totalPages}`;
         const pageTextWidth = regularFont.widthOfTextAtSize(pageText, 10);
-        
+
         page.drawText(normalizeText(pageText), {
             x: pageWidth - margin - pageTextWidth,
             y: margin - 20,
@@ -446,7 +446,7 @@ export const generatePDF = async ({ data, columns, title, fileName, firmas = [] 
 
         // Dibujar un rectángulo de fondo
         const textWidth = font.widthOfTextAtSize(summaryText, 12);
-        
+
         page.drawRectangle({
             x: margin,
             y: summaryY - 5,
@@ -459,7 +459,7 @@ export const generatePDF = async ({ data, columns, title, fileName, firmas = [] 
 
         // Centrar el texto en el rectángulo
         const textX = margin + ((pageWidth - (2 * margin) - textWidth) / 2);
-        
+
         page.drawText(normalizeText(summaryText), {
             x: textX,
             y: summaryY,
@@ -536,11 +536,11 @@ export const generatePDF = async ({ data, columns, title, fileName, firmas = [] 
     for (let currentPage = 0; currentPage < paginadas.length; currentPage++) {
         const pageData = paginadas[currentPage];
         const yPos = await processPage(pageData, currentPage, totalPages, globalIndex);
-        
+
         // Si es la última página y hay firmas
         if (currentPage === paginadas.length - 1 && firmas.length > 0) {
             const page = pdfDoc.getPages()[currentPage];
-            
+
             // Verificar si hay espacio suficiente para el resumen y las firmas
             if (yPos - margin < 160) {
                 // No hay suficiente espacio, crear nueva página
@@ -551,7 +551,7 @@ export const generatePDF = async ({ data, columns, title, fileName, firmas = [] 
                 // Agregar número de página a la nueva página
                 const pageText = `PÁGINA ${currentPage + 2} DE ${totalPages}`;
                 const pageTextWidth = regularFont.widthOfTextAtSize(pageText, 10);
-                
+
                 newPage.drawText(normalizeText(pageText), {
                     x: pageWidth - margin - pageTextWidth,
                     y: margin - 20,
