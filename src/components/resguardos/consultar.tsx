@@ -1366,8 +1366,8 @@ export default function ConsultarResguardos({ folioParam }: { folioParam?: strin
                                                 }`}>Resguardantes</label>
                                             <div className="flex flex-wrap gap-2">
                                                 {Array.from(new Set(selectedResguardo.articulos.map(a => a.resguardante || 'Sin asignar'))).map((resguardante, idx) => {
-                                                    // Paleta de colores pastel bonitos
-                                                    const colorPalette = [
+                                                    // Paleta de colores para modo oscuro y claro
+                                                    const colorPaletteDark = [
                                                         'from-pink-500/80 to-pink-400/80 border-pink-400 text-pink-100',
                                                         'from-blue-500/80 to-blue-400/80 border-blue-400 text-blue-100',
                                                         'from-green-500/80 to-green-400/80 border-green-400 text-green-100',
@@ -1379,11 +1379,25 @@ export default function ConsultarResguardos({ folioParam }: { folioParam?: strin
                                                         'from-rose-500/80 to-rose-400/80 border-rose-400 text-rose-100',
                                                         'from-emerald-500/80 to-emerald-400/80 border-emerald-400 text-emerald-100',
                                                     ];
-                                                    const color = colorPalette[idx % colorPalette.length];
+                                                    const colorPaletteLight = [
+                                                        'from-pink-400 to-pink-300 border-pink-500 text-pink-900',
+                                                        'from-blue-400 to-blue-300 border-blue-500 text-blue-900',
+                                                        'from-green-400 to-green-300 border-green-500 text-green-900',
+                                                        'from-yellow-400 to-yellow-300 border-yellow-500 text-yellow-900',
+                                                        'from-purple-400 to-purple-300 border-purple-500 text-purple-900',
+                                                        'from-fuchsia-400 to-fuchsia-300 border-fuchsia-500 text-fuchsia-900',
+                                                        'from-cyan-400 to-cyan-300 border-cyan-500 text-cyan-900',
+                                                        'from-orange-400 to-orange-300 border-orange-500 text-orange-900',
+                                                        'from-rose-400 to-rose-300 border-rose-500 text-rose-900',
+                                                        'from-emerald-400 to-emerald-300 border-emerald-500 text-emerald-900',
+                                                    ];
+                                                    const color = isDarkMode 
+                                                        ? colorPaletteDark[idx % colorPaletteDark.length]
+                                                        : colorPaletteLight[idx % colorPaletteLight.length];
                                                     return (
                                                         <span
                                                             key={idx}
-                                                            className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold ${color} border shadow-md transition-all duration-200 hover:scale-105 tracking-tight`}
+                                                            className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-gradient-to-r ${color} border shadow-md transition-all duration-200 hover:scale-105 tracking-tight`}
                                                         >
                                                             <User className="h-3.5 w-3.5 mr-1 opacity-80" />
                                                             {resguardante}
@@ -1396,7 +1410,10 @@ export default function ConsultarResguardos({ folioParam }: { folioParam?: strin
 
                                     <button
                                         onClick={() => setShowPDFButton(true)}
-                                        className="mt-6 w-full py-2.5 bg-blue-600/20 border border-blue-800 text-blue-400 rounded-lg hover:bg-blue-600/30 transition-all duration-300 hover:scale-[1.02] flex items-center justify-center gap-2 shadow-lg hover:shadow-blue-500/20"
+                                        className={`mt-6 w-full py-2.5 border rounded-lg transition-all duration-300 hover:scale-[1.02] flex items-center justify-center gap-2 shadow-lg ${isDarkMode
+                                            ? 'bg-blue-600/20 border-blue-800 text-blue-400 hover:bg-blue-600/30 hover:shadow-blue-500/20'
+                                            : 'bg-blue-100 border-blue-400 text-blue-700 hover:bg-blue-200 hover:shadow-blue-500/30'
+                                            }`}
                                     >
                                         <Download className="h-4 w-4" />
                                         Generar PDF
@@ -1404,7 +1421,10 @@ export default function ConsultarResguardos({ folioParam }: { folioParam?: strin
                                     <RoleGuard roles={["admin", "superadmin"]} userRole={userRole}>
                                         <button
                                             onClick={() => setShowDeleteAllModal(true)}
-                                            className="mt-2 w-full py-2.5 bg-red-900/20 border border-red-800 text-red-300 rounded-lg hover:bg-red-900/40 transition-all duration-300 hover:scale-[1.02] flex items-center justify-center gap-2 shadow-lg hover:shadow-red-500/20"
+                                            className={`mt-2 w-full py-2.5 border rounded-lg transition-all duration-300 hover:scale-[1.02] flex items-center justify-center gap-2 shadow-lg ${isDarkMode
+                                                ? 'bg-red-900/20 border-red-800 text-red-300 hover:bg-red-900/40 hover:shadow-red-500/20'
+                                                : 'bg-red-100 border-red-400 text-red-700 hover:bg-red-200 hover:shadow-red-500/30'
+                                                }`}
                                         >
                                             <XOctagon className="h-4 w-4" />
                                             Borrar resguardo
@@ -1445,7 +1465,7 @@ export default function ConsultarResguardos({ folioParam }: { folioParam?: strin
                                             onClick={() => setEditResguardanteMode(e => !e)}
                                             className={`ml-2 p-2 rounded-lg border transition-all duration-300 hover:scale-110 flex items-center gap-1 ${isDarkMode
                                                 ? 'border-blue-800 bg-blue-900/20 text-blue-300 hover:bg-blue-800/30'
-                                                : 'border-blue-300 bg-blue-50 text-blue-600 hover:bg-blue-100'
+                                                : 'border-blue-600 bg-blue-200 text-blue-900 hover:bg-blue-300'
                                                 } ${editResguardanteMode ? 'ring-2 ring-blue-400' : ''}`}
                                         >
                                             <Pencil className="h-4 w-4" />
@@ -1531,7 +1551,7 @@ export default function ConsultarResguardos({ folioParam }: { folioParam?: strin
                                                         }}
                                                         className={`flex items-center gap-1 px-2.5 py-1 rounded text-xs font-normal border transition-all duration-300 hover:scale-105 shadow-none ${isDarkMode
                                                             ? 'bg-blue-800/10 hover:bg-blue-700/20 text-blue-200 border-blue-800/10'
-                                                            : 'bg-blue-50 hover:bg-blue-100 text-blue-600 border-blue-200'
+                                                            : 'bg-blue-200 hover:bg-blue-300 text-blue-900 border-blue-600'
                                                             }`}
                                                     >
                                                         <FileText className="h-4 w-4" />
@@ -1547,7 +1567,7 @@ export default function ConsultarResguardos({ folioParam }: { folioParam?: strin
                                                         <li
                                                             key={`${selectedResguardo.folio}-${index}`}
                                                             className={`flex items-start gap-4 px-6 py-3 transition-all duration-200 ${selectedArticulos.includes(articulo.num_inventario)
-                                                                ? (isDarkMode ? 'bg-blue-900/10' : 'bg-blue-50')
+                                                                ? (isDarkMode ? 'bg-blue-900/10' : 'bg-blue-100')
                                                                 : (isDarkMode ? 'hover:bg-blue-900/5' : 'hover:bg-gray-50')
                                                                 }`}
                                                         >
@@ -1567,14 +1587,14 @@ export default function ConsultarResguardos({ folioParam }: { folioParam?: strin
                                                                 <div className="flex flex-wrap items-center gap-2">
                                                                     <span className={`text-sm font-medium truncate ${isDarkMode ? 'text-white' : 'text-gray-900'
                                                                         }`}>{articulo.num_inventario}</span>
-                                                                    <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-normal border ${articulo.condicion === 'B' ? 'bg-green-900/10 text-green-200 border border-green-900/20' :
-                                                                        articulo.condicion === 'R' ? 'bg-yellow-900/10 text-yellow-200 border border-yellow-900/20' :
-                                                                            articulo.condicion === 'M' ? 'bg-red-900/10 text-red-200 border border-red-900/20' :
-                                                                                'bg-gray-900/10 text-gray-300 border-gray-900/20'
+                                                                    <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-normal border ${articulo.condicion === 'B' ? (isDarkMode ? 'bg-green-900/10 text-green-200 border-green-900/20' : 'bg-green-200 text-green-900 border-green-600') :
+                                                                        articulo.condicion === 'R' ? (isDarkMode ? 'bg-yellow-900/10 text-yellow-200 border-yellow-900/20' : 'bg-yellow-200 text-yellow-900 border-yellow-600') :
+                                                                            articulo.condicion === 'M' ? (isDarkMode ? 'bg-red-900/10 text-red-200 border-red-900/20' : 'bg-red-200 text-red-900 border-red-600') :
+                                                                                (isDarkMode ? 'bg-gray-900/10 text-gray-300 border-gray-900/20' : 'bg-gray-200 text-gray-900 border-gray-600')
                                                                         }`}>{articulo.condicion}</span>
-                                                                    <span className={`ml-2 px-2 py-0.5 rounded-full text-xs font-normal border ${articulo.origen === 'INEA' ? 'bg-blue-900/10 text-blue-200 border-blue-700/20' :
-                                                                        articulo.origen === 'ITEA' ? 'bg-pink-900/10 text-pink-200 border-pink-700/20' :
-                                                                            'bg-gray-900/10 text-gray-400 border-gray-800/20'
+                                                                    <span className={`ml-2 px-2 py-0.5 rounded-full text-xs font-normal border ${articulo.origen === 'INEA' ? (isDarkMode ? 'bg-blue-900/10 text-blue-200 border-blue-700/20' : 'bg-blue-200 text-blue-900 border-blue-600') :
+                                                                        articulo.origen === 'ITEA' ? (isDarkMode ? 'bg-pink-900/10 text-pink-200 border-pink-700/20' : 'bg-pink-200 text-pink-900 border-pink-600') :
+                                                                            (isDarkMode ? 'bg-gray-900/10 text-gray-400 border-gray-800/20' : 'bg-gray-200 text-gray-900 border-gray-600')
                                                                         }`}>{articulo.origen}</span>
                                                                 </div>
                                                                 <div className={`text-xs mt-1 ${isDarkMode ? 'text-gray-300' : 'text-gray-700'
