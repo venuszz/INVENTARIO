@@ -11,7 +11,7 @@ import RoleGuard from "@/components/roleGuard";
 import { useNotifications } from '@/hooks/useNotifications';
 import { useTheme } from '@/context/ThemeContext';
 import { useIneaIndexation } from '@/context/IneaIndexationContext';
-import { useSearchParams } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 
 interface Mueble {
     id: number;
@@ -185,6 +185,7 @@ function getStatusBadgeColors(status: string | null | undefined) {
 export default function ConsultasIneaGeneral() {
     // Usar el contexto de indexación en lugar de estado local
     const { data: muebles, isIndexing, reindex } = useIneaIndexation();
+    const router = useRouter();
     const searchParams = useSearchParams();
     const [error, setError] = useState<string | null>(null);
     const loading = isIndexing;
@@ -629,26 +630,6 @@ export default function ConsultasIneaGeneral() {
         setCurrentPage(1);
     }, [searchTerm, filters, sortField, sortDirection, rowsPerPage]);
 
-    // Detectar parámetro id en URL y abrir detalles automáticamente
-    useEffect(() => {
-        const idParam = searchParams.get('id');
-        if (idParam && muebles.length > 0) {
-            const itemId = parseInt(idParam, 10);
-            const item = muebles.find(m => m.id === itemId);
-            if (item) {
-                setSelectedItem(item);
-                setIsEditing(false);
-                setEditFormData(null);
-                // Scroll al detalle si es necesario
-                setTimeout(() => {
-                    if (detailRef.current) {
-                        detailRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                    }
-                }, 100);
-            }
-        }
-    }, [searchParams, muebles]);
-
     const handleSelectItem = (item: Mueble) => {
         setSelectedItem(item);
         setIsEditing(false);
@@ -846,6 +827,11 @@ const confirmMarkAsInactive = async () => {
         setEditFormData(null);
         setImageFile(null);
         setImagePreview(null);
+        // Limpiar el parámetro id de la URL
+        const params = new URLSearchParams(searchParams.toString());
+        params.delete('id');
+        const newUrl = params.toString() ? `${window.location.pathname}?${params.toString()}` : window.location.pathname;
+        router.replace(newUrl);
     };
 
     const clearFilters = () => {
@@ -1163,6 +1149,48 @@ const confirmMarkAsInactive = async () => {
             return 0;
         })
         .slice((currentPage - 1) * rowsPerPage, currentPage * rowsPerPage);
+
+    // Detectar parámetro id en URL y abrir detalles automáticamente
+    useEffect(() => {
+        const idParam = searchParams.get('id');
+        if (idParam && muebles.length > 0) {
+            const itemId = parseInt(idParam, 10);
+            const item = muebles.find(m => m.id === itemId);
+            if (item) {
+                setSelectedItem(item);
+                setIsEditing(false);
+                setEditFormData(null);
+                
+                // Calcular la página donde se encuentra el item
+                // Primero, obtener la lista filtrada y ordenada (igual que en paginatedMuebles)
+                const sortedFiltered = filteredMueblesOmni
+                    .slice()
+                    .sort((a, b) => {
+                        const aValue = a[sortField] ?? '';
+                        const bValue = b[sortField] ?? '';
+                        if (aValue < bValue) return sortDirection === 'asc' ? -1 : 1;
+                        if (aValue > bValue) return sortDirection === 'asc' ? 1 : -1;
+                        return 0;
+                    });
+                
+                // Encontrar el índice del item en la lista ordenada
+                const itemIndex = sortedFiltered.findIndex(m => m.id === itemId);
+                
+                if (itemIndex !== -1) {
+                    // Calcular la página basándose en el índice
+                    const targetPage = Math.floor(itemIndex / rowsPerPage) + 1;
+                    setCurrentPage(targetPage);
+                }
+                
+                // Scroll al detalle si es necesario
+                setTimeout(() => {
+                    if (detailRef.current) {
+                        detailRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                    }
+                }, 100);
+            }
+        }
+    }, [searchParams, muebles, filteredMueblesOmni, sortField, sortDirection, rowsPerPage]);
 
     // Calcular totales directamente
     const filteredValue = filteredMueblesOmni.reduce((acc, item) => acc + (item.valor !== null && item.valor !== undefined ? Number(item.valor) : 0), 0);
@@ -1872,7 +1900,11 @@ const confirmMarkAsInactive = async () => {
                                 </h2>
                                 <button
                                     type="button"
-                                    onClick={closeDetail}
+                                    onClick={(e) => {
+                                        e.preventDefault();
+                                        e.stopPropagation();
+                                        closeDetail();
+                                    }}
                                     title="Cerrar detalle"
                                     className={`rounded-full p-2 focus:outline-none focus:ring-2 transition-colors ${isDarkMode
                                         ? 'text-gray-400 hover:text-white focus:ring-white hover:bg-gray-800'
