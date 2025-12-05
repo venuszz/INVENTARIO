@@ -1,15 +1,14 @@
-import Personal from "@/components/admin/directorio"
-import { Metadata } from "next";
+"use client";
 
-export const metadata: Metadata = {
-    title: 'INVENTARIO | ADMIN | PERSONAL',
-    description: 'Admin page for managing personal',
-}
+import Personal from "@/components/admin/directorio"
+import ProtectedPage from "@/components/ProtectedPage";
 
 export default function Add() {
     return (
-        <div className="max-h-full overflow-auto">
-            <Personal />
-        </div>            
+        <ProtectedPage requiredRoles={["superadmin"]}>
+            <div className="max-h-full overflow-auto">
+                <Personal />
+            </div>            
+        </ProtectedPage>
     )
 }

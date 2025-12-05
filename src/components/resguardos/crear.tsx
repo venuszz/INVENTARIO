@@ -10,7 +10,6 @@ import {
     Plus
 } from 'lucide-react';
 import supabase from '@/app/lib/supabase/client';
-import Cookies from 'js-cookie';
 import { generateResguardoPDF } from './ResguardoPDFReport';
 import { useUserRole } from "@/hooks/useUserRole";
 import { useNotifications } from '@/hooks/useNotifications';
@@ -356,29 +355,6 @@ export default function CrearResguardos() {
         fetchAreasAndRelations();
     }, []);
 
-    async function fetchAllRows<T = unknown>(table: string, filter: object = {}, batchSize = 1000): Promise<T[]> {
-        let allRows: T[] = [];
-        let from = 0;
-        let to = batchSize - 1;
-        let keepFetching = true;
-        while (keepFetching) {
-            let query = supabase.from(table).select('*').range(from, to);
-            Object.entries(filter).forEach(([key, value]) => {
-                query = query.eq(key, value);
-            });
-            const { data, error } = await query;
-            if (error) throw error;
-            allRows = allRows.concat(data || []);
-            if (!data || data.length < batchSize) {
-                keepFetching = false;
-            } else {
-                from += batchSize;
-                to += batchSize;
-            }
-        }
-        return allRows;
-    }
-
     const fetchData = useCallback(async (
         sortField = 'id_inv',
         sortDir = 'asc'
@@ -666,15 +642,6 @@ export default function CrearResguardos() {
             if (!folioToUse) return;
         }
 
-        let createdBy = '';
-        try {
-            const userDataCookie = Cookies.get('userData');
-            if (userDataCookie) {
-                const userData = JSON.parse(userDataCookie);
-                createdBy = `${userData.firstName || ''}${userData.lastName ? ' ' + userData.lastName : ''}`.trim();
-            }
-        } catch { }
-
         try {
             setLoading(true);
 
@@ -731,7 +698,6 @@ export default function CrearResguardos() {
                     rubro: mueble.rubro,
                     condicion: mueble.estado,
                     usufinal: resguardanteToUse,
-                    created_by: createdBy,
                     puesto: formData.puesto,
                     origen: mueble.origen || '',
                 });
@@ -944,6 +910,8 @@ export default function CrearResguardos() {
         if (!showDirectorSuggestions || filteredDirectorOptions.length === 0) return null;
         return (
             <ul
+                role="listbox"
+                aria-label="Lista de directores sugeridos"
                 className={`absolute left-0 top-full w-full mt-1 animate-fadeInUp max-h-80 overflow-y-auto rounded-lg shadow-2xl border backdrop-blur-xl ring-1 ring-inset transition-all duration-200 z-50 ${isDarkMode
                     ? 'border-gray-800 bg-black/95 ring-gray-900/60'
                     : 'border-gray-300 bg-white/95 ring-gray-200/60'
@@ -956,7 +924,7 @@ export default function CrearResguardos() {
                         <li
                             key={opt.id_directorio}
                             role="option"
-                            {...(isSelected && { 'aria-selected': 'true' })}
+                            aria-selected={isSelected}
                             onMouseDown={() => handleDirectorSuggestionClick(opt)}
                             onMouseEnter={() => setHighlightedDirectorIndex(i)}
                             className={`flex flex-col px-3 py-2 cursor-pointer select-none text-xs whitespace-normal break-words w-full border-b last:border-b-0 transition-colors ${isDarkMode
@@ -1118,7 +1086,7 @@ export default function CrearResguardos() {
                         <li
                             key={s.value + s.type}
                             role="option"
-                            {...(isSelected && { 'aria-selected': 'true' })}
+                            aria-selected={isSelected}
                             onMouseDown={() => handleSuggestionClick(i)}
                             onMouseEnter={() => setHighlightedIndex(i)}
                             className={`flex items-center gap-2 px-3 py-2 cursor-pointer select-none text-xs whitespace-normal break-words w-full border-b last:border-b-0 transition-colors ${isDarkMode
@@ -1459,14 +1427,10 @@ export default function CrearResguardos() {
                                                         )}
                                                         {/* Tooltip visual mejorado */}
                                                         <span
-                                                            className={`absolute left-0 top-8 z-40 px-3 py-1.5 rounded-lg text-xs font-semibold shadow-xl border opacity-0 group-hover:opacity-100 group-hover:translate-y-1 transition-all pointer-events-none whitespace-nowrap ${isDarkMode
+                                                            className={`absolute left-0 top-8 z-40 px-3 py-1.5 rounded-lg text-xs font-semibold shadow-xl border opacity-0 group-hover:opacity-100 group-hover:translate-y-1 transition-all pointer-events-none whitespace-nowrap w-auto min-w-[180px] ${isDarkMode
                                                                 ? 'bg-black text-white border-white'
                                                                 : 'bg-white text-gray-900 border-gray-300'
                                                                 }`}
-                                                            style={{
-                                                                width: 'auto',
-                                                                minWidth: '180px',
-                                                            }}
                                                         >
                                                             Seleccionar todos los aríticulos de la página
                                                         </span>

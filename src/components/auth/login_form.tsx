@@ -34,19 +34,18 @@ export default function LoginPage() {
             const redirectPath = searchParams.get('from') || '/';
 
             const { data: userData, error: userError } = await supabase
-                .from('users')
-                .select('id, email, rol, first_name, last_name')
-                .eq('username', username)
-                .single();
+                .rpc('get_user_by_username', { p_username: username });
 
-            if (userError || !userData) {
+            if (userError || !userData || userData.length === 0) {
                 setError('Usuario o contraseña incorrectos');
                 setIsLoading(false);
                 return;
             }
 
+            const user = userData[0];
+
             const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
-                email: userData.email,
+                email: user.email,
                 password
             });
 
@@ -65,11 +64,11 @@ export default function LoginPage() {
             });
 
             Cookies.set('userData', JSON.stringify({
-                id: userData.id,
-                username: username,
-                firstName: userData.first_name,
-                lastName: userData.last_name,
-                rol: userData.rol
+                id: user.id,
+                username: user.username,
+                firstName: user.first_name,
+                lastName: user.last_name,
+                rol: user.rol
             }), {
                 expires,
                 path: '/'
