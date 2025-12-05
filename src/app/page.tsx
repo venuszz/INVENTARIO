@@ -2,6 +2,7 @@
 import { useEffect, useState, useRef } from 'react';
 import { useTheme } from '@/context/ThemeContext';
 import { useInactivity } from '@/context/InactivityContext';
+import GravityBackground from '@/components/GravityBackground';
 
 export default function Inicio() {
   const { isDarkMode } = useTheme();
@@ -10,7 +11,6 @@ export default function Inicio() {
   const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
   const [currentTime, setCurrentTime] = useState('');
   const [currentDate, setCurrentDate] = useState('');
-  const particlesRef = useRef(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -54,67 +54,9 @@ export default function Inicio() {
 
     window.addEventListener('mousemove', handleMouseMove);
 
-    const particleInterval = setInterval(() => {
-      if (particlesRef.current) {
-        const particle = document.createElement('div');
-        particle.classList.add('particle');
-
-        // Posición aleatoria
-        const posX = Math.random() * 100;
-        const posY = Math.random() * 100;
-
-        // Tamaño aleatorio
-        const size = Math.random() * 3 + 1;
-
-        // Velocidad aleatoria
-        const speedX = (Math.random() - 0.5) * 2;
-        const speedY = (Math.random() - 0.5) * 2;
-
-        // Aplicar estilos
-        particle.style.left = `${posX}%`;
-        particle.style.top = `${posY}%`;
-        particle.style.width = `${size}px`;
-        particle.style.height = `${size}px`;
-        particle.style.opacity = (Math.random() * 0.5 + 0.3).toString();
-
-        // Añadir partícula al contenedor
-        (particlesRef.current as HTMLDivElement).appendChild(particle);
-
-        // Animar la partícula
-        let positionX = posX;
-        let positionY = posY;
-
-        const animate = () => {
-          positionX += speedX;
-          positionY += speedY;
-
-          particle.style.left = `${positionX}%`;
-          particle.style.top = `${positionY}%`;
-
-          // Eliminar si está fuera de los límites
-          if (positionX < -10 || positionX > 110 || positionY < -10 || positionY > 110) {
-            particle.remove();
-            return;
-          }
-
-          requestAnimationFrame(animate);
-        };
-
-        animate();
-
-        // Eliminar después de un tiempo
-        setTimeout(() => {
-          if (particle.parentNode === particlesRef.current) {
-            particle.remove();
-          }
-        }, 8000);
-      }
-    }, 100);
-
     return () => {
       window.removeEventListener('mousemove', handleMouseMove);
       clearInterval(interval);
-      clearInterval(particleInterval);
     };
   }, []);
 
@@ -156,8 +98,8 @@ export default function Inicio() {
         <div className="wave wave3"></div>
       </div>
 
-      {/* Sistema de partículas */}
-      <div ref={particlesRef} className="absolute inset-0 overflow-hidden z-0"></div>
+      {/* Sistema de partículas (Reemplazado por GravityBackground) */}
+      <GravityBackground />
 
       {/* Efecto de luz que sigue al cursor */}
       <div
@@ -232,13 +174,6 @@ export default function Inicio() {
       </div>
 
       <style jsx>{`
-        .particle {
-          position: absolute;
-          background: ${isDarkMode ? 'white' : '#3b82f6'};
-          border-radius: 50%;
-          pointer-events: none;
-        }
-        
         .bg-grid {
           background-image: ${isDarkMode
           ? 'linear-gradient(rgba(255, 255, 255, 0.05) 1px, transparent 1px), linear-gradient(90deg, rgba(255, 255, 255, 0.05) 1px, transparent 1px)'
