@@ -13,7 +13,24 @@ export default function Inicio() {
   const [currentTime, setCurrentTime] = useState('');
   const [currentDate, setCurrentDate] = useState('');
   const [isGravityEnabled, setIsGravityEnabled] = useState(true);
+  const [isConfigLoaded, setIsConfigLoaded] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
+
+  // Cargar configuración al iniciar
+  useEffect(() => {
+    const saved = localStorage.getItem('gravityEnabled');
+    if (saved !== null) {
+      setIsGravityEnabled(saved === 'true');
+    }
+    setIsConfigLoaded(true);
+  }, []);
+
+  // Guardar configuración solo cuando haya cambiado y ya esté cargada
+  useEffect(() => {
+    if (isConfigLoaded) {
+      localStorage.setItem('gravityEnabled', String(isGravityEnabled));
+    }
+  }, [isGravityEnabled, isConfigLoaded]);
 
   useEffect(() => {
     setIsLoaded(true);
@@ -81,8 +98,8 @@ export default function Inicio() {
             <button
               onClick={() => setIsGravityEnabled(!isGravityEnabled)}
               className={`absolute top-2 right-2 p-1.5 rounded-full transition-all duration-500 opacity-0 group-hover:opacity-100 ${isGravityEnabled
-                  ? (isDarkMode ? 'text-blue-400 bg-white/10' : 'text-blue-600 bg-black/5')
-                  : 'text-gray-400 hover:bg-gray-500/10'
+                ? (isDarkMode ? 'text-blue-400 bg-white/10' : 'text-blue-600 bg-black/5')
+                : 'text-gray-400 hover:bg-gray-500/10'
                 }`}
               title={isGravityEnabled ? "Desactivar efectos" : "Activar efectos"}
             >

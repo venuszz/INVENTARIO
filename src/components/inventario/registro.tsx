@@ -678,7 +678,7 @@ export default function RegistroBienesForm() {
 
                 <form onSubmit={handleSubmit} className="flex flex-col h-full">
                     {/* Contenedor con scroll para los inputs - ALTURA FORZADA PARA TESTING */}
-                    <div className={`px-2 sm:px-4 md:px-6 py-4 sm:py-6 overflow-y-scroll bg-red-100/10 ${isDarkMode ? 'scrollbar-thumb-gray-600 scrollbar-track-gray-800' : 'scrollbar-thumb-gray-400 scrollbar-track-gray-100'}`} style={{ height: '50vh', minHeight: '200px', maxHeight: '50vh' }}>
+                    <div className={`px-2 sm:px-4 md:px-6 py-4 sm:py-6 overflow-y-scroll ${isDarkMode ? 'bg-black scrollbar-thumb-gray-600 scrollbar-track-gray-800' : 'bg-red-100/10 scrollbar-thumb-gray-400 scrollbar-track-gray-100'}`} style={{ height: '50vh', minHeight: '200px', maxHeight: '50vh' }}>
                         {/* Paso 1: Información Básica */}
                         <div className={`form-section transition-all duration-500 ${currentStep === 1 ? 'block' : 'hidden'}`}>
                             <h2 className={`text-lg sm:text-xl font-semibold mb-4 sm:mb-6 border-b pb-2 transition-colors duration-500 ${isDarkMode ? 'text-white border-gray-800' : 'text-gray-900 border-gray-200'
