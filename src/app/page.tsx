@@ -3,6 +3,7 @@ import { useEffect, useState, useRef } from 'react';
 import { useTheme } from '@/context/ThemeContext';
 import { useInactivity } from '@/context/InactivityContext';
 import GravityBackground from '@/components/GravityBackground';
+import { Sparkles } from 'lucide-react';
 
 export default function Inicio() {
   const { isDarkMode } = useTheme();
@@ -11,6 +12,7 @@ export default function Inicio() {
   const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
   const [currentTime, setCurrentTime] = useState('');
   const [currentDate, setCurrentDate] = useState('');
+  const [isGravityEnabled, setIsGravityEnabled] = useState(true);
   const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -70,10 +72,23 @@ export default function Inicio() {
       {!isInactive && (
         <div className={`absolute top-20 left-8 z-20 transition-all duration-500 ${isDarkMode ? 'text-white' : 'text-gray-800'
           } animate-in fade-in-0 slide-in-from-left-4 duration-700`}>
-          <div className={`backdrop-blur-sm rounded-xl p-4 shadow-2xl transition-all duration-500 ${isDarkMode
+          <div className={`relative group backdrop-blur-sm rounded-xl p-4 shadow-2xl transition-all duration-500 ${isDarkMode
             ? 'bg-black/5 border border-white/5'
             : 'bg-white/5 border border-white/10'
             }`}>
+
+            {/* Botón sutil para activar/desactivar efectos */}
+            <button
+              onClick={() => setIsGravityEnabled(!isGravityEnabled)}
+              className={`absolute top-2 right-2 p-1.5 rounded-full transition-all duration-500 opacity-0 group-hover:opacity-100 ${isGravityEnabled
+                  ? (isDarkMode ? 'text-blue-400 bg-white/10' : 'text-blue-600 bg-black/5')
+                  : 'text-gray-400 hover:bg-gray-500/10'
+                }`}
+              title={isGravityEnabled ? "Desactivar efectos" : "Activar efectos"}
+            >
+              <Sparkles size={12} className={isGravityEnabled ? 'fill-current' : ''} />
+            </button>
+
             <div className="text-4xl font-light tracking-wider mb-1">
               {currentTime}
             </div>
@@ -98,8 +113,8 @@ export default function Inicio() {
         <div className="wave wave3"></div>
       </div>
 
-      {/* Sistema de partículas (Reemplazado por GravityBackground) */}
-      <GravityBackground />
+      {/* Sistema de partículas (GravityBackground) */}
+      {isGravityEnabled && <GravityBackground />}
 
       {/* Efecto de luz que sigue al cursor */}
       <div
