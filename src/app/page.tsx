@@ -4,6 +4,7 @@ import { useTheme } from '@/context/ThemeContext';
 import { useInactivity } from '@/context/InactivityContext';
 import GravityBackground from '@/components/GravityBackground';
 import { Sparkles } from 'lucide-react';
+import confetti from 'canvas-confetti';
 
 export default function Inicio() {
   const { isDarkMode } = useTheme();
@@ -14,6 +15,7 @@ export default function Inicio() {
   const [currentDate, setCurrentDate] = useState('');
   const [isGravityEnabled, setIsGravityEnabled] = useState(true);
   const [isConfigLoaded, setIsConfigLoaded] = useState(false);
+  const [showCredits, setShowCredits] = useState(true);
   const containerRef = useRef<HTMLDivElement>(null);
 
   // Cargar configuración al iniciar
@@ -22,6 +24,20 @@ export default function Inicio() {
     if (saved !== null) {
       setIsGravityEnabled(saved === 'true');
     }
+
+    // Check credits visibility (24h expiration)
+    const hiddenTimestamp = localStorage.getItem('creditsHiddenTimestamp');
+    if (hiddenTimestamp) {
+      const now = Date.now();
+      const savedTime = parseInt(hiddenTimestamp, 10);
+      // 24 hours = 86400000 ms
+      if (now - savedTime < 86400000) {
+        setShowCredits(false);
+      } else {
+        localStorage.removeItem('creditsHiddenTimestamp');
+      }
+    }
+
     setIsConfigLoaded(true);
   }, []);
 
@@ -78,6 +94,29 @@ export default function Inicio() {
       clearInterval(interval);
     };
   }, []);
+
+  const handleEasterEgg = (e: React.MouseEvent) => {
+    const rect = (e.target as HTMLElement).getBoundingClientRect();
+    const x = (rect.left + rect.width / 2) / window.innerWidth;
+    const y = (rect.top + rect.height / 2) / window.innerHeight;
+
+    confetti({
+      origin: { x, y },
+      particleCount: 150, // More particles
+      spread: 100, // Wider spread
+      startVelocity: 25, // More energetic pop
+      colors: isDarkMode ? ['#ffffff', '#3b82f6', '#8b5cf6'] : ['#000000', '#3b82f6', '#8b5cf6'],
+      ticks: 300,
+      gravity: 0.8, // Floats longer
+      scalar: 0.8, // Slightly larger
+      shapes: ['circle'],
+      disableForReducedMotion: true
+    });
+
+    // Save timestamp and hide for session (24h)
+    localStorage.setItem('creditsHiddenTimestamp', Date.now().toString());
+    setShowCredits(false);
+  };
 
   return (
     <div
@@ -155,7 +194,7 @@ export default function Inicio() {
 
       {/* Logo con animación */}
       <div className="relative z-20">
-        <div className={`transform transition-all duration-1000 ${isLoaded ? 'scale-100 opacity-100' : 'scale-90 opacity-0'}`}>
+        <div className={`transform transition-all duration-1000 relative z-10 ${isLoaded ? 'scale-100 opacity-100' : 'scale-90 opacity-0'}`}>
           <img
             src={isDarkMode ? "/images/TLAX_logo.svg" : "/images/TLAX_logo_negro.png"}
             alt="Logo ITEA"
@@ -186,8 +225,22 @@ export default function Inicio() {
               </div>
             </div>
           ) : (
-            <p className={`text-center pt-2 transition-colors duration-500 ${isDarkMode ? 'text-gray-800' : 'text-white/30'
-              }`}>Derechos Reservados ©2025</p>
+            <div className="flex flex-col items-center gap-1 pt-4 relative z-50">
+              <p className={`text-[8px] tracking-widest uppercase transition-colors duration-500 ${isDarkMode ? 'text-gray-600' : 'text-gray-400'
+                }`}>
+                Derechos Reservados © 2025
+              </p>
+
+              {showCredits && (
+                <div
+                  className={`text-[8px] font-bold tracking-[0.2em] cursor-pointer transition-all duration-500 opacity-20 hover:opacity-40 hover:scale-105 ${isDarkMode ? 'text-white' : 'text-gray-900'
+                    }`}
+                  onClick={handleEasterEgg}
+                >
+                  Made By: <span className="text-blue-500">A</span>|<span className="text-purple-500">X</span>
+                </div>
+              )}
+            </div>
           )}
         </div>
 
@@ -258,6 +311,7 @@ export default function Inicio() {
           border: 1px solid ${isDarkMode ? 'rgba(255, 255, 255, 0.1)' : 'rgba(59, 130, 246, 0.2)'};
           border-radius: 50%;
           transform: translate(-50%, -50%);
+          pointer-events: none;
         }
         
         .orbit1 {
@@ -287,6 +341,7 @@ export default function Inicio() {
           top: 50%;
           left: 50%;
           transform: translate(-50%, -50%);
+          pointer-events: none;
         }
         
         .orbital-dot1 {
