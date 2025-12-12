@@ -3,7 +3,7 @@ import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { usePathname } from 'next/navigation';
-import { ChevronDown, ChevronRight, User, LogOut, Database, FileText, Settings, Menu, X, Grid, Bell, Moon, Sun } from 'lucide-react';
+import { ChevronDown, ChevronRight, User, LogOut, Database, FileText, Settings, Menu, X, Grid, Bell, Moon, Sun, Package } from 'lucide-react';
 import Cookies from 'js-cookie';
 import { useRouter } from 'next/navigation';
 import supabase from '@/app/lib/supabase/client';
@@ -637,6 +637,16 @@ export default function NavigationBar() {
                                             <Grid className="h-5 w-5" />
                                         </Link>
                                     </RoleGuard>
+                                    <Link
+                                        href="/consultas/no-listado"
+                                        className={`p-2 rounded-full transition-all duration-200 hover:scale-110 ${pathname === '/consultas/no-listado'
+                                            ? isDarkMode ? 'text-white bg-white/10 border border-white/20' : 'text-gray-900 bg-gray-100 border border-gray-300'
+                                            : isDarkMode ? 'text-gray-300 hover:text-white hover:bg-gray-800' : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
+                                            }`}
+                                        title="No Listado"
+                                    >
+                                        <Package className="h-5 w-5" />
+                                    </Link>
                                     <button
                                         onClick={toggleDarkMode}
                                         className={`p-2 rounded-full transition-all duration-200 hover:scale-110 ${isDarkMode
