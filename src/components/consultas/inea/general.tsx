@@ -1,5 +1,5 @@
 "use client"
-import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
+import { useState, useEffect, useRef, useCallback, useMemo, useDeferredValue } from 'react';
 import {
     Search, RefreshCw, ChevronLeft, ChevronRight,
     ArrowUpDown, AlertCircle, X, Save, Trash2, LayoutGrid, ChevronDown, Building2, User, Shield, AlertTriangle, Calendar, Info, Edit, Receipt, ClipboardList, Store, CheckCircle, XCircle, Plus, DollarSign, BadgeCheck
@@ -233,6 +233,24 @@ export default function ConsultasIneaGeneral() {
     const [isEditing, setIsEditing] = useState(false);
     const [editFormData, setEditFormData] = useState<Mueble | null>(null);
     const [message, setMessage] = useState<Message | null>(null);
+
+    // Defer search term to avoid blocking input
+    const deferredSearchTerm = useDeferredValue(searchTerm);
+
+    // Pre-calculate searchable vectors to avoid mapping on every keystroke
+    const searchableData = useMemo(() => {
+        if (!muebles || muebles.length === 0) return null;
+        return {
+            id: muebles.map(m => m.id_inv || '').filter(Boolean),
+            area: muebles.map(m => m.area || '').filter(Boolean),
+            usufinal: muebles.map(m => m.usufinal || '').filter(Boolean),
+            resguardante: muebles.map(m => m.resguardante || '').filter(Boolean),
+            descripcion: muebles.map(m => m.descripcion || '').filter(Boolean),
+            rubro: muebles.map(m => m.rubro || '').filter(Boolean),
+            estado: muebles.map(m => m.estado || '').filter(Boolean),
+            estatus: muebles.map(m => m.estatus || '').filter(Boolean),
+        };
+    }, [muebles]);
 
     // Estados para el modal del director
     const [showDirectorModal, setShowDirectorModal] = useState(false);
@@ -719,18 +737,18 @@ export default function ConsultasIneaGeneral() {
     };
 
     const markAsInactive = async () => {
-    if (!selectedItem) return;
-    setShowInactiveModal(true);
-};
+        if (!selectedItem) return;
+        setShowInactiveModal(true);
+    };
 
-const confirmMarkAsInactive = async () => {
-    if (!selectedItem) return;
-    setShowInactiveModal(false);
-    try {
-        const { error } = await supabase
-            .from('muebles')
-            .update({ estatus: 'INACTIVO' })
-            .eq('id', selectedItem.id);
+    const confirmMarkAsInactive = async () => {
+        if (!selectedItem) return;
+        setShowInactiveModal(false);
+        try {
+            const { error } = await supabase
+                .from('muebles')
+                .update({ estatus: 'INACTIVO' })
+                .eq('id', selectedItem.id);
 
             if (error) throw error;
 
@@ -892,60 +910,43 @@ const confirmMarkAsInactive = async () => {
     const userRole = useUserRole();
 
     // --- OMNIBOX MATCH TYPE DETECTION ---
+    // --- OMNIBOX MATCH TYPE DETECTION ---
     useEffect(() => {
-        if (!searchTerm || muebles.length === 0) {
+        if (!deferredSearchTerm || muebles.length === 0) {
             setSearchMatchType(null);
             return;
         }
-        const clean = (str: string) => (str || '').normalize('NFKD').replace(/\p{Diacritic}/gu, '').toLowerCase().trim();
-        const term = clean(searchTerm);
+        const term = deferredSearchTerm.toLowerCase().trim();
         let bestMatch = { type: null, value: '', score: 0 } as { type: ActiveFilter['type'], value: string, score: number };
+
+        // Optimización: Iteración simple sin regex pesado
         for (const item of muebles) {
-            if ((item.usufinal && clean(item.usufinal).includes(term)) || (item.resguardante && clean(item.resguardante).includes(term))) {
-                const exact = clean(item.usufinal || '') === term || clean(item.resguardante || '') === term;
+            if ((item.usufinal && (item.usufinal.toLowerCase().includes(term))) || (item.resguardante && item.resguardante.toLowerCase().includes(term))) {
+                const exact = (item.usufinal?.toLowerCase() === term) || (item.resguardante?.toLowerCase() === term);
                 const score = exact ? 10 : 9;
                 if (score > bestMatch.score) bestMatch = { type: 'usufinal', value: item.usufinal || item.resguardante || '', score };
             }
-            if (item.area && clean(item.area).includes(term)) {
-                const exact = clean(item.area) === term;
+            else if (item.area && item.area.toLowerCase().includes(term)) {
+                const exact = item.area.toLowerCase() === term;
                 const score = exact ? 8 : 7;
                 if (score > bestMatch.score) bestMatch = { type: 'area', value: item.area, score };
             }
-            if (item.id_inv && clean(item.id_inv).includes(term)) {
-                const exact = clean(item.id_inv) === term;
+            else if (item.id_inv && item.id_inv.toLowerCase().includes(term)) {
+                const exact = item.id_inv.toLowerCase() === term;
                 const score = exact ? 6 : 5;
                 if (score > bestMatch.score) bestMatch = { type: 'id', value: item.id_inv, score };
             }
-            if (item.descripcion && clean(item.descripcion).includes(term)) {
-                const exact = clean(item.descripcion) === term;
+            else if (item.descripcion && item.descripcion.toLowerCase().includes(term)) {
+                const exact = item.descripcion.toLowerCase() === term;
                 const score = exact ? 4 : 3;
                 if (score > bestMatch.score) bestMatch = { type: 'descripcion', value: item.descripcion, score };
             }
-            if (item.rubro && clean(item.rubro).includes(term)) {
-                const exact = clean(item.rubro) === term;
-                const score = exact ? 2 : 1;
-                if (score > bestMatch.score) bestMatch = { type: 'rubro', value: item.rubro, score };
-            }
-            if (item.estado && clean(item.estado).includes(term)) {
-                const score = 1;
-                if (score > bestMatch.score) bestMatch = { type: 'estado', value: item.estado, score };
-            }
-            if (item.estatus && clean(item.estatus).includes(term)) {
-                const score = 1;
-                if (score > bestMatch.score) bestMatch = { type: 'estatus', value: item.estatus, score };
-            }
-            const otherFields: (keyof Mueble)[] = [
-                'valor', 'f_adq', 'formadq', 'proveedor', 'factura', 'ubicacion_es', 'ubicacion_mu', 'ubicacion_no', 'fechabaja', 'causadebaja', 'resguardante', 'image_path'
-            ];
-            for (const field of otherFields) {
-                const val = item[field];
-                if (typeof val === 'string' && clean(val).includes(term)) {
-                    if (bestMatch.score < 0.5) bestMatch = { type: null, value: val, score: 0.5 };
-                }
-            }
+
+            // Short-circuit si encontramos un match exacto de alta prioridad
+            if (bestMatch.score >= 10) break;
         }
         setSearchMatchType(bestMatch.type);
-    }, [searchTerm, muebles]);
+    }, [deferredSearchTerm, muebles]);
 
     // --- OMNIBOX AUTOCOMPLETADO Y SUGERENCIAS ---
     function getTypeIcon(type: ActiveFilter['type']) {
@@ -1039,56 +1040,67 @@ const confirmMarkAsInactive = async () => {
         setTimeout(() => setShowSuggestions(false), 100);
     }
     useEffect(() => {
-        if (!searchTerm || !muebles.length) {
+        if (!deferredSearchTerm || !searchableData) {
             setSuggestions([]);
             setShowSuggestions(false);
             setHighlightedIndex(-1);
             return;
         }
-        const clean = (str: string) => (str || '').normalize('NFKD').replace(/\p{Diacritic}/gu, '').toLowerCase().trim();
-        const term = clean(searchTerm);
+        const term = deferredSearchTerm.toLowerCase().trim();
+        if (term.length < 2) {
+            setSuggestions([]);
+            setShowSuggestions(false);
+            return;
+        }
+
         const seen = new Set<string>();
         const fields = [
-            { type: 'id' as ActiveFilter['type'], label: 'ID' },
-            { type: 'area' as ActiveFilter['type'], label: 'Área' },
-            { type: 'usufinal' as ActiveFilter['type'], label: 'Director' },
-            { type: 'resguardante' as ActiveFilter['type'], label: 'Resguardante' },
-            { type: 'descripcion' as ActiveFilter['type'], label: 'Descripción' },
-            { type: 'rubro' as ActiveFilter['type'], label: 'Rubro' },
-            { type: 'estado' as ActiveFilter['type'], label: 'Estado' },
-            { type: 'estatus' as ActiveFilter['type'], label: 'Estatus' },
+            { type: 'id' as ActiveFilter['type'], label: 'ID', data: searchableData.id },
+            { type: 'area' as ActiveFilter['type'], label: 'Área', data: searchableData.area },
+            { type: 'usufinal' as ActiveFilter['type'], label: 'Director', data: searchableData.usufinal },
+            { type: 'resguardante' as ActiveFilter['type'], label: 'Resguardante', data: searchableData.resguardante },
+            { type: 'descripcion' as ActiveFilter['type'], label: 'Descripción', data: searchableData.descripcion },
+            { type: 'rubro' as ActiveFilter['type'], label: 'Rubro', data: searchableData.rubro },
+            { type: 'estado' as ActiveFilter['type'], label: 'Estado', data: searchableData.estado },
+            { type: 'estatus' as ActiveFilter['type'], label: 'Estatus', data: searchableData.estatus },
         ];
+
         let allSuggestions: { value: string; type: ActiveFilter['type'] }[] = [];
+        let count = 0;
+        const maxSuggestions = 10;
+
+        // Iterate fields efficiently
         for (const f of fields) {
-            let values: string[] = [];
-            switch (f.type) {
-                case 'id': values = muebles.map(m => m.id_inv || '').filter(Boolean) as string[]; break;
-                case 'area': values = muebles.map(m => m.area || '').filter(Boolean) as string[]; break;
-                case 'usufinal': values = muebles.map(m => m.usufinal || '').filter(Boolean) as string[]; break;
-                case 'resguardante': values = muebles.map(m => m.resguardante || '').filter(Boolean) as string[]; break;
-                case 'descripcion': values = muebles.map(m => m.descripcion || '').filter(Boolean) as string[]; break;
-                case 'rubro': values = muebles.map(m => m.rubro || '').filter(Boolean) as string[]; break;
-                case 'estado': values = muebles.map(m => m.estado || '').filter(Boolean) as string[]; break;
-                case 'estatus': values = muebles.map(m => m.estatus || '').filter(Boolean) as string[]; break;
-                default: values = [];
-            }
-            for (const v of values) {
-                if (!v) continue;
-                const vClean = clean(v);
-                if (vClean.includes(term) && !seen.has(f.type + ':' + vClean)) {
-                    allSuggestions.push({ value: v, type: f.type });
-                    seen.add(f.type + ':' + vClean);
+            if (count >= maxSuggestions) break;
+
+            for (const v of f.data) {
+                const vLower = v.toLowerCase();
+                if (vLower.includes(term)) {
+                    // Create unique key
+                    const key = f.type + ':' + vLower;
+                    if (!seen.has(key)) {
+                        allSuggestions.push({ value: v, type: f.type });
+                        seen.add(key);
+                        count++;
+                        if (count >= maxSuggestions) break;
+                    }
                 }
             }
         }
-        allSuggestions = [
-            ...allSuggestions.filter(s => clean(s.value) === term),
-            ...allSuggestions.filter(s => clean(s.value) !== term)
-        ].slice(0, 7);
-        setSuggestions(allSuggestions);
+
+        // Priorize exact matches
+        allSuggestions.sort((a, b) => {
+            const aStarts = a.value.toLowerCase().startsWith(term);
+            const bStarts = b.value.toLowerCase().startsWith(term);
+            if (aStarts && !bStarts) return -1;
+            if (!aStarts && bStarts) return 1;
+            return 0;
+        });
+
+        setSuggestions(allSuggestions.slice(0, 7));
         setShowSuggestions(allSuggestions.length > 0);
         setHighlightedIndex(allSuggestions.length > 0 ? 0 : -1);
-    }, [searchTerm, muebles]);
+    }, [deferredSearchTerm, searchableData]);
 
     const saveCurrentFilter = () => {
         if (searchTerm && searchMatchType) {
@@ -1107,36 +1119,47 @@ const confirmMarkAsInactive = async () => {
     };
 
     // --- OMNIBOX FILTERING Y PAGINACIÓN ---
-    const clean = (str: string) => (str || '').normalize('NFKD').replace(/\p{Diacritic}/gu, '').toLowerCase();
-    const filteredMueblesOmni = muebles.filter(item => {
-        if (activeFilters.length === 0 && !searchTerm) return true;
-        const passesActiveFilters = activeFilters.every(filter => {
-            const filterTerm = clean(filter.term);
-            if (!filterTerm) return true;
-            switch (filter.type) {
-                case 'id': return clean(item.id_inv || '').includes(filterTerm);
-                case 'descripcion': return clean(item.descripcion || '').includes(filterTerm);
-                case 'rubro': return clean(item.rubro || '').includes(filterTerm);
-                case 'estado': return clean(item.estado || '').includes(filterTerm);
-                case 'estatus': return clean(item.estatus || '').includes(filterTerm);
-                case 'area': return clean(item.area || '').includes(filterTerm);
-                case 'usufinal': return clean(item.usufinal || '').includes(filterTerm);
-                case 'resguardante': return clean(item.resguardante || '').includes(filterTerm);
-                default: return true;
-            }
+    const filteredMueblesOmni = useMemo(() => {
+        const term = deferredSearchTerm.toLowerCase().trim();
+
+        if (activeFilters.length === 0 && !term) return muebles;
+
+        return muebles.filter(item => {
+            // Verificar filtros activos
+            const passesActiveFilters = activeFilters.every(filter => {
+                const filterTerm = filter.term.toLowerCase();
+                if (!filterTerm) return true;
+
+                switch (filter.type) {
+                    case 'id': return (item.id_inv?.toLowerCase() || '').includes(filterTerm);
+                    case 'descripcion': return (item.descripcion?.toLowerCase() || '').includes(filterTerm);
+                    case 'rubro': return (item.rubro?.toLowerCase() || '').includes(filterTerm);
+                    case 'estado': return (item.estado?.toLowerCase() || '').includes(filterTerm);
+                    case 'estatus': return (item.estatus?.toLowerCase() || '').includes(filterTerm);
+                    case 'area': return (item.area?.toLowerCase() || '').includes(filterTerm);
+                    case 'usufinal': return (item.usufinal?.toLowerCase() || '').includes(filterTerm);
+                    case 'resguardante': return (item.resguardante?.toLowerCase() || '').includes(filterTerm);
+                    default: return true;
+                }
+            });
+
+            if (!passesActiveFilters) return false;
+
+            // Búsqueda general estilo GlobalSearch (más eficiente)
+            if (!term) return true;
+
+            return (
+                (item.id_inv?.toLowerCase() || '').includes(term) ||
+                (item.descripcion?.toLowerCase() || '').includes(term) ||
+                (item.rubro?.toLowerCase() || '').includes(term) ||
+                (item.estado?.toLowerCase() || '').includes(term) ||
+                (item.estatus?.toLowerCase() || '').includes(term) ||
+                (item.area?.toLowerCase() || '').includes(term) ||
+                (item.usufinal?.toLowerCase() || '').includes(term) ||
+                (item.resguardante?.toLowerCase() || '').includes(term)
+            );
         });
-        const currentTerm = clean(searchTerm);
-        const passesCurrentSearch = !currentTerm ||
-            clean(item.id_inv || '').includes(currentTerm) ||
-            clean(item.descripcion || '').includes(currentTerm) ||
-            clean(item.rubro || '').includes(currentTerm) ||
-            clean(item.estado || '').includes(currentTerm) ||
-            clean(item.estatus || '').includes(currentTerm) ||
-            clean(item.area || '').includes(currentTerm) ||
-            clean(item.usufinal || '').includes(currentTerm) ||
-            clean(item.resguardante || '').includes(currentTerm);
-        return passesActiveFilters && passesCurrentSearch;
-    });
+    }, [muebles, activeFilters, deferredSearchTerm]);
     const totalCount = filteredMueblesOmni.length;
     const totalPages = Math.max(1, Math.ceil(totalCount / rowsPerPage));
     const paginatedMuebles = filteredMueblesOmni
@@ -1160,7 +1183,7 @@ const confirmMarkAsInactive = async () => {
                 setSelectedItem(item);
                 setIsEditing(false);
                 setEditFormData(null);
-                
+
                 // Calcular la página donde se encuentra el item
                 // Primero, obtener la lista filtrada y ordenada (igual que en paginatedMuebles)
                 const sortedFiltered = filteredMueblesOmni
@@ -1172,16 +1195,16 @@ const confirmMarkAsInactive = async () => {
                         if (aValue > bValue) return sortDirection === 'asc' ? 1 : -1;
                         return 0;
                     });
-                
+
                 // Encontrar el índice del item en la lista ordenada
                 const itemIndex = sortedFiltered.findIndex(m => m.id === itemId);
-                
+
                 if (itemIndex !== -1) {
                     // Calcular la página basándose en el índice
                     const targetPage = Math.floor(itemIndex / rowsPerPage) + 1;
                     setCurrentPage(targetPage);
                 }
-                
+
                 // Scroll al detalle si es necesario
                 setTimeout(() => {
                     if (detailRef.current) {
@@ -1358,9 +1381,9 @@ const confirmMarkAsInactive = async () => {
                                             : 'bg-gray-100'
                                             }`}></div>
                                         <div className={`relative text-3xl font-bold transition-all duration-500 px-6 py-3 ${isDarkMode
-                                                ? 'text-white/90 group-hover:text-white'
-                                                : 'text-gray-800 group-hover:text-gray-900'
-                                                }`}>
+                                            ? 'text-white/90 group-hover:text-white'
+                                            : 'text-gray-800 group-hover:text-gray-900'
+                                            }`}>
                                             {(activeFilters.length > 0 || searchTerm ? filteredMueblesOmni.length : muebles.length).toLocaleString('es-MX')}
                                         </div>
                                     </div>
@@ -2574,71 +2597,57 @@ const confirmMarkAsInactive = async () => {
 
                     {/* Modal para completar información del director */}
                     {showDirectorModal && (
-                        <div className={`fixed inset-0 flex items-center justify-center z-50 px-4 animate-fadeIn ${
-                            isDarkMode ? 'bg-black/90' : 'bg-black/50'
-                        }`}>
-                            <div className={`rounded-2xl shadow-2xl border w-full max-w-md overflow-hidden transition-all duration-300 transform ${
-                                isDarkMode 
-                                    ? 'bg-black border-yellow-600/30' 
-                                    : 'bg-white border-yellow-200'
+                        <div className={`fixed inset-0 flex items-center justify-center z-50 px-4 animate-fadeIn ${isDarkMode ? 'bg-black/90' : 'bg-black/50'
                             }`}>
-                                <div className={`relative p-6 ${
-                                    isDarkMode 
-                                        ? 'bg-gradient-to-b from-black to-gray-900' 
-                                        : 'bg-gradient-to-b from-yellow-50 to-white'
+                            <div className={`rounded-2xl shadow-2xl border w-full max-w-md overflow-hidden transition-all duration-300 transform ${isDarkMode
+                                ? 'bg-black border-yellow-600/30'
+                                : 'bg-white border-yellow-200'
                                 }`}>
-                                    <div className={`absolute top-0 left-0 w-full h-1 ${
-                                        isDarkMode ? 'bg-white/30' : 'bg-yellow-500'
-                                    }`}></div>
+                                <div className={`relative p-6 ${isDarkMode
+                                    ? 'bg-gradient-to-b from-black to-gray-900'
+                                    : 'bg-gradient-to-b from-yellow-50 to-white'
+                                    }`}>
+                                    <div className={`absolute top-0 left-0 w-full h-1 ${isDarkMode ? 'bg-white/30' : 'bg-yellow-500'
+                                        }`}></div>
 
                                     <div className="flex flex-col items-center text-center mb-4">
-                                        <div className={`p-3 rounded-full border mb-3 ${
-                                            isDarkMode 
-                                                ? 'bg-yellow-500/10 border-yellow-500/30' 
-                                                : 'bg-yellow-100 border-yellow-200'
-                                        }`}>
+                                        <div className={`p-3 rounded-full border mb-3 ${isDarkMode
+                                            ? 'bg-yellow-500/10 border-yellow-500/30'
+                                            : 'bg-yellow-100 border-yellow-200'
+                                            }`}>
                                             <AlertCircle className="h-8 w-8 text-yellow-500" />
                                         </div>
-                                        <h3 className={`text-2xl font-bold ${
-                                            isDarkMode ? 'text-white' : 'text-gray-900'
-                                        }`}>Información requerida</h3>
-                                        <p className={`mt-2 ${
-                                            isDarkMode ? 'text-gray-400' : 'text-gray-600'
-                                        }`}>
+                                        <h3 className={`text-2xl font-bold ${isDarkMode ? 'text-white' : 'text-gray-900'
+                                            }`}>Información requerida</h3>
+                                        <p className={`mt-2 ${isDarkMode ? 'text-gray-400' : 'text-gray-600'
+                                            }`}>
                                             Por favor complete el área del director/jefe de área seleccionado
                                         </p>
                                     </div>
 
                                     <div className="space-y-5 mt-6">
-                                        <div className={`rounded-lg border p-4 ${
-                                            isDarkMode 
-                                                ? 'border-gray-800 bg-gray-900/50' 
-                                                : 'border-gray-200 bg-gray-50'
-                                        }`}>
-                                            <label className={`flex items-center gap-2 text-sm font-medium mb-2 ${
-                                                isDarkMode ? 'text-gray-300' : 'text-gray-700'
-                                            }`}>Director/Jefe seleccionado</label>
+                                        <div className={`rounded-lg border p-4 ${isDarkMode
+                                            ? 'border-gray-800 bg-gray-900/50'
+                                            : 'border-gray-200 bg-gray-50'
+                                            }`}>
+                                            <label className={`flex items-center gap-2 text-sm font-medium mb-2 ${isDarkMode ? 'text-gray-300' : 'text-gray-700'
+                                                }`}>Director/Jefe seleccionado</label>
                                             <div className="flex items-center gap-3">
-                                                <div className={`p-2 rounded-lg ${
-                                                    isDarkMode ? 'bg-gray-800' : 'bg-yellow-100'
-                                                }`}>
-                                                    <User className={`h-4 w-4 ${
-                                                        isDarkMode ? 'text-yellow-400' : 'text-yellow-600'
-                                                    }`} />
+                                                <div className={`p-2 rounded-lg ${isDarkMode ? 'bg-gray-800' : 'bg-yellow-100'
+                                                    }`}>
+                                                    <User className={`h-4 w-4 ${isDarkMode ? 'text-yellow-400' : 'text-yellow-600'
+                                                        }`} />
                                                 </div>
-                                                <span className={`font-medium ${
-                                                    isDarkMode ? 'text-white' : 'text-gray-900'
-                                                }`}>{incompleteDirector?.nombre || 'Director'}</span>
+                                                <span className={`font-medium ${isDarkMode ? 'text-white' : 'text-gray-900'
+                                                    }`}>{incompleteDirector?.nombre || 'Director'}</span>
                                             </div>
                                         </div>
 
                                         <div>
-                                            <label className={`flex items-center gap-2 text-sm font-medium mb-2 ${
-                                                isDarkMode ? 'text-gray-300' : 'text-gray-700'
-                                            }`}>
-                                                <LayoutGrid className={`h-4 w-4 ${
-                                                    isDarkMode ? 'text-gray-400' : 'text-gray-500'
-                                                }`} />
+                                            <label className={`flex items-center gap-2 text-sm font-medium mb-2 ${isDarkMode ? 'text-gray-300' : 'text-gray-700'
+                                                }`}>
+                                                <LayoutGrid className={`h-4 w-4 ${isDarkMode ? 'text-gray-400' : 'text-gray-500'
+                                                    }`} />
                                                 Área
                                             </label>
                                             <input
@@ -2646,11 +2655,10 @@ const confirmMarkAsInactive = async () => {
                                                 value={directorFormData.area}
                                                 onChange={(e) => setDirectorFormData({ area: e.target.value })}
                                                 placeholder="Ej: Administración, Recursos Humanos, Contabilidad..."
-                                                className={`block w-full border rounded-lg py-3 px-4 focus:outline-none focus:ring-1 transition-colors ${
-                                                    isDarkMode 
-                                                        ? 'bg-gray-900 border-gray-700 text-white placeholder-gray-500 focus:border-yellow-500 focus:ring-yellow-500' 
-                                                        : 'bg-white border-gray-300 text-gray-900 placeholder-gray-400 focus:border-yellow-500 focus:ring-yellow-500'
-                                                }`}
+                                                className={`block w-full border rounded-lg py-3 px-4 focus:outline-none focus:ring-1 transition-colors ${isDarkMode
+                                                    ? 'bg-gray-900 border-gray-700 text-white placeholder-gray-500 focus:border-yellow-500 focus:ring-yellow-500'
+                                                    : 'bg-white border-gray-300 text-gray-900 placeholder-gray-400 focus:border-yellow-500 focus:ring-yellow-500'
+                                                    }`}
                                                 required
                                             />
                                             {!directorFormData.area && (
@@ -2663,18 +2671,16 @@ const confirmMarkAsInactive = async () => {
                                     </div>
                                 </div>
 
-                                <div className={`p-5 border-t flex justify-end gap-3 ${
-                                    isDarkMode 
-                                        ? 'bg-black border-gray-800' 
-                                        : 'bg-white border-gray-200'
-                                }`}>
+                                <div className={`p-5 border-t flex justify-end gap-3 ${isDarkMode
+                                    ? 'bg-black border-gray-800'
+                                    : 'bg-white border-gray-200'
+                                    }`}>
                                     <button
                                         onClick={() => setShowDirectorModal(false)}
-                                        className={`px-5 py-2.5 rounded-lg text-sm border transition-colors flex items-center gap-2 ${
-                                            isDarkMode 
-                                                ? 'bg-gray-900 text-white hover:bg-gray-800 border-gray-800' 
-                                                : 'bg-gray-100 text-gray-700 hover:bg-gray-200 border-gray-300'
-                                        }`}
+                                        className={`px-5 py-2.5 rounded-lg text-sm border transition-colors flex items-center gap-2 ${isDarkMode
+                                            ? 'bg-gray-900 text-white hover:bg-gray-800 border-gray-800'
+                                            : 'bg-gray-100 text-gray-700 hover:bg-gray-200 border-gray-300'
+                                            }`}
                                     >
                                         <X className="h-4 w-4" />
                                         Cancelar
@@ -2682,15 +2688,14 @@ const confirmMarkAsInactive = async () => {
                                     <button
                                         onClick={saveDirectorInfo}
                                         disabled={savingDirector || !directorFormData.area}
-                                        className={`px-5 py-2.5 rounded-lg text-sm flex items-center gap-2 transition-all duration-300 ${
-                                            savingDirector || !directorFormData.area
-                                                ? isDarkMode
-                                                    ? 'bg-gray-900 text-gray-500 cursor-not-allowed border border-gray-800'
-                                                    : 'bg-gray-200 text-gray-400 cursor-not-allowed border border-gray-300'
-                                                : isDarkMode
-                                                    ? 'bg-white/20 text-white font-medium hover:bg-white/30'
-                                                    : 'bg-yellow-600 text-white font-medium hover:bg-yellow-700'
-                                        }`}
+                                        className={`px-5 py-2.5 rounded-lg text-sm flex items-center gap-2 transition-all duration-300 ${savingDirector || !directorFormData.area
+                                            ? isDarkMode
+                                                ? 'bg-gray-900 text-gray-500 cursor-not-allowed border border-gray-800'
+                                                : 'bg-gray-200 text-gray-400 cursor-not-allowed border border-gray-300'
+                                            : isDarkMode
+                                                ? 'bg-white/20 text-white font-medium hover:bg-white/30'
+                                                : 'bg-yellow-600 text-white font-medium hover:bg-yellow-700'
+                                            }`}
                                     >
                                         {savingDirector ? (
                                             <RefreshCw className="h-4 w-4 animate-spin" />
@@ -2770,71 +2775,57 @@ const confirmMarkAsInactive = async () => {
 
                     {/* Modal de confirmación de baja */}
                     {showBajaModal && selectedItem && (
-                        <div className={`fixed inset-0 flex items-center justify-center z-50 px-4 animate-fadeIn ${
-                            isDarkMode ? 'bg-black/90' : 'bg-black/50'
-                        }`}>
-                            <div className={`rounded-2xl shadow-2xl border w-full max-w-md overflow-hidden transition-all duration-300 transform ${
-                                isDarkMode 
-                                    ? 'bg-black border-red-600/30' 
-                                    : 'bg-white border-red-200'
+                        <div className={`fixed inset-0 flex items-center justify-center z-50 px-4 animate-fadeIn ${isDarkMode ? 'bg-black/90' : 'bg-black/50'
                             }`}>
-                                <div className={`relative p-6 ${
-                                    isDarkMode 
-                                        ? 'bg-gradient-to-b from-black to-gray-900' 
-                                        : 'bg-gradient-to-b from-red-50 to-white'
+                            <div className={`rounded-2xl shadow-2xl border w-full max-w-md overflow-hidden transition-all duration-300 transform ${isDarkMode
+                                ? 'bg-black border-red-600/30'
+                                : 'bg-white border-red-200'
                                 }`}>
-                                    <div className={`absolute top-0 left-0 w-full h-1 ${
-                                        isDarkMode ? 'bg-white/30' : 'bg-red-500'
-                                    }`}></div>
+                                <div className={`relative p-6 ${isDarkMode
+                                    ? 'bg-gradient-to-b from-black to-gray-900'
+                                    : 'bg-gradient-to-b from-red-50 to-white'
+                                    }`}>
+                                    <div className={`absolute top-0 left-0 w-full h-1 ${isDarkMode ? 'bg-white/30' : 'bg-red-500'
+                                        }`}></div>
                                     <div className="flex flex-col items-center text-center mb-4">
-                                        <div className={`p-3 rounded-full border mb-3 ${
-                                            isDarkMode 
-                                                ? 'bg-red-500/10 border-red-500/30' 
-                                                : 'bg-red-100 border-red-200'
-                                        }`}>
+                                        <div className={`p-3 rounded-full border mb-3 ${isDarkMode
+                                            ? 'bg-red-500/10 border-red-500/30'
+                                            : 'bg-red-100 border-red-200'
+                                            }`}>
                                             <AlertTriangle className="h-8 w-8 text-red-500" />
                                         </div>
-                                        <h3 className={`text-2xl font-bold ${
-                                            isDarkMode ? 'text-white' : 'text-gray-900'
-                                        }`}>¿Dar de baja este artículo?</h3>
+                                        <h3 className={`text-2xl font-bold ${isDarkMode ? 'text-white' : 'text-gray-900'
+                                            }`}>¿Dar de baja este artículo?</h3>
                                     </div>
-                                    <div className={`rounded-lg border p-4 mb-4 ${
-                                        isDarkMode 
-                                            ? 'border-gray-800 bg-gray-900/50' 
-                                            : 'border-gray-200 bg-gray-50'
-                                    }`}>
-                                        <div className={`text-left text-sm ${
-                                            isDarkMode ? 'text-gray-300' : 'text-gray-700'
+                                    <div className={`rounded-lg border p-4 mb-4 ${isDarkMode
+                                        ? 'border-gray-800 bg-gray-900/50'
+                                        : 'border-gray-200 bg-gray-50'
                                         }`}>
-                                            <div><span className={`font-bold ${
-                                                isDarkMode ? 'text-white' : 'text-gray-900'
-                                            }`}>ID:</span> {selectedItem.id_inv}</div>
-                                            <div><span className={`font-bold ${
-                                                isDarkMode ? 'text-white' : 'text-gray-900'
-                                            }`}>Descripción:</span> {selectedItem.descripcion}</div>
-                                            <div><span className={`font-bold ${
-                                                isDarkMode ? 'text-white' : 'text-gray-900'
-                                            }`}>Área:</span> {selectedItem.area}</div>
+                                        <div className={`text-left text-sm ${isDarkMode ? 'text-gray-300' : 'text-gray-700'
+                                            }`}>
+                                            <div><span className={`font-bold ${isDarkMode ? 'text-white' : 'text-gray-900'
+                                                }`}>ID:</span> {selectedItem.id_inv}</div>
+                                            <div><span className={`font-bold ${isDarkMode ? 'text-white' : 'text-gray-900'
+                                                }`}>Descripción:</span> {selectedItem.descripcion}</div>
+                                            <div><span className={`font-bold ${isDarkMode ? 'text-white' : 'text-gray-900'
+                                                }`}>Área:</span> {selectedItem.area}</div>
                                         </div>
                                     </div>
                                     <div>
-                                        <label className={`flex items-center gap-2 text-sm font-medium mb-2 ${
-                                            isDarkMode ? 'text-gray-300' : 'text-gray-700'
-                                        }`}>
-                                            <Info className={`h-4 w-4 ${
-                                                isDarkMode ? 'text-gray-400' : 'text-gray-500'
-                                            }`} />
+                                        <label className={`flex items-center gap-2 text-sm font-medium mb-2 ${isDarkMode ? 'text-gray-300' : 'text-gray-700'
+                                            }`}>
+                                            <Info className={`h-4 w-4 ${isDarkMode ? 'text-gray-400' : 'text-gray-500'
+                                                }`} />
                                             Causa de Baja
                                         </label>
                                         <textarea
                                             value={bajaCause}
                                             onChange={(e) => setBajaCause(e.target.value)}
                                             placeholder="Ingrese la causa de baja"
-                                            className={`block w-full border rounded-lg py-3 px-4 focus:outline-none focus:ring-1 transition-colors ${
-                                                isDarkMode 
-                                                    ? 'bg-gray-900 border-gray-700 text-white placeholder-gray-500 focus:border-red-500 focus:ring-red-500' 
-                                                    : 'bg-white border-gray-300 text-gray-900 placeholder-gray-400 focus:border-red-500 focus:ring-red-500'
-                                            }`}
+                                            className={`block w-full border rounded-lg py-3 px-4 focus:outline-none focus:ring-1 transition-colors ${isDarkMode
+                                                ? 'bg-gray-900 border-gray-700 text-white placeholder-gray-500 focus:border-red-500 focus:ring-red-500'
+                                                : 'bg-white border-gray-300 text-gray-900 placeholder-gray-400 focus:border-red-500 focus:ring-red-500'
+                                                }`}
                                             rows={3}
                                             required
                                         />
@@ -2846,18 +2837,16 @@ const confirmMarkAsInactive = async () => {
                                         )}
                                     </div>
                                 </div>
-                                <div className={`p-5 border-t flex justify-end gap-3 ${
-                                    isDarkMode 
-                                        ? 'bg-black border-gray-800' 
-                                        : 'bg-white border-gray-200'
-                                }`}>
+                                <div className={`p-5 border-t flex justify-end gap-3 ${isDarkMode
+                                    ? 'bg-black border-gray-800'
+                                    : 'bg-white border-gray-200'
+                                    }`}>
                                     <button
                                         onClick={() => setShowBajaModal(false)}
-                                        className={`px-5 py-2.5 rounded-lg text-sm border transition-colors flex items-center gap-2 ${
-                                            isDarkMode 
-                                                ? 'bg-gray-900 text-white hover:bg-gray-800 border-gray-800' 
-                                                : 'bg-gray-100 text-gray-700 hover:bg-gray-200 border-gray-300'
-                                        }`}
+                                        className={`px-5 py-2.5 rounded-lg text-sm border transition-colors flex items-center gap-2 ${isDarkMode
+                                            ? 'bg-gray-900 text-white hover:bg-gray-800 border-gray-800'
+                                            : 'bg-gray-100 text-gray-700 hover:bg-gray-200 border-gray-300'
+                                            }`}
                                     >
                                         <X className="h-4 w-4" />
                                         Cancelar
@@ -2865,15 +2854,14 @@ const confirmMarkAsInactive = async () => {
                                     <button
                                         onClick={confirmBaja}
                                         disabled={!bajaCause}
-                                        className={`px-5 py-2.5 rounded-lg text-sm flex items-center gap-2 transition-all duration-300 ${
-                                            !bajaCause
-                                                ? isDarkMode
-                                                    ? 'bg-gray-900 text-gray-500 cursor-not-allowed border border-gray-800'
-                                                    : 'bg-gray-200 text-gray-400 cursor-not-allowed border border-gray-300'
-                                                : isDarkMode
-                                                    ? 'bg-white/20 text-white font-medium hover:bg-white/30'
-                                                    : 'bg-red-600 text-white font-medium hover:bg-red-700'
-                                        }`}
+                                        className={`px-5 py-2.5 rounded-lg text-sm flex items-center gap-2 transition-all duration-300 ${!bajaCause
+                                            ? isDarkMode
+                                                ? 'bg-gray-900 text-gray-500 cursor-not-allowed border border-gray-800'
+                                                : 'bg-gray-200 text-gray-400 cursor-not-allowed border border-gray-300'
+                                            : isDarkMode
+                                                ? 'bg-white/20 text-white font-medium hover:bg-white/30'
+                                                : 'bg-red-600 text-white font-medium hover:bg-red-700'
+                                            }`}
                                     >
                                         <Trash2 className="h-4 w-4" />
                                         Dar de Baja
@@ -2885,63 +2873,51 @@ const confirmMarkAsInactive = async () => {
 
                     {/* Modal de confirmación para marcar como inactivo */}
                     {showInactiveModal && selectedItem && (
-                        <div className={`fixed inset-0 flex items-center justify-center z-50 px-4 animate-fadeIn ${
-                            isDarkMode ? 'bg-black/90' : 'bg-black/50'
-                        }`}>
-                            <div className={`rounded-2xl shadow-2xl border w-full max-w-md overflow-hidden transition-all duration-300 transform ${
-                                isDarkMode 
-                                    ? 'bg-black border-orange-600/30' 
-                                    : 'bg-white border-orange-200'
+                        <div className={`fixed inset-0 flex items-center justify-center z-50 px-4 animate-fadeIn ${isDarkMode ? 'bg-black/90' : 'bg-black/50'
                             }`}>
-                                <div className={`relative p-6 ${
-                                    isDarkMode 
-                                        ? 'bg-gradient-to-b from-black to-gray-900' 
-                                        : 'bg-gradient-to-b from-orange-50 to-white'
+                            <div className={`rounded-2xl shadow-2xl border w-full max-w-md overflow-hidden transition-all duration-300 transform ${isDarkMode
+                                ? 'bg-black border-orange-600/30'
+                                : 'bg-white border-orange-200'
                                 }`}>
+                                <div className={`relative p-6 ${isDarkMode
+                                    ? 'bg-gradient-to-b from-black to-gray-900'
+                                    : 'bg-gradient-to-b from-orange-50 to-white'
+                                    }`}>
                                     <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-orange-500/60 via-orange-400 to-orange-500/60"></div>
                                     <div className="flex flex-col items-center text-center mb-4">
-                                        <div className={`p-3 rounded-full border mb-3 ${
-                                            isDarkMode 
-                                                ? 'bg-orange-500/10 border-orange-500/30' 
-                                                : 'bg-orange-100 border-orange-200'
-                                        }`}>
+                                        <div className={`p-3 rounded-full border mb-3 ${isDarkMode
+                                            ? 'bg-orange-500/10 border-orange-500/30'
+                                            : 'bg-orange-100 border-orange-200'
+                                            }`}>
                                             <AlertTriangle className="h-8 w-8 text-orange-500" />
                                         </div>
-                                        <h3 className={`text-2xl font-bold ${
-                                            isDarkMode ? 'text-white' : 'text-gray-900'
-                                        }`}>¿Marcar como INACTIVO?</h3>
-                                        <p className={`mt-2 ${
-                                            isDarkMode ? 'text-gray-400' : 'text-gray-600'
-                                        }`}>El artículo será marcado como <span className="text-orange-500 font-semibold">INACTIVO</span> en el inventario.</p>
+                                        <h3 className={`text-2xl font-bold ${isDarkMode ? 'text-white' : 'text-gray-900'
+                                            }`}>¿Marcar como INACTIVO?</h3>
+                                        <p className={`mt-2 ${isDarkMode ? 'text-gray-400' : 'text-gray-600'
+                                            }`}>El artículo será marcado como <span className="text-orange-500 font-semibold">INACTIVO</span> en el inventario.</p>
                                     </div>
-                                    <div className={`rounded-lg border p-4 mb-4 text-left text-sm ${
-                                        isDarkMode 
-                                            ? 'border-gray-800 bg-gray-900/50 text-gray-300' 
-                                            : 'border-gray-200 bg-gray-50 text-gray-700'
-                                    }`}>
-                                        <div><span className={`font-bold ${
-                                            isDarkMode ? 'text-white' : 'text-gray-900'
-                                        }`}>ID:</span> {selectedItem.id_inv}</div>
-                                        <div><span className={`font-bold ${
-                                            isDarkMode ? 'text-white' : 'text-gray-900'
-                                        }`}>Descripción:</span> {selectedItem.descripcion}</div>
-                                        <div><span className={`font-bold ${
-                                            isDarkMode ? 'text-white' : 'text-gray-900'
-                                        }`}>Área:</span> {selectedItem.area}</div>
+                                    <div className={`rounded-lg border p-4 mb-4 text-left text-sm ${isDarkMode
+                                        ? 'border-gray-800 bg-gray-900/50 text-gray-300'
+                                        : 'border-gray-200 bg-gray-50 text-gray-700'
+                                        }`}>
+                                        <div><span className={`font-bold ${isDarkMode ? 'text-white' : 'text-gray-900'
+                                            }`}>ID:</span> {selectedItem.id_inv}</div>
+                                        <div><span className={`font-bold ${isDarkMode ? 'text-white' : 'text-gray-900'
+                                            }`}>Descripción:</span> {selectedItem.descripcion}</div>
+                                        <div><span className={`font-bold ${isDarkMode ? 'text-white' : 'text-gray-900'
+                                            }`}>Área:</span> {selectedItem.area}</div>
                                     </div>
                                 </div>
-                                <div className={`p-5 border-t flex justify-end gap-3 ${
-                                    isDarkMode 
-                                        ? 'bg-black border-gray-800' 
-                                        : 'bg-white border-gray-200'
-                                }`}>
+                                <div className={`p-5 border-t flex justify-end gap-3 ${isDarkMode
+                                    ? 'bg-black border-gray-800'
+                                    : 'bg-white border-gray-200'
+                                    }`}>
                                     <button
                                         onClick={() => setShowInactiveModal(false)}
-                                        className={`px-5 py-2.5 rounded-lg text-sm border transition-colors flex items-center gap-2 ${
-                                            isDarkMode 
-                                                ? 'bg-gray-900 text-white hover:bg-gray-800 border-gray-800' 
-                                                : 'bg-gray-100 text-gray-700 hover:bg-gray-200 border-gray-300'
-                                        }`}
+                                        className={`px-5 py-2.5 rounded-lg text-sm border transition-colors flex items-center gap-2 ${isDarkMode
+                                            ? 'bg-gray-900 text-white hover:bg-gray-800 border-gray-800'
+                                            : 'bg-gray-100 text-gray-700 hover:bg-gray-200 border-gray-300'
+                                            }`}
                                     >
                                         <X className="h-4 w-4" />
                                         Cancelar
