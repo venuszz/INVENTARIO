@@ -1028,15 +1028,16 @@ export default function CrearResguardos() {
     }, [deferredSearchTerm, searchableData]);
 
     function getTypeIcon(type: ActiveFilter['type']) {
+        const baseClass = "h-4 w-6 inline-flex items-center justify-center font-medium text-[10px] opacity-80";
         switch (type) {
-            case 'id': return <span className="h-4 w-4 text-white font-bold">#</span>;
-            case 'area': return <span className="h-4 w-4 text-red-400 font-bold">A</span>;
-            case 'usufinal': return <span className="h-4 w-4 text-orange-400 font-bold">U</span>;
-            case 'resguardante': return <span className="h-4 w-4 text-orange-300 font-bold">R</span>;
-            case 'descripcion': return <span className="h-4 w-4 text-purple-400 font-bold">Desc</span>;
-            case 'rubro': return <span className="h-4 w-4 text-green-400 font-bold">Ru</span>;
-            case 'estado': return <span className="h-4 w-4 text-yellow-400 font-bold">Edo</span>;
-            case 'estatus': return <span className="h-4 w-4 text-teal-400 font-bold">Est</span>;
+            case 'id': return <span className={baseClass}>ID</span>;
+            case 'area': return <span className={baseClass}>AR</span>;
+            case 'usufinal': return <span className={baseClass}>US</span>;
+            case 'resguardante': return <span className={baseClass}>RE</span>;
+            case 'descripcion': return <span className={baseClass}>DE</span>;
+            case 'rubro': return <span className={baseClass}>RU</span>;
+            case 'estado': return <span className={baseClass}>ED</span>;
+            case 'estatus': return <span className={baseClass}>ES</span>;
             default: return null;
         }
     }
@@ -1089,9 +1090,9 @@ export default function CrearResguardos() {
                 id="omnibox-suggestions"
                 role="listbox"
                 title="Sugerencias de búsqueda"
-                className={`absolute left-0 top-full w-full mt-1 animate-fadeInUp max-h-80 overflow-y-auto rounded-lg shadow-2xl border backdrop-blur-xl ring-1 ring-inset transition-all duration-200 z-50 ${isDarkMode
-                    ? 'border-gray-800 bg-black/95 ring-gray-900/60'
-                    : 'border-gray-300 bg-white/95 ring-gray-200/60'
+                className={`absolute left-0 top-full w-full mt-1 animate-fadeInUp max-h-80 overflow-y-auto rounded-lg shadow-sm border backdrop-blur-xl transition-all duration-200 z-50 ${isDarkMode
+                    ? 'border-white/10 bg-black/90'
+                    : 'border-gray-200 bg-white/95'
                     }`}
             >
                 {suggestions.map((s, i) => {
@@ -1100,17 +1101,18 @@ export default function CrearResguardos() {
                         <li
                             key={s.value + s.type}
                             role="option"
-                            aria-selected={isSelected}
+                            {...(isSelected && { 'aria-selected': 'true' })}
                             onMouseDown={() => handleSuggestionClick(i)}
                             onMouseEnter={() => setHighlightedIndex(i)}
-                            className={`flex items-center gap-2 px-3 py-2 cursor-pointer select-none text-xs whitespace-normal break-words w-full border-b last:border-b-0 transition-colors ${isDarkMode
-                                ? `border-gray-800 ${isSelected ? 'bg-gray-800/80 text-white' : 'text-gray-300'} hover:bg-gray-800/80`
-                                : `border-gray-200 ${isSelected ? 'bg-gray-100 text-gray-900' : 'text-gray-700'} hover:bg-gray-100`
+                            className={`flex items-center gap-1.5 px-2 py-1 cursor-pointer select-none text-xs whitespace-normal break-words w-full transition-colors ${isSelected
+                                ? (isDarkMode ? 'bg-white/5 text-white' : 'bg-blue-50 text-blue-900')
+                                : (isDarkMode ? 'text-white/80 hover:bg-white/5' : 'text-gray-700 hover:bg-gray-50')
                                 }`}
                         >
-                            <span className="shrink-0">{getTypeIcon(s.type)}</span>
-                            <span className="font-semibold whitespace-normal break-words w-full">{s.value}</span>
-                            <span className={`ml-auto text-[10px] font-mono ${isDarkMode ? 'text-gray-400' : 'text-gray-500'
+                            <span className={`shrink-0 ${isDarkMode ? 'text-white/70' : 'text-gray-600'
+                                }`}>{getTypeIcon(s.type)}</span>
+                            <span className="font-normal whitespace-normal break-words w-full truncate">{s.value}</span>
+                            <span className={`ml-auto text-[10px] font-mono ${isDarkMode ? 'text-white/60' : 'text-gray-500'
                                 }`}>{getTypeLabel(s.type)}</span>
                         </li>
                     );
@@ -1330,57 +1332,53 @@ export default function CrearResguardos() {
                                         </button>
                                     </div>                                    {/* Filtros activos */}
                                     {activeFilters.length > 0 && (
-                                        <div className="mt-2 flex flex-wrap gap-1">
-                                            {activeFilters.map((filter, index) => (
-                                                <div
-                                                    key={index}
-                                                    className={`flex items-center gap-1 px-2 py-0.5 rounded-full text-xs border font-medium transition-colors bg-transparent
-                                                        ${filter.type === 'id' ? (isDarkMode ? 'border-white text-white hover:bg-gray-900/40' : 'border-gray-600 text-gray-700 hover:bg-gray-100') :
-                                                            filter.type === 'descripcion' ? (isDarkMode ? 'border-purple-500 text-purple-200 hover:bg-gray-900/40' : 'border-purple-400 text-purple-700 hover:bg-purple-50') :
-                                                                filter.type === 'rubro' ? (isDarkMode ? 'border-green-500 text-green-200 hover:bg-gray-900/40' : 'border-green-400 text-green-700 hover:bg-green-50') :
-                                                                    filter.type === 'estado' ? (isDarkMode ? 'border-yellow-500 text-yellow-200 hover:bg-gray-900/40' : 'border-yellow-400 text-yellow-700 hover:bg-yellow-50') :
-                                                                        filter.type === 'estatus' ? (isDarkMode ? 'border-teal-500 text-teal-200 hover:bg-gray-900/40' : 'border-teal-400 text-teal-700 hover:bg-teal-50') :
-                                                                            filter.type === 'area' ? (isDarkMode ? 'border-red-500 text-red-200 hover:bg-gray-900/40' : 'border-red-400 text-red-700 hover:bg-red-50') :
-                                                                                filter.type === 'usufinal' || filter.type === 'resguardante' ? (isDarkMode ? 'border-orange-500 text-orange-200 hover:bg-gray-900/40' : 'border-orange-400 text-orange-700 hover:bg-orange-50') :
-                                                                                    (isDarkMode ? 'border-gray-600 text-gray-300 hover:bg-gray-900/40' : 'border-gray-400 text-gray-600 hover:bg-gray-100')}`}
-                                                >
-                                                    <span className="uppercase font-semibold opacity-70">{
-                                                        filter.type === 'id' ? 'ID' :
-                                                            filter.type === 'descripcion' ? 'Desc' :
-                                                                filter.type === 'rubro' ? 'Rubro' :
-                                                                    filter.type === 'estado' ? 'Estado' :
-                                                                        filter.type === 'estatus' ? 'Estatus' :
-                                                                            filter.type === 'area' ? 'Área' :
-                                                                                filter.type === 'usufinal' ? 'Usuario' :
-                                                                                    filter.type === 'resguardante' ? 'Resg.' :
-                                                                                        filter.type
-                                                    }</span>
-                                                    <span className="truncate max-w-[80px]">{filter.term}</span>
-                                                    <button
-                                                        onClick={() => removeFilter(index)}
-                                                        className={`ml-1 p-0.5 rounded-full text-xs focus:outline-none focus:ring-1 focus:ring-red-500 transition-colors ${isDarkMode
-                                                            ? 'text-gray-400 hover:text-red-400'
-                                                            : 'text-gray-500 hover:text-red-600'
-                                                            }`}
-                                                        title="Eliminar filtro"
-                                                        tabIndex={0}
+                                        <div className="mt-2 flex flex-wrap gap-2 w-full">
+                                            {activeFilters.map((filter, index) => {
+                                                const colorClass = isDarkMode
+                                                    ? 'bg-white/10 border-white/30 text-white/90'
+                                                    : 'bg-blue-50 border-blue-200 text-blue-800';
+
+                                                return (
+                                                    <div
+                                                        key={index}
+                                                        className={`inline-flex items-center px-2 py-0.5 rounded-full ${colorClass} text-xs font-medium shadow-sm hover:shadow-md transition-all duration-200 border`}
                                                     >
-                                                        <svg width="10" height="10" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                                            <path d="M6 6L14 14M14 6L6 14" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-                                                        </svg>
-                                                    </button>
-                                                </div>
-                                            ))}
+                                                        <span className="uppercase font-semibold opacity-70 mr-1 text-[10px]">{
+                                                            filter.type === 'id' ? 'ID' :
+                                                                filter.type === 'descripcion' ? 'Desc' :
+                                                                    filter.type === 'rubro' ? 'Rubro' :
+                                                                        filter.type === 'estado' ? 'Edo' :
+                                                                            filter.type === 'estatus' ? 'Est' :
+                                                                                filter.type === 'area' ? 'Área' :
+                                                                                    filter.type === 'usufinal' ? 'Usu' :
+                                                                                        filter.type === 'resguardante' ? 'Resg' :
+                                                                                            filter.type
+                                                        }</span>
+                                                        <span className="truncate max-w-[120px]">{filter.term}</span>
+                                                        <button
+                                                            onClick={() => removeFilter(index)}
+                                                            className={`ml-1 p-0.5 rounded-full text-xs focus:outline-none focus:ring-1 focus:ring-red-500 transition-colors ${isDarkMode
+                                                                ? 'text-white/60 hover:text-white'
+                                                                : 'text-blue-600/60 hover:text-blue-800'
+                                                                }`}
+                                                            title="Eliminar filtro"
+                                                            tabIndex={0}
+                                                        >
+                                                            <X className="h-3 w-3" />
+                                                        </button>
+                                                    </div>
+                                                )
+                                            })}
                                             {activeFilters.length > 1 && (
                                                 <button
                                                     onClick={() => setActiveFilters([])}
-                                                    className={`ml-2 px-2 py-0.5 rounded-full border text-xs bg-transparent transition-colors ${isDarkMode
-                                                        ? 'border-gray-700 text-gray-400 hover:text-red-400 hover:border-red-500'
-                                                        : 'border-gray-300 text-gray-600 hover:text-red-600 hover:border-red-400'
+                                                    className={`px-2 py-0.5 rounded-full border text-xs bg-transparent transition-colors ${isDarkMode
+                                                        ? 'border-gray-700 text-gray-400 hover:text-white hover:border-white'
+                                                        : 'border-gray-300 text-gray-600 hover:text-gray-900 hover:border-gray-400'
                                                         }`}
                                                     title="Limpiar todos los filtros"
                                                 >
-                                                    Limpiar filtros
+                                                    Limpiar
                                                 </button>
                                             )}
                                         </div>

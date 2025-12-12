@@ -4,7 +4,7 @@ import { generatePDF } from '@/components/consultas/PDFLevantamiento';
 import { generatePDF as generatePDFPerArea } from '@/components/consultas/PDFLevantamientoPerArea';
 import { useUserRole } from "@/hooks/useUserRole";
 import React from 'react';
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback, useMemo, useDeferredValue } from 'react';
 import {
     Search, RefreshCw, ChevronLeft, ChevronRight,
     ArrowUpDown, AlertCircle, X, FileUp, File
@@ -68,18 +68,18 @@ export default function LevantamientoUnificado() {
     // Usar los contextos de indexación
     const ineaContext = useIneaIndexation();
     const iteaContext = useIteaIndexation();
-    
+
     // Combinar datos de ambos contextos
     const muebles = useMemo(() => {
         const ineaData = ineaContext.data.map(item => ({ ...item, origen: 'INEA' as const }));
         const iteaData = iteaContext.muebles.map(item => ({ ...item, origen: 'ITEA' as const }));
         return [...ineaData, ...iteaData];
     }, [ineaContext.data, iteaContext.muebles]);
-    
+
     // Estado de carga combinado
     const loading = ineaContext.isIndexing || iteaContext.isIndexing;
     const error = ineaContext.error || iteaContext.error;
-    
+
     const role = useUserRole();
     const isAdmin = role === "admin" || role === "superadmin";
     const { isDarkMode } = useTheme();
@@ -90,8 +90,35 @@ export default function LevantamientoUnificado() {
     const [savingDirectorData, setSavingDirectorData] = useState(false);
 
     const [searchTerm, setSearchTerm] = useState('');
-    const [, setSortField] = useState<keyof LevMueble>('id_inv');
+    const deferredSearchTerm = useDeferredValue(searchTerm);
+
+    // Pre-calculate searchable vectors
+    const searchableData = useMemo(() => {
+        if (!muebles || muebles.length === 0) return null;
+        return {
+            id: muebles.map(m => m.id_inv || '').filter(Boolean),
+            area: muebles.map(m => m.area || '').filter(Boolean),
+            usufinal: muebles.map(m => m.usufinal || '').filter(Boolean),
+            resguardante: muebles.map(m => m.resguardante || '').filter(Boolean),
+            descripcion: muebles.map(m => m.descripcion || '').filter(Boolean),
+            rubro: muebles.map(m => m.rubro || '').filter(Boolean),
+            estado: muebles.map(m => m.estado || '').filter(Boolean),
+            estatus: muebles.map(m => m.estatus || '').filter(Boolean),
+        };
+    }, [muebles]);
+
+    const [sortField, setSortField] = useState<keyof LevMueble>('id_inv');
     const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
+
+    const handleSort = (field: keyof LevMueble) => {
+        if (sortField === field) {
+            setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
+        } else {
+            setSortField(field);
+            setSortDirection('asc');
+        }
+        setCurrentPage(1);
+    };
     const [message, setMessage] = useState<Message | null>(null);
     const [exportType, setExportType] = useState<'excel' | 'pdf' | null>(null);
     const [showExportModal, setShowExportModal] = useState(false);
@@ -163,19 +190,20 @@ export default function LevantamientoUnificado() {
         }
     }
     function getTypeIcon(type: ActiveFilter['type']) {
-        const iconClass = isDarkMode ? 'text-white/80' : 'text-gray-600';
+        const baseClass = "h-4 w-6 inline-flex items-center justify-center font-medium text-[10px] opacity-80";
         switch (type) {
-            case 'id': return <Search className={`h-3.5 w-3.5 ${iconClass}`} />;
-            case 'area': return <span title="Área" className={`font-medium ${iconClass}`}>A</span>;
-            case 'usufinal': return <span title="Director" className={`font-medium ${iconClass}`}>D</span>;
-            case 'resguardante': return <span title="Resguardante" className={`font-medium ${iconClass}`}>R</span>;
-            case 'descripcion': return <span title="Descripción" className={`font-medium ${iconClass}`}>Desc</span>;
-            case 'rubro': return <span title="Rubro" className={`font-medium ${iconClass}`}>Ru</span>;
-            case 'estado': return <span title="Estado" className={`font-medium ${iconClass}`}>Edo</span>;
-            case 'estatus': return <span title="Estatus" className={`font-medium ${iconClass}`}>Est</span>;
+            case 'id': return <span className={baseClass}>ID</span>;
+            case 'area': return <span className={baseClass}>AR</span>;
+            case 'usufinal': return <span className={baseClass}>US</span>;
+            case 'resguardante': return <span className={baseClass}>RE</span>;
+            case 'descripcion': return <span className={baseClass}>DE</span>;
+            case 'rubro': return <span className={baseClass}>RU</span>;
+            case 'estado': return <span className={baseClass}>ED</span>;
+            case 'estatus': return <span className={baseClass}>ES</span>;
             default: return null;
         }
     }
+
     function SuggestionDropdown() {
         if (!showSuggestions || !dropdownClass || suggestions.length === 0) return null;
         return ReactDOM.createPortal(
@@ -183,7 +211,7 @@ export default function LevantamientoUnificado() {
                 id="omnibox-suggestions"
                 role="listbox"
                 title="Sugerencias de búsqueda"
-                className={`animate-fadeInUp max-h-48 overflow-y-auto rounded-md shadow-md border transition-all duration-200 ${isDarkMode ? 'border-white/10 bg-black/95' : 'border-gray-200 bg-white/95'} backdrop-blur-xl ${dropdownClass}`}
+                className={`animate-fadeInUp max-h-60 overflow-y-auto rounded-lg shadow-sm border transition-all duration-200 ${isDarkMode ? 'border-white/10 bg-black/95' : 'border-gray-200 bg-white/95'} backdrop-blur-xl ${dropdownClass}`}
             >
                 {suggestions.map((s, i) => {
                     const isSelected = highlightedIndex === i;
@@ -194,12 +222,11 @@ export default function LevantamientoUnificado() {
                             role="option"
                             {...(isSelected && { 'aria-selected': 'true' })}
                             tabIndex={-1}
-                            className={`group flex items-center gap-1.5 px-2 py-1 cursor-pointer select-none text-xs
-                                        transition-all duration-150 ease-in-out
+                            className={`flex items-center gap-1.5 px-2 py-1.5 cursor-pointer select-none text-xs
+                                        transition-colors duration-150 ease-in-out
                                         ${isSelected
-                                    ? isDarkMode ? 'bg-white/5 text-white border-l border-l-white/40' : 'bg-blue-50 text-blue-900 border-l border-l-blue-400'
-                                    : isDarkMode ? 'hover:bg-white/5 text-white/70' : 'hover:bg-gray-50 text-gray-700'}
-                                        border-b ${isDarkMode ? 'border-white/5' : 'border-gray-100'} last:border-b-0`}
+                                    ? isDarkMode ? 'bg-white/5 text-white' : 'bg-blue-50 text-blue-900'
+                                    : isDarkMode ? 'hover:bg-white/5 text-white/70' : 'hover:bg-gray-50 text-gray-700'}`}
                             onMouseDown={e => {
                                 e.preventDefault();
                                 setActiveFilters(prev => [...prev, { term: s.value, type: s.type }]);
@@ -210,23 +237,13 @@ export default function LevantamientoUnificado() {
                             }}
                             onMouseEnter={() => setHighlightedIndex(i)}
                         >
-                            {/* Icono minimalista */}
-                            <span
-                                className={`flex items-center justify-center w-5 h-5 rounded-md
-                                    transition-colors duration-200 font-medium text-xs
-                                    ${isDarkMode ? 'bg-neutral-800/40 group-hover:bg-white/5 text-white/70 group-hover:text-white' : 'bg-gray-100 group-hover:bg-gray-200 text-gray-600 group-hover:text-gray-800'}`}
-                            >
+                            <span className={`shrink-0 ${isDarkMode ? 'text-white/70' : 'text-gray-600'}`}>
                                 {getTypeIcon(s.type)}
                             </span>
-
-                            {/* Texto principal */}
-                            <span className="flex-1 text-xs font-normal truncate tracking-wide" title={s.value}>
+                            <span className="flex-1 font-normal truncate tracking-wide">
                                 {s.value}
                             </span>
-
-                            {/* Etiqueta de tipo */}
-                            <span className={`text-[10px] font-medium px-1.5 py-0.5 rounded-md ml-1 tracking-wide border
-                                ${isDarkMode ? 'bg-neutral-900/50 text-white/60 border-white/10' : 'bg-gray-100 text-gray-600 border-gray-200'}`}>
+                            <span className={`ml-auto text-[10px] font-mono ${isDarkMode ? 'text-white/60' : 'text-gray-500'}`}>
                                 {getTypeLabel(s.type)}
                             </span>
                         </li>
@@ -265,122 +282,113 @@ export default function LevantamientoUnificado() {
     })();
 
     // Mejorar analyzeMatch para todos los campos relevantes
+    // Mejorar analyzeMatch para todos los campos relevantes
     useEffect(() => {
-        const analyzeMatch = () => {
-            if (!searchTerm || !muebles.length) {
-                setSearchMatchType(null);
-                return;
-            }
-            const clean = (str: string) => (str || '').normalize('NFKD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim();
-            const term = clean(searchTerm);
-
-            // 1. Coincidencia exacta por prioridad
-            for (const item of muebles) {
-                if (item.id_inv && clean(item.id_inv) === term) {
-                    setSearchMatchType('id');
-                    return;
-                }
-                if (item.area && clean(item.area) === term) {
-                    setSearchMatchType('area');
-                    return;
-                }
-                if ((item.usufinal && clean(item.usufinal) === term) || (item.resguardante && clean(item.resguardante) === term)) {
-                    setSearchMatchType('usufinal');
-                    return;
-                }
-                if (item.descripcion && clean(item.descripcion) === term) {
-                    setSearchMatchType('descripcion');
-                    return;
-                }
-                if (item.rubro && clean(item.rubro) === term) {
-                    setSearchMatchType('rubro');
-                    return;
-                }
-                if (item.estado && clean(item.estado) === term) {
-                    setSearchMatchType('estado');
-                    return;
-                }
-                if (item.estatus && clean(item.estatus) === term) {
-                    setSearchMatchType('estatus');
-                    return;
-                }
-            }
-            // 2. Coincidencia parcial por prioridad
-            for (const item of muebles) {
-                if (item.id_inv && clean(item.id_inv).includes(term)) {
-                    setSearchMatchType('id');
-                    return;
-                }
-                if (item.area && clean(item.area).includes(term)) {
-                    setSearchMatchType('area');
-                    return;
-                }
-                if ((item.usufinal && clean(item.usufinal).includes(term)) || (item.resguardante && clean(item.resguardante).includes(term))) {
-                    setSearchMatchType('usufinal');
-                    return;
-                }
-                if (item.descripcion && clean(item.descripcion).includes(term)) {
-                    setSearchMatchType('descripcion');
-                    return;
-                }
-                if (item.rubro && clean(item.rubro).includes(term)) {
-                    setSearchMatchType('rubro');
-                    return;
-                }
-                if (item.estado && clean(item.estado).includes(term)) {
-                    setSearchMatchType('estado');
-                    return;
-                }
-                if (item.estatus && clean(item.estatus).includes(term)) {
-                    setSearchMatchType('estatus');
-                    return;
-                }
-            }
+        if (!deferredSearchTerm || !muebles.length) {
             setSearchMatchType(null);
-        };
-        const debounceTimeout = setTimeout(analyzeMatch, 200);
-        return () => clearTimeout(debounceTimeout);
-    }, [searchTerm, muebles]);
+            return;
+        }
 
-    // Filtrado por filtros activos (aproximado, insensible a tildes/mayúsculas)
-    const filteredMuebles = muebles.filter(item => {
-        if (activeFilters.length === 0 && !searchTerm) return true;
-        const passesActiveFilters = activeFilters.every(filter => {
-            const filterTerm = clean(filter.term);
-            if (!filterTerm) return true;
-            switch (filter.type) {
-                case 'id':
-                    return clean(item.id_inv || '').includes(filterTerm);
-                case 'descripcion':
-                    return clean(item.descripcion || '').includes(filterTerm);
-                case 'area':
-                    return clean(item.area || '') === filterTerm;
-                case 'usufinal':
-                    return clean(item.usufinal || '') === filterTerm;
-                case 'resguardante':
-                    return clean(item.resguardante || '').includes(filterTerm);
-                case 'rubro':
-                    return clean(item.rubro || '').includes(filterTerm);
-                case 'estado':
-                    return clean(item.estado || '').includes(filterTerm);
-                case 'estatus':
-                    return clean(item.estatus || '').includes(filterTerm);
-                default:
-                    return true;
+        const term = deferredSearchTerm.toLowerCase().trim();
+        let bestMatch = { type: null, value: '', score: 0 } as { type: typeof searchMatchType, value: string, score: number };
+
+        const isMatch = (val: string | null | undefined) => val && val.toLowerCase().includes(term);
+        const isExact = (val: string | null | undefined) => val && val.toLowerCase() === term;
+
+        for (const item of muebles) {
+            // Coincidencia por ID (alta prioridad)
+            if (isMatch(item.id_inv)) {
+                const exact = isExact(item.id_inv);
+                const score = exact ? 6 : 4;
+                if (score > bestMatch.score) bestMatch = { type: 'id', value: item.id_inv!, score };
             }
+            // Coincidencia por área
+            else if (isMatch(item.area)) {
+                const exact = isExact(item.area);
+                const score = exact ? 5 : 3;
+                if (score > bestMatch.score) bestMatch = { type: 'area', value: item.area!, score };
+            }
+            // Coincidencia por usufinal/resguardante
+            else if (isMatch(item.usufinal) || isMatch(item.resguardante)) {
+                const exact = isExact(item.usufinal) || isExact(item.resguardante);
+                const score = exact ? 4 : 2;
+                if (score > bestMatch.score) bestMatch = { type: 'usufinal', value: item.usufinal || item.resguardante || '', score };
+            }
+
+            if (bestMatch.score >= 6) break;
+        }
+
+        // Fallback simples
+        if (!bestMatch.type) {
+            for (const item of muebles) {
+                if (isMatch(item.descripcion)) { setSearchMatchType('descripcion'); return; }
+                if (isMatch(item.rubro)) { setSearchMatchType('rubro'); return; }
+                if (isMatch(item.estado)) { setSearchMatchType('estado'); return; }
+                if (isMatch(item.estatus)) { setSearchMatchType('estatus'); return; }
+            }
+        } else {
+            setSearchMatchType(bestMatch.type);
+        }
+    }, [deferredSearchTerm, muebles]);
+
+    // Filtrado por filtros activos (Optimizado con useMemo y deferredValue)
+    const filteredMuebles = useMemo(() => {
+        const term = deferredSearchTerm.toLowerCase().trim();
+        let result = muebles;
+
+        if (activeFilters.length > 0 || term) {
+            result = muebles.filter(item => {
+                // Aplicar filtros activos (optimizados)
+                const passesActiveFilters = activeFilters.every(filter => {
+                    const filterTerm = filter.term.toLowerCase();
+                    if (!filterTerm) return true;
+
+                    switch (filter.type) {
+                        case 'id': return (item.id_inv?.toLowerCase() || '').includes(filterTerm);
+                        case 'descripcion': return (item.descripcion?.toLowerCase() || '').includes(filterTerm);
+                        case 'rubro': return (item.rubro?.toLowerCase() || '').includes(filterTerm);
+                        case 'estado': return (item.estado?.toLowerCase() || '').includes(filterTerm);
+                        case 'estatus': return (item.estatus?.toLowerCase() || '').includes(filterTerm);
+                        case 'area': return (item.area?.toLowerCase() || '').includes(filterTerm);
+                        case 'usufinal': return (item.usufinal?.toLowerCase() || '').includes(filterTerm);
+                        case 'resguardante': return (item.resguardante?.toLowerCase() || '').includes(filterTerm);
+                        default: return true;
+                    }
+                });
+
+                if (!passesActiveFilters) return false;
+
+                // Búsqueda general
+                if (!term) return true;
+
+                return (
+                    (item.id_inv?.toLowerCase() || '').includes(term) ||
+                    (item.descripcion?.toLowerCase() || '').includes(term) ||
+                    (item.area?.toLowerCase() || '').includes(term) ||
+                    (item.usufinal?.toLowerCase() || '').includes(term) ||
+                    (item.resguardante?.toLowerCase() || '').includes(term) ||
+                    (item.rubro?.toLowerCase() || '').includes(term) ||
+                    (item.estado?.toLowerCase() || '').includes(term) ||
+                    (item.estatus?.toLowerCase() || '').includes(term)
+                );
+            });
+        }
+
+        // Sorting
+        return [...result].sort((a, b) => {
+            if (!sortField) return 0;
+            const aVal = a[sortField];
+            const bVal = b[sortField];
+
+            if (aVal === bVal) return 0;
+            if (aVal === null || aVal === undefined) return 1;
+            if (bVal === null || bVal === undefined) return -1;
+
+            const compareResult = aVal > bVal ? 1 : -1;
+            return sortDirection === 'asc' ? compareResult : -compareResult;
         });
-        const currentTerm = clean(searchTerm);
-        const passesCurrentSearch = !currentTerm ||
-            clean(item.id_inv || '').includes(currentTerm) ||
-            clean(item.descripcion || '').includes(currentTerm) ||
-            clean(item.area || '').includes(currentTerm) ||
-            clean(item.usufinal || '').includes(currentTerm) ||
-            clean(item.resguardante || '').includes(currentTerm) ||
-            clean(item.rubro || '').includes(currentTerm) ||
-            clean(item.estado || '').includes(currentTerm) ||
-            clean(item.estatus || '').includes(currentTerm);
-        return passesActiveFilters && passesCurrentSearch;
-    });
+
+    }, [muebles, activeFilters, deferredSearchTerm, sortField, sortDirection]);
     const totalFilteredCount = filteredMuebles.length;
     const totalPages = Math.ceil(totalFilteredCount / rowsPerPage);
 
@@ -619,59 +627,68 @@ export default function LevantamientoUnificado() {
     };
 
     // Generar sugerencias al escribir
+    // Generar sugerencias al escribir (Optimizado con useDeferredValue y vectores)
     useEffect(() => {
-        if (!searchTerm || !muebles.length) {
+        if (!deferredSearchTerm || !searchableData) {
             setSuggestions([]);
             setShowSuggestions(false);
             setHighlightedIndex(-1);
             return;
         }
-        const clean = (str: string) => (str || '').normalize('NFKD').replace(/\p{Diacritic}/gu, '').toLowerCase().trim();
-        const term = clean(searchTerm);
-        // Recolectar valores únicos por campo
+
+        const term = deferredSearchTerm.toLowerCase().trim();
+        if (term.length < 2) {
+            setSuggestions([]);
+            setShowSuggestions(false);
+            return;
+        }
+
         const seen = new Set<string>();
         const fields = [
-            { type: 'id' as ActiveFilter['type'], label: 'ID', icon: <Search className="h-3.5 w-3.5 text-white/80" /> },
-            { type: 'area' as ActiveFilter['type'], label: 'Área', icon: <span className="h-3.5 w-3.5 text-white/80 font-medium">A</span> },
-            { type: 'usufinal' as ActiveFilter['type'], label: 'Director', icon: <span className="h-3.5 w-3.5 text-white/80 font-medium">D</span> },
-            { type: 'resguardante' as ActiveFilter['type'], label: 'Resguardante', icon: <span className="h-3.5 w-3.5 text-white/80 font-medium">R</span> },
-            { type: 'descripcion' as ActiveFilter['type'], label: 'Descripción', icon: <span className="h-3.5 w-3.5 text-white/80 font-medium">Desc</span> },
-            { type: 'rubro' as ActiveFilter['type'], label: 'Rubro', icon: <span className="h-3.5 w-3.5 text-white/80 font-medium">Ru</span> },
-            { type: 'estado' as ActiveFilter['type'], label: 'Estado', icon: <span className="h-3.5 w-3.5 text-white/80 font-medium">Edo</span> },
-            { type: 'estatus' as ActiveFilter['type'], label: 'Estatus', icon: <span className="h-3.5 w-3.5 text-white/80 font-medium">Est</span> },
+            { type: 'id' as ActiveFilter['type'], label: 'ID', data: searchableData.id },
+            { type: 'area' as ActiveFilter['type'], label: 'Área', data: searchableData.area },
+            { type: 'usufinal' as ActiveFilter['type'], label: 'Director', data: searchableData.usufinal },
+            { type: 'resguardante' as ActiveFilter['type'], label: 'Resguardante', data: searchableData.resguardante },
+            { type: 'descripcion' as ActiveFilter['type'], label: 'Descripción', data: searchableData.descripcion },
+            { type: 'rubro' as ActiveFilter['type'], label: 'Rubro', data: searchableData.rubro },
+            { type: 'estado' as ActiveFilter['type'], label: 'Estado', data: searchableData.estado },
+            { type: 'estatus' as ActiveFilter['type'], label: 'Estatus', data: searchableData.estatus },
         ];
+
         let allSuggestions: { value: string; type: ActiveFilter['type'] }[] = [];
+        let count = 0;
+        const maxSuggestions = 10;
+
         for (const f of fields) {
-            let values: string[] = [];
-            switch (f.type) {
-                case 'id': values = muebles.map(m => m.id_inv).filter(Boolean) as string[]; break;
-                case 'area': values = muebles.map(m => m.area).filter(Boolean) as string[]; break;
-                case 'usufinal': values = muebles.map(m => m.usufinal).filter(Boolean) as string[]; break;
-                case 'resguardante': values = muebles.map(m => m.resguardante).filter(Boolean) as string[]; break;
-                case 'descripcion': values = muebles.map(m => m.descripcion).filter(Boolean) as string[]; break;
-                case 'rubro': values = muebles.map(m => m.rubro).filter(Boolean) as string[]; break;
-                case 'estado': values = muebles.map(m => m.estado).filter(Boolean) as string[]; break;
-                case 'estatus': values = muebles.map(m => m.estatus).filter(Boolean) as string[]; break;
-                default: values = [];
-            }
-            for (const v of values) {
-                if (!v) continue;
-                const vClean = clean(v);
-                if (vClean.includes(term) && !seen.has(f.type + ':' + vClean)) {
-                    allSuggestions.push({ value: v, type: f.type });
-                    seen.add(f.type + ':' + vClean);
+            if (count >= maxSuggestions) break;
+
+            for (const v of f.data) {
+                const vLower = v.toLowerCase();
+                if (vLower.includes(term)) {
+                    const key = f.type + ':' + vLower;
+                    if (!seen.has(key)) {
+                        allSuggestions.push({ value: v, type: f.type });
+                        seen.add(key);
+                        count++;
+                        if (count >= maxSuggestions) break;
+                    }
                 }
             }
         }
-        // Prioridad: exactos primero, luego parciales, máx 7
-        allSuggestions = [
-            ...allSuggestions.filter(s => clean(s.value) === term),
-            ...allSuggestions.filter(s => clean(s.value) !== term)
-        ].slice(0, 7);
-        setSuggestions(allSuggestions);
+
+        // Prioridad: exactos primero
+        allSuggestions.sort((a, b) => {
+            const aStarts = a.value.toLowerCase().startsWith(term);
+            const bStarts = b.value.toLowerCase().startsWith(term);
+            if (aStarts && !bStarts) return -1;
+            if (!aStarts && bStarts) return 1;
+            return 0;
+        });
+
+        setSuggestions(allSuggestions.slice(0, 7));
         setShowSuggestions(allSuggestions.length > 0);
         setHighlightedIndex(allSuggestions.length > 0 ? 0 : -1);
-    }, [searchTerm, muebles]);
+    }, [deferredSearchTerm, searchableData]);
 
     // Manejo de teclado en el input
     const handleInputKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
@@ -929,9 +946,9 @@ export default function LevantamientoUnificado() {
                                             pl-14 pr-32 py-3 w-full transition-all duration-300
                                             text-lg font-semibold tracking-wide backdrop-blur-xl
                                             focus:outline-none focus:ring-2 rounded-2xl shadow-2xl
-                                            ${isDarkMode 
-                                                ? 'bg-black/80 text-white placeholder-neutral-500 focus:ring-white/50 focus:border-white/50 border-neutral-800 hover:shadow-white/10 focus:scale-[1.03] focus:bg-black/90' + (searchMatchType ? ' border-white/80 shadow-white/20' : '')
-                                                : 'bg-white border-gray-300 text-gray-900 placeholder-gray-400 focus:ring-blue-500 focus:border-blue-500 hover:border-gray-400 focus:scale-[1.02]' + (searchMatchType ? ' border-blue-400 shadow-blue-100' : '')}
+                                            ${isDarkMode
+                                                    ? 'bg-black/80 text-white placeholder-neutral-500 focus:ring-white/50 focus:border-white/50 border-neutral-800 hover:shadow-white/10 focus:scale-[1.03] focus:bg-black/90' + (searchMatchType ? ' border-white/80 shadow-white/20' : '')
+                                                    : 'bg-white border-gray-300 text-gray-900 placeholder-gray-400 focus:ring-blue-500 focus:border-blue-500 hover:border-gray-400 focus:scale-[1.02]' + (searchMatchType ? ' border-blue-400 shadow-blue-100' : '')}
                                         `}
                                             title="Buscar"
                                             aria-autocomplete="list"
@@ -945,29 +962,42 @@ export default function LevantamientoUnificado() {
                                     {/* Chips de filtros activos brutalmente mejorados */}
                                     {activeFilters.length > 0 && (
                                         <div className="flex flex-wrap gap-2 mt-1 px-1">
-                                            {activeFilters.map((filter, index) => (
-                                                <span
-                                                    key={index}
-                                                    className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium border shadow-sm animate-fadeIn transition-all duration-200 group relative
-                                                    ${isDarkMode ? 'border-white/20 bg-black/60 text-white/80 hover:bg-white/5' : 'border-gray-300 bg-gray-100 text-gray-700 hover:bg-gray-200'}`}
-                                                >
-                                                    <span className="mr-1">
-                                                        {getTypeIcon(filter.type)}
-                                                    </span>
-                                                    <span className="font-medium text-xs mr-1 truncate max-w-[90px]" title={filter.term}>{filter.term}</span>
-                                                    <span className="ml-1 text-[10px] opacity-60 font-bold">{getTypeLabel(filter.type)}</span>
-                                                    <button
-                                                        onClick={() => removeFilter(index)}
-                                                        className={`ml-2 p-0.5 rounded-full transition-colors duration-200 focus:outline-none focus:ring-2 ${isDarkMode ? 'bg-neutral-800 hover:bg-white/20 text-neutral-400 hover:text-white focus:ring-white/50' : 'bg-gray-300 hover:bg-gray-400 text-gray-600 hover:text-gray-800 focus:ring-gray-500'}`}
-                                                        title="Eliminar filtro"
-                                                        tabIndex={0}
+                                            {activeFilters.map((filter, index) => {
+                                                const colorClass = isDarkMode
+                                                    ? 'bg-white/10 border-white/30 text-white/90'
+                                                    : 'bg-blue-50 border-blue-200 text-blue-800';
+
+                                                return (
+                                                    <div
+                                                        key={index}
+                                                        className={`inline-flex items-center px-2 py-0.5 rounded-full ${colorClass} text-xs font-medium shadow-sm hover:shadow-md transition-all duration-200 border`}
                                                     >
-                                                        <svg width="12" height="12" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                                            <path d="M6 6L14 14M14 6L6 14" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-                                                        </svg>
-                                                    </button>
-                                                </span>
-                                            ))}
+                                                        <span className="uppercase font-semibold opacity-70 mr-1 text-[10px]">{
+                                                            filter.type === 'id' ? 'ID' :
+                                                                filter.type === 'descripcion' ? 'Desc' :
+                                                                    filter.type === 'rubro' ? 'Rubro' :
+                                                                        filter.type === 'estado' ? 'Edo' :
+                                                                            filter.type === 'estatus' ? 'Est' :
+                                                                                filter.type === 'area' ? 'Área' :
+                                                                                    filter.type === 'usufinal' ? 'Usu' :
+                                                                                        filter.type === 'resguardante' ? 'Resg' :
+                                                                                            filter.type
+                                                        }</span>
+                                                        <span className="truncate max-w-[120px]">{filter.term}</span>
+                                                        <button
+                                                            onClick={() => removeFilter(index)}
+                                                            className={`ml-1 p-0.5 rounded-full text-xs focus:outline-none focus:ring-1 focus:ring-red-500 transition-colors ${isDarkMode
+                                                                ? 'text-white/60 hover:text-white'
+                                                                : 'text-blue-600/60 hover:text-blue-800'
+                                                                }`}
+                                                            title="Eliminar filtro"
+                                                            tabIndex={0}
+                                                        >
+                                                            <X className="h-3 w-3" />
+                                                        </button>
+                                                    </div>
+                                                )
+                                            })}
                                         </div>
                                     )}
                                 </div>
@@ -1005,13 +1035,13 @@ export default function LevantamientoUnificado() {
                                     className={`group relative px-4 py-2.5 rounded-lg font-medium 
                                     flex items-center gap-2.5 transition-all duration-300
                                     ${isCustomPDFEnabled
-                                            ? isDarkMode 
+                                            ? isDarkMode
                                                 ? 'bg-gradient-to-r from-white/90 to-white/70 text-gray-900 hover:from-white hover:to-white/80 border border-white/80 hover:border-white shadow-lg shadow-white/10'
                                                 : 'bg-gradient-to-r from-green-600 to-green-500 text-white hover:from-green-700 hover:to-green-600 border border-green-600 hover:border-green-700 shadow-lg shadow-green-100'
                                             : isDarkMode
                                                 ? 'bg-white/80 text-gray-900 hover:bg-white/70 border border-white/70 hover:border-white'
                                                 : 'bg-red-600 text-white hover:bg-red-700 border border-red-600 hover:border-red-700'
-                                    }`}
+                                        }`}
                                     title={isCustomPDFEnabled ? 'Exportar PDF personalizado por área y director (solo si ambos filtros son exactos)' : 'Exportar a PDF'}
                                 >
                                     <FileUp className="h-4 w-4 transition-transform group-hover:scale-110 group-hover:-translate-y-0.5 duration-300" />
@@ -1034,10 +1064,10 @@ export default function LevantamientoUnificado() {
                                     flex items-center gap-2.5 transition-all duration-300
                                     shadow-lg border overflow-hidden
                                     hover:scale-[1.02] active:scale-[0.98]
-                                    ${isDarkMode 
-                                        ? 'bg-white/70 hover:bg-white/80 text-gray-900 border-white/60 hover:border-white/70'
-                                        : 'bg-gray-600 hover:bg-gray-700 text-white border-gray-600 hover:border-gray-700'
-                                    }
+                                    ${isDarkMode
+                                            ? 'bg-white/70 hover:bg-white/80 text-gray-900 border-white/60 hover:border-white/70'
+                                            : 'bg-gray-600 hover:bg-gray-700 text-white border-gray-600 hover:border-gray-700'
+                                        }
                                 `}
                                     title="Actualizar datos"
                                     disabled={loading}
@@ -1068,16 +1098,16 @@ export default function LevantamientoUnificado() {
                         </div>
                     </div>
                     {message && (
-                        <div className={`p-3 rounded-md border ${isDarkMode 
+                        <div className={`p-3 rounded-md border ${isDarkMode
                             ? message.type === 'success' ? 'bg-green-900/50 text-green-300 border-green-800' :
-                              message.type === 'error' ? 'bg-red-900/50 text-red-300 border-red-800' :
-                              message.type === 'warning' ? 'bg-yellow-900/50 text-yellow-300 border-yellow-800' :
-                              message.type === 'info' ? 'bg-blue-900/50 text-blue-300 border-blue-800' : ''
+                                message.type === 'error' ? 'bg-red-900/50 text-red-300 border-red-800' :
+                                    message.type === 'warning' ? 'bg-yellow-900/50 text-yellow-300 border-yellow-800' :
+                                        message.type === 'info' ? 'bg-blue-900/50 text-blue-300 border-blue-800' : ''
                             : message.type === 'success' ? 'bg-green-50 text-green-800 border-green-200' :
-                              message.type === 'error' ? 'bg-red-50 text-red-800 border-red-200' :
-                              message.type === 'warning' ? 'bg-yellow-50 text-yellow-800 border-yellow-200' :
-                              message.type === 'info' ? 'bg-blue-50 text-blue-800 border-blue-200' : ''
-                        }`}>
+                                message.type === 'error' ? 'bg-red-50 text-red-800 border-red-200' :
+                                    message.type === 'warning' ? 'bg-yellow-50 text-yellow-800 border-yellow-200' :
+                                        message.type === 'info' ? 'bg-blue-50 text-blue-800 border-blue-200' : ''
+                            }`}>
                             {message.text}
                         </div>
                     )}
@@ -1213,11 +1243,11 @@ export default function LevantamientoUnificado() {
                                                             <button
                                                                 key={opt.id_directorio}
                                                                 className={`w-full text-left px-4 py-2 flex flex-col gap-0.5 transition-all duration-150 border-l-4
-                                                            ${directorSugerido && opt.id_directorio === directorSugerido.id_directorio ? 
-                                                                isDarkMode ? 'border-white bg-white/10 text-white font-bold shadow-lg' : 'border-blue-500 bg-blue-50 text-blue-900 font-bold shadow-lg' :
-                                                                areaDirectorForm.nombre === opt.nombre ? 
-                                                                    isDarkMode ? 'border-white/60 bg-white/5 text-white font-semibold' : 'border-blue-300 bg-blue-25 text-blue-800 font-semibold' :
-                                                                    isDarkMode ? 'border-transparent hover:bg-white/5 text-white' : 'border-transparent hover:bg-gray-100 text-gray-900'}
+                                                            ${directorSugerido && opt.id_directorio === directorSugerido.id_directorio ?
+                                                                        isDarkMode ? 'border-white bg-white/10 text-white font-bold shadow-lg' : 'border-blue-500 bg-blue-50 text-blue-900 font-bold shadow-lg' :
+                                                                        areaDirectorForm.nombre === opt.nombre ?
+                                                                            isDarkMode ? 'border-white/60 bg-white/5 text-white font-semibold' : 'border-blue-300 bg-blue-25 text-blue-800 font-semibold' :
+                                                                            isDarkMode ? 'border-transparent hover:bg-white/5 text-white' : 'border-transparent hover:bg-gray-100 text-gray-900'}
         `}
                                                                 onClick={() => {
                                                                     setAreaDirectorForm({ nombre: opt.nombre, puesto: opt.puesto });
@@ -1346,7 +1376,7 @@ export default function LevantamientoUnificado() {
                                                 <span className={`animate-ping absolute inline-flex h-full w-full rounded-full opacity-20 ${isDarkMode ? 'bg-white' : 'bg-blue-500'}`}></span>
                                                 <span className={`relative inline-flex rounded-full h-20 w-20 border-4 border-t-transparent animate-spin ${isDarkMode ? 'border-white' : 'border-blue-500'}`}></span>
                                             </span>
-                                            
+
                                             {/* Contador numérico en el centro del spinner */}
                                             <div className="absolute inset-0 flex items-center justify-center">
                                                 <span className={`text-sm font-mono font-bold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
@@ -1354,7 +1384,7 @@ export default function LevantamientoUnificado() {
                                                 </span>
                                             </div>
                                         </div>
-                                        
+
                                         {/* Mensaje de carga con efecto de typing */}
                                         <div className="flex flex-col items-center gap-1">
                                             <span className={`text-2xl font-bold drop-shadow-md ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
@@ -1404,46 +1434,31 @@ export default function LevantamientoUnificado() {
                                                 <th className={`px-4 py-3 text-left text-xs font-medium uppercase tracking-wider ${isDarkMode ? 'text-white' : 'text-gray-700'}`}>Origen</th>
                                                 <th className={`px-4 py-3 text-left text-xs font-medium uppercase tracking-wider ${isDarkMode ? 'text-white' : 'text-gray-700'}`}>Resguardo</th>
                                                 <th
-                                                    onClick={() => {
-                                                        setSortField('id_inv');
-                                                        setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
-                                                    }}
+                                                    onClick={() => handleSort('id_inv')}
                                                     className={`px-4 py-3 text-left text-xs font-medium uppercase tracking-wider cursor-pointer transition-colors ${isDarkMode ? 'text-white hover:bg-white/10' : 'text-gray-700 hover:bg-gray-100'}`}
                                                 >
                                                     <div className="flex items-center gap-1">ID Inventario<ArrowUpDown className="h-3 w-3" /></div>
                                                 </th>
                                                 <th
-                                                    onClick={() => {
-                                                        setSortField('descripcion');
-                                                        setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
-                                                    }}
+                                                    onClick={() => handleSort('descripcion')}
                                                     className={`px-4 py-3 text-left text-xs font-medium uppercase tracking-wider cursor-pointer transition-colors ${isDarkMode ? 'text-white hover:bg-white/10' : 'text-gray-700 hover:bg-gray-100'}`}
                                                 >
                                                     <div className="flex items-center gap-1">Descripción<ArrowUpDown className="h-3 w-3" /></div>
                                                 </th>
                                                 <th
-                                                    onClick={() => {
-                                                        setSortField('area');
-                                                        setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
-                                                    }}
+                                                    onClick={() => handleSort('area')}
                                                     className={`px-4 py-3 text-left text-xs font-medium uppercase tracking-wider cursor-pointer transition-colors ${isDarkMode ? 'text-white hover:bg-white/10' : 'text-gray-700 hover:bg-gray-100'}`}
                                                 >
                                                     <div className="flex items-center gap-1">Área<ArrowUpDown className="h-3 w-3" /></div>
                                                 </th>
                                                 <th
-                                                    onClick={() => {
-                                                        setSortField('usufinal');
-                                                        setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
-                                                    }}
+                                                    onClick={() => handleSort('usufinal')}
                                                     className={`px-4 py-3 text-left text-xs font-medium uppercase tracking-wider cursor-pointer transition-colors ${isDarkMode ? 'text-white hover:bg-white/10' : 'text-gray-700 hover:bg-gray-100'}`}
                                                 >
                                                     <div className="flex items-center gap-1">Jefe/Director de Área<ArrowUpDown className="h-3 w-3" /></div>
                                                 </th>
                                                 <th
-                                                    onClick={() => {
-                                                        setSortField('estatus');
-                                                        setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
-                                                    }}
+                                                    onClick={() => handleSort('estatus')}
                                                     className={`px-4 py-3 text-left text-xs font-medium uppercase tracking-wider cursor-pointer transition-colors ${isDarkMode ? 'text-white hover:bg-white/10' : 'text-gray-700 hover:bg-gray-100'}`}
                                                 >
                                                     <div className="flex items-center gap-1">Estatus<ArrowUpDown className="h-3 w-3" /></div>
@@ -1513,10 +1528,10 @@ export default function LevantamientoUnificado() {
                                                         </td>
                                                         <td className="px-4 py-3 text-sm">
                                                             <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium ${item.estatus === 'ACTIVO' ? getEstatusColors(isDarkMode).ACTIVO :
-                                                item.estatus === 'INACTIVO' ? getEstatusColors(isDarkMode).INACTIVO :
-                                                    item.estatus === 'NO LOCALIZADO' ? getEstatusColors(isDarkMode)['NO LOCALIZADO'] :
-                                                        getEstatusColors(isDarkMode).DEFAULT
-                                                }`}>
+                                                                item.estatus === 'INACTIVO' ? getEstatusColors(isDarkMode).INACTIVO :
+                                                                    item.estatus === 'NO LOCALIZADO' ? getEstatusColors(isDarkMode)['NO LOCALIZADO'] :
+                                                                        getEstatusColors(isDarkMode).DEFAULT
+                                                                }`}>
                                                                 {item.estatus}
                                                             </span>
                                                         </td>
@@ -1623,8 +1638,8 @@ export default function LevantamientoUnificado() {
                                                     onClick={() => changePage(i)}
                                                     className={`mx-0.5 px-3 py-1.5 rounded-lg border text-sm font-semibold transition
                                                 ${i === currentPage
-                                                        ? isDarkMode ? 'bg-white/10 text-white border-white/30 shadow' : 'bg-blue-600 text-white border-blue-600 shadow'
-                                                        : isDarkMode ? 'bg-neutral-900 text-neutral-300 border-neutral-700 hover:bg-white/5 hover:text-white hover:border-white/20' : 'bg-gray-100 text-gray-700 border-gray-300 hover:bg-gray-200 hover:text-gray-900 hover:border-gray-400'}
+                                                            ? isDarkMode ? 'bg-white/10 text-white border-white/30 shadow' : 'bg-blue-600 text-white border-blue-600 shadow'
+                                                            : isDarkMode ? 'bg-neutral-900 text-neutral-300 border-neutral-700 hover:bg-white/5 hover:text-white hover:border-white/20' : 'bg-gray-100 text-gray-700 border-gray-300 hover:bg-gray-200 hover:text-gray-900 hover:border-gray-400'}
                                             `}
                                                     aria-current={i === currentPage ? 'page' : undefined}
                                                 >
