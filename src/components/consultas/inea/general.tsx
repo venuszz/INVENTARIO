@@ -273,10 +273,6 @@ export default function ConsultasIneaGeneral() {
     const [foliosResguardo, setFoliosResguardo] = useState<{ [id_inv: string]: string | null }>({});
     const [resguardoDetalles, setResguardoDetalles] = useState<{ [folio: string]: ResguardoDetalle }>({});
 
-    // Estados para totales obtenidos de la BD
-    const [dbTotalValue, setDbTotalValue] = useState<number>(0);
-    const [dbTotalCount, setDbTotalCount] = useState<number>(0);
-
     // Cargar áreas y relaciones N:M al montar
     useEffect(() => {
         async function fetchAreasAndRelations() {
@@ -346,56 +342,6 @@ export default function ConsultasIneaGeneral() {
             console.error('Error al cargar opciones únicas de filtro:', error);
         }
     }, []);
-
-    // Función para obtener totales desde la BD (manejo de paginación para > 1000)
-    const fetchDbTotals = useCallback(async () => {
-        try {
-            let totalValue = 0;
-            let totalCount = 0;
-            let offset = 0;
-            const pageSize = 1000;
-
-            // Iterar a través de páginas de 1000 registros
-            while (true) {
-                const { data, error } = await supabase
-                    .from('muebles')
-                    .select('valor', { count: 'exact' })
-                    .range(offset, offset + pageSize - 1);
-
-                if (error) throw error;
-
-                if (!data || data.length === 0) break;
-
-                // Sumar los valores de esta página
-                data.forEach(item => {
-                    if (item.valor !== null && item.valor !== undefined) {
-                        totalValue += Number(item.valor);
-                    }
-                });
-
-                totalCount += data.length;
-
-                // Si obtuvimos menos de pageSize registros, hemos llegado al final
-                if (data.length < pageSize) break;
-
-                offset += pageSize;
-            }
-
-            setDbTotalValue(totalValue);
-            setDbTotalCount(totalCount);
-        } catch (err) {
-            console.error('Error al cargar totales desde BD:', err);
-            setMessage({
-                type: 'error',
-                text: 'Error al cargar los totales'
-            });
-        }
-    }, []);
-
-    // Efecto para cargar los totales cuando el componente monta
-    useEffect(() => {
-        fetchDbTotals();
-    }, [fetchDbTotals]);
 
     // Función para manejar la selección del director/jefe de área
     const handleSelectDirector = (nombre: string) => {
@@ -1221,10 +1167,7 @@ const confirmMarkAsInactive = async () => {
 
     // Calcular totales directamente
     const filteredValue = filteredMueblesOmni.reduce((acc, item) => acc + (item.valor !== null && item.valor !== undefined ? Number(item.valor) : 0), 0);
-    
-    // Usar totales de BD para los totales principales (sin filtros), y los indexados para los filtrados
-    const displayValue = (activeFilters.length > 0 || searchTerm ? filteredValue : dbTotalValue);
-    const displayCount = (activeFilters.length > 0 || searchTerm ? filteredMueblesOmni.length : dbTotalCount);
+    const allValue = muebles.reduce((acc, item) => acc + (item.valor !== null && item.valor !== undefined ? Number(item.valor) : 0), 0);
 
     // Fetch de resguardos y detalles (igual que ITEA)
     useEffect(() => {
@@ -1331,7 +1274,7 @@ const confirmMarkAsInactive = async () => {
                                             }`}>Valor Total del Inventario</h3>
                                         <div className="relative">
                                             <div className={`text-4xl font-bold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
-                                                ${displayValue.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                                ${(activeFilters.length > 0 || searchTerm ? filteredValue : allValue).toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                                             </div>
                                             <div className={`absolute -bottom-2 left-0 w-full h-px ${isDarkMode ? 'bg-white/30' : 'bg-gray-300'
                                                 }`}></div>
@@ -1367,7 +1310,7 @@ const confirmMarkAsInactive = async () => {
                                                 ? 'text-white/90 group-hover:text-white'
                                                 : 'text-gray-800 group-hover:text-gray-900'
                                                 }`}>
-                                            {displayCount.toLocaleString('es-MX')}
+                                            {(activeFilters.length > 0 || searchTerm ? filteredMueblesOmni.length : muebles.length).toLocaleString('es-MX')}
                                         </div>
                                     </div>
                                 </div>
