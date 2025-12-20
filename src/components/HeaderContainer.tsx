@@ -9,7 +9,7 @@ export default function HeaderContainer() {
     const { isInactive } = useInactivity();
 
     // Rutas donde NO queremos mostrar el Header
-    const hideHeaderPaths = ['/login', '/register'];
+    const hideHeaderPaths = ['/login', '/register', '/pending-approval'];
     const shouldShowHeader = !hideHeaderPaths.includes(pathname);
 
     // Ocultar header si hay inactividad y estamos en la página principal

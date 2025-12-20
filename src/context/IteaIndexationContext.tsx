@@ -64,16 +64,16 @@ export function IteaIndexationProvider({ children }: { children: React.ReactNode
         try {
             const cached = localStorage.getItem(CACHE_KEY);
             const timestamp = localStorage.getItem(CACHE_TIMESTAMP_KEY);
-            
+
             if (!cached || !timestamp) return null;
-            
+
             const cacheAge = Date.now() - parseInt(timestamp);
             if (cacheAge > CACHE_TTL) {
                 localStorage.removeItem(CACHE_KEY);
                 localStorage.removeItem(CACHE_TIMESTAMP_KEY);
                 return null;
             }
-            
+
             return JSON.parse(cached);
         } catch (error) {
             console.error('Error loading ITEA cache:', error);
@@ -106,7 +106,7 @@ export function IteaIndexationProvider({ children }: { children: React.ReactNode
     // Función de indexación
     const indexMuebles = useCallback(async () => {
         setState(prev => ({ ...prev, isIndexing: true, error: null, progress: 0 }));
-        
+
         try {
             // Primero obtenemos el total
             const { count, error: countError } = await supabase
@@ -115,7 +115,7 @@ export function IteaIndexationProvider({ children }: { children: React.ReactNode
                 .neq('estatus', 'BAJA');
 
             if (countError) throw countError;
-            
+
             const totalRecords = count || 0;
             setState(prev => ({ ...prev, total: totalRecords }));
 
@@ -187,7 +187,7 @@ export function IteaIndexationProvider({ children }: { children: React.ReactNode
         }
 
         const cachedData = loadFromCache();
-        
+
         if (cachedData && cachedData.length > 0) {
             // Cargar desde cache
             setState(prev => ({

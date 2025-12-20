@@ -4,7 +4,7 @@ import { useState } from 'react'
 import { useTheme } from '@/context/ThemeContext'
 import supabase from '@/app/lib/supabase/client'
 import { useRouter } from 'next/navigation'
-import { User, Lock, Shield, UserCircle, Users, Eye, EyeOff } from 'lucide-react'
+import { User, Lock, Shield, UserCircle, Users, Eye, EyeOff, ChevronRight } from 'lucide-react'
 import { useUserRole } from "@/hooks/useUserRole"
 import RoleGuard from "@/components/roleGuard"
 import Link from 'next/link'
@@ -172,65 +172,57 @@ export default function RegisterPage() {
 
     // --- PANTALLA DE ACCESO RESTRINGIDO ---
     const restrictedContent = (
-        <div className={`min-h-screen w-full overflow-hidden relative transition-colors duration-500 ${isDarkMode ? 'bg-black' : 'bg-gradient-to-br from-gray-50 via-white to-red-50'
+        <div className={`min-h-screen w-full flex items-center justify-center p-4 relative transition-colors duration-500 ${isDarkMode
+            ? 'bg-black text-white'
+            : 'bg-gray-50 text-gray-900'
             }`}>
-            <div className={`absolute inset-0 opacity-80 z-0 transition-colors duration-500 ${isDarkMode ? 'bg-black' : 'bg-white/20'
+
+
+
+            <div className={`relative z-10 w-full max-w-lg p-10 md:p-14 rounded-2xl flex flex-col items-center border ${isDarkMode
+                ? 'bg-[#0A0A0A] border-gray-800 shadow-2xl shadow-black'
+                : 'bg-white border-gray-200 shadow-xl shadow-gray-200/50'
                 }`}>
-                <div className="absolute inset-0 bg-grid"></div>
-            </div>
-            <div className="relative z-10 flex items-center justify-center min-h-screen p-4">
-                <div className={`w-full max-w-2xl backdrop-blur-lg rounded-2xl shadow-2xl overflow-hidden transition-colors duration-500 ${isDarkMode
-                        ? 'bg-black/60 border border-red-800/30'
-                        : 'bg-white/80 border border-red-200'
-                    }`}>
-                    <div className={`relative p-8 flex flex-col items-center justify-center border-b transition-colors duration-500 ${isDarkMode
-                            ? 'bg-gradient-to-b from-black to-black/40 border-b border-red-800/20'
-                            : 'bg-gradient-to-b from-white to-white/60 border-b border-red-200'
-                        }`}>
-                        <img
-                            src={isDarkMode ? "/images/ITEA_logo.svg" : "/images/ITEA_logo_negro.svg"}
-                            alt="Logo ITEA"
-                            className="h-32 w-auto object-contain animate-float mb-6"
-                        />
-                        <div className={`absolute -bottom-px left-0 right-0 h-px bg-gradient-to-r from-transparent to-transparent transition-colors duration-500 ${isDarkMode ? 'via-red-500/50' : 'via-red-400/50'
-                            }`}></div>
-                    </div>
-                    <div className="p-8">
-                        <div className="flex flex-col items-center">
-                            <div className={`mb-6 p-px rounded-xl transition-colors duration-500 ${isDarkMode
-                                    ? 'bg-gradient-to-r from-red-500/20 via-red-500/10 to-red-500/20'
-                                    : 'bg-gradient-to-r from-red-400/30 via-red-400/20 to-red-400/30'
-                                }`}>
-                                <div className={`rounded-xl p-4 backdrop-blur-sm transition-colors duration-500 ${isDarkMode ? 'bg-black/40' : 'bg-white/60'
-                                    }`}>
-                                    <div className="flex items-center justify-center mb-4">
-                                        <Shield className="h-10 w-10 text-red-500 animate-pulse" />
-                                    </div>
-                                    <h1 className={`text-xl font-bold text-center mb-2 transition-colors duration-500 ${isDarkMode ? 'text-white' : 'text-gray-900'
-                                        }`}>Acceso Restringido</h1>
-                                    <p className={`text-center text-sm transition-colors duration-500 ${isDarkMode ? 'text-gray-300' : 'text-gray-600'
-                                        }`}>Si necesitas acceso, contacta a un administrador.</p>
-                                </div>
-                            </div>
-                            <Link href="/" className="group relative px-6 py-3 overflow-hidden rounded-lg bg-gradient-to-r from-blue-600 to-blue-500 text-white font-medium text-sm inline-flex items-center gap-2 hover:shadow-lg hover:shadow-blue-500/20 transition-all duration-300">
-                                <div className="absolute inset-0 bg-white/20 group-hover:scale-x-100 scale-x-0 origin-left transition-transform duration-300"></div>
-                                <span className="relative">Volver al Panel Principal</span>
-                            </Link>
-                        </div>
-                    </div>
+
+                {/* Logo Section */}
+                <div className="mb-12">
+                    <img
+                        src={isDarkMode ? "/images/ITEA_logo.png" : "/images/ITEA_logo_negro.svg"}
+                        alt="Logo ITEA"
+                        className="h-24 w-auto object-contain"
+                    />
                 </div>
+
+                {/* Restricted Access Badge */}
+                <div className={`mb-6 inline-flex items-center gap-2 px-3 py-1 rounded-md text-[10px] font-bold uppercase tracking-[0.2em] border ${isDarkMode
+                    ? 'bg-white/5 text-gray-400 border-white/10'
+                    : 'bg-gray-100 text-gray-500 border-gray-200'
+                    }`}>
+                    <Shield size={12} />
+                    Acceso Restringido
+                </div>
+
+                <h1 className={`text-2xl font-semibold text-center mb-4 tracking-tight ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
+                    Área Protegida
+                </h1>
+
+                <p className={`text-center text-sm mb-12 max-w-xs leading-relaxed ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                    Esta sección requiere permisos de administrador.
+                    Si crees que esto es un error, contacta al equipo de sistemas.
+                </p>
+
+                <Link
+                    href="/"
+                    className={`w-full py-4 rounded-xl text-[10px] font-bold tracking-widest uppercase transition-all duration-300 flex items-center justify-center gap-3 ${isDarkMode
+                        ? 'bg-white text-black hover:bg-gray-200'
+                        : 'bg-black text-white hover:bg-gray-800'
+                        }`}
+                >
+                    Volver al Panel Principal
+                </Link>
             </div>
-            <style jsx>{`
-                .bg-grid { 
-                    background-image: ${isDarkMode
-                    ? 'linear-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 1px), linear-gradient(90deg, rgba(255, 255, 255, 0.03) 1px, transparent 1px)'
-                    : 'linear-gradient(rgba(59, 130, 246, 0.1) 1px, transparent 1px), linear-gradient(90deg, rgba(59, 130, 246, 0.1) 1px, transparent 1px)'
-                }; 
-                    background-size: 30px 30px; 
-                }
-                @keyframes float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-10px); } }
-                .animate-float { animation: float 6s ease-in-out infinite; }
-            `}</style>
+
+
         </div>
     );
 
@@ -238,8 +230,8 @@ export default function RegisterPage() {
         <RoleGuard roles={["superadmin"]} userRole={userRole} fallback={restrictedContent}>
             {/* --- NUEVO DISEÑO INSPIRADO EN EL COMPONENTE DE LOGIN --- */}
             <div className={`min-h-screen relative overflow-hidden flex items-center justify-center p-4 transition-colors duration-500 ${isDarkMode
-                    ? 'bg-black'
-                    : 'bg-gradient-to-br from-blue-50 via-white to-blue-100'
+                ? 'bg-black'
+                : 'bg-gradient-to-br from-blue-50 via-white to-blue-100'
                 }`}>
                 {/* Efectos de fondo animados */}
                 <div className="absolute inset-0">
@@ -256,12 +248,12 @@ export default function RegisterPage() {
                             <div className="inline-flex items-center justify-center lg:justify-start mb-8">
                                 <div className="relative group">
                                     <div className={`absolute -inset-1 rounded-3xl blur-md group-hover:transition-all duration-700 animate-pulse ${isDarkMode
-                                            ? 'bg-blue-500/20 group-hover:bg-blue-500/30'
-                                            : 'bg-blue-400/30 group-hover:bg-blue-400/40'
+                                        ? 'bg-blue-500/20 group-hover:bg-blue-500/30'
+                                        : 'bg-blue-400/30 group-hover:bg-blue-400/40'
                                         }`}></div>
                                     <div className={`relative p-6 rounded-3xl backdrop-blur-xl transition-colors duration-500 ${isDarkMode
-                                            ? 'bg-white/5 border border-white/10'
-                                            : 'bg-white/60 border border-blue-200/30'
+                                        ? 'bg-white/5 border border-white/10'
+                                        : 'bg-white/60 border border-blue-200/30'
                                         }`}>
                                         <img
                                             src={isDarkMode ? "/images/ITEA_logo.png" : "/images/ITEA_logo_negro.svg"}
@@ -294,15 +286,15 @@ export default function RegisterPage() {
                                             }`}>Datos</span>
                                     </div>
                                     <div className={`flex-1 h-0.5 transition-colors duration-500 ${step === 2
-                                            ? 'bg-blue-500'
-                                            : isDarkMode ? 'bg-white/20' : 'bg-gray-300'
+                                        ? 'bg-blue-500'
+                                        : isDarkMode ? 'bg-white/20' : 'bg-gray-300'
                                         }`}></div>
                                     <div className={`flex items-center gap-2 transition-opacity duration-300 ${step === 2 ? 'opacity-100' : 'opacity-50'}`}>
                                         <span className={`font-medium transition-colors duration-500 ${isDarkMode ? 'text-white' : 'text-gray-900'
                                             }`}>Acceso</span>
                                         <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold transition-colors duration-500 ${step === 2
-                                                ? 'bg-blue-600 text-white'
-                                                : isDarkMode ? 'bg-white/20 text-white' : 'bg-gray-300 text-gray-600'
+                                            ? 'bg-blue-600 text-white'
+                                            : isDarkMode ? 'bg-white/20 text-white' : 'bg-gray-300 text-gray-600'
                                             }`}>2</div>
                                     </div>
                                 </div>
@@ -312,8 +304,8 @@ export default function RegisterPage() {
                                         <div className={`absolute inset-0 rounded-xl blur-sm transition-colors duration-500 ${isDarkMode ? 'bg-red-500/10' : 'bg-red-400/20'
                                             }`}></div>
                                         <p className={`relative text-sm text-center p-3 rounded-xl animate-fade-in backdrop-blur-sm transition-colors duration-500 ${isDarkMode
-                                                ? 'text-red-400 bg-red-500/5 border border-red-500/20'
-                                                : 'text-red-600 bg-red-50/80 border border-red-200'
+                                            ? 'text-red-400 bg-red-500/5 border border-red-500/20'
+                                            : 'text-red-600 bg-red-50/80 border border-red-200'
                                             }`}>{error}</p>
                                     </div>
                                 )}
@@ -331,8 +323,8 @@ export default function RegisterPage() {
                                                 placeholder="Nombre(s)"
                                                 required
                                                 className={`w-full pl-12 pr-4 py-4 text-base rounded-2xl focus:outline-none focus:ring-2 focus:ring-blue-500/50 transition-colors duration-500 ${isDarkMode
-                                                        ? 'bg-white/5 border border-white/20 text-white placeholder-gray-400'
-                                                        : 'bg-white/80 border border-gray-300 text-gray-900 placeholder-gray-500'
+                                                    ? 'bg-white/5 border border-white/20 text-white placeholder-gray-400'
+                                                    : 'bg-white/80 border border-gray-300 text-gray-900 placeholder-gray-500'
                                                     }`}
                                             />
                                         </div>
@@ -346,8 +338,8 @@ export default function RegisterPage() {
                                                 placeholder="Apellido(s)"
                                                 required
                                                 className={`w-full pl-12 pr-4 py-4 text-base rounded-2xl focus:outline-none focus:ring-2 focus:ring-blue-500/50 transition-colors duration-500 ${isDarkMode
-                                                        ? 'bg-white/5 border border-white/20 text-white placeholder-gray-400'
-                                                        : 'bg-white/80 border border-gray-300 text-gray-900 placeholder-gray-500'
+                                                    ? 'bg-white/5 border border-white/20 text-white placeholder-gray-400'
+                                                    : 'bg-white/80 border border-gray-300 text-gray-900 placeholder-gray-500'
                                                     }`}
                                             />
                                         </div>
@@ -368,8 +360,8 @@ export default function RegisterPage() {
                                                 placeholder="Nombre de Usuario"
                                                 required
                                                 className={`w-full pl-12 pr-4 py-4 text-base rounded-2xl focus:outline-none focus:ring-2 focus:ring-blue-500/50 transition-colors duration-500 ${isDarkMode
-                                                        ? 'bg-white/5 border border-white/20 text-white placeholder-gray-400'
-                                                        : 'bg-white/80 border border-gray-300 text-gray-900 placeholder-gray-500'
+                                                    ? 'bg-white/5 border border-white/20 text-white placeholder-gray-400'
+                                                    : 'bg-white/80 border border-gray-300 text-gray-900 placeholder-gray-500'
                                                     }`}
                                             />
                                         </div>
@@ -384,8 +376,8 @@ export default function RegisterPage() {
                                                 required
                                                 minLength={8}
                                                 className={`w-full pl-12 pr-12 py-4 text-base rounded-2xl focus:outline-none focus:ring-2 focus:ring-blue-500/50 transition-colors duration-500 ${isDarkMode
-                                                        ? 'bg-white/5 border border-white/20 text-white placeholder-gray-400'
-                                                        : 'bg-white/80 border border-gray-300 text-gray-900 placeholder-gray-500'
+                                                    ? 'bg-white/5 border border-white/20 text-white placeholder-gray-400'
+                                                    : 'bg-white/80 border border-gray-300 text-gray-900 placeholder-gray-500'
                                                     }`}
                                             />
                                             <button
@@ -408,8 +400,8 @@ export default function RegisterPage() {
                                                 required
                                                 minLength={8}
                                                 className={`w-full pl-12 pr-12 py-4 text-base rounded-2xl focus:outline-none focus:ring-2 focus:ring-blue-500/50 transition-colors duration-500 ${isDarkMode
-                                                        ? 'bg-white/5 border border-white/20 text-white placeholder-gray-400'
-                                                        : 'bg-white/80 border border-gray-300 text-gray-900 placeholder-gray-500'
+                                                    ? 'bg-white/5 border border-white/20 text-white placeholder-gray-400'
+                                                    : 'bg-white/80 border border-gray-300 text-gray-900 placeholder-gray-500'
                                                     }`}
                                             />
                                             <button
@@ -430,8 +422,8 @@ export default function RegisterPage() {
                                                 onChange={(e) => setRol(e.target.value)}
                                                 required
                                                 className={`w-full pl-12 pr-4 py-4 text-base rounded-2xl focus:outline-none focus:ring-2 focus:ring-blue-500/50 appearance-none transition-colors duration-500 ${isDarkMode
-                                                        ? 'bg-white/5 border border-white/20 text-white placeholder-gray-400'
-                                                        : 'bg-white/80 border border-gray-300 text-gray-900 placeholder-gray-500'
+                                                    ? 'bg-white/5 border border-white/20 text-white placeholder-gray-400'
+                                                    : 'bg-white/80 border border-gray-300 text-gray-900 placeholder-gray-500'
                                                     }`}
                                             >
                                                 <option value="usuario" className={isDarkMode ? "bg-gray-900" : "bg-white"}>Usuario Normal</option>
@@ -443,8 +435,8 @@ export default function RegisterPage() {
                                                 type="button"
                                                 onClick={handlePrevStep}
                                                 className={`w-full py-4 rounded-2xl font-semibold transition-colors ${isDarkMode
-                                                        ? 'bg-white/10 text-white hover:bg-white/20'
-                                                        : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                                                    ? 'bg-white/10 text-white hover:bg-white/20'
+                                                    : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
                                                     }`}
                                             >
                                                 Atrás

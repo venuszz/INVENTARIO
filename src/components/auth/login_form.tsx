@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { useTheme } from '@/context/ThemeContext';
 import supabase from '@/app/lib/supabase/client';
 import { useSearchParams } from 'next/navigation';
-import { User, Lock, Eye, EyeOff, LogIn, Moon, Sun } from 'lucide-react';
+import { User, Lock, Eye, EyeOff, LogIn, Moon, Sun, Shield } from 'lucide-react';
 import Cookies from 'js-cookie';
 
 export default function LoginPage() {
@@ -16,7 +16,6 @@ export default function LoginPage() {
     const [showPassword, setShowPassword] = useState(false);
     const searchParams = useSearchParams();
 
-    // --- LÓGICA ORIGINAL (SIN CAMBIOS) ---
     const handleLogin = async (e: React.FormEvent) => {
         e.preventDefault();
         setError(null);
@@ -31,7 +30,24 @@ export default function LoginPage() {
         setIsLoading(true);
 
         try {
-            const redirectPath = searchParams.get('from') || '/';
+            const clientId = searchParams.get('client_id');
+            const responseType = searchParams.get('response_type');
+            const redirectUri = searchParams.get('redirect_uri');
+            const scope = searchParams.get('scope');
+            const state = searchParams.get('state');
+
+            let redirectPath = searchParams.get('from') || '/';
+
+            if (clientId && redirectUri) {
+                const params = new URLSearchParams();
+                params.append('client_id', clientId);
+                if (responseType) params.append('response_type', responseType);
+                params.append('redirect_uri', redirectUri);
+                if (scope) params.append('scope', scope);
+                if (state) params.append('state', state);
+
+                redirectPath = `/authorize?${params.toString()}`;
+            }
 
             const { data: userData, error: userError } = await supabase
                 .rpc('get_user_by_username', { p_username: username });
@@ -74,7 +90,6 @@ export default function LoginPage() {
                 path: '/'
             });
 
-            // Redirección directa para una mejor experiencia
             window.location.href = redirectPath;
 
         } catch {
@@ -83,21 +98,18 @@ export default function LoginPage() {
         }
     };
 
-    // --- NUEVO DISEÑO INSPIRADO EN EL COMPONENTE VEHICULAR ---
     return (
-        <div className={`h-screen relative overflow-hidden flex items-center justify-center transition-colors duration-300 ${
-            isDarkMode
-                ? 'bg-black'
-                : 'bg-gradient-to-br from-blue-50 via-white to-blue-100'
-        }`}>
+        <div className={`h-screen relative overflow-hidden flex items-center justify-center transition-colors duration-300 ${isDarkMode
+            ? 'bg-black'
+            : 'bg-gradient-to-br from-blue-50 via-white to-blue-100'
+            }`}>
             {/* Botón de tema - Posición fija superior derecha */}
             <button
                 onClick={toggleDarkMode}
-                className={`fixed top-6 right-6 z-50 p-3 rounded-full transition-all duration-200 hover:scale-110 ${
-                    isDarkMode
-                        ? 'text-gray-300 hover:text-white hover:bg-gray-800/50 bg-white/5 border border-white/10'
-                        : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100 bg-white/80 border border-gray-200'
-                }`}
+                className={`fixed top-6 right-6 z-50 p-3 rounded-full transition-all duration-200 hover:scale-110 ${isDarkMode
+                    ? 'text-gray-300 hover:text-white hover:bg-gray-800/50 bg-white/5 border border-white/10'
+                    : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100 bg-white/80 border border-gray-200'
+                    }`}
                 aria-label="Cambiar modo de color"
                 title={isDarkMode ? "Cambiar a modo claro" : "Cambiar a modo oscuro"}
             >
@@ -110,15 +122,12 @@ export default function LoginPage() {
 
             {/* Efectos de fondo animados - Más suaves */}
             <div className="absolute inset-0 pointer-events-none">
-                <div className={`absolute top-1/4 left-1/4 w-96 h-96 rounded-full blur-3xl transition-all duration-[3000ms] ${
-                    isDarkMode ? 'bg-blue-500/10' : 'bg-blue-400/20'
-                }`} style={{ animation: 'float 8s ease-in-out infinite' }}></div>
-                <div className={`absolute bottom-1/4 right-1/4 w-96 h-96 rounded-full blur-3xl transition-all duration-[3000ms] ${
-                    isDarkMode ? 'bg-white/10' : 'bg-blue-300/15'
-                }`} style={{ animation: 'float 10s ease-in-out infinite', animationDelay: '2s' }}></div>
-                <div className={`absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-64 h-64 rounded-full blur-2xl transition-all duration-[3000ms] ${
-                    isDarkMode ? 'bg-blue-400/5' : 'bg-blue-200/15'
-                }`} style={{ animation: 'float 12s ease-in-out infinite', animationDelay: '4s' }}></div>
+                <div className={`absolute top-1/4 left-1/4 w-96 h-96 rounded-full blur-3xl transition-all duration-[3000ms] ${isDarkMode ? 'bg-blue-500/10' : 'bg-blue-400/20'
+                    }`} style={{ animation: 'float 8s ease-in-out infinite' }}></div>
+                <div className={`absolute bottom-1/4 right-1/4 w-96 h-96 rounded-full blur-3xl transition-all duration-[3000ms] ${isDarkMode ? 'bg-white/10' : 'bg-blue-300/15'
+                    }`} style={{ animation: 'float 10s ease-in-out infinite', animationDelay: '2s' }}></div>
+                <div className={`absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-64 h-64 rounded-full blur-2xl transition-all duration-[3000ms] ${isDarkMode ? 'bg-blue-400/5' : 'bg-blue-200/15'
+                    }`} style={{ animation: 'float 12s ease-in-out infinite', animationDelay: '4s' }}></div>
             </div>
 
             <div className="relative z-10 w-full max-w-6xl px-6" style={{ animation: 'fadeInUp 0.6s ease-out' }}>
@@ -128,16 +137,14 @@ export default function LoginPage() {
                     <div className="text-center lg:text-left" style={{ animation: 'fadeInLeft 0.8s ease-out' }}>
                         <div className="inline-flex items-center justify-center lg:justify-start mb-8">
                             <div className="relative group">
-                                <div className={`absolute -inset-1 rounded-3xl blur-md transition-all duration-500 ${
-                                    isDarkMode
-                                        ? 'bg-blue-500/10 group-hover:bg-blue-500/20'
-                                        : 'bg-blue-400/20 group-hover:bg-blue-400/30'
-                                }`} style={{ animation: 'pulse 3s ease-in-out infinite' }}></div>
-                                <div className={`relative p-6 rounded-3xl backdrop-blur-xl transition-all duration-300 ${
-                                    isDarkMode
-                                        ? 'bg-white/5 border border-white/10'
-                                        : 'bg-white/60 border border-blue-200/30'
-                                }`}>
+                                <div className={`absolute -inset-1 rounded-3xl blur-md transition-all duration-500 ${isDarkMode
+                                    ? 'bg-blue-500/10 group-hover:bg-blue-500/20'
+                                    : 'bg-blue-400/20 group-hover:bg-blue-400/30'
+                                    }`} style={{ animation: 'pulse 3s ease-in-out infinite' }}></div>
+                                <div className={`relative p-6 rounded-3xl backdrop-blur-xl transition-all duration-300 ${isDarkMode
+                                    ? 'bg-white/5 border border-white/10'
+                                    : 'bg-white/60 border border-blue-200/30'
+                                    }`}>
                                     <img
                                         src={isDarkMode ? "/images/ITEA_logo.png" : "/images/ITEA_logo_negro.svg"}
                                         alt="Logo ITEA"
@@ -147,17 +154,14 @@ export default function LoginPage() {
                             </div>
                         </div>
 
-                        <h1 className={`text-5xl lg:text-6xl font-extralight mb-6 tracking-tight transition-colors duration-300 ${
-                            isDarkMode ? 'text-white' : 'text-gray-900'
-                        }`}>
+                        <h1 className={`text-5xl lg:text-6xl font-extralight mb-6 tracking-tight transition-colors duration-300 ${isDarkMode ? 'text-white' : 'text-gray-900'
+                            }`}>
                             Sistema
-                            <span className={`block transition-colors duration-300 ${
-                                isDarkMode ? 'text-blue-400' : 'text-blue-600'
-                            }`}>Gubernamental</span>
+                            <span className={`block transition-colors duration-300 ${isDarkMode ? 'text-blue-400' : 'text-blue-600'
+                                }`}>Gubernamental</span>
                         </h1>
-                        <p className={`text-xl font-light transition-colors duration-300 ${
-                            isDarkMode ? 'text-gray-400' : 'text-gray-600'
-                        }`}>
+                        <p className={`text-xl font-light transition-colors duration-300 ${isDarkMode ? 'text-gray-400' : 'text-gray-600'
+                            }`}>
                             Acceso a la plataforma de gestión de inventario.
                         </p>
                     </div>
@@ -165,28 +169,25 @@ export default function LoginPage() {
                     {/* Panel derecho - Formulario */}
                     <div className="w-full max-w-md mx-auto lg:mx-0" style={{ animation: 'fadeInRight 0.8s ease-out' }}>
                         <form onSubmit={handleLogin} className="space-y-6">
-                            <h2 className={`text-2xl font-bold mb-6 text-center lg:hidden transition-colors duration-300 ${
-                                isDarkMode ? 'text-white' : 'text-gray-900'
-                            }`}>
+                            <h2 className={`text-2xl font-bold mb-6 text-center lg:hidden transition-colors duration-300 ${isDarkMode ? 'text-white' : 'text-gray-900'
+                                }`}>
                                 Iniciar Sesión
                             </h2>
                             {/* Campo de Usuario */}
                             <div className="relative group">
-                                <div className="absolute left-4 top-1/2 transform -translate-y-1/2 transition-all duration-200">
-                                    <User className={`w-5 h-5 transition-all duration-200 ${
-                                        isDarkMode ? 'text-gray-400 group-focus-within:text-blue-400' : 'text-gray-500 group-focus-within:text-blue-600'
-                                    }`} />
+                                <div className="absolute left-4 top-1/2 transform -translate-y-1/2 transition-all duration-200 z-10">
+                                    <User className={`w-5 h-5 transition-all duration-200 ${isDarkMode ? 'text-gray-400 group-focus-within:text-blue-400' : 'text-gray-500 group-focus-within:text-blue-600'
+                                        }`} />
                                 </div>
                                 <input
                                     type="text"
                                     value={username}
                                     onChange={(e) => setUsername(e.target.value)}
                                     placeholder="Nombre de Usuario"
-                                    className={`w-full pl-12 pr-4 py-4 text-base rounded-2xl focus:outline-none focus:ring-2 focus:ring-blue-500/50 backdrop-blur-xl transition-all duration-200 ${
-                                        isDarkMode
-                                            ? 'bg-white/5 border border-white/20 text-white placeholder-gray-400 hover:bg-white/10 focus:bg-white/10 focus:border-white/30'
-                                            : 'bg-white/80 border border-gray-300 text-gray-900 placeholder-gray-500 hover:bg-white focus:bg-white focus:border-blue-400'
-                                    }`}
+                                    className={`w-full pl-12 pr-4 py-4 text-base rounded-2xl focus:outline-none focus:ring-2 focus:ring-blue-500/50 backdrop-blur-xl transition-all duration-200 ${isDarkMode
+                                        ? 'bg-white/5 border border-white/20 text-white placeholder-gray-400 hover:bg-white/10 focus:bg-white/10 focus:border-white/30'
+                                        : 'bg-white/80 border border-gray-300 text-gray-900 placeholder-gray-500 hover:bg-white focus:bg-white focus:border-blue-400'
+                                        }`}
                                     autoComplete="username"
                                     disabled={isLoading}
                                     required
@@ -195,21 +196,19 @@ export default function LoginPage() {
 
                             {/* Campo de Contraseña */}
                             <div className="relative group">
-                                <div className="absolute left-4 top-1/2 transform -translate-y-1/2 transition-all duration-200">
-                                    <Lock className={`w-5 h-5 transition-all duration-200 ${
-                                        isDarkMode ? 'text-gray-400 group-focus-within:text-blue-400' : 'text-gray-500 group-focus-within:text-blue-600'
-                                    }`} />
+                                <div className="absolute left-4 top-1/2 transform -translate-y-1/2 transition-all duration-200 z-10">
+                                    <Lock className={`w-5 h-5 transition-all duration-200 ${isDarkMode ? 'text-gray-400 group-focus-within:text-blue-400' : 'text-gray-500 group-focus-within:text-blue-600'
+                                        }`} />
                                 </div>
                                 <input
                                     type={showPassword ? "text" : "password"}
                                     value={password}
                                     onChange={(e) => setPassword(e.target.value)}
                                     placeholder="Contraseña"
-                                    className={`w-full pl-12 pr-12 py-4 text-base rounded-2xl focus:outline-none focus:ring-2 focus:ring-blue-500/50 backdrop-blur-xl transition-all duration-200 ${
-                                        isDarkMode
-                                            ? 'bg-white/5 border border-white/20 text-white placeholder-gray-400 hover:bg-white/10 focus:bg-white/10 focus:border-white/30'
-                                            : 'bg-white/80 border border-gray-300 text-gray-900 placeholder-gray-500 hover:bg-white focus:bg-white focus:border-blue-400'
-                                    }`}
+                                    className={`w-full pl-12 pr-12 py-4 text-base rounded-2xl focus:outline-none focus:ring-2 focus:ring-blue-500/50 backdrop-blur-xl transition-all duration-200 ${isDarkMode
+                                        ? 'bg-white/5 border border-white/20 text-white placeholder-gray-400 hover:bg-white/10 focus:bg-white/10 focus:border-white/30'
+                                        : 'bg-white/80 border border-gray-300 text-gray-900 placeholder-gray-500 hover:bg-white focus:bg-white focus:border-blue-400'
+                                        }`}
                                     autoComplete="current-password"
                                     disabled={isLoading}
                                     required
@@ -217,9 +216,8 @@ export default function LoginPage() {
                                 <button
                                     type="button"
                                     onClick={() => setShowPassword((prev) => !prev)}
-                                    className={`absolute right-4 top-1/2 transform -translate-y-1/2 focus:outline-none transition-all duration-200 ${
-                                        isDarkMode ? 'text-gray-400 hover:text-blue-400' : 'text-gray-500 hover:text-blue-600'
-                                    }`}
+                                    className={`absolute right-4 top-1/2 transform -translate-y-1/2 focus:outline-none transition-all duration-200 ${isDarkMode ? 'text-gray-400 hover:text-blue-400' : 'text-gray-500 hover:text-blue-600'
+                                        }`}
                                     tabIndex={-1}
                                     aria-label={showPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'}
                                     disabled={isLoading}
@@ -234,14 +232,12 @@ export default function LoginPage() {
 
                             {error && (
                                 <div className="relative" style={{ animation: 'shake 0.4s ease-in-out' }}>
-                                    <div className={`absolute inset-0 rounded-xl blur-sm transition-colors duration-300 ${
-                                        isDarkMode ? 'bg-red-500/10' : 'bg-red-400/20'
-                                    }`}></div>
-                                    <p className={`relative text-sm text-center p-3 rounded-xl backdrop-blur-sm transition-colors duration-300 ${
-                                        isDarkMode
-                                            ? 'text-red-400 bg-red-500/5 border border-red-500/20'
-                                            : 'text-red-600 bg-red-50/80 border border-red-200'
-                                    }`} style={{ animation: 'fadeIn 0.3s ease-out' }}>
+                                    <div className={`absolute inset-0 rounded-xl blur-sm transition-colors duration-300 ${isDarkMode ? 'bg-red-500/10' : 'bg-red-400/20'
+                                        }`}></div>
+                                    <p className={`relative text-sm text-center p-3 rounded-xl backdrop-blur-sm transition-colors duration-300 ${isDarkMode
+                                        ? 'text-red-400 bg-red-500/5 border border-red-500/20'
+                                        : 'text-red-600 bg-red-50/80 border border-red-200'
+                                        }`} style={{ animation: 'fadeIn 0.3s ease-out' }}>
                                         {error}
                                     </p>
                                 </div>
@@ -266,6 +262,78 @@ export default function LoginPage() {
                                             <span>Iniciar Sesión</span>
                                         </>
                                     )}
+                                </button>
+
+                                {/* Divider with text */}
+                                <div className="relative flex py-2 items-center">
+                                    <div className={`flex-grow border-t ${isDarkMode ? 'border-gray-700' : 'border-gray-300'}`}></div>
+                                    <span className={`flex-shrink-0 mx-4 text-sm ${isDarkMode ? 'text-gray-500' : 'text-gray-400'}`}>O continúa con</span>
+                                    <div className={`flex-grow border-t ${isDarkMode ? 'border-gray-700' : 'border-gray-300'}`}></div>
+                                </div>
+
+                                {/* SSO Button */}
+                                <button
+                                    type="button"
+                                    onClick={async () => {
+                                        setIsLoading(true);
+                                        try {
+                                            // Redirigir al endpoint de API que maneja el inicio del flujo
+                                            window.location.href = process.env.NEXT_PUBLIC_SSO_URL as string;
+                                        } catch (err) {
+                                            console.error(err);
+                                            setIsLoading(false);
+                                            setError("Error iniciando SSO");
+                                        }
+                                    }}
+                                    disabled={isLoading}
+                                    className={`group relative w-full py-5 px-8 rounded-2xl font-bold transition-all duration-700 flex items-center justify-between overflow-hidden transform active:scale-[0.98] ${isDarkMode
+                                        ? 'bg-neutral-100 border border-white text-black hover:text-white hover:border-neutral-800'
+                                        : 'bg-black border border-black text-white hover:text-black shadow-2xl hover:border-neutral-200'
+                                        }`}
+                                >
+                                    <div className="relative z-10 flex items-center text-lg md:text-xl">
+                                        <span className="opacity-80">Acceder con</span>
+                                        <span className="ml-2 font-extrabold tracking-tight">AXpert</span>
+                                    </div>
+
+                                    <div className="relative z-10 h-9 flex items-center">
+                                        {/* Logo Container with enhanced crossfade */}
+                                        {isDarkMode ? (
+                                            <>
+                                                {/* Dark Mode: Start White bg (Black Logo) -> Hover Dark bg (White Logo) */}
+                                                <img
+                                                    src="/images/BlackLogo.png"
+                                                    alt="AXpert"
+                                                    className="h-9 w-auto object-contain transition-all duration-500 group-hover:opacity-0 group-hover:scale-90"
+                                                />
+                                                <img
+                                                    src="/images/WhiteLogo.png"
+                                                    alt="AXpert"
+                                                    className="h-9 w-auto object-contain absolute right-0 opacity-0 transition-all duration-500 group-hover:opacity-100 group-hover:scale-110"
+                                                />
+                                            </>
+                                        ) : (
+                                            <>
+                                                {/* Light Mode: Start Black bg (White Logo) -> Hover White bg (Black Logo) */}
+                                                <img
+                                                    src="/images/WhiteLogo.png"
+                                                    alt="AXpert"
+                                                    className="h-9 w-auto object-contain transition-all duration-500 group-hover:opacity-0 group-hover:scale-90"
+                                                />
+                                                <img
+                                                    src="/images/BlackLogo.png"
+                                                    alt="AXpert"
+                                                    className="h-9 w-auto object-contain absolute right-0 opacity-0 transition-all duration-500 group-hover:opacity-100 group-hover:scale-110"
+                                                />
+                                            </>
+                                        )}
+                                    </div>
+
+                                    {/* Premium Background Reveal Animation (Inverts based on mode) */}
+                                    <div className={`absolute inset-0 -translate-x-full group-hover:translate-x-0 transition-transform duration-500 ease-in-out ${isDarkMode ? 'bg-black' : 'bg-white'}`}></div>
+
+                                    {/* Subtle Glow Effect */}
+                                    <div className={`absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-700 ${isDarkMode ? 'bg-gradient-to-r from-transparent via-white/5 to-transparent' : 'bg-gradient-to-r from-transparent via-black/5 to-transparent'}`}></div>
                                 </button>
                             </div>
                         </form>
@@ -336,6 +404,6 @@ export default function LoginPage() {
                     20%, 40%, 60%, 80% { transform: translateX(5px); }
                 }
             `}</style>
-        </div>
+        </div >
     );
 }

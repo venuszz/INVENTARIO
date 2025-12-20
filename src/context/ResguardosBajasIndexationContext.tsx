@@ -97,7 +97,7 @@ export const ResguardosBajasIndexationProvider: React.FC<{ children: React.React
                 },
                 (payload) => {
                     console.log('Resguardos bajas change detected:', payload);
-                    
+
                     if (payload.eventType === 'INSERT') {
                         setResguardosBajas(prev => [...prev, payload.new as ResguardoBaja]);
                     } else if (payload.eventType === 'UPDATE') {

@@ -145,12 +145,12 @@ export const IneaIndexationProvider: React.FC<{ children: React.ReactNode }> = (
 
                 if (data && data.length > 0) {
                     allData = allData.concat(data as MuebleInea[]);
-                    
+
                     if (showProgress) {
-                        setState(prev => ({ 
-                            ...prev, 
+                        setState(prev => ({
+                            ...prev,
                             progress: allData.length,
-                            data: allData 
+                            data: allData
                         }));
                     }
 

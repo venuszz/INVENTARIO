@@ -94,7 +94,7 @@ export const ResguardosIndexationProvider: React.FC<{ children: React.ReactNode 
                 },
                 (payload) => {
                     console.log('Resguardos change detected:', payload);
-                    
+
                     if (payload.eventType === 'INSERT') {
                         setResguardos(prev => [...prev, payload.new as Resguardo]);
                     } else if (payload.eventType === 'UPDATE') {
