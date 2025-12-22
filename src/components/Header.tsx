@@ -3,7 +3,7 @@ import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { usePathname } from 'next/navigation';
-import { ChevronDown, ChevronRight, User, LogOut, Database, FileText, Settings, Menu, X, Grid, Bell, Moon, Sun, Package, UserCheck } from 'lucide-react';
+import { ChevronDown, ChevronRight, User, LogOut, Database, FileText, Settings, Menu, X, Grid, Bell, Moon, Sun, Package, UserCheck, Link2 } from 'lucide-react';
 import Cookies from 'js-cookie';
 import { useRouter } from 'next/navigation';
 import supabase from '@/app/lib/supabase/client';
@@ -70,7 +70,7 @@ export default function NavigationBar() {
     const [openMenu, setOpenMenu] = useState<string | null>(null);
     const [openSubmenu, setOpenSubmenu] = useState<string | null>(null);
     const [notificationsOpen, setNotificationsOpen] = useState(false);
-    const [userData, setUserData] = useState<{ firstName?: string; lastName?: string; username?: string; email?: string; rol?: string; oauthProvider?: string }>({});
+    const [userData, setUserData] = useState<{ id?: string; firstName?: string; lastName?: string; username?: string; email?: string; rol?: string; oauthProvider?: string }>({});
     const [showLogoutModal, setShowLogoutModal] = useState(false);
     const [modalPosition, setModalPosition] = useState({ x: 0, y: 0 });
     const [popoverPosition, setPopoverPosition] = useState<'top' | 'bottom'>('bottom');
@@ -156,6 +156,7 @@ export default function NavigationBar() {
             try {
                 const parsed = JSON.parse(userDataCookie);
                 setUserData({
+                    id: parsed.id,
                     firstName: parsed.firstName,
                     lastName: parsed.lastName,
                     username: parsed.username,
@@ -783,8 +784,8 @@ export default function NavigationBar() {
                                 </div>
                             </RoleGuard>
 
-                            {/* AXpert Profile Avatar - Only for SSO users */}
-                            {userData.oauthProvider === 'axpert' && (
+                            {/* User Profile & Sync Hub */}
+                            {(userData.id || userData.username || userData.email) && (
                                 <div
                                     className="relative flex items-center"
                                     ref={avatarPopoverRef}
@@ -806,9 +807,12 @@ export default function NavigationBar() {
                                             )}
                                         </div>
 
-                                        {/* Status Dot (Subtle AXpert Indicator) */}
-                                        <div className={`absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full border-2 ${isDarkMode ? 'bg-white border-black' : 'bg-black border-white'
-                                            }`} />
+                                        {/* Status Dot */}
+                                        {/* Green if linked (AXpert), Gray/Empty if not */}
+                                        {userData.oauthProvider === 'axpert' && (
+                                            <div className={`absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full border-2 ${isDarkMode ? 'bg-white border-black' : 'bg-black border-white'
+                                                }`} title="Cuenta Vinculada con AXpert" />
+                                        )}
                                     </div>
 
                                     {/* Elegant Monochromatic Popover */}
@@ -818,48 +822,120 @@ export default function NavigationBar() {
                                                 ? 'bg-black/90 border-white/10 text-white'
                                                 : 'bg-white/95 border-gray-200 text-black'
                                                 }`}
-                                                style={{ width: '240px' }}
+                                                style={{ width: '260px' }}
                                             >
-                                                <div className="p-5 flex flex-col items-center gap-4">
-                                                    {/* Profile Avatar Large */}
-                                                    <div className={`w-14 h-14 rounded-xl overflow-hidden shadow-sm border flex items-center justify-center ${isDarkMode ? 'border-white/10' : 'border-gray-100'
-                                                        } ${!axpertAvatarUrl ? (isDarkMode ? 'bg-white text-black' : 'bg-black text-white') : ''}`}>
-                                                        {axpertAvatarUrl ? (
+                                                {userData.oauthProvider === 'axpert' ? (
+                                                    // === VIEW: LINKED USER (AXpert) ===
+                                                    <div className="p-5 flex flex-col items-center gap-4">
+                                                        {/* Profile Avatar Large */}
+                                                        <div className={`w-14 h-14 rounded-xl overflow-hidden shadow-sm border flex items-center justify-center ${isDarkMode ? 'border-white/10' : 'border-gray-100'
+                                                            } ${!axpertAvatarUrl ? (isDarkMode ? 'bg-white text-black' : 'bg-black text-white') : ''}`}>
+                                                            {axpertAvatarUrl ? (
+                                                                <img
+                                                                    src={axpertAvatarUrl}
+                                                                    alt="Profile"
+                                                                    className="w-full h-full object-cover"
+                                                                />
+                                                            ) : (
+                                                                <span className="text-lg font-bold">{getInitials()}</span>
+                                                            )}
+                                                        </div>
+
+                                                        {/* User Info */}
+                                                        <div className="text-center space-y-0.5">
+                                                            <p className="text-sm font-bold tracking-tight">
+                                                                {userData.firstName} {userData.lastName}
+                                                            </p>
+                                                            <p className={`text-[10px] font-medium opacity-50`}>
+                                                                {userData.email}
+                                                            </p>
+                                                        </div>
+
+                                                        <button
+                                                            onClick={() => window.open(process.env.NEXT_PUBLIC_SSO_URL_HEADER, '_blank')}
+                                                            className={`w-full py-2.5 px-4 rounded-xl text-[9px] font-bold uppercase tracking-widest transition-all duration-300 flex items-center justify-center gap-2.5 active:scale-95 ${isDarkMode
+                                                                ? 'bg-white text-black hover:bg-gray-200'
+                                                                : 'bg-black text-white hover:bg-gray-800 shadow-md shadow-black/10'
+                                                                }`}
+                                                        >
                                                             <img
-                                                                src={axpertAvatarUrl}
-                                                                alt="Profile"
-                                                                className="w-full h-full object-cover"
+                                                                src={isDarkMode ? "/images/BlackLogo.png" : "/images/WhiteLogo.png"}
+                                                                alt="AX"
+                                                                className="h-2.5 w-auto object-contain"
                                                             />
-                                                        ) : (
-                                                            <span className="text-lg font-bold">{getInitials()}</span>
-                                                        )}
+                                                            Panel de Usuario
+                                                        </button>
                                                     </div>
+                                                ) : (
+                                                    // === VIEW: TRADITIONAL USER (Sync Prompt) ===
+                                                    <div className="p-6 flex flex-col items-center gap-6">
+                                                        {/* Minimalist Institutional Connection */}
+                                                        <div className="relative flex items-center justify-center w-full">
+                                                            <div className="flex items-center justify-between w-full max-w-[140px] relative">
+                                                                {/* Local Node - Strict Minimalist */}
+                                                                <div className={`w-10 h-10 rounded-full flex items-center justify-center border transition-colors duration-300 ${isDarkMode ? 'bg-zinc-900 border-zinc-800 text-zinc-400' : 'bg-zinc-50 border-zinc-200 text-zinc-500'}`}>
+                                                                    <span className="text-[10px] font-bold tracking-tighter">{getInitials()}</span>
+                                                                </div>
 
-                                                    {/* User Info */}
-                                                    <div className="text-center space-y-0.5">
-                                                        <p className="text-sm font-bold tracking-tight">
-                                                            {userData.firstName} {userData.lastName}
-                                                        </p>
-                                                        <p className={`text-[10px] font-medium opacity-50`}>
-                                                            {userData.email}
-                                                        </p>
+                                                                {/* Minimalist Connector Line */}
+                                                                <div className={`h-[1px] flex-1 mx-2 ${isDarkMode ? 'bg-zinc-800' : 'bg-zinc-200'}`}></div>
+
+                                                                {/* AXpert Node - Dynamic Logo */}
+                                                                <div className={`w-10 h-10 rounded-full flex items-center justify-center border transition-colors duration-300 ${isDarkMode ? 'bg-zinc-900 border-zinc-800' : 'bg-zinc-50 border-zinc-200'}`}>
+                                                                    <img
+                                                                        src={isDarkMode ? "/images/WhiteLogo.png" : "/images/BlackLogo.png"}
+                                                                        alt="AXpert"
+                                                                        className="w-5 h-auto grayscale opacity-80"
+                                                                    />
+                                                                </div>
+                                                            </div>
+                                                        </div>
+
+                                                        {/* Institutional Messaging */}
+                                                        <div className="text-center space-y-2">
+                                                            <h4 className={`text-sm font-bold tracking-tight ${isDarkMode ? 'text-zinc-100' : 'text-zinc-900'}`}>
+                                                                Portal de Identidad Institucional
+                                                            </h4>
+                                                            <p className={`text-[10px] leading-relaxed px-1 transition-colors duration-300 ${isDarkMode ? 'text-zinc-500' : 'text-zinc-400'}`}>
+                                                                Vincule su cuenta local con la plataforma <span className="font-semibold italic">AXpert</span> para formalizar su acceso y asegurar la integridad de sus datos institucionales.
+                                                            </p>
+                                                        </div>
+
+                                                        {/* Action Button (Keep unchanged architecture, but following previous styling) */}
+
+                                                        {/* Action Button (Keep unchanged) */}
+
+                                                        {/* Action Button */}
+                                                        <button
+                                                            className={`group relative w-full py-3 px-4 rounded-xl overflow-hidden transition-all duration-300 active:scale-95 shadow-lg ${isDarkMode
+                                                                ? 'bg-neutral-100 text-black border border-white hover:border-neutral-300'
+                                                                : 'bg-black text-white border border-black hover:border-gray-800'
+                                                                }`}
+                                                            onClick={async () => {
+                                                                // Future implementation: Logic to start linking flow
+                                                                console.log("Iniciar vinculación");
+                                                            }}
+                                                        >
+                                                            {/* Default State */}
+                                                            <div className="relative z-10 flex items-center justify-center gap-2 group-hover:opacity-0 transition-opacity duration-300">
+                                                                <span className="text-[10px] uppercase font-extrabold tracking-widest">Vincular Cuenta</span>
+                                                            </div>
+
+                                                            {/* Hover Overlay Background (Inverted) */}
+                                                            <div className={`absolute inset-0 -translate-x-full group-hover:translate-x-0 transition-transform duration-500 ease-out ${isDarkMode ? 'bg-black' : 'bg-white'}`}></div>
+
+                                                            {/* Hover Content (Inverted Colors) */}
+                                                            <div className={`absolute inset-0 z-10 flex items-center justify-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300 ${isDarkMode ? 'text-white' : 'text-black'}`}>
+                                                                <span className="text-[10px] uppercase font-extrabold tracking-widest">Conectar</span>
+                                                                <img
+                                                                    src={isDarkMode ? "/images/WhiteLogo.png" : "/images/BlackLogo.png"}
+                                                                    alt="AX"
+                                                                    className="h-2.5 w-auto object-contain"
+                                                                />
+                                                            </div>
+                                                        </button>
                                                     </div>
-
-                                                    <button
-                                                        onClick={() => window.open(process.env.NEXT_PUBLIC_SSO_URL_HEADER, '_blank')}
-                                                        className={`w-full py-2.5 px-4 rounded-xl text-[9px] font-bold uppercase tracking-widest transition-all duration-300 flex items-center justify-center gap-2.5 active:scale-95 ${isDarkMode
-                                                            ? 'bg-white text-black hover:bg-gray-200'
-                                                            : 'bg-black text-white hover:bg-gray-800 shadow-md shadow-black/10'
-                                                            }`}
-                                                    >
-                                                        <img
-                                                            src={isDarkMode ? "/images/BlackLogo.png" : "/images/WhiteLogo.png"}
-                                                            alt="AX"
-                                                            className="h-2.5 w-auto object-contain"
-                                                        />
-                                                        Panel de Usuario
-                                                    </button>
-                                                </div>
+                                                )}
                                             </div>
                                         </div>
                                     )}
