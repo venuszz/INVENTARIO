@@ -117,6 +117,7 @@ export async function POST(request: NextRequest) {
       rol: user.rol,
       email: user.email,
       oauthProvider: user.oauth_provider || null,
+      loginMethod: 'local', // Indica que se usó el método de login tradicional
     }), cookieOptions);
     
     // Si el usuario está vinculado con AXpert, cargar su perfil

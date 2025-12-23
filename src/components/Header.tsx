@@ -3,7 +3,7 @@ import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { usePathname } from 'next/navigation';
-import { ChevronDown, ChevronRight, User, LogOut, Database, FileText, Settings, Menu, X, Grid, Bell, Moon, Sun, Package, UserCheck, Link2 } from 'lucide-react';
+import { ChevronDown, ChevronRight, User, LogOut, Database, FileText, Settings, Menu, X, Grid, Bell, Moon, Sun, Package, UserCheck, Link2, Crown, Cog, Shield } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import supabase from '@/app/lib/supabase/client';
 import RoleGuard from "@/components/roleGuard";
@@ -66,7 +66,7 @@ export default function NavigationBar() {
     const [openMenu, setOpenMenu] = useState<string | null>(null);
     const [openSubmenu, setOpenSubmenu] = useState<string | null>(null);
     const [notificationsOpen, setNotificationsOpen] = useState(false);
-    const [userData, setUserData] = useState<{ id?: string; firstName?: string; lastName?: string; username?: string; email?: string; rol?: string; oauthProvider?: 'axpert' | 'local' }>({});
+    const [userData, setUserData] = useState<{ id?: string; firstName?: string; lastName?: string; username?: string; email?: string; rol?: string; oauthProvider?: 'axpert' | 'local'; loginMethod?: 'local' | 'axpert' }>({});
     const [showLogoutModal, setShowLogoutModal] = useState(false);
     const [modalPosition, setModalPosition] = useState({ x: 0, y: 0 });
     const [popoverPosition, setPopoverPosition] = useState<'top' | 'bottom'>('bottom');
@@ -178,7 +178,8 @@ export default function NavigationBar() {
                 username: sessionUser.username,
                 email: sessionUser.email,
                 rol: sessionUser.rol ?? undefined,
-                oauthProvider: sessionUser.oauthProvider
+                oauthProvider: sessionUser.oauthProvider,
+                loginMethod: sessionUser.loginMethod
             });
 
             // Cargar avatar de AXpert si el usuario inició sesión con AXpert
@@ -885,13 +886,27 @@ export default function NavigationBar() {
                                                         </div>
 
                                                         {/* User Info */}
-                                                        <div className="text-center space-y-0.5">
+                                                        <div className="text-center space-y-2">
                                                             <p className="text-sm font-bold tracking-tight">
                                                                 {userData.firstName} {userData.lastName}
                                                             </p>
-                                                            <p className={`text-[10px] font-medium opacity-50`}>
-                                                                {userData.email}
-                                                            </p>
+                                                            {/* Show email only if logged in via AXpert */}
+                                                            {userData.loginMethod === 'axpert' && (
+                                                                <p className={`text-[10px] font-medium opacity-50`}>
+                                                                    {userData.email}
+                                                                </p>
+                                                            )}
+                                                            {userData.rol && (
+                                                                <div className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-widest border ${isDarkMode
+                                                                    ? 'bg-white text-black border-white'
+                                                                    : 'bg-black text-white border-black'
+                                                                    }`}>
+                                                                    {userData.rol === 'superadmin' && <Crown size={12} />}
+                                                                    {userData.rol === 'admin' && <Cog size={12} />}
+                                                                    {userData.rol === 'usuario' && <Shield size={12} />}
+                                                                    {userData.rol}
+                                                                </div>
+                                                            )}
                                                         </div>
 
                                                         <button
@@ -933,6 +948,19 @@ export default function NavigationBar() {
                                                                 </div>
                                                             </div>
                                                         </div>
+
+                                                        {/* User Role Badge */}
+                                                        {userData.rol && (
+                                                            <div className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-widest border ${isDarkMode
+                                                                ? 'bg-white text-black border-white'
+                                                                : 'bg-black text-white border-black'
+                                                                }`}>
+                                                                {userData.rol === 'superadmin' && <Crown size={12} />}
+                                                                {userData.rol === 'admin' && <Cog size={12} />}
+                                                                {userData.rol === 'usuario' && <Shield size={12} />}
+                                                                {userData.rol}
+                                                            </div>
+                                                        )}
 
                                                         {/* Institutional Messaging */}
                                                         <div className="text-center space-y-2">

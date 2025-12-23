@@ -13,6 +13,7 @@ export interface UserData {
   email: string;
   rol: string | null;
   oauthProvider?: 'axpert' | 'local';
+  loginMethod?: 'local' | 'axpert';
 }
 
 export interface AxpertProfile {

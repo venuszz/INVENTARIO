@@ -78,6 +78,7 @@ export async function GET(request: NextRequest) {
         email: userData.email,
         rol: userData.rol,
         oauthProvider: userData.oauthProvider,
+        loginMethod: userData.loginMethod,
       },
       pendingUser: null,
       axpertProfile,

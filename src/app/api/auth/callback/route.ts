@@ -197,6 +197,7 @@ export async function GET(request: NextRequest) {
                     rol: updatedUser.rol,
                     email: axpertProfile.email, // Mostramos el de AXpert inmediatamente
                     oauthProvider: 'axpert',
+                    loginMethod: 'axpert', // Indica que se usó el método de login a través de AXpert
                 }), cookieOptions);
             }
 
@@ -401,6 +402,7 @@ export async function GET(request: NextRequest) {
             rol: localUser.rol,
             email: axpertProfile.email, // USAR EMAIL DE AXPERT
             oauthProvider: 'axpert',
+            loginMethod: 'axpert', // Indica que se usó el método de login a través de AXpert
         }), cookieOptions);
 
         // Guardar el perfil de AXpert para acceso al avatar
