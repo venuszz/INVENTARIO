@@ -237,25 +237,6 @@ La aplicación estará disponible en `http://localhost:3000`
 
 ---
 
-## 🔧 Variables de entorno
-
-```env
-# Supabase
-NEXT_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
-NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-key
-SUPABASE_SERVICE_ROLE_KEY=your-service-key
-
-# OAuth (AXpert)
-SUPABASE_OAUTH_PROVIDER_URL=https://your-oauth-provider.com
-SUPABASE_OAUTH_CLIENT_ID=your-client-id
-SUPABASE_OAUTH_CLIENT_SECRET=your-client-secret
-
-# SSO
-NEXT_PUBLIC_SSO_URL_HEADER=https://your-sso-url.com
-```
-
----
-
 ## 📱 Uso de la aplicación
 
 ### Para usuarios normales
