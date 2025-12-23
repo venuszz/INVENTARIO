@@ -173,17 +173,19 @@ export default function Inicio() {
       {isGravityEnabled && <GravityBackground />}
 
       {/* Efecto de luz que sigue al cursor */}
-      <div
-        className={`absolute w-64 h-64 rounded-full pointer-events-none z-0 blur-3xl transition-opacity duration-500 ${isDarkMode ? 'opacity-20' : 'opacity-30'
-          }`}
-        style={{
-          background: isDarkMode
-            ? 'radial-gradient(circle, rgba(255,255,255,0.8) 0%, rgba(255,255,255,0) 70%)'
-            : 'radial-gradient(circle, rgba(59,130,246,0.6) 0%, rgba(59,130,246,0) 70%)',
-          transform: `translate(${mousePosition.x - 128}px, ${mousePosition.y - 128}px)`,
-          transition: 'transform 0.1s ease-out'
-        }}
-      ></div>
+      {isGravityEnabled && (
+        <div
+          className={`absolute w-64 h-64 rounded-full pointer-events-none z-0 blur-3xl transition-opacity duration-500 ${isDarkMode ? 'opacity-20' : 'opacity-30'
+            }`}
+          style={{
+            background: isDarkMode
+              ? 'radial-gradient(circle, rgba(255,255,255,0.8) 0%, rgba(255,255,255,0) 70%)'
+              : 'radial-gradient(circle, rgba(59,130,246,0.6) 0%, rgba(59,130,246,0) 70%)',
+            transform: `translate(${mousePosition.x - 128}px, ${mousePosition.y - 128}px)`,
+            transition: 'transform 0.1s ease-out'
+          }}
+        ></div>
+      )}
 
       {/* Líneas de conexión */}
       <div className="absolute inset-0 bg-connections z-0"></div>
@@ -209,7 +211,7 @@ export default function Inicio() {
                 <p className={`relative text-3xl font-medium tracking-wide transition-colors duration-500 ${isDarkMode ? 'text-white' : 'text-gray-900'
                   }`}>
                   <span className="animate-text-shimmer bg-gradient-to-r from-current via-current to-current bg-[length:200%_100%] bg-clip-text">
-                    Esperando Interacción A|X
+                    Esperando Interacción
                   </span>
                 </p>
 
@@ -228,7 +230,7 @@ export default function Inicio() {
             <div className="flex flex-col items-center gap-1 pt-4 relative z-50">
               <p className={`text-[8px] tracking-widest uppercase transition-colors duration-500 ${isDarkMode ? 'text-gray-600' : 'text-gray-400'
                 }`}>
-                Derechos Reservados © 2025
+                Derechos Reservados © 2026
               </p>
 
               {showCredits && (
@@ -244,8 +246,8 @@ export default function Inicio() {
           )}
         </div>
 
-        {/* Círculos orbitando alrededor del logo - Solo visible cuando NO hay inactividad */}
-        {!isInactive && (
+        {/* Círculos orbitando alrededor del logo - Solo visible cuando NO hay inactividad y efectos activos */}
+        {!isInactive && isGravityEnabled && (
           <div className="absolute inset-0 z-0 animate-in fade-in-0 duration-1000">
             <div className="orbit orbit1"></div>
             <div className="orbit orbit2"></div>

@@ -63,15 +63,18 @@ async function handleProxy(request: NextRequest) {
     }
 
     const allowedPrefixes = [
-        '/rest/v1/muebles?',
-        '/rest/v1/mueblesitea?',
-        '/rest/v1/resguardos?',
-        '/rest/v1/resguardos_bajas?',
+        '/rest/v1/muebles',
+        '/rest/v1/mueblesitea',
+        '/rest/v1/resguardos',
+        '/rest/v1/resguardos_bajas',
         '/rest/v1/config',
         '/rest/v1/directorio',
         '/rest/v1/area',
         '/rest/v1/directorio_areas',
         '/rest/v1/rpc/get_admin_notifications',
+        '/rest/v1/users',
+        '/rest/v1/notifications',
+        '/rest/v1/admin_notification_states',
     ];
 
     const isAllowed = allowedPrefixes.some((p) => target.startsWith(p));
@@ -83,7 +86,10 @@ async function handleProxy(request: NextRequest) {
         target.startsWith('/rest/v1/config') ||
         target.startsWith('/rest/v1/directorio') ||
         target.startsWith('/rest/v1/area') ||
-        target.startsWith('/rest/v1/directorio_areas');
+        target.startsWith('/rest/v1/directorio_areas') ||
+        target.startsWith('/rest/v1/notifications') ||
+        target.startsWith('/rest/v1/admin_notification_states') ||
+        target.startsWith('/rest/v1/users');
 
     const isRpcNotifications = target.startsWith('/rest/v1/rpc/get_admin_notifications');
 
@@ -93,7 +99,7 @@ async function handleProxy(request: NextRequest) {
             return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
         }
 
-        if (!isAdminTableTarget) {
+        if (!isAdminTableTarget && !isRpcNotifications) {
             return NextResponse.json({ error: 'Target not allowed' }, { status: 403 });
         }
     }

@@ -80,6 +80,7 @@ export default function NavigationBar() {
     const [searchBarShouldHide, setSearchBarShouldHide] = useState(false);
     const [axpertAvatarUrl, setAxpertAvatarUrl] = useState<string | null>(null);
     const [showAvatarPopover, setShowAvatarPopover] = useState(false);
+    const [showLinkingSuccess, setShowLinkingSuccess] = useState(false);
     const handleLogout = useCerrarSesion();
     const { notifications, doNotDisturb } = useNotifications();
     const unreadCount = notifications.filter(n => !n.is_read && !n.data?.is_deleted).length;
@@ -92,6 +93,25 @@ export default function NavigationBar() {
     const actionButtonsContainerRef = useRef<HTMLDivElement>(null);
     const notificationWrapperRef = useRef<HTMLDivElement>(null);
     const avatarPopoverRef = useRef<HTMLDivElement>(null);
+
+    // Detectar éxito de vinculación
+    useEffect(() => {
+        const searchParams = new URLSearchParams(window.location.search);
+        if (searchParams.get('linked') === 'success') {
+            setShowLinkingSuccess(true);
+            setShowAvatarPopover(true);
+
+            // Limpiar URL
+            const newUrl = window.location.pathname;
+            window.history.replaceState({}, '', newUrl);
+
+            // Auto-ocultar mensaje de éxito después de 8 segundos
+            const timer = setTimeout(() => {
+                setShowLinkingSuccess(false);
+            }, 8000);
+            return () => clearTimeout(timer);
+        }
+    }, []);
 
     // Gestionar visibilidad de elementos
     useEffect(() => {
@@ -752,25 +772,26 @@ export default function NavigationBar() {
                                 <div className="relative" ref={notificationWrapperRef}>
                                     <button
                                         onClick={() => setNotificationsOpen(!notificationsOpen)}
-                                        className={`p-2 rounded-full relative transition-all duration-200 hover:scale-110 ${isDarkMode
-                                            ? 'text-gray-300 hover:text-white hover:bg-gray-800'
-                                            : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
+                                        className={`p-2 rounded-full relative transition-all duration-300 hover:scale-110 ${isDarkMode
+                                            ? doNotDisturb ? 'text-purple-400 bg-purple-500/10' : 'text-gray-300 hover:text-white hover:bg-gray-800'
+                                            : doNotDisturb ? 'text-purple-600 bg-purple-100' : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
                                             }`}
                                         title={doNotDisturb ? "Modo No Molestar activo" : "Notificaciones"}
                                     >
-                                        <Bell className="h-5 w-5" />
-                                        {unreadCount > 0 && (
+                                        <Bell className={`h-5 w-5 transition-all duration-300 ${doNotDisturb ? 'fill-purple-500/20' : ''}`} />
+                                        {(unreadCount > 0 || doNotDisturb) && (
                                             <>
-                                                <span className={`absolute top-0 right-0 h-2 w-2 rounded-full ${doNotDisturb ? 'bg-purple-500' : 'bg-white'
-                                                    }`}></span>
-                                                {!doNotDisturb && (
-                                                    <span className="absolute -top-2 -right-2 bg-white text-black text-xs font-bold rounded-full px-1.5 min-w-[18px] text-center border border-black shadow">
-                                                        {unreadCount}
-                                                    </span>
+                                                {unreadCount > 0 && !doNotDisturb && (
+                                                    <>
+                                                        <span className="absolute top-0 right-0 h-2 w-2 rounded-full bg-white ring-2 ring-black"></span>
+                                                        <span className="absolute -top-2 -right-2 bg-white text-black text-[10px] font-bold rounded-full px-1.5 min-w-[18px] h-[18px] flex items-center justify-center border border-black shadow-sm">
+                                                            {unreadCount}
+                                                        </span>
+                                                    </>
                                                 )}
                                                 {doNotDisturb && (
-                                                    <span className="absolute -top-2 -right-2 bg-purple-600 text-white text-xs font-bold rounded-full p-1 min-w-[18px] text-center border border-black shadow">
-                                                        <Moon size={10} />
+                                                    <span className="absolute -top-0.5 -right-0.5 bg-purple-600 text-white rounded-full p-0.5 shadow-sm animate-in zoom-in-50 duration-500 ring-1 ring-white dark:ring-black">
+                                                        <Moon size={8} className="fill-current" />
                                                     </span>
                                                 )}
                                             </>
@@ -824,7 +845,34 @@ export default function NavigationBar() {
                                                 }`}
                                                 style={{ width: '260px' }}
                                             >
-                                                {userData.oauthProvider === 'axpert' ? (
+                                                {showLinkingSuccess ? (
+                                                    // === VIEW: LINKING SUCCESS MESSAGE ===
+                                                    <div className="p-6 flex flex-col items-center gap-6 animate-in fade-in slide-in-from-bottom-2 duration-700">
+                                                        <div className="relative flex items-center justify-center">
+                                                            <div className={`w-14 h-14 rounded-full flex items-center justify-center border transition-colors duration-500 ${isDarkMode ? 'bg-green-950/30 border-green-900/50 text-green-400' : 'bg-green-50 border-green-100 text-green-600'}`}>
+                                                                <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                                                                    <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                                                                </svg>
+                                                            </div>
+                                                        </div>
+
+                                                        <div className="text-center space-y-2">
+                                                            <h4 className={`text-sm font-bold tracking-tight ${isDarkMode ? 'text-zinc-100' : 'text-zinc-900'}`}>
+                                                                Vinculación Exitosa
+                                                            </h4>
+                                                            <p className={`text-[10px] leading-relaxed px-1 transition-colors duration-300 ${isDarkMode ? 'text-zinc-500' : 'text-zinc-400'}`}>
+                                                                Su identidad digital ha sido unificada correctamente con el sistema institucional.
+                                                            </p>
+                                                        </div>
+
+                                                        <button
+                                                            onClick={() => setShowLinkingSuccess(false)}
+                                                            className={`text-[9px] font-bold uppercase tracking-widest py-2 px-4 rounded-lg transition-colors ${isDarkMode ? 'hover:bg-white/5 text-zinc-400 hover:text-white' : 'hover:bg-black/5 text-zinc-500 hover:text-black'}`}
+                                                        >
+                                                            Cerrar
+                                                        </button>
+                                                    </div>
+                                                ) : userData.oauthProvider === 'axpert' ? (
                                                     // === VIEW: LINKED USER (AXpert) ===
                                                     <div className="p-5 flex flex-col items-center gap-4">
                                                         {/* Profile Avatar Large */}
@@ -912,8 +960,8 @@ export default function NavigationBar() {
                                                                 : 'bg-black text-white border border-black hover:border-gray-800'
                                                                 }`}
                                                             onClick={async () => {
-                                                                // Future implementation: Logic to start linking flow
-                                                                console.log("Iniciar vinculación");
+                                                                // Iniciar flujo de vinculación
+                                                                window.location.href = '/api/auth/sso?mode=linking';
                                                             }}
                                                         >
                                                             {/* Default State */}

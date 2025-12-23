@@ -24,11 +24,40 @@ export async function GET(request: NextRequest) {
     const origin = new URL(request.url).origin;
     const redirectUri = `${origin}/api/auth/callback`;
 
-    const state = Buffer.from(JSON.stringify({
-        timestamp: Date.now(),
-        nonce: Math.random().toString(36)
-    })).toString('base64url');
+    const { searchParams } = new URL(request.url);
+    const mode = searchParams.get('mode');
 
+    // Estado base para OAuth
+    const statePayload: any = {
+        timestamp: Date.now(),
+        nonce: Math.random().toString(36),
+    };
+
+    // Si es modo vinculación, validamos sesión y añadimos metadata
+    if (mode === 'linking') {
+        const userDataCookie = request.cookies.get('userData');
+
+        if (!userDataCookie) {
+            return NextResponse.json(
+                { error: "Unauthorized: Must be logged in to link accounts" },
+                { status: 401 }
+            );
+        }
+
+        try {
+            const userData = JSON.parse(userDataCookie.value);
+            if (!userData.id) throw new Error("No user ID found");
+            statePayload.mode = 'linking';
+            statePayload.original_user_id = userData.id;
+        } catch (e) {
+            return NextResponse.json(
+                { error: "Invalid session" },
+                { status: 401 }
+            );
+        }
+    }
+
+    const state = Buffer.from(JSON.stringify(statePayload)).toString('base64url');
     const codeVerifier = generateCodeVerifier();
     const codeChallenge = await generateCodeChallenge(codeVerifier);
 

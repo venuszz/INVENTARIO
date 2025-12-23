@@ -31,6 +31,15 @@ export async function GET(request: NextRequest) {
         );
     }
 
+    // Decodificar el estado para ver si hay metadata (como mode: 'linking')
+    let stateMetadata: any = {};
+    try {
+        const decodedState = Buffer.from(state, 'base64url').toString('utf-8');
+        stateMetadata = JSON.parse(decodedState);
+    } catch (e) {
+        // Marcamos si falló para saber que es un estado tradicional
+    }
+
     const codeVerifier = request.cookies.get('oauth_code_verifier')?.value;
     if (!codeVerifier) {
         return NextResponse.redirect(
@@ -104,7 +113,6 @@ export async function GET(request: NextRequest) {
         const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
         if (!supabaseServiceKey) {
-            console.error('SERVER ERROR: SUPABASE_SERVICE_ROLE_KEY is not defined en .env.local');
             return NextResponse.redirect(
                 new URL('/login?error=Server configuration error', request.url)
             );
@@ -112,86 +120,210 @@ export async function GET(request: NextRequest) {
 
         const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey);
 
-        // Verificar si el usuario existe en nuestra base de datos local
-        const { data: existingUser, error: userError } = await supabaseAdmin
-            .from('users')
-            .select('*')
-            .eq('email', axpertProfile.email)
-            .single();
+        // =================================================================================
+        // MODO VINCULACIÓN DE CUENTAS (ACCOUNT LINKING)
+        // =================================================================================
+        if (stateMetadata.mode === 'linking') {
+            // Confiamos en el stateMetadata porque el state fue validado contra la cookie oauth_state original
+            // Esto evita problemas si la cookie de sesión userData no llega correctamente en el callback
+            const originalUserId = stateMetadata.original_user_id;
 
-        let localUser = existingUser;
-
-        if (userError && userError.code !== 'PGRST116') {
-            console.error('Error verificando usuario:', userError);
-            return NextResponse.redirect(
-                new URL('/login?error=Error de base de datos', request.url)
-            );
-        }
-
-        // Si el usuario NO existe, crearlo como pendiente de aprobación
-        if (!existingUser) {
-            // 1. Asegurar que el usuario existe en auth.users (para satisfacer FK users_id_fkey) y actualizar metadata
-            // Intentamos actualizar primero por si ya existe en auth pero no en public.users
-            const { error: updateError } = await supabaseAdmin.auth.admin.updateUserById(
-                axpertProfile.id,
-                {
-                    user_metadata: {
-                        first_name: axpertProfile.first_name,
-                        last_name: axpertProfile.last_name,
-                        avatar_url: axpertProfile.avatar_url, // Guardamos aquí la URL
-                    }
-                }
-            );
-
-            // Si falla la actualización (ej: no existe), lo creamos
-            if (updateError) {
-                const { error: authCreateError } = await supabaseAdmin.auth.admin.createUser({
-                    id: axpertProfile.id,
-                    email: axpertProfile.email,
-                    email_confirm: true,
-                    user_metadata: {
-                        first_name: axpertProfile.first_name,
-                        last_name: axpertProfile.last_name,
-                        avatar_url: axpertProfile.avatar_url, // Guardamos aquí la URL
-                    }
-                });
-
-                if (authCreateError) {
-                    console.log('Info: Error creando/actualizando auth user:', authCreateError.message);
-                }
-            }
-
-            // Generar username automático desde el email
-            const username = axpertProfile.email.split('@')[0];
-
-            const { data: newUser, error: createError } = await supabaseAdmin
-                .from('users')
-                .insert({
-                    id: axpertProfile.id, // Usar el mismo ID que en AXpert para consistencia
-                    email: axpertProfile.email,
-                    username: username,
-                    first_name: axpertProfile.first_name,
-                    last_name: axpertProfile.last_name,
-                    oauth_provider: 'axpert',
-                    oauth_user_id: axpertProfile.id,
-                    rol: null,
-                    is_active: false,
-                    pending_approval: true,
-                    // avatar_url: axpertProfile.avatar_url // REMOVED: Column does not exist
-                })
-                .select()
-                .single();
-
-            if (createError) {
-                console.error('Error creando usuario:', createError);
+            if (!originalUserId) {
                 return NextResponse.redirect(
-                    new URL('/login?error=Error creando usuario', request.url)
+                    new URL('/login?error=Invalid linking state', request.url)
                 );
             }
 
-            localUser = newUser;
+            // Actualizar el usuario existente con los datos de AXpert
+            const { error: updateError } = await supabaseAdmin
+                .from('users')
+                .update({
+                    oauth_provider: 'axpert',
+                    oauth_user_id: axpertProfile.id,
+                })
+                .eq('id', originalUserId);
+
+            if (updateError) {
+                return NextResponse.redirect(
+                    new URL('/?error=Failed to link account', request.url)
+                );
+            }
+
+            // Recuperar los datos actualizados del usuario para la cookie
+            const { data: updatedUser } = await supabaseAdmin
+                .from('users')
+                .select('*')
+                .eq('id', originalUserId)
+                .single();
+
+            // Actualizar cookies para reflejar el cambio inmediato en el frontend
+            // ESTRATEGIA: En lugar de redirect 307 directo, devolvemos una página HTML intermedia.
+            // Esto es crucial porque si la cookie de sesión original (authToken) tiene SameSite=Strict,
+            // el navegador NO la enviará en la redirección inmediata tras volver de un dominio externo (AXpert).
+            // Al cargar una página intermedia y hacer la navegación por JS/Meta, se restablece el contexto Same-Site.
+
+            const response = new NextResponse(
+                `<!DOCTYPE html>
+                <html>
+                <head>
+                    <meta http-equiv="refresh" content="0;url=/?linked=success">
+                    <title>Redirigiendo...</title>
+                </head>
+                <body>
+                    <script>window.location.href = '/?linked=success';</script>
+                </body>
+                </html>`,
+                {
+                    status: 200,
+                    headers: { 'Content-Type': 'text/html' }
+                }
+            );
+
+            const cookieOptions = {
+                httpOnly: false,
+                secure: process.env.NODE_ENV === 'production',
+                sameSite: 'lax' as const,
+                maxAge: 60 * 60 * 4,
+                path: '/',
+            };
+
+            // Recargar userData con la nueva info
+            if (updatedUser) {
+                response.cookies.set('userData', JSON.stringify({
+                    id: updatedUser.id,
+                    username: updatedUser.username,
+                    firstName: updatedUser.first_name,
+                    lastName: updatedUser.last_name,
+                    rol: updatedUser.rol,
+                    email: axpertProfile.email, // Mostramos el de AXpert inmediatamente
+                    oauthProvider: 'axpert',
+                }), cookieOptions);
+            }
+
+            // Guardar avatar de AXpert
+            response.cookies.set('axpert_profile', JSON.stringify({
+                avatarUrl: axpertProfile.avatar_url,
+                email: axpertProfile.email,
+                firstName: axpertProfile.first_name,
+                lastName: axpertProfile.last_name,
+            }), cookieOptions);
+
+            response.cookies.set('axpert_avatar_url', axpertProfile.avatar_url || '', cookieOptions);
+
+            // Limpiar estado
+            response.cookies.delete('oauth_state');
+            response.cookies.delete('oauth_code_verifier');
+
+            return response;
+        }
+
+        // =================================================================================
+        // FLUJO NORMAL DE LOGIN / REGISTRO
+        // =================================================================================
+
+        // 1. INTENTO PRIMARIO: Buscar por ID de usuario OAuth (Independiente del email)
+        // Esto es crucial para cuentas ya vinculadas donde el email puede haber cambiado o ser diferente
+        const { data: linkedUser, error: linkedError } = await supabaseAdmin
+            .from('users')
+            .select('*')
+            .eq('oauth_user_id', axpertProfile.id)
+            .eq('oauth_provider', 'axpert')
+            .single();
+
+        let localUser = linkedUser;
+
+        // 2. INTENTO SECUNDARIO: Si no hay cuenta vinculada, buscar por EMAIL
+        // Esto permite vincular automáticamente cuentas antiguas por coincidencia de correo
+        if (!localUser) {
+            const { data: emailUser, error: emailError } = await supabaseAdmin
+                .from('users')
+                .select('*')
+                .eq('email', axpertProfile.email)
+                .single();
+
+            if (emailUser) {
+                localUser = emailUser;
+                // Auto-vinculación silenciosa si coincide el email
+                await supabaseAdmin.from('users').update({
+                    oauth_provider: 'axpert',
+                    oauth_user_id: axpertProfile.id
+                }).eq('id', localUser.id);
+            }
+        }
+
+        // Si el usuario NO existe, crearlo
+        if (!localUser) {
+            // Verificar primero si el ID ya existe en public.users (caso raro de ID colisionando)
+            const { data: idCollisionUser } = await supabaseAdmin
+                .from('users')
+                .select('*')
+                .eq('id', axpertProfile.id)
+                .single();
+
+            if (idCollisionUser) {
+                // Si existe por ID, lo usamos y actualizamos sus datos de oauth
+                localUser = idCollisionUser;
+                await supabaseAdmin.from('users').update({
+                    oauth_provider: 'axpert',
+                    oauth_user_id: axpertProfile.id
+                }).eq('id', localUser.id);
+            } else {
+                // PROCEDER CON CREACIÓN NUEVA
+
+                // 1. Asegurar auth.users
+                const { error: updateError } = await supabaseAdmin.auth.admin.updateUserById(
+                    axpertProfile.id,
+                    {
+                        user_metadata: {
+                            first_name: axpertProfile.first_name,
+                            last_name: axpertProfile.last_name,
+                            avatar_url: axpertProfile.avatar_url,
+                        }
+                    }
+                );
+
+                if (updateError) {
+                    await supabaseAdmin.auth.admin.createUser({
+                        id: axpertProfile.id,
+                        email: axpertProfile.email,
+                        email_confirm: true,
+                        user_metadata: {
+                            first_name: axpertProfile.first_name,
+                            last_name: axpertProfile.last_name,
+                            avatar_url: axpertProfile.avatar_url,
+                        }
+                    });
+                }
+
+                // Generar username
+                const username = axpertProfile.email.split('@')[0];
+
+                const { data: newUser, error: createError } = await supabaseAdmin
+                    .from('users')
+                    .insert({
+                        id: axpertProfile.id,
+                        email: axpertProfile.email,
+                        username: username,
+                        first_name: axpertProfile.first_name,
+                        last_name: axpertProfile.last_name,
+                        oauth_provider: 'axpert',
+                        oauth_user_id: axpertProfile.id,
+                        rol: null,
+                        is_active: false,
+                        pending_approval: true,
+                    })
+                    .select()
+                    .single();
+
+                if (createError) {
+                    return NextResponse.redirect(
+                        new URL('/login?error=Error creando usuario', request.url)
+                    );
+                }
+                localUser = newUser;
+            }
         } else {
-            // Si el usuario ya existe, actualizamos su avatar en metadata de todas formas para tener lo más reciente
+            // Si el usuario ya existe (lo encontramos en paso 1 o 2), actualizamos metadata
             await supabaseAdmin.auth.admin.updateUserById(
                 axpertProfile.id,
                 {
@@ -225,10 +357,7 @@ export async function GET(request: NextRequest) {
             }), cookieOptions);
 
             // COOKIE ADICIONAL SOLICITADA PARA EL USO DE ESTA SESION
-            response.cookies.set('axpert_avatar_url', axpertProfile.avatar_url || '', {
-                ...cookieOptions,
-                httpOnly: false // Accessible by client
-            });
+            response.cookies.set('axpert_avatar_url', axpertProfile.avatar_url || '', cookieOptions);
 
 
             response.cookies.delete('oauth_state');
@@ -248,8 +377,7 @@ export async function GET(request: NextRequest) {
             path: '/',
         };
 
-        // NOTE: El cliente (navegador) necesita leer el token para adjuntarlo a las llamadas REST
-        // en los providers de indexación. Por eso este cookie NO debe ser httpOnly.
+        // NOTE: El cliente (navegador) necesita leer el token para adjuntarlo a las llamadas REST en los providers de indexación. Por eso este cookie NO debe ser httpOnly.
         response.cookies.set('authToken', access_token, {
             ...cookieOptions,
             httpOnly: false,
@@ -273,7 +401,7 @@ export async function GET(request: NextRequest) {
             firstName: axpertProfile.first_name,
             lastName: axpertProfile.last_name,
             rol: localUser.rol,
-            email: localUser.email,
+            email: axpertProfile.email, // USAR EMAIL DE AXPERT
             oauthProvider: 'axpert',
         }), {
             ...cookieOptions,
@@ -283,6 +411,7 @@ export async function GET(request: NextRequest) {
         // Guardar el perfil de AXpert para acceso al avatar
         response.cookies.set('axpert_profile', JSON.stringify({
             avatarUrl: axpertProfile.avatar_url,
+            email: axpertProfile.email,
             firstName: axpertProfile.first_name,
             lastName: axpertProfile.last_name,
         }), {
@@ -303,7 +432,6 @@ export async function GET(request: NextRequest) {
 
 
     } catch (error) {
-        console.error('Error en OAuth callback:', error);
         return NextResponse.redirect(
             new URL('/login?error=Authentication failed', request.url)
         );
