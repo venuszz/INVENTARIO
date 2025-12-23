@@ -22,7 +22,7 @@ export async function POST(request: NextRequest) {
         const userData = JSON.parse(userDataCookie.value);
 
         // Verificar que sea superadmin
-        if (userData.rol !== 'superadmin' && userData.rol !== 'admin') {
+        if (userData.rol !== 'superadmin') {
             return NextResponse.json(
                 { error: 'No tienes permisos para realizar esta acción' },
                 { status: 403 }

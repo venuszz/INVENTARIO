@@ -34,7 +34,7 @@ interface PendingUser {
 
 export default function UsuariosPendientesPage() {
     const { isDarkMode } = useTheme();
-    const { user } = useSession();
+    const { user, isLoading } = useSession();
     const router = useRouter();
     const [pendingUsers, setPendingUsers] = useState<PendingUser[]>([]);
     const [selectedUser, setSelectedUser] = useState<PendingUser | null>(null);
@@ -51,12 +51,17 @@ export default function UsuariosPendientesPage() {
 
     useEffect(() => {
         const checkAuth = async () => {
+            // Esperar a que la sesión termine de cargar
+            if (isLoading) {
+                return;
+            }
+
             if (!user) {
                 router.push('/login');
                 return;
             }
 
-            if (user.rol !== 'superadmin' && user.rol !== 'admin') {
+            if (user.rol !== 'superadmin') {
                 router.push('/');
                 return;
             }
@@ -64,7 +69,7 @@ export default function UsuariosPendientesPage() {
             await loadPendingUsers();
         };
         checkAuth();
-    }, [router, user]);
+    }, [router, user, isLoading]);
 
     const loadPendingUsers = async () => {
         try {
