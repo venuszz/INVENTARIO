@@ -923,6 +923,17 @@ export default function NavigationBar() {
                                                             />
                                                             Panel de Usuario
                                                         </button>
+
+                                                        <button
+                                                            onClick={confirmLogout}
+                                                            className={`w-full py-2.5 px-4 rounded-xl text-[9px] font-bold uppercase tracking-widest transition-all duration-300 flex items-center justify-center gap-2.5 active:scale-95 ${isDarkMode
+                                                                ? 'bg-red-500/10 text-red-400 hover:bg-red-500/20 border border-red-500/30'
+                                                                : 'bg-red-50 text-red-600 hover:bg-red-100 border border-red-200'
+                                                                }`}
+                                                        >
+                                                            <LogOut size={14} />
+                                                            Cerrar Sesión
+                                                        </button>
                                                     </div>
                                                 ) : (
                                                     // === VIEW: TRADITIONAL USER (Sync Prompt) ===
@@ -948,19 +959,6 @@ export default function NavigationBar() {
                                                                 </div>
                                                             </div>
                                                         </div>
-
-                                                        {/* User Role Badge */}
-                                                        {userData.rol && (
-                                                            <div className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-widest border ${isDarkMode
-                                                                ? 'bg-white text-black border-white'
-                                                                : 'bg-black text-white border-black'
-                                                                }`}>
-                                                                {userData.rol === 'superadmin' && <Crown size={12} />}
-                                                                {userData.rol === 'admin' && <Cog size={12} />}
-                                                                {userData.rol === 'usuario' && <Shield size={12} />}
-                                                                {userData.rol}
-                                                            </div>
-                                                        )}
 
                                                         {/* Institutional Messaging */}
                                                         <div className="text-center space-y-2">
@@ -1005,6 +1003,32 @@ export default function NavigationBar() {
                                                                 />
                                                             </div>
                                                         </button>
+
+                                                        {/* User Role Badge */}
+                                                        {userData.rol && (
+                                                            <div className={`w-full flex justify-center`}>
+                                                                <div className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-widest border ${isDarkMode
+                                                                    ? 'bg-white text-black border-white'
+                                                                    : 'bg-black text-white border-black'
+                                                                    }`}>
+                                                                    {userData.rol === 'superadmin' && <Crown size={12} />}
+                                                                    {userData.rol === 'admin' && <Cog size={12} />}
+                                                                    {userData.rol === 'usuario' && <Shield size={12} />}
+                                                                    {userData.rol}
+                                                                </div>
+                                                            </div>
+                                                        )}
+
+                                                        <button
+                                                            onClick={confirmLogout}
+                                                            className={`w-full py-2.5 px-4 rounded-xl text-[9px] font-bold uppercase tracking-widest transition-all duration-300 flex items-center justify-center gap-2.5 active:scale-95 ${isDarkMode
+                                                                ? 'bg-red-500/10 text-red-400 hover:bg-red-500/20 border border-red-500/30'
+                                                                : 'bg-red-50 text-red-600 hover:bg-red-100 border border-red-200'
+                                                                }`}
+                                                        >
+                                                            <LogOut size={14} />
+                                                            Cerrar Sesión
+                                                        </button>
                                                     </div>
                                                 )}
                                             </div>
@@ -1013,16 +1037,6 @@ export default function NavigationBar() {
                                 </div>
                             )}
 
-                            <button
-                                onClick={initiateLogout}
-                                className={`p-2 rounded-full transition-all duration-200 hover:scale-110 ${isDarkMode
-                                    ? 'text-gray-300 hover:text-white hover:bg-gray-800'
-                                    : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
-                                    }`}
-                                title='Cerrar sesión'
-                            >
-                                <LogOut className="h-5 w-5" />
-                            </button>
                         </div >
                     </div >
 
