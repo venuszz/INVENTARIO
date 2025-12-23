@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useTheme } from '@/context/ThemeContext';
 import { Clock, CheckCircle2, Moon, Sun, Loader2 } from 'lucide-react';
-import Cookies from 'js-cookie';
+import { useSession } from '@/hooks/useSession';
 import supabase from '@/app/lib/supabase/client';
 import { useRouter } from 'next/navigation';
 
@@ -16,6 +16,7 @@ interface PendingUserInfo {
 
 export default function PendingApprovalPage() {
     const { isDarkMode, toggleDarkMode } = useTheme();
+    const { user, pendingUser } = useSession();
     const router = useRouter();
     const [userInfo, setUserInfo] = useState<PendingUserInfo | null>(null);
     const [isApproved, setIsApproved] = useState(false);
@@ -25,38 +26,25 @@ export default function PendingApprovalPage() {
 
     useEffect(() => {
         const checkAccess = () => {
-            const userData = Cookies.get('userData');
-            const pendingCookie = Cookies.get('pending_user_info');
-            const avatarCookie = Cookies.get('axpert_avatar_url');
-
-            // 1. Si ya tiene userData, significa que ya está activo/logueado -> Redirigir al inicio
-            if (userData) {
+            // 1. Si ya tiene user (userData), significa que ya está activo/logueado -> Redirigir al inicio
+            if (user) {
                 router.replace('/');
                 return;
             }
 
-            // 2. Si NO tiene cookie de pendiente, no debería estar aquí -> Redirigir al login
-            if (!pendingCookie) {
+            // 2. Si NO tiene pendingUser, no debería estar aquí -> Redirigir al login
+            if (!pendingUser) {
                 router.replace('/login');
                 return;
             }
 
-            // 3. Si es válido (tiene pendingCookie y no userData), cargar info
-            try {
-                const info = JSON.parse(pendingCookie);
-                if (avatarCookie) {
-                    info.avatarUrl = avatarCookie;
-                }
-                setUserInfo(info);
-                setIsChecking(false);
-            } catch (e) {
-                console.error('Error parseando pending_user_info:', e);
-                router.replace('/login');
-            }
+            // 3. Si es válido (tiene pendingUser y no user), cargar info
+            setUserInfo(pendingUser);
+            setIsChecking(false);
         };
 
         checkAccess();
-    }, [router]);
+    }, [router, user, pendingUser]);
 
     // Supabase Realtime Subscription
     useEffect(() => {

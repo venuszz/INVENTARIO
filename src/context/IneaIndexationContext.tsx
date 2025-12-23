@@ -1,7 +1,6 @@
 "use client"
 import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
 import supabase from '@/app/lib/supabase/client';
-import Cookies from 'js-cookie';
 import type { RealtimeChannel, RealtimePostgresChangesPayload } from '@supabase/supabase-js';
 
 // Interface para los datos de muebles INEA
@@ -250,9 +249,23 @@ export const IneaIndexationProvider: React.FC<{ children: React.ReactNode }> = (
 
         const initializeData = async () => {
             // Verificar si el usuario está autenticado
-            const userData = Cookies.get('userData');
-            if (!userData) {
-                // No está autenticado, no inicializar
+            try {
+                const response = await fetch('/api/auth/session', {
+                    credentials: 'include',
+                });
+                
+                if (!response.ok) {
+                    // No está autenticado, no inicializar
+                    return;
+                }
+                
+                const sessionData = await response.json();
+                if (!sessionData.isAuthenticated) {
+                    // No está autenticado, no inicializar
+                    return;
+                }
+            } catch (error) {
+                console.error('Error checking authentication:', error);
                 return;
             }
 
@@ -282,25 +295,42 @@ export const IneaIndexationProvider: React.FC<{ children: React.ReactNode }> = (
 
     // Suscribirse a cambios en tiempo real
     useEffect(() => {
-        // Verificar autenticación
-        const userData = Cookies.get('userData');
-        if (!userData || !state.isComplete) return;
+        // Solo suscribirse si los datos están completos
+        if (!state.isComplete) return;
 
-        // Crear suscripción
-        const channel = supabase
-            .channel('muebles-changes')
-            .on(
-                'postgres_changes',
-                {
-                    event: '*',
-                    schema: 'public',
-                    table: 'muebles'
-                },
-                handleRealtimeUpdate
-            )
-            .subscribe();
+        // Verificar autenticación de manera asíncrona
+        const checkAuthAndSubscribe = async () => {
+            try {
+                const response = await fetch('/api/auth/session', {
+                    credentials: 'include',
+                });
+                
+                if (!response.ok) return;
+                
+                const sessionData = await response.json();
+                if (!sessionData.isAuthenticated) return;
 
-        subscriptionRef.current = channel;
+                // Crear suscripción
+                const channel = supabase
+                    .channel('muebles-changes')
+                    .on(
+                        'postgres_changes',
+                        {
+                            event: '*',
+                            schema: 'public',
+                            table: 'muebles'
+                        },
+                        handleRealtimeUpdate
+                    )
+                    .subscribe();
+
+                subscriptionRef.current = channel;
+            } catch (error) {
+                console.error('Error setting up realtime subscription:', error);
+            }
+        };
+
+        checkAuthAndSubscribe();
 
         return () => {
             if (subscriptionRef.current) {

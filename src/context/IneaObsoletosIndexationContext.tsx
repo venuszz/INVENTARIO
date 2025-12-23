@@ -1,7 +1,6 @@
 "use client"
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import supabase from '@/app/lib/supabase/client';
-import Cookies from 'js-cookie';
 
 interface Obsoleto {
     id: number;
@@ -64,14 +63,32 @@ export function IneaObsoletosIndexationProvider({ children }: { children: React.
 
     useEffect(() => {
         // Verificar si el usuario está autenticado
-        const userData = Cookies.get('userData');
-        if (!userData) {
-            // No está autenticado, no inicializar
-            setIsIndexing(false);
-            return;
-        }
+        const checkAuthAndFetch = async () => {
+            try {
+                const response = await fetch('/api/auth/session', {
+                    credentials: 'include',
+                });
+                
+                if (!response.ok) {
+                    setIsIndexing(false);
+                    return;
+                }
+                
+                const sessionData = await response.json();
+                if (!sessionData.isAuthenticated) {
+                    setIsIndexing(false);
+                    return;
+                }
 
-        fetchData();
+                // Usuario autenticado, proceder con fetch
+                await fetchData();
+            } catch (error) {
+                console.error('Error checking authentication:', error);
+                setIsIndexing(false);
+            }
+        };
+
+        checkAuthAndFetch();
 
         // Suscripción a cambios en tiempo real
         const channel = supabase

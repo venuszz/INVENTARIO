@@ -2,7 +2,6 @@
 
 import React, { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
 import supabase from '@/app/lib/supabase/client';
-import Cookies from 'js-cookie';
 
 interface NotificationData {
     location?: string;
@@ -58,7 +57,30 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
 
     const [userData, setUserData] = useState<any>(null);
 
-    // Initial load from localStorage and cookies
+    // Función para obtener datos del usuario desde el servidor
+    const fetchUserData = useCallback(async () => {
+        try {
+            const response = await fetch('/api/auth/session', {
+                credentials: 'include',
+            });
+            
+            if (response.ok) {
+                const data = await response.json();
+                if (data.isAuthenticated && data.user) {
+                    setUserData(data.user);
+                } else {
+                    setUserData(null);
+                }
+            } else {
+                setUserData(null);
+            }
+        } catch (error) {
+            console.error('Error fetching user data:', error);
+            setUserData(null);
+        }
+    }, []);
+
+    // Initial load from localStorage and fetch user data
     useEffect(() => {
         if (typeof window !== 'undefined') {
             const saved = localStorage.getItem('doNotDisturb');
@@ -66,37 +88,20 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
                 setDoNotDisturb(JSON.parse(saved));
             }
 
-            const cookieData = Cookies.get('userData');
-            if (cookieData) {
-                try {
-                    setUserData(JSON.parse(cookieData));
-                } catch (e) {
-                    console.error("Error parsing userData cookie", e);
-                }
-            }
+            // Obtener datos del usuario desde el servidor
+            fetchUserData();
             setInitialized(true);
         }
-    }, []);
+    }, [fetchUserData]);
 
-    // Monitor cookie changes for login/logout (simple polling)
+    // Monitor session changes (polling cada minuto)
     useEffect(() => {
         const interval = setInterval(() => {
-            const cookieData = Cookies.get('userData');
-            if (!cookieData) {
-                if (userData !== null) setUserData(null);
-                return;
-            }
-            try {
-                const parsed = JSON.parse(cookieData);
-                if (JSON.stringify(parsed) !== JSON.stringify(userData)) {
-                    setUserData(parsed);
-                }
-            } catch (e) {
-                // Ignore parse errors
-            }
-        }, 3000);
+            fetchUserData();
+        }, 60000); // Cada 60 segundos
+        
         return () => clearInterval(interval);
-    }, [userData]);
+    }, [fetchUserData]);
 
     const userId = userData?.id;
     const userRole = userData?.rol;

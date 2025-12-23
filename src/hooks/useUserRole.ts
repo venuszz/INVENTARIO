@@ -1,18 +1,21 @@
-import { useEffect, useState } from "react";
-import Cookies from "js-cookie";
+import { useSession } from "./useSession";
 
-export function useUserRole() {
-    const [role, setRole] = useState<string | undefined>();
-    useEffect(() => {
-        const userDataCookie = Cookies.get("userData");
-        if (userDataCookie) {
-            try {
-                const parsed = JSON.parse(userDataCookie);
-                setRole(parsed.rol);
-            } catch {
-                setRole(undefined);
-            }
-        }
-    }, []);
-    return role;
+/**
+ * Hook useUserRole
+ * 
+ * Proporciona acceso al rol del usuario actual de manera segura.
+ * Utiliza el hook useSession internamente.
+ * 
+ * @returns {string | undefined} El rol del usuario o undefined si está cargando o no tiene rol
+ */
+export function useUserRole(): string | undefined {
+    const { user, isLoading } = useSession();
+    
+    // Si está cargando, retornar undefined
+    if (isLoading) {
+        return undefined;
+    }
+    
+    // Retornar el rol del usuario, convirtiendo null a undefined
+    return user?.rol ?? undefined;
 }

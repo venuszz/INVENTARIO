@@ -5,7 +5,7 @@ import {
     ArrowUpDown, AlertCircle, X, Save, Trash2, LayoutGrid, ChevronDown, Building2, User, Shield, AlertTriangle, Calendar, Info, Edit, Receipt, ClipboardList, Store, CheckCircle, XCircle, Plus, DollarSign, BadgeCheck, Archive, FileWarning
 } from 'lucide-react';
 import supabase from '@/app/lib/supabase/client';
-import Cookies from 'js-cookie';
+import { useSession } from "@/hooks/useSession";
 import { useUserRole } from "@/hooks/useUserRole";
 import RoleGuard from "@/components/roleGuard";
 import { useNotifications } from '@/hooks/useNotifications';
@@ -185,6 +185,7 @@ function getStatusBadgeColors(status: string | null | undefined) {
 export default function ConsultasNoListadoGeneral() {
     // Usar el contexto de indexación en lugar de estado local
     const { data: muebles, isIndexing, reindex } = useIneaIndexation();
+    const { user } = useSession();
     const router = useRouter();
     const searchParams = useSearchParams();
     const [error, setError] = useState<string | null>(null);
@@ -488,17 +489,11 @@ export default function ConsultasNoListadoGeneral() {
                 .eq('id', selectedItem.id);
             if (error) throw error;
 
-            // Obtener nombre completo del usuario desde la cookie userData
+            // Obtener nombre completo del usuario desde el hook useSession
             let createdBy = 'SISTEMA';
-            try {
-                const userData = Cookies.get('userData');
-                if (userData) {
-                    const parsed = JSON.parse(userData);
-                    if (parsed.firstName && parsed.lastName) {
-                        createdBy = `${parsed.firstName} ${parsed.lastName}`;
-                    }
-                }
-            } catch { }
+            if (user?.firstName && user?.lastName) {
+                createdBy = `${user.firstName} ${user.lastName}`;
+            }
 
             await supabase.from('deprecated').insert({
                 id_inv: selectedItem.id_inv,

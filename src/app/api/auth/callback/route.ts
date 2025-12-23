@@ -180,7 +180,7 @@ export async function GET(request: NextRequest) {
             );
 
             const cookieOptions = {
-                httpOnly: false,
+                httpOnly: true,  // ✅ SEGURIDAD: Protección contra XSS
                 secure: process.env.NODE_ENV === 'production',
                 sameSite: 'lax' as const,
                 maxAge: 60 * 60 * 4,
@@ -341,7 +341,7 @@ export async function GET(request: NextRequest) {
             const response = NextResponse.redirect(new URL('/pending-approval', request.url));
 
             const cookieOptions = {
-                httpOnly: false,
+                httpOnly: true,  // ✅ SEGURIDAD: Protección contra XSS
                 secure: process.env.NODE_ENV === 'production',
                 sameSite: 'lax' as const,
                 maxAge: 60 * 60 * 4,
@@ -370,18 +370,15 @@ export async function GET(request: NextRequest) {
         const response = NextResponse.redirect(new URL('/', request.url));
 
         const cookieOptions = {
-            httpOnly: true,
+            httpOnly: true,  // ✅ SEGURIDAD: Protección contra XSS
             secure: process.env.NODE_ENV === 'production',
             sameSite: 'lax' as const,
             maxAge: 60 * 60 * 4,
             path: '/',
         };
 
-        // NOTE: El cliente (navegador) necesita leer el token para adjuntarlo a las llamadas REST en los providers de indexación. Por eso este cookie NO debe ser httpOnly.
-        response.cookies.set('authToken', access_token, {
-            ...cookieOptions,
-            httpOnly: false,
-        });
+        // authToken ahora con HttpOnly para máxima seguridad
+        response.cookies.set('authToken', access_token, cookieOptions);
 
         if (refresh_token) {
             response.cookies.set('refreshToken', refresh_token, {
@@ -395,6 +392,7 @@ export async function GET(request: NextRequest) {
         }
 
         // Guardar información del usuario local + perfil de AXpert
+        // Ahora con HttpOnly para proteger información personal
         response.cookies.set('userData', JSON.stringify({
             id: localUser.id,
             username: localUser.username,
@@ -403,27 +401,19 @@ export async function GET(request: NextRequest) {
             rol: localUser.rol,
             email: axpertProfile.email, // USAR EMAIL DE AXPERT
             oauthProvider: 'axpert',
-        }), {
-            ...cookieOptions,
-            httpOnly: false,
-        });
+        }), cookieOptions);
 
         // Guardar el perfil de AXpert para acceso al avatar
+        // Ahora con HttpOnly para proteger datos del perfil externo
         response.cookies.set('axpert_profile', JSON.stringify({
             avatarUrl: axpertProfile.avatar_url,
             email: axpertProfile.email,
             firstName: axpertProfile.first_name,
             lastName: axpertProfile.last_name,
-        }), {
-            ...cookieOptions,
-            httpOnly: false,
-        });
+        }), cookieOptions);
 
-        // COOKIE ADICIONAL SOLICITADA
-        response.cookies.set('axpert_avatar_url', axpertProfile.avatar_url || '', {
-            ...cookieOptions,
-            httpOnly: false
-        });
+        // Cookie de avatar ahora con HttpOnly
+        response.cookies.set('axpert_avatar_url', axpertProfile.avatar_url || '', cookieOptions);
 
         response.cookies.delete('oauth_state');
         response.cookies.delete('oauth_code_verifier');

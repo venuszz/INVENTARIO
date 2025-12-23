@@ -36,8 +36,12 @@ async function handleProxy(request: NextRequest) {
     const isReadMethod = method === 'GET' || method === 'HEAD';
     const isWriteMethod = method === 'POST' || method === 'PATCH' || method === 'PUT' || method === 'DELETE';
 
+    // Leer cookies HttpOnly del servidor
+    const authToken = request.cookies.get('authToken')?.value;
     const userDataCookie = request.cookies.get('userData')?.value;
-    if (!userDataCookie) {
+    
+    // Validar que el usuario esté autenticado
+    if (!authToken || !userDataCookie) {
         return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
@@ -49,10 +53,6 @@ async function handleProxy(request: NextRequest) {
         userRole = parsed?.rol;
     } catch {
         return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    if (oauthProvider !== 'axpert') {
-        return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
     const { searchParams } = new URL(request.url);
@@ -122,30 +122,46 @@ async function handleProxy(request: NextRequest) {
     if (range) upstreamHeaders.set('range', range);
 
     upstreamHeaders.set('apikey', supabaseAnonKey);
-    upstreamHeaders.set('Authorization', `Bearer ${supabaseServiceKey}`);
+    
+    // MEJORA DE SEGURIDAD: Usar authToken de cookie HttpOnly
+    // Para usuarios AXpert, usar service key (tokens externos no válidos en Supabase)
+    // Para usuarios locales, usar su authToken
+    if (oauthProvider === 'axpert') {
+        upstreamHeaders.set('Authorization', `Bearer ${supabaseServiceKey}`);
+    } else {
+        upstreamHeaders.set('Authorization', `Bearer ${authToken}`);
+    }
 
     const hasBody = method === 'POST' || method === 'PATCH' || method === 'PUT';
     const body = hasBody ? await request.arrayBuffer() : undefined;
 
-    const upstreamRes = await fetch(upstreamUrl, {
-        method,
-        headers: upstreamHeaders,
-        body,
-    });
+    try {
+        const upstreamRes = await fetch(upstreamUrl, {
+            method,
+            headers: upstreamHeaders,
+            body,
+        });
 
-    const resHeaders = new Headers();
-    const upstreamContentType = upstreamRes.headers.get('content-type');
-    if (upstreamContentType) resHeaders.set('content-type', upstreamContentType);
+        const resHeaders = new Headers();
+        const upstreamContentType = upstreamRes.headers.get('content-type');
+        if (upstreamContentType) resHeaders.set('content-type', upstreamContentType);
 
-    const upstreamContentRange = upstreamRes.headers.get('content-range');
-    if (upstreamContentRange) resHeaders.set('content-range', upstreamContentRange);
+        const upstreamContentRange = upstreamRes.headers.get('content-range');
+        if (upstreamContentRange) resHeaders.set('content-range', upstreamContentRange);
 
-    const upstreamPrefer = upstreamRes.headers.get('preference-applied');
-    if (upstreamPrefer) resHeaders.set('preference-applied', upstreamPrefer);
+        const upstreamPrefer = upstreamRes.headers.get('preference-applied');
+        if (upstreamPrefer) resHeaders.set('preference-applied', upstreamPrefer);
 
-    const buf = await upstreamRes.arrayBuffer();
-    return new NextResponse(buf, {
-        status: upstreamRes.status,
-        headers: resHeaders,
-    });
+        const buf = await upstreamRes.arrayBuffer();
+        return new NextResponse(buf, {
+            status: upstreamRes.status,
+            headers: resHeaders,
+        });
+    } catch (error) {
+        console.error('Supabase proxy error:', error);
+        return NextResponse.json(
+            { error: 'Proxy request failed' },
+            { status: 500 }
+        );
+    }
 }

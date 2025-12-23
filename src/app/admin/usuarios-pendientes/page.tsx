@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useTheme } from '@/context/ThemeContext';
 import { useRouter } from 'next/navigation';
-import Cookies from 'js-cookie';
+import { useSession } from '@/hooks/useSession';
 import {
     UserCheck,
     Clock,
@@ -34,6 +34,7 @@ interface PendingUser {
 
 export default function UsuariosPendientesPage() {
     const { isDarkMode } = useTheme();
+    const { user } = useSession();
     const router = useRouter();
     const [pendingUsers, setPendingUsers] = useState<PendingUser[]>([]);
     const [selectedUser, setSelectedUser] = useState<PendingUser | null>(null);
@@ -50,14 +51,12 @@ export default function UsuariosPendientesPage() {
 
     useEffect(() => {
         const checkAuth = async () => {
-            const userDataCookie = Cookies.get('userData');
-            if (!userDataCookie) {
+            if (!user) {
                 router.push('/login');
                 return;
             }
 
-            const userData = JSON.parse(userDataCookie);
-            if (userData.rol !== 'superadmin' && userData.rol !== 'admin') {
+            if (user.rol !== 'superadmin' && user.rol !== 'admin') {
                 router.push('/');
                 return;
             }
@@ -65,7 +64,7 @@ export default function UsuariosPendientesPage() {
             await loadPendingUsers();
         };
         checkAuth();
-    }, [router]);
+    }, [router, user]);
 
     const loadPendingUsers = async () => {
         try {

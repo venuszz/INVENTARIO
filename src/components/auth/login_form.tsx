@@ -2,10 +2,8 @@
 
 import { useState } from 'react';
 import { useTheme } from '@/context/ThemeContext';
-import supabase from '@/app/lib/supabase/client';
 import { useSearchParams } from 'next/navigation';
-import { User, Lock, Eye, EyeOff, LogIn, Moon, Sun, Shield } from 'lucide-react';
-import Cookies from 'js-cookie';
+import { User, Lock, Eye, EyeOff, LogIn, Moon, Sun } from 'lucide-react';
 
 export default function LoginPage() {
     const { isDarkMode, toggleDarkMode } = useTheme();
@@ -49,50 +47,31 @@ export default function LoginPage() {
                 redirectPath = `/authorize?${params.toString()}`;
             }
 
-            const { data: userData, error: userError } = await supabase
-                .rpc('get_user_by_username', { p_username: username });
+            // Llamar al endpoint de login del servidor
+            // El servidor establecerá las cookies HttpOnly de manera segura
+            const response = await fetch('/api/auth/login', {
+                method: 'POST',
+                headers: { 
+                    'Content-Type': 'application/json' 
+                },
+                body: JSON.stringify({ username, password }),
+                credentials: 'include', // Importante: permitir cookies
+            });
 
-            if (userError || !userData || userData.length === 0) {
-                setError('Usuario o contraseña incorrectos');
+            const data = await response.json();
+
+            if (!data.success) {
+                setError(data.error || 'Error de autenticación');
                 setIsLoading(false);
                 return;
             }
 
-            const user = userData[0];
-
-            const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
-                email: user.email,
-                password
-            });
-
-            if (authError) {
-                setError('Usuario o contraseña incorrectos');
-                setIsLoading(false);
-                return;
-            }
-
-            const expires = new Date(Date.now() + 4 * 60 * 60 * 1000);
-            Cookies.set('authToken', authData.session.access_token, {
-                expires,
-                path: '/',
-                secure: process.env.NODE_ENV === 'production',
-                sameSite: 'strict'
-            });
-
-            Cookies.set('userData', JSON.stringify({
-                id: user.id,
-                username: user.username,
-                firstName: user.first_name,
-                lastName: user.last_name,
-                rol: user.rol
-            }), {
-                expires,
-                path: '/'
-            });
-
+            // Las cookies HttpOnly se establecieron automáticamente por el servidor
+            // Redirigir al usuario
             window.location.href = redirectPath;
 
-        } catch {
+        } catch (err) {
+            console.error('Login error:', err);
             setError('Error de conexión. Intenta de nuevo más tarde.');
             setIsLoading(false);
         }

@@ -1,7 +1,6 @@
 "use client";
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import supabase from '@/app/lib/supabase/client';
-import Cookies from 'js-cookie';
 
 // Interfaz del mueble ITEA
 export interface MuebleItea {
@@ -180,45 +179,61 @@ export function IteaIndexationProvider({ children }: { children: React.ReactNode
     // Efecto para cargar datos al iniciar
     useEffect(() => {
         // Verificar si el usuario está autenticado
-        const userData = Cookies.get('userData');
-        if (!userData) {
-            // No está autenticado, no inicializar
-            return;
-        }
+        const checkAuthAndInit = async () => {
+            try {
+                const response = await fetch('/api/auth/session', {
+                    credentials: 'include',
+                });
+                
+                if (!response.ok) return;
+                
+                const sessionData = await response.json();
+                if (!sessionData.isAuthenticated) return;
 
-        const cachedData = loadFromCache();
+                const cachedData = loadFromCache();
 
-        if (cachedData && cachedData.length > 0) {
-            // Cargar desde cache
-            setState(prev => ({
-                ...prev,
-                muebles: cachedData,
-                isComplete: true,
-                progress: cachedData.length,
-                total: cachedData.length,
-                lastUpdated: new Date(parseInt(localStorage.getItem(CACHE_TIMESTAMP_KEY) || '0')),
-            }));
-        } else {
-            // Indexar desde la base de datos
-            indexMuebles();
-        }
+                if (cachedData && cachedData.length > 0) {
+                    // Cargar desde cache
+                    setState(prev => ({
+                        ...prev,
+                        muebles: cachedData,
+                        isComplete: true,
+                        progress: cachedData.length,
+                        total: cachedData.length,
+                        lastUpdated: new Date(parseInt(localStorage.getItem(CACHE_TIMESTAMP_KEY) || '0')),
+                    }));
+                } else {
+                    // Indexar desde la base de datos
+                    await indexMuebles();
+                }
+            } catch (error) {
+                console.error('Error checking authentication:', error);
+            }
+        };
+
+        checkAuthAndInit();
     }, [loadFromCache, indexMuebles]);
 
     // Suscripción a cambios en tiempo real
     useEffect(() => {
         // Verificar si el usuario está autenticado
-        const userData = Cookies.get('userData');
-        if (!userData) {
-            // No está autenticado, no suscribirse
-            return;
-        }
+        const checkAuthAndSubscribe = async () => {
+            try {
+                const response = await fetch('/api/auth/session', {
+                    credentials: 'include',
+                });
+                
+                if (!response.ok) return;
+                
+                const sessionData = await response.json();
+                if (!sessionData.isAuthenticated) return;
 
-        const channel = supabase
-            .channel('itea-muebles-changes')
-            .on(
-                'postgres_changes',
-                {
-                    event: '*',
+                const channel = supabase
+                    .channel('itea-muebles-changes')
+                    .on(
+                        'postgres_changes',
+                        {
+                            event: '*',
                     schema: 'public',
                     table: 'mueblesitea',
                 },
@@ -265,9 +280,15 @@ export function IteaIndexationProvider({ children }: { children: React.ReactNode
             )
             .subscribe();
 
-        return () => {
-            supabase.removeChannel(channel);
+                return () => {
+                    supabase.removeChannel(channel);
+                };
+            } catch (error) {
+                console.error('Error setting up realtime subscription:', error);
+            }
         };
+
+        checkAuthAndSubscribe();
     }, [saveToCache]);
 
     return (

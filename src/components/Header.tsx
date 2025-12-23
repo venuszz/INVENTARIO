@@ -4,7 +4,6 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { usePathname } from 'next/navigation';
 import { ChevronDown, ChevronRight, User, LogOut, Database, FileText, Settings, Menu, X, Grid, Bell, Moon, Sun, Package, UserCheck, Link2 } from 'lucide-react';
-import Cookies from 'js-cookie';
 import { useRouter } from 'next/navigation';
 import supabase from '@/app/lib/supabase/client';
 import RoleGuard from "@/components/roleGuard";
@@ -12,6 +11,7 @@ import NotificationsPanel from './NotificationCenter';
 import { useNotifications } from '@/hooks/useNotifications';
 import { useTheme } from "@/context/ThemeContext";
 import GlobalSearch from './GlobalSearch';
+import { useSession } from '@/hooks/useSession';
 
 
 type MenuItem = {
@@ -36,16 +36,12 @@ export function useCerrarSesion() {
             // Cerrar sesión en Supabase
             await supabase.auth.signOut();
 
-            // Eliminar tokens y datos del usuario
-            Cookies.remove('authToken', { path: '/' });
-            Cookies.remove('userData', { path: '/' });
-            Cookies.remove('refreshToken', { path: '/' });
-            Cookies.remove('idToken', { path: '/' });
-
-            // Eliminar cookies de AXpert SSO
-            Cookies.remove('axpert_profile', { path: '/' });
-            Cookies.remove('axpert_avatar_url', { path: '/' });
-            Cookies.remove('pending_user_info', { path: '/' });
+            // Llamar al endpoint de logout del servidor
+            // Esto eliminará todas las cookies HttpOnly de manera segura
+            await fetch('/api/auth/logout', {
+                method: 'POST',
+                credentials: 'include',
+            });
 
             // Limpiar localStorage
             localStorage.removeItem('authToken');
@@ -70,7 +66,7 @@ export default function NavigationBar() {
     const [openMenu, setOpenMenu] = useState<string | null>(null);
     const [openSubmenu, setOpenSubmenu] = useState<string | null>(null);
     const [notificationsOpen, setNotificationsOpen] = useState(false);
-    const [userData, setUserData] = useState<{ id?: string; firstName?: string; lastName?: string; username?: string; email?: string; rol?: string; oauthProvider?: string }>({});
+    const [userData, setUserData] = useState<{ id?: string; firstName?: string; lastName?: string; username?: string; email?: string; rol?: string; oauthProvider?: 'axpert' | 'local' }>({});
     const [showLogoutModal, setShowLogoutModal] = useState(false);
     const [modalPosition, setModalPosition] = useState({ x: 0, y: 0 });
     const [popoverPosition, setPopoverPosition] = useState<'top' | 'bottom'>('bottom');
@@ -170,31 +166,30 @@ export default function NavigationBar() {
         closeAll();
     }, [pathname]);
 
-    useEffect(() => {
-        const userDataCookie = Cookies.get('userData');
-        if (userDataCookie) {
-            try {
-                const parsed = JSON.parse(userDataCookie);
-                setUserData({
-                    id: parsed.id,
-                    firstName: parsed.firstName,
-                    lastName: parsed.lastName,
-                    username: parsed.username,
-                    email: parsed.email,
-                    rol: parsed.rol,
-                    oauthProvider: parsed.oauthProvider
-                });
+    // Usar useSession hook para obtener datos del usuario de manera segura
+    const { user: sessionUser, axpertProfile, isAuthenticated } = useSession();
 
-                // Load AXpert avatar if user logged in via AXpert
-                if (parsed.oauthProvider === 'axpert') {
-                    const avatarUrl = Cookies.get('axpert_avatar_url');
-                    setAxpertAvatarUrl(avatarUrl || null);
-                }
-            } catch {
-                setUserData({});
+    useEffect(() => {
+        if (isAuthenticated && sessionUser) {
+            setUserData({
+                id: sessionUser.id,
+                firstName: sessionUser.firstName,
+                lastName: sessionUser.lastName,
+                username: sessionUser.username,
+                email: sessionUser.email,
+                rol: sessionUser.rol ?? undefined,
+                oauthProvider: sessionUser.oauthProvider
+            });
+
+            // Cargar avatar de AXpert si el usuario inició sesión con AXpert
+            if (sessionUser.oauthProvider === 'axpert' && axpertProfile?.avatarUrl) {
+                setAxpertAvatarUrl(axpertProfile.avatarUrl);
             }
+        } else {
+            setUserData({});
+            setAxpertAvatarUrl(null);
         }
-    }, []);
+    }, [isAuthenticated, sessionUser, axpertProfile]);
 
     // Cerrar popover al hacer clic fuera
     useEffect(() => {

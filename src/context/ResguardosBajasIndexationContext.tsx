@@ -1,7 +1,6 @@
 "use client";
 import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
 import supabase from '@/app/lib/supabase/client';
-import Cookies from 'js-cookie';
 
 interface ResguardoBaja {
     id: number;
@@ -76,14 +75,32 @@ export const ResguardosBajasIndexationProvider: React.FC<{ children: React.React
 
     useEffect(() => {
         // Verificar si el usuario está autenticado
-        const userData = Cookies.get('userData');
-        if (!userData) {
-            // No está autenticado, no inicializar
-            setLoading(false);
-            return;
-        }
+        const checkAuthAndFetch = async () => {
+            try {
+                const response = await fetch('/api/auth/session', {
+                    credentials: 'include',
+                });
+                
+                if (!response.ok) {
+                    setLoading(false);
+                    return;
+                }
+                
+                const sessionData = await response.json();
+                if (!sessionData.isAuthenticated) {
+                    setLoading(false);
+                    return;
+                }
 
-        fetchResguardosBajas();
+                // Usuario autenticado, proceder con fetch
+                await fetchResguardosBajas();
+            } catch (error) {
+                console.error('Error checking authentication:', error);
+                setLoading(false);
+            }
+        };
+
+        checkAuthAndFetch();
 
         // Setup realtime subscription
         channelRef.current = supabase
