@@ -1,6 +1,6 @@
 "use client";
 
-import Dasboard from "@/components/dashboard/dashboard2"
+import Dasboard from "@/components/dashboard/dashboard"
 import ProtectedPage from "@/components/ProtectedPage";
 
 export default function Add() {
