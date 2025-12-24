@@ -1,4 +1,4 @@
-import Dasboard from "@/components/dashboard/dashboard2"
+import Dasboard from "@/components/dashboard/dashboard"
 import { Metadata } from "next";
 
 export const metadata: Metadata = {
