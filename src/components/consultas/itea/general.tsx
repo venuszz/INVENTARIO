@@ -6,8 +6,8 @@ import {
     LayoutGrid, ChevronDown, Building2, FileText, User, Shield, AlertTriangle, Calendar, Info, Edit, Receipt, ClipboardList, Store, CheckCircle, XCircle, Plus, Clock, DollarSign, BadgeCheck
 } from 'lucide-react';
 import supabase from '@/app/lib/supabase/client';
-import Cookies from 'js-cookie';
 import { useUserRole } from "@/hooks/useUserRole";
+import { useSession } from "@/hooks/useSession";
 import RoleGuard from "@/components/roleGuard";
 import { useNotifications } from '@/hooks/useNotifications';
 import { useTheme } from '@/context/ThemeContext';
@@ -174,6 +174,7 @@ interface ActiveFilter {
 export default function ConsultasIteaGeneral() {
     // Usar el contexto de indexación de ITEA
     const { muebles, isIndexing: loading, error, reindex } = useIteaIndexation();
+    const { user } = useSession(); // Hook para obtener datos del usuario de manera segura
     const searchParams = useSearchParams();
 
     const [imageFile, setImageFile] = useState<File | null>(null);
@@ -671,17 +672,11 @@ export default function ConsultasIteaGeneral() {
                 .eq('id', selectedItem.id);
             if (error) throw error;
 
-            // Obtener nombre completo del usuario desde la cookie userData
+            // Obtener nombre completo del usuario desde useSession
             let createdBy = 'SISTEMA';
-            try {
-                const userData = Cookies.get('userData');
-                if (userData) {
-                    const parsed = JSON.parse(userData);
-                    if (parsed.firstName && parsed.lastName) {
-                        createdBy = `${parsed.firstName} ${parsed.lastName}`;
-                    }
-                }
-            } catch { }
+            if (user && user.firstName && user.lastName) {
+                createdBy = `${user.firstName} ${user.lastName}`;
+            }
 
             await supabase.from('deprecated').insert({
                 id_inv: selectedItem.id_inv || '',

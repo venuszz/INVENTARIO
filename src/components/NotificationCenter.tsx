@@ -243,9 +243,14 @@ export default function NotificationsPanel({ onClose }: { onClose?: () => void }
                 {/* Barra superior minimalista */}
                 <div className="flex items-center justify-between px-6 pt-6 pb-4">
                     <div className="flex items-center gap-3">
-                        <h1 className={`text-lg font-semibold tracking-tight ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
-                            Notificaciones
-                        </h1>
+                        <div className="relative">
+                            <h1 className={`text-lg font-semibold tracking-tight ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
+                                Notificaciones
+                            </h1>
+                            {doNotDisturb && (
+                                <span className="absolute -top-1 -right-2 flex h-2 w-2 rounded-full bg-purple-500 shadow-[0_0_8px_rgba(168,85,247,0.5)] animate-in fade-in zoom-in duration-500"></span>
+                            )}
+                        </div>
                         {/* Botón de Filtros */}
                         <button
                             onClick={() => setShowFilters(!showFilters)}
@@ -290,10 +295,10 @@ export default function NotificationsPanel({ onClose }: { onClose?: () => void }
                                 <Moon size={20} strokeWidth={doNotDisturb ? 2.5 : 1.5} className={doNotDisturb ? "fill-current" : ""} />
                             </div>
 
-                            {/* Badge animado */}
+                            {/* Badge animado - Estilo consistente con el header */}
                             <div className={`absolute -top-1 -right-1 transition-all duration-500 ${doNotDisturb ? 'opacity-100 scale-100' : 'opacity-0 scale-0'}`}>
-                                <span className="flex h-4 w-4 items-center justify-center rounded-full bg-purple-500 text-[8px] font-bold text-white shadow-sm ring-2 ring-white dark:ring-black">
-                                    Zz
+                                <span className="flex h-4 w-4 items-center justify-center rounded-full bg-purple-600 text-white shadow-sm ring-2 ring-white dark:ring-black animate-in zoom-in-50 duration-300">
+                                    <Moon size={8} className="fill-current" />
                                 </span>
                             </div>
                         </button>

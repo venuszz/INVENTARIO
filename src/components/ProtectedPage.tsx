@@ -1,7 +1,7 @@
 "use client";
 
-import { ReactNode, useEffect, useState } from "react";
-import Cookies from "js-cookie";
+import { ReactNode } from "react";
+import { useSession } from "@/hooks/useSession";
 import AccessDenied from "./AccessDenied";
 
 interface ProtectedPageProps {
@@ -13,27 +13,20 @@ export default function ProtectedPage({
   children,
   requiredRoles,
 }: ProtectedPageProps) {
-  const [userRole, setUserRole] = useState<string | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const { user, isAuthenticated, isLoading } = useSession();
 
-  useEffect(() => {
-    const userDataCookie = Cookies.get("userData");
-    if (userDataCookie) {
-      try {
-        const parsed = JSON.parse(userDataCookie);
-        setUserRole(parsed.rol || null);
-      } catch {
-        setUserRole(null);
-      }
-    }
-    setIsLoading(false);
-  }, []);
-
+  // Mostrar nada mientras carga
   if (isLoading) {
     return null;
   }
 
-  const hasAccess = userRole && requiredRoles.includes(userRole);
+  // Si no está autenticado, denegar acceso
+  if (!isAuthenticated || !user) {
+    return <AccessDenied />;
+  }
+
+  // Verificar si el usuario tiene uno de los roles requeridos
+  const hasAccess = user.rol && requiredRoles.includes(user.rol);
 
   if (!hasAccess) {
     return <AccessDenied />;

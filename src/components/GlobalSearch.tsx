@@ -1,5 +1,5 @@
 "use client"
-import { useState, useEffect, useMemo, useRef } from 'react';
+import { useState, useEffect, useMemo, useRef, useDeferredValue } from 'react';
 import { Search, X, ChevronRight, FileText, Archive } from 'lucide-react';
 import { useTheme } from '@/context/ThemeContext';
 import { useIneaIndexation } from '@/context/IneaIndexationContext';
@@ -51,6 +51,7 @@ export default function GlobalSearch({ onExpandChange }: GlobalSearchProps) {
     const resguardosBajasContext = useResguardosBajasIndexation();
 
     const [searchTerm, setSearchTerm] = useState('');
+    const deferredSearchTerm = useDeferredValue(searchTerm);
     const [isExpanded, setIsExpanded] = useState(false);
     const [autocompleteSuggestion, setAutocompleteSuggestion] = useState('');
     const searchRef = useRef<HTMLDivElement>(null);
@@ -158,11 +159,11 @@ export default function GlobalSearch({ onExpandChange }: GlobalSearchProps) {
         return [...ineaData, ...iteaData, ...ineaObsData, ...iteaObsData, ...resguardosData, ...resguardosBajasData];
     }, [ineaContext.data, iteaContext.muebles, ineaObsContext.data, iteaObsContext.data, resguardosContext.resguardos, resguardosBajasContext.resguardosBajas]);
 
-    // Búsqueda en tiempo real
+    // Búsqueda en tiempo real - Usando el valor diferido para evitar lag
     const searchResults = useMemo(() => {
-        if (!searchTerm.trim()) return [];
+        if (!deferredSearchTerm.trim()) return [];
 
-        const term = searchTerm.toLowerCase().trim();
+        const term = deferredSearchTerm.toLowerCase().trim();
 
         return allData.filter(item => {
             return (
@@ -185,16 +186,16 @@ export default function GlobalSearch({ onExpandChange }: GlobalSearchProps) {
                 item.motivo_baja?.toLowerCase().includes(term)
             );
         }).slice(0, 50); // Limitar a 50 resultados
-    }, [searchTerm, allData]);
+    }, [deferredSearchTerm, allData]);
 
     // Actualizar sugerencia inline en tiempo real - SOLO FOLIOS
     useEffect(() => {
-        if (!searchTerm.trim() || searchTerm.length < 2) {
+        if (!deferredSearchTerm.trim() || deferredSearchTerm.length < 2) {
             setAutocompleteSuggestion('');
             return;
         }
 
-        const term = searchTerm.toLowerCase().trim();
+        const term = deferredSearchTerm.toLowerCase().trim();
 
         // Buscar SOLO en folios/IDs que empiecen con el término
         const match = allData.find(item => {
@@ -224,7 +225,7 @@ export default function GlobalSearch({ onExpandChange }: GlobalSearchProps) {
         } else {
             setAutocompleteSuggestion('');
         }
-    }, [searchTerm, allData]);
+    }, [deferredSearchTerm, allData]);
 
     // Separar resultados por origen
     const ineaResults = searchResults.filter(r => r.origen === 'INEA');
@@ -314,7 +315,7 @@ export default function GlobalSearch({ onExpandChange }: GlobalSearchProps) {
                         <div
                             className={`absolute left-0 right-0 pointer-events-none text-xs ${isDarkMode ? 'text-gray-600' : 'text-gray-400'
                                 }`}
-                            style={{ 
+                            style={{
                                 display: 'inline-block',
                                 lineHeight: '1.5rem',
                                 fontFamily: 'inherit',
@@ -357,7 +358,7 @@ export default function GlobalSearch({ onExpandChange }: GlobalSearchProps) {
             </div>
 
             {/* Resultados de búsqueda en tiempo real */}
-            {searchTerm.trim().length >= 2 && (
+            {deferredSearchTerm.trim().length >= 2 && (
                 <div className={`absolute top-full right-0 mt-2 w-[320px] max-h-[500px] rounded-2xl shadow-2xl border transition-all duration-300 overflow-y-auto ${isDarkMode
                     ? 'bg-black/95 border-white/10 backdrop-blur-md'
                     : 'bg-white/95 border-gray-200 backdrop-blur-md'

@@ -3,8 +3,7 @@ import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { usePathname } from 'next/navigation';
-import { ChevronDown, ChevronRight, User, LogOut, Database, FileText, Settings, Menu, X, Grid, Bell, Moon, Sun } from 'lucide-react';
-import Cookies from 'js-cookie';
+import { ChevronDown, ChevronRight, User, LogOut, Database, FileText, Settings, Menu, X, Grid, Bell, Moon, Sun, Package, UserCheck, Link2, Crown, Cog, Shield } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import supabase from '@/app/lib/supabase/client';
 import RoleGuard from "@/components/roleGuard";
@@ -12,6 +11,7 @@ import NotificationsPanel from './NotificationCenter';
 import { useNotifications } from '@/hooks/useNotifications';
 import { useTheme } from "@/context/ThemeContext";
 import GlobalSearch from './GlobalSearch';
+import { useSession } from '@/hooks/useSession';
 
 
 type MenuItem = {
@@ -36,8 +36,14 @@ export function useCerrarSesion() {
             // Cerrar sesión en Supabase
             await supabase.auth.signOut();
 
-            // Eliminar tokens y datos del usuario
-            Cookies.remove('authToken', { path: '/' });
+            // Llamar al endpoint de logout del servidor
+            // Esto eliminará todas las cookies HttpOnly de manera segura
+            await fetch('/api/auth/logout', {
+                method: 'POST',
+                credentials: 'include',
+            });
+
+            // Limpiar localStorage
             localStorage.removeItem('authToken');
             localStorage.removeItem('refreshToken');
             localStorage.removeItem('userId');
@@ -60,7 +66,7 @@ export default function NavigationBar() {
     const [openMenu, setOpenMenu] = useState<string | null>(null);
     const [openSubmenu, setOpenSubmenu] = useState<string | null>(null);
     const [notificationsOpen, setNotificationsOpen] = useState(false);
-    const [userData, setUserData] = useState<{ firstName?: string; lastName?: string; username?: string; email?: string; rol?: string }>({});
+    const [userData, setUserData] = useState<{ id?: string; firstName?: string; lastName?: string; username?: string; email?: string; rol?: string; oauthProvider?: 'axpert' | 'local'; loginMethod?: 'local' | 'axpert' }>({});
     const [showLogoutModal, setShowLogoutModal] = useState(false);
     const [modalPosition, setModalPosition] = useState({ x: 0, y: 0 });
     const [popoverPosition, setPopoverPosition] = useState<'top' | 'bottom'>('bottom');
@@ -68,6 +74,9 @@ export default function NavigationBar() {
     const [isSearchExpanded, setIsSearchExpanded] = useState(false);
     const [logoShouldHide, setLogoShouldHide] = useState(false);
     const [searchBarShouldHide, setSearchBarShouldHide] = useState(false);
+    const [axpertAvatarUrl, setAxpertAvatarUrl] = useState<string | null>(null);
+    const [showAvatarPopover, setShowAvatarPopover] = useState(false);
+    const [showLinkingSuccess, setShowLinkingSuccess] = useState(false);
     const handleLogout = useCerrarSesion();
     const { notifications, doNotDisturb } = useNotifications();
     const unreadCount = notifications.filter(n => !n.is_read && !n.data?.is_deleted).length;
@@ -79,6 +88,26 @@ export default function NavigationBar() {
     const actionButtonsRef = useRef<HTMLDivElement>(null);
     const actionButtonsContainerRef = useRef<HTMLDivElement>(null);
     const notificationWrapperRef = useRef<HTMLDivElement>(null);
+    const avatarPopoverRef = useRef<HTMLDivElement>(null);
+
+    // Detectar éxito de vinculación
+    useEffect(() => {
+        const searchParams = new URLSearchParams(window.location.search);
+        if (searchParams.get('linked') === 'success') {
+            setShowLinkingSuccess(true);
+            setShowAvatarPopover(true);
+
+            // Limpiar URL
+            const newUrl = window.location.pathname;
+            window.history.replaceState({}, '', newUrl);
+
+            // Auto-ocultar mensaje de éxito después de 8 segundos
+            const timer = setTimeout(() => {
+                setShowLinkingSuccess(false);
+            }, 8000);
+            return () => clearTimeout(timer);
+        }
+    }, []);
 
     // Gestionar visibilidad de elementos
     useEffect(() => {
@@ -137,23 +166,31 @@ export default function NavigationBar() {
         closeAll();
     }, [pathname]);
 
+    // Usar useSession hook para obtener datos del usuario de manera segura
+    const { user: sessionUser, axpertProfile, isAuthenticated } = useSession();
+
     useEffect(() => {
-        const userDataCookie = Cookies.get('userData');
-        if (userDataCookie) {
-            try {
-                const parsed = JSON.parse(userDataCookie);
-                setUserData({
-                    firstName: parsed.firstName,
-                    lastName: parsed.lastName,
-                    username: parsed.username,
-                    email: parsed.email,
-                    rol: parsed.rol
-                });
-            } catch {
-                setUserData({});
+        if (isAuthenticated && sessionUser) {
+            setUserData({
+                id: sessionUser.id,
+                firstName: sessionUser.firstName,
+                lastName: sessionUser.lastName,
+                username: sessionUser.username,
+                email: sessionUser.email,
+                rol: sessionUser.rol ?? undefined,
+                oauthProvider: sessionUser.oauthProvider,
+                loginMethod: sessionUser.loginMethod
+            });
+
+            // Cargar avatar de AXpert si el usuario inició sesión con AXpert
+            if (sessionUser.oauthProvider === 'axpert' && axpertProfile?.avatarUrl) {
+                setAxpertAvatarUrl(axpertProfile.avatarUrl);
             }
+        } else {
+            setUserData({});
+            setAxpertAvatarUrl(null);
         }
-    }, []);
+    }, [isAuthenticated, sessionUser, axpertProfile]);
 
     // Cerrar popover al hacer clic fuera
     useEffect(() => {
@@ -182,6 +219,20 @@ export default function NavigationBar() {
             document.removeEventListener('mousedown', handleClickOutsideNotification);
         };
     }, [notificationsOpen]);
+
+    // Cerrar avatar popover al hacer clic fuera
+    useEffect(() => {
+        const handleClickOutsideAvatar = (event: MouseEvent) => {
+            if (showAvatarPopover && avatarPopoverRef.current && !avatarPopoverRef.current.contains(event.target as Node)) {
+                setShowAvatarPopover(false);
+            }
+        };
+
+        document.addEventListener('mousedown', handleClickOutsideAvatar);
+        return () => {
+            document.removeEventListener('mousedown', handleClickOutsideAvatar);
+        };
+    }, [showAvatarPopover]);
 
     const handleMenuHover = (menu: string | null) => {
         setOpenMenu(menu);
@@ -270,6 +321,13 @@ export default function NavigationBar() {
     const confirmLogout = async () => {
         await handleLogout();
         setShowLogoutModal(false);
+    };
+
+    const getInitials = () => {
+        const first = userData.firstName?.charAt(0) || '';
+        const last = userData.lastName?.charAt(0) || '';
+        if (!first && !last) return userData.username?.charAt(0).toUpperCase() || 'U';
+        return (first + last).toUpperCase();
     };
 
     const menuItems: MenuItem[] = [
@@ -637,6 +695,28 @@ export default function NavigationBar() {
                                             <Grid className="h-5 w-5" />
                                         </Link>
                                     </RoleGuard>
+                                    <Link
+                                        href="/consultas/no-listado"
+                                        className={`p-2 rounded-full transition-all duration-200 hover:scale-110 ${pathname === '/consultas/no-listado'
+                                            ? isDarkMode ? 'text-white bg-white/10 border border-white/20' : 'text-gray-900 bg-gray-100 border border-gray-300'
+                                            : isDarkMode ? 'text-gray-300 hover:text-white hover:bg-gray-800' : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
+                                            }`}
+                                        title="No Listado"
+                                    >
+                                        <Package className="h-5 w-5" />
+                                    </Link>
+                                    <RoleGuard roles={["superadmin"]} userRole={userData.rol}>
+                                        <Link
+                                            href="/admin/usuarios-pendientes"
+                                            className={`p-2 rounded-full transition-all duration-200 hover:scale-110 ${pathname === '/admin/usuarios-pendientes'
+                                                ? isDarkMode ? 'text-white bg-white/10 border border-white/20' : 'text-gray-900 bg-gray-100 border border-gray-300'
+                                                : isDarkMode ? 'text-gray-300 hover:text-white hover:bg-gray-800' : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
+                                                }`}
+                                            title="Validar usuarios"
+                                        >
+                                            <UserCheck className="h-5 w-5" />
+                                        </Link>
+                                    </RoleGuard>
                                     <button
                                         onClick={toggleDarkMode}
                                         className={`p-2 rounded-full transition-all duration-200 hover:scale-110 ${isDarkMode
@@ -688,25 +768,26 @@ export default function NavigationBar() {
                                 <div className="relative" ref={notificationWrapperRef}>
                                     <button
                                         onClick={() => setNotificationsOpen(!notificationsOpen)}
-                                        className={`p-2 rounded-full relative transition-all duration-200 hover:scale-110 ${isDarkMode
-                                            ? 'text-gray-300 hover:text-white hover:bg-gray-800'
-                                            : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
+                                        className={`p-2 rounded-full relative transition-all duration-300 hover:scale-110 ${isDarkMode
+                                            ? doNotDisturb ? 'text-purple-400 bg-purple-500/10' : 'text-gray-300 hover:text-white hover:bg-gray-800'
+                                            : doNotDisturb ? 'text-purple-600 bg-purple-100' : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
                                             }`}
                                         title={doNotDisturb ? "Modo No Molestar activo" : "Notificaciones"}
                                     >
-                                        <Bell className="h-5 w-5" />
-                                        {unreadCount > 0 && (
+                                        <Bell className={`h-5 w-5 transition-all duration-300 ${doNotDisturb ? 'fill-purple-500/20' : ''}`} />
+                                        {(unreadCount > 0 || doNotDisturb) && (
                                             <>
-                                                <span className={`absolute top-0 right-0 h-2 w-2 rounded-full ${doNotDisturb ? 'bg-purple-500' : 'bg-white'
-                                                    }`}></span>
-                                                {!doNotDisturb && (
-                                                    <span className="absolute -top-2 -right-2 bg-white text-black text-xs font-bold rounded-full px-1.5 min-w-[18px] text-center border border-black shadow">
-                                                        {unreadCount}
-                                                    </span>
+                                                {unreadCount > 0 && !doNotDisturb && (
+                                                    <>
+                                                        <span className="absolute top-0 right-0 h-2 w-2 rounded-full bg-white ring-2 ring-black"></span>
+                                                        <span className="absolute -top-2 -right-2 bg-white text-black text-[10px] font-bold rounded-full px-1.5 min-w-[18px] h-[18px] flex items-center justify-center border border-black shadow-sm">
+                                                            {unreadCount}
+                                                        </span>
+                                                    </>
                                                 )}
                                                 {doNotDisturb && (
-                                                    <span className="absolute -top-2 -right-2 bg-purple-600 text-white text-xs font-bold rounded-full p-1 min-w-[18px] text-center border border-black shadow">
-                                                        <Moon size={10} />
+                                                    <span className="absolute -top-0.5 -right-0.5 bg-purple-600 text-white rounded-full p-0.5 shadow-sm animate-in zoom-in-50 duration-500 ring-1 ring-white dark:ring-black">
+                                                        <Moon size={8} className="fill-current" />
                                                     </span>
                                                 )}
                                             </>
@@ -719,16 +800,243 @@ export default function NavigationBar() {
                                     )}
                                 </div>
                             </RoleGuard>
-                            <button
-                                onClick={initiateLogout}
-                                className={`p-2 rounded-full transition-all duration-200 hover:scale-110 ${isDarkMode
-                                    ? 'text-gray-300 hover:text-white hover:bg-gray-800'
-                                    : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
-                                    }`}
-                                title='Cerrar sesión'
-                            >
-                                <LogOut className="h-5 w-5" />
-                            </button>
+
+                            {/* User Profile & Sync Hub */}
+                            {(userData.id || userData.username || userData.email) && (
+                                <div
+                                    className="relative flex items-center"
+                                    ref={avatarPopoverRef}
+                                    onMouseEnter={() => setShowAvatarPopover(true)}
+                                    onMouseLeave={() => setShowAvatarPopover(false)}
+                                >
+                                    <div className={`relative transition-all duration-500 ease-out ${showAvatarPopover ? 'scale-110' : 'scale-100'
+                                        }`}>
+                                        <div className={`w-8 h-8 rounded-full overflow-hidden cursor-pointer shadow-md transition-shadow hover:shadow-lg flex items-center justify-center ${!axpertAvatarUrl ? (isDarkMode ? 'bg-white text-black' : 'bg-black text-white') : ''
+                                            }`}>
+                                            {axpertAvatarUrl ? (
+                                                <img
+                                                    src={axpertAvatarUrl}
+                                                    alt="Profile"
+                                                    className="w-full h-full object-cover"
+                                                />
+                                            ) : (
+                                                <span className="text-[10px] font-bold tracking-tighter">{getInitials()}</span>
+                                            )}
+                                        </div>
+
+                                        {/* Status Dot */}
+                                        {/* Green if linked (AXpert), Gray/Empty if not */}
+                                        {userData.oauthProvider === 'axpert' && (
+                                            <div className={`absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full border-2 ${isDarkMode ? 'bg-white border-black' : 'bg-black border-white'
+                                                }`} title="Cuenta Vinculada con AXpert" />
+                                        )}
+                                    </div>
+
+                                    {/* Elegant Monochromatic Popover */}
+                                    {showAvatarPopover && (
+                                        <div className="absolute right-0 top-full pt-3 z-50 animate-in zoom-in-95 fade-in duration-400 ease-out origin-top-right">
+                                            <div className={`rounded-2xl overflow-hidden shadow-2xl border backdrop-blur-md transition-all duration-300 ${isDarkMode
+                                                ? 'bg-black/90 border-white/10 text-white'
+                                                : 'bg-white/95 border-gray-200 text-black'
+                                                }`}
+                                                style={{ width: '260px' }}
+                                            >
+                                                {showLinkingSuccess ? (
+                                                    // === VIEW: LINKING SUCCESS MESSAGE ===
+                                                    <div className="p-6 flex flex-col items-center gap-6 animate-in fade-in slide-in-from-bottom-2 duration-700">
+                                                        <div className="relative flex items-center justify-center">
+                                                            <div className={`w-14 h-14 rounded-full flex items-center justify-center border transition-colors duration-500 ${isDarkMode ? 'bg-green-950/30 border-green-900/50 text-green-400' : 'bg-green-50 border-green-100 text-green-600'}`}>
+                                                                <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                                                                    <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                                                                </svg>
+                                                            </div>
+                                                        </div>
+
+                                                        <div className="text-center space-y-2">
+                                                            <h4 className={`text-sm font-bold tracking-tight ${isDarkMode ? 'text-zinc-100' : 'text-zinc-900'}`}>
+                                                                Vinculación Exitosa
+                                                            </h4>
+                                                            <p className={`text-[10px] leading-relaxed px-1 transition-colors duration-300 ${isDarkMode ? 'text-zinc-500' : 'text-zinc-400'}`}>
+                                                                Su identidad digital ha sido unificada correctamente con el sistema institucional.
+                                                            </p>
+                                                        </div>
+
+                                                        <button
+                                                            onClick={() => setShowLinkingSuccess(false)}
+                                                            className={`text-[9px] font-bold uppercase tracking-widest py-2 px-4 rounded-lg transition-colors ${isDarkMode ? 'hover:bg-white/5 text-zinc-400 hover:text-white' : 'hover:bg-black/5 text-zinc-500 hover:text-black'}`}
+                                                        >
+                                                            Cerrar
+                                                        </button>
+                                                    </div>
+                                                ) : userData.oauthProvider === 'axpert' ? (
+                                                    // === VIEW: LINKED USER (AXpert) ===
+                                                    <div className="p-5 flex flex-col items-center gap-4">
+                                                        {/* Profile Avatar Large */}
+                                                        <div className={`w-14 h-14 rounded-xl overflow-hidden shadow-sm border flex items-center justify-center ${isDarkMode ? 'border-white/10' : 'border-gray-100'
+                                                            } ${!axpertAvatarUrl ? (isDarkMode ? 'bg-white text-black' : 'bg-black text-white') : ''}`}>
+                                                            {axpertAvatarUrl ? (
+                                                                <img
+                                                                    src={axpertAvatarUrl}
+                                                                    alt="Profile"
+                                                                    className="w-full h-full object-cover"
+                                                                />
+                                                            ) : (
+                                                                <span className="text-lg font-bold">{getInitials()}</span>
+                                                            )}
+                                                        </div>
+
+                                                        {/* User Info */}
+                                                        <div className="text-center space-y-2">
+                                                            <p className="text-sm font-bold tracking-tight">
+                                                                {userData.firstName} {userData.lastName}
+                                                            </p>
+                                                            {/* Show email only if logged in via AXpert */}
+                                                            {userData.loginMethod === 'axpert' && (
+                                                                <p className={`text-[10px] font-medium opacity-50`}>
+                                                                    {userData.email}
+                                                                </p>
+                                                            )}
+                                                            {userData.rol && (
+                                                                <div className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-widest border ${isDarkMode
+                                                                    ? 'bg-white text-black border-white'
+                                                                    : 'bg-black text-white border-black'
+                                                                    }`}>
+                                                                    {userData.rol === 'superadmin' && <Crown size={12} />}
+                                                                    {userData.rol === 'admin' && <Cog size={12} />}
+                                                                    {userData.rol === 'usuario' && <Shield size={12} />}
+                                                                    {userData.rol}
+                                                                </div>
+                                                            )}
+                                                        </div>
+
+                                                        <button
+                                                            onClick={() => window.open(process.env.NEXT_PUBLIC_SSO_URL_HEADER, '_blank')}
+                                                            className={`w-full py-2.5 px-4 rounded-xl text-[9px] font-bold uppercase tracking-widest transition-all duration-300 flex items-center justify-center gap-2.5 active:scale-95 ${isDarkMode
+                                                                ? 'bg-white text-black hover:bg-gray-200'
+                                                                : 'bg-black text-white hover:bg-gray-800 shadow-md shadow-black/10'
+                                                                }`}
+                                                        >
+                                                            <img
+                                                                src={isDarkMode ? "/images/BlackLogo.png" : "/images/WhiteLogo.png"}
+                                                                alt="AX"
+                                                                className="h-2.5 w-auto object-contain"
+                                                            />
+                                                            Panel de Usuario
+                                                        </button>
+
+                                                        <button
+                                                            onClick={confirmLogout}
+                                                            className={`w-full py-2.5 px-4 rounded-xl text-[9px] font-bold uppercase tracking-widest transition-all duration-300 flex items-center justify-center gap-2.5 active:scale-95 ${isDarkMode
+                                                                ? 'bg-red-500/10 text-red-400 hover:bg-red-500/20 border border-red-500/30'
+                                                                : 'bg-red-50 text-red-600 hover:bg-red-100 border border-red-200'
+                                                                }`}
+                                                        >
+                                                            <LogOut size={14} />
+                                                            Cerrar Sesión
+                                                        </button>
+                                                    </div>
+                                                ) : (
+                                                    // === VIEW: TRADITIONAL USER (Sync Prompt) ===
+                                                    <div className="p-6 flex flex-col items-center gap-6">
+                                                        {/* Minimalist Institutional Connection */}
+                                                        <div className="relative flex items-center justify-center w-full">
+                                                            <div className="flex items-center justify-between w-full max-w-[140px] relative">
+                                                                {/* Local Node - Strict Minimalist */}
+                                                                <div className={`w-10 h-10 rounded-full flex items-center justify-center border transition-colors duration-300 ${isDarkMode ? 'bg-zinc-900 border-zinc-800 text-zinc-400' : 'bg-zinc-50 border-zinc-200 text-zinc-500'}`}>
+                                                                    <span className="text-[10px] font-bold tracking-tighter">{getInitials()}</span>
+                                                                </div>
+
+                                                                {/* Minimalist Connector Line */}
+                                                                <div className={`h-[1px] flex-1 mx-2 ${isDarkMode ? 'bg-zinc-800' : 'bg-zinc-200'}`}></div>
+
+                                                                {/* AXpert Node - Dynamic Logo */}
+                                                                <div className={`w-10 h-10 rounded-full flex items-center justify-center border transition-colors duration-300 ${isDarkMode ? 'bg-zinc-900 border-zinc-800' : 'bg-zinc-50 border-zinc-200'}`}>
+                                                                    <img
+                                                                        src={isDarkMode ? "/images/WhiteLogo.png" : "/images/BlackLogo.png"}
+                                                                        alt="AXpert"
+                                                                        className="w-5 h-auto grayscale opacity-80"
+                                                                    />
+                                                                </div>
+                                                            </div>
+                                                        </div>
+
+                                                        {/* Institutional Messaging */}
+                                                        <div className="text-center space-y-2">
+                                                            <h4 className={`text-sm font-bold tracking-tight ${isDarkMode ? 'text-zinc-100' : 'text-zinc-900'}`}>
+                                                                Portal de Identidad Institucional
+                                                            </h4>
+                                                            <p className={`text-[10px] leading-relaxed px-1 transition-colors duration-300 ${isDarkMode ? 'text-zinc-500' : 'text-zinc-400'}`}>
+                                                                Vincule su cuenta local con la plataforma <span className="font-semibold italic">AXpert</span> para formalizar su acceso y asegurar la integridad de sus datos institucionales.
+                                                            </p>
+                                                        </div>
+
+                                                        {/* Action Button (Keep unchanged architecture, but following previous styling) */}
+
+                                                        {/* Action Button (Keep unchanged) */}
+
+                                                        {/* Action Button */}
+                                                        <button
+                                                            className={`group relative w-full py-3 px-4 rounded-xl overflow-hidden transition-all duration-300 active:scale-95 shadow-lg ${isDarkMode
+                                                                ? 'bg-neutral-100 text-black border border-white hover:border-neutral-300'
+                                                                : 'bg-black text-white border border-black hover:border-gray-800'
+                                                                }`}
+                                                            onClick={async () => {
+                                                                // Iniciar flujo de vinculación
+                                                                window.location.href = '/api/auth/sso?mode=linking';
+                                                            }}
+                                                        >
+                                                            {/* Default State */}
+                                                            <div className="relative z-10 flex items-center justify-center gap-2 group-hover:opacity-0 transition-opacity duration-300">
+                                                                <span className="text-[10px] uppercase font-extrabold tracking-widest">Vincular Cuenta</span>
+                                                            </div>
+
+                                                            {/* Hover Overlay Background (Inverted) */}
+                                                            <div className={`absolute inset-0 -translate-x-full group-hover:translate-x-0 transition-transform duration-500 ease-out ${isDarkMode ? 'bg-black' : 'bg-white'}`}></div>
+
+                                                            {/* Hover Content (Inverted Colors) */}
+                                                            <div className={`absolute inset-0 z-10 flex items-center justify-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300 ${isDarkMode ? 'text-white' : 'text-black'}`}>
+                                                                <span className="text-[10px] uppercase font-extrabold tracking-widest">Conectar</span>
+                                                                <img
+                                                                    src={isDarkMode ? "/images/WhiteLogo.png" : "/images/BlackLogo.png"}
+                                                                    alt="AX"
+                                                                    className="h-2.5 w-auto object-contain"
+                                                                />
+                                                            </div>
+                                                        </button>
+
+                                                        {/* User Role Badge */}
+                                                        {userData.rol && (
+                                                            <div className={`w-full flex justify-center`}>
+                                                                <div className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-widest border ${isDarkMode
+                                                                    ? 'bg-white text-black border-white'
+                                                                    : 'bg-black text-white border-black'
+                                                                    }`}>
+                                                                    {userData.rol === 'superadmin' && <Crown size={12} />}
+                                                                    {userData.rol === 'admin' && <Cog size={12} />}
+                                                                    {userData.rol === 'usuario' && <Shield size={12} />}
+                                                                    {userData.rol}
+                                                                </div>
+                                                            </div>
+                                                        )}
+
+                                                        <button
+                                                            onClick={confirmLogout}
+                                                            className={`w-full py-2.5 px-4 rounded-xl text-[9px] font-bold uppercase tracking-widest transition-all duration-300 flex items-center justify-center gap-2.5 active:scale-95 ${isDarkMode
+                                                                ? 'bg-red-500/10 text-red-400 hover:bg-red-500/20 border border-red-500/30'
+                                                                : 'bg-red-50 text-red-600 hover:bg-red-100 border border-red-200'
+                                                                }`}
+                                                        >
+                                                            <LogOut size={14} />
+                                                            Cerrar Sesión
+                                                        </button>
+                                                    </div>
+                                                )}
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
+                            )}
+
                         </div >
                     </div >
 
@@ -966,7 +1274,7 @@ export default function NavigationBar() {
                         }}
                     >
                         <div
-                            className={`${isDarkMode ? 'bg-gray-900/95 border-white/20' : 'bg-white/95 border-gray-200'} backdrop-blur-sm rounded-lg border overflow-visible w-64 popover-content shadow-xl transition-colors duration-300`}
+                            className={`${isDarkMode ? 'bg-black/95 border-white/10' : 'bg-white/95 border-gray-200'} backdrop-blur-md rounded-2xl border overflow-visible w-64 popover-content shadow-2xl transition-all duration-300`}
                             data-position={popoverPosition}
                             style={{
                                 '--arrow-x': '50%',
@@ -977,8 +1285,8 @@ export default function NavigationBar() {
                         >
                             <div className="p-4">
                                 <div className="flex flex-col items-center text-center gap-3">
-                                    <div className={`p-2 ${isDarkMode ? 'bg-white/10' : 'bg-gray-100'} rounded-full`}>
-                                        <User className={`h-5 w-5 ${isDarkMode ? 'text-white' : 'text-gray-700'}`} />
+                                    <div className={`p-2.5 ${isDarkMode ? 'bg-white/5 border border-white/10' : 'bg-gray-100'} rounded-xl`}>
+                                        <User className={`h-5 w-5 ${isDarkMode ? 'text-white/70' : 'text-gray-700'}`} />
                                     </div>
                                     <div className="space-y-1">
                                         <p className={`text-sm font-medium ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
@@ -993,24 +1301,24 @@ export default function NavigationBar() {
                                             ¿Cerrar sesión?
                                         </p>
                                     </div>
-                                    <div className="flex w-full gap-2">
+                                    <div className="flex w-full gap-3 mt-2">
                                         <button
                                             onClick={() => setShowLogoutModal(false)}
-                                            className={`flex-1 py-1.5 px-3 text-xs rounded-md border transition-all duration-200 hover:scale-105 ${isDarkMode
-                                                ? 'bg-gray-800/50 text-gray-300 hover:bg-gray-800 border-gray-700/50'
-                                                : 'bg-gray-100 text-gray-600 hover:bg-gray-200 border-gray-300'
+                                            className={`flex-1 py-2 px-3 text-[10px] font-bold uppercase tracking-wider rounded-xl border transition-all duration-300 active:scale-95 ${isDarkMode
+                                                ? 'bg-transparent text-white/50 hover:text-white hover:bg-white/5 border-white/10'
+                                                : 'bg-gray-50 text-gray-500 hover:bg-gray-100 border-gray-200'
                                                 }`}
                                         >
                                             Cancelar
                                         </button>
                                         <button
                                             onClick={confirmLogout}
-                                            className={`flex-1 py-1.5 px-3 text-xs rounded-md border transition-all duration-200 hover:scale-105 ${isDarkMode
-                                                ? 'bg-white/20 text-white hover:bg-white/30 border-white/30'
-                                                : 'bg-gray-900 text-white hover:bg-gray-800 border-gray-900'
+                                            className={`flex-1 py-2 px-3 text-[10px] font-bold uppercase tracking-wider rounded-xl border transition-all duration-300 active:scale-95 ${isDarkMode
+                                                ? 'bg-white text-black hover:bg-gray-100 border-white'
+                                                : 'bg-black text-white hover:bg-gray-800 border-black'
                                                 }`}
                                         >
-                                            Confirmar
+                                            Cerrar Sesión
                                         </button>
                                     </div>
                                 </div>

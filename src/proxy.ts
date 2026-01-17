@@ -36,6 +36,23 @@ export async function proxy(request: NextRequest) {
 
     // Opcionalmente: verificar el token solo una vez cada cierto tiempo para mejorar rendimiento
     try {
+        // Parsear userData para verificar proveedor
+        let isAxpertUser = false;
+        try {
+            const parsedUserData = JSON.parse(userData);
+            if (parsedUserData.oauthProvider === 'axpert') {
+                isAxpertUser = true;
+            }
+        } catch (e) {
+            // Error parsing user data, continue with standard validation
+        }
+
+        // Si es usuario de AXpert, confiamos en la cookie y permitimos el paso
+        // (La validación estricta ocurrira en las llamadas a API o componentes de servidor si fallan)
+        if (isAxpertUser) {
+            return NextResponse.next();
+        }
+
         const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || ''
         const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ''
         const supabase = createClient(supabaseUrl, supabaseKey)
