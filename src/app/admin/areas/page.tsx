@@ -1,15 +1,14 @@
-import Areas from "@/components/admin/areas"
-import { Metadata } from "next";
+"use client";
 
-export const metadata: Metadata = {
-    title: 'INVENTARIO | ADMIN | ÁREAS',
-    description: 'Admin page for managing áreas',
-}
+import Areas from "@/components/admin/areas"
+import ProtectedPage from "@/components/ProtectedPage";
 
 export default function Add() {
     return (
-        <div className="max-h-full overflow-auto">
-            <Areas />
-        </div>            
+        <ProtectedPage requiredRoles={["superadmin"]}>
+            <div className="max-h-full overflow-auto">
+                <Areas />
+            </div>
+        </ProtectedPage>
     )
 }

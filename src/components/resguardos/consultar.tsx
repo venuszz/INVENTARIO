@@ -279,16 +279,6 @@ export default function ConsultarResguardos({ folioParam }: { folioParam?: strin
     const moveToResguardosBajas = async (articulos: Array<ResguardoArticulo>, folioBaja: string) => {
         if (!selectedResguardo) return;
 
-        // Obtener el nombre del usuario autenticado desde la cookie
-        let createdBy = 'SISTEMA';
-        try {
-            const userDataCookie = typeof window !== 'undefined' ? window.document.cookie.split('; ').find(row => row.startsWith('userData=')) : null;
-            if (userDataCookie) {
-                const userData = JSON.parse(decodeURIComponent(userDataCookie.split('=')[1]));
-                createdBy = `${userData.firstName || ''}${userData.lastName ? ' ' + userData.lastName : ''}`.trim();
-            }
-        } catch { }
-
         for (const articulo of articulos) {
             await supabase
                 .from('resguardos_bajas')
@@ -303,7 +293,6 @@ export default function ConsultarResguardos({ folioParam }: { folioParam?: strin
                     rubro: articulo.rubro,
                     condicion: articulo.condicion,
                     usufinal: articulo.resguardante || '',
-                    created_by: createdBy, // Ahora guarda el nombre del usuario
                     puesto: selectedResguardo.puesto,
                     origen: articulo.origen
                 });
@@ -1779,39 +1768,39 @@ export default function ConsultarResguardos({ folioParam }: { folioParam?: strin
 
             {/* Modal para PDF de baja */}
             {showPDFBajaButton && pdfBajaData && (
-                <div className="fixed inset-0 bg-black/90 flex items-center justify-center z-50 px-4 animate-fadeIn">
-                    <div className="bg-black rounded-2xl shadow-2xl border border-red-600/30 w-full max-w-md overflow-hidden transition-all duration-300 transform">
-                        <div className="relative p-6 bg-gradient-to-b from-black to-gray-900">
-                            <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-red-500/60 via-red-400 to-red-500/60"></div>
+                <div className={`fixed inset-0 ${isDarkMode ? 'bg-black/90' : 'bg-gray-900/80'} flex items-center justify-center z-50 px-4 animate-fadeIn`}>
+                    <div className={`${isDarkMode ? 'bg-black' : 'bg-white'} rounded-2xl shadow-2xl border ${isDarkMode ? 'border-red-600/30' : 'border-red-500/50'} w-full max-w-md overflow-hidden transition-all duration-300 transform`}>
+                        <div className={`relative p-6 ${isDarkMode ? 'bg-gradient-to-b from-black to-gray-900' : 'bg-gradient-to-b from-white to-gray-50'}`}>
+                            <div className={`absolute top-0 left-0 w-full h-1 bg-gradient-to-r ${isDarkMode ? 'from-red-500/60 via-red-400 to-red-500/60' : 'from-red-500 via-red-400 to-red-500'}`}></div>
 
                             <button
                                 onClick={() => {
                                     setShowPDFBajaButton(false);
                                     setPdfBajaData(null);
                                 }}
-                                className="absolute top-3 right-3 p-2 rounded-full bg-black/60 hover:bg-gray-900 text-red-400 hover:text-red-500 border border-red-500/30 transition-colors"
+                                className={`absolute top-3 right-3 p-2 rounded-full ${isDarkMode ? 'bg-black/60 hover:bg-gray-900 text-red-400 hover:text-red-500 border border-red-500/30' : 'bg-white/80 hover:bg-gray-100 text-red-600 hover:text-red-700 border border-red-500/50'} transition-colors`}
                                 title="Cerrar"
                             >
                                 <X className="h-4 w-4" />
                             </button>
 
                             <div className="flex flex-col items-center text-center mb-4">
-                                <div className="p-3 bg-red-500/10 rounded-full border border-red-500/30 mb-3 animate-pulse">
-                                    <FileDigit className="h-8 w-8 text-red-500" />
+                                <div className={`p-3 ${isDarkMode ? 'bg-red-500/10 border-red-500/30' : 'bg-red-50 border-red-200'} rounded-full border mb-3 animate-pulse`}>
+                                    <FileDigit className={`h-8 w-8 ${isDarkMode ? 'text-red-500' : 'text-red-600'}`} />
                                 </div>
-                                <h3 className="text-2xl font-bold text-white">Baja generada</h3>
-                                <p className="text-gray-400 mt-2">
+                                <h3 className={`text-2xl font-bold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>Baja generada</h3>
+                                <p className={`mt-2 ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>
                                     Descarga el PDF de la baja para imprimir o compartir
                                 </p>
                             </div>
                             <div className="space-y-5 mt-6">
-                                <div className="rounded-lg border border-gray-800 bg-gray-900/50 p-4">
-                                    <label className="block text-xs uppercase tracking-wider text-gray-500 mb-1">Documento generado</label>
+                                <div className={`rounded-lg border ${isDarkMode ? 'border-gray-800 bg-gray-900/50' : 'border-gray-200 bg-gray-50'} p-4`}>
+                                    <label className={`block text-xs uppercase tracking-wider ${isDarkMode ? 'text-gray-500' : 'text-gray-600'} mb-1`}>Documento generado</label>
                                     <div className="flex items-center gap-3">
-                                        <div className="p-2 bg-gray-800 rounded-lg">
-                                            <FileText className="h-4 w-4 text-red-400" />
+                                        <div className={`p-2 ${isDarkMode ? 'bg-gray-800' : 'bg-gray-100'} rounded-lg`}>
+                                            <FileText className={`h-4 w-4 ${isDarkMode ? 'text-red-400' : 'text-red-600'}`} />
                                         </div>
-                                        <span className="text-white font-medium">Baja {pdfBajaData.folio_baja}</span>
+                                        <span className={`font-medium ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>Baja {pdfBajaData.folio_baja}</span>
                                     </div>
                                 </div>
 
@@ -1863,10 +1852,10 @@ export default function ConsultarResguardos({ folioParam }: { folioParam?: strin
                                                 setPdfBajaData(null);
                                             }
                                         }}
-                                        className="w-full py-3 px-4 bg-red-600 hover:bg-red-500 text-white rounded-lg font-medium transition-all duration-300 hover:scale-[1.02] shadow-lg hover:shadow-red-500/30"
+                                        className={`w-full py-3.5 px-5 ${isDarkMode ? 'bg-gradient-to-r from-red-600 to-red-500 hover:from-red-500 hover:to-red-400 text-white shadow-lg hover:shadow-red-500/30' : 'bg-gradient-to-r from-red-600 to-red-500 hover:from-red-500 hover:to-red-400 text-white shadow-lg hover:shadow-red-500/20'} rounded-lg font-semibold transition-all duration-300 hover:scale-[1.02] flex items-center justify-center gap-2 border ${isDarkMode ? 'border-red-700/50' : 'border-red-600/30'}`}
                                     >
-                                        <Download className="h-4 w-4" />
-                                        Descargar PDF
+                                        <Download className="h-5 w-5" />
+                                        Descargar PDF de Baja
                                     </button>
                                 </div>
                             </div>
@@ -1877,37 +1866,37 @@ export default function ConsultarResguardos({ folioParam }: { folioParam?: strin
 
             {/* Modal de confirmación para borrar TODO el resguardo */}
             {showDeleteAllModal && selectedResguardo && (
-                <div className="fixed inset-0 bg-black/90 flex items-center justify-center z-50 px-4 animate-fadeIn">
-                    <div className="bg-black rounded-2xl shadow-2xl border border-red-600/30 w-full max-w-md overflow-hidden transition-all duration-300 transform">
-                        <div className="relative p-6 bg-gradient-to-b from-black to-gray-900">
-                            <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-red-500/60 via-red-400 to-red-500/60"></div>
+                <div className={`fixed inset-0 ${isDarkMode ? 'bg-black/90' : 'bg-gray-900/80'} flex items-center justify-center z-50 px-4 animate-fadeIn`}>
+                    <div className={`${isDarkMode ? 'bg-black' : 'bg-white'} rounded-2xl shadow-2xl border ${isDarkMode ? 'border-red-600/30' : 'border-red-500/50'} w-full max-w-md overflow-hidden transition-all duration-300 transform`}>
+                        <div className={`relative p-6 ${isDarkMode ? 'bg-gradient-to-b from-black to-gray-900' : 'bg-gradient-to-b from-white to-gray-50'}`}>
+                            <div className={`absolute top-0 left-0 w-full h-1 bg-gradient-to-r ${isDarkMode ? 'from-red-500/60 via-red-400 to-red-500/60' : 'from-red-500 via-red-400 to-red-500'}`}></div>
                             <button
                                 onClick={() => setShowDeleteAllModal(false)}
-                                className="absolute top-3 right-3 p-2 rounded-full bg-black/60 hover:bg-gray-900 text-red-400 hover:text-red-500 border border-red-500/30 transition-colors"
+                                className={`absolute top-3 right-3 p-2 rounded-full ${isDarkMode ? 'bg-black/60 hover:bg-gray-900 text-red-400 hover:text-red-500 border border-red-500/30' : 'bg-white/80 hover:bg-gray-100 text-red-600 hover:text-red-700 border border-red-500/50'} transition-colors`}
                                 title="Cerrar"
                             >
                                 <X className="h-4 w-4" />
                             </button>
                             <div className="flex flex-col items-center text-center mb-4">
-                                <div className="p-3 bg-red-500/10 rounded-full border border-red-500/30 mb-3 animate-pulse">
-                                    <XOctagon className="h-8 w-8 text-red-500" />
+                                <div className={`p-3 ${isDarkMode ? 'bg-red-500/10 border-red-500/30' : 'bg-red-50 border-red-200'} rounded-full border mb-3 animate-pulse`}>
+                                    <XOctagon className={`h-8 w-8 ${isDarkMode ? 'text-red-500' : 'text-red-600'}`} />
                                 </div>
-                                <h3 className="text-2xl font-bold text-white">¿Borrar todo el resguardo?</h3>
-                                <p className="text-gray-400 mt-2">
-                                    Esta acción eliminará <b>todos los artículos</b> del resguardo <span className="text-red-300 font-bold">{selectedResguardo.folio}</span> de la base de datos. ¿Desea continuar?
+                                <h3 className={`text-2xl font-bold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>¿Borrar todo el resguardo?</h3>
+                                <p className={`mt-2 ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+                                    Esta acción eliminará <b className={isDarkMode ? 'text-white' : 'text-gray-900'}>todos los artículos</b> del resguardo <span className={`${isDarkMode ? 'text-red-300' : 'text-red-600'} font-bold`}>{selectedResguardo.folio}</span> de la base de datos. ¿Desea continuar?
                                 </p>
                             </div>
                             <div className="flex gap-3 w-full mt-2">
                                 <button
                                     onClick={() => setShowDeleteAllModal(false)}
-                                    className="flex-1 py-2 px-4 border border-gray-700 text-gray-300 hover:bg-gray-800 rounded-lg transition-colors hover:border-blue-500/50"
+                                    className={`flex-1 py-2.5 px-4 border ${isDarkMode ? 'border-gray-700 text-gray-300 hover:bg-gray-800 hover:border-blue-500/50' : 'border-gray-300 text-gray-700 hover:bg-gray-100 hover:border-blue-400'} rounded-lg transition-colors font-medium`}
                                 >
                                     Cancelar
                                 </button>
                                 <button
                                     onClick={handleDeleteAll}
                                     disabled={deleting}
-                                    className="flex-1 py-2 px-4 bg-gradient-to-r from-red-600 to-red-500 text-white font-bold rounded-lg hover:from-red-500 hover:to-red-400 transition-all transform hover:scale-[1.02] shadow-lg border border-red-700 disabled:opacity-60"
+                                    className={`flex-1 py-2.5 px-4 bg-gradient-to-r from-red-600 to-red-500 text-white font-bold rounded-lg hover:from-red-500 hover:to-red-400 transition-all transform hover:scale-[1.02] shadow-lg border ${isDarkMode ? 'border-red-700' : 'border-red-600/50'} disabled:opacity-60 disabled:cursor-not-allowed`}
                                 >
                                     {deleting ? 'Eliminando...' : 'Borrar todo'}
                                 </button>
@@ -1919,37 +1908,37 @@ export default function ConsultarResguardos({ folioParam }: { folioParam?: strin
 
             {/* Modal de confirmación para borrar un solo artículo */}
             {showDeleteItemModal && selectedResguardo && (
-                <div className="fixed inset-0 bg-black/90 flex items-center justify-center z-50 px-4 animate-fadeIn">
-                    <div className="bg-black rounded-2xl shadow-2xl border border-red-600/30 w-full max-w-md overflow-hidden transition-all duration-300 transform">
-                        <div className="relative p-6 bg-gradient-to-b from-black to-gray-900">
-                            <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-red-500/60 via-red-400 to-red-500/60"></div>
+                <div className={`fixed inset-0 ${isDarkMode ? 'bg-black/90' : 'bg-gray-900/80'} flex items-center justify-center z-50 px-4 animate-fadeIn`}>
+                    <div className={`${isDarkMode ? 'bg-black' : 'bg-white'} rounded-2xl shadow-2xl border ${isDarkMode ? 'border-red-600/30' : 'border-red-500/50'} w-full max-w-md overflow-hidden transition-all duration-300 transform`}>
+                        <div className={`relative p-6 ${isDarkMode ? 'bg-gradient-to-b from-black to-gray-900' : 'bg-gradient-to-b from-white to-gray-50'}`}>
+                            <div className={`absolute top-0 left-0 w-full h-1 bg-gradient-to-r ${isDarkMode ? 'from-red-500/60 via-red-400 to-red-500/60' : 'from-red-500 via-red-400 to-red-500'}`}></div>
                             <button
                                 onClick={() => setShowDeleteItemModal(null)}
-                                className="absolute top-3 right-3 p-2 rounded-full bg-black/60 hover:bg-gray-900 text-red-400 hover:text-red-500 border border-red-500/30 transition-colors"
+                                className={`absolute top-3 right-3 p-2 rounded-full ${isDarkMode ? 'bg-black/60 hover:bg-gray-900 text-red-400 hover:text-red-500 border border-red-500/30' : 'bg-white/80 hover:bg-gray-100 text-red-600 hover:text-red-700 border border-red-500/50'} transition-colors`}
                                 title="Cerrar"
                             >
                                 <X className="h-4 w-4" />
                             </button>
                             <div className="flex flex-col items-center text-center mb-4">
-                                <div className="p-3 bg-red-500/10 rounded-full border border-red-500/30 mb-3 animate-pulse">
-                                    <CircleX className="h-8 w-8 text-red-500" />
+                                <div className={`p-3 ${isDarkMode ? 'bg-red-500/10 border-red-500/30' : 'bg-red-50 border-red-200'} rounded-full border mb-3 animate-pulse`}>
+                                    <CircleX className={`h-8 w-8 ${isDarkMode ? 'text-red-500' : 'text-red-600'}`} />
                                 </div>
-                                <h3 className="text-2xl font-bold text-white">¿Eliminar este artículo?</h3>
-                                <p className="text-gray-400 mt-2">
-                                    El artículo <span className="text-red-300 font-bold">{showDeleteItemModal.articulo.num_inventario}</span> será eliminado del resguardo <span className="text-red-300 font-bold">{selectedResguardo.folio}</span>.
+                                <h3 className={`text-2xl font-bold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>¿Eliminar este artículo?</h3>
+                                <p className={`mt-2 ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+                                    El artículo <span className={`${isDarkMode ? 'text-red-300' : 'text-red-600'} font-bold`}>{showDeleteItemModal.articulo.num_inventario}</span> será eliminado del resguardo <span className={`${isDarkMode ? 'text-red-300' : 'text-red-600'} font-bold`}>{selectedResguardo.folio}</span>.
                                 </p>
                             </div>
                             <div className="flex gap-3 w-full mt-2">
                                 <button
                                     onClick={() => setShowDeleteItemModal(null)}
-                                    className="flex-1 py-2 px-4 border border-gray-700 text-gray-300 hover:bg-gray-800 rounded-lg transition-colors hover:border-blue-500/50"
+                                    className={`flex-1 py-2.5 px-4 border ${isDarkMode ? 'border-gray-700 text-gray-300 hover:bg-gray-800 hover:border-blue-500/50' : 'border-gray-300 text-gray-700 hover:bg-gray-100 hover:border-blue-400'} rounded-lg transition-colors font-medium`}
                                 >
                                     Cancelar
                                 </button>
                                 <button
                                     onClick={() => handleDeleteItem(showDeleteItemModal.articulo)}
                                     disabled={deleting}
-                                    className="flex-1 py-2 px-4 bg-gradient-to-r from-red-600 to-red-500 text-white font-bold rounded-lg hover:from-red-500 hover:to-red-400 transition-all transform hover:scale-[1.02] shadow-lg border border-red-700 disabled:opacity-60"
+                                    className={`flex-1 py-2.5 px-4 bg-gradient-to-r from-red-600 to-red-500 text-white font-bold rounded-lg hover:from-red-500 hover:to-red-400 transition-all transform hover:scale-[1.02] shadow-lg border ${isDarkMode ? 'border-red-700' : 'border-red-600/50'} disabled:opacity-60 disabled:cursor-not-allowed`}
                                 >
                                     {deleting ? 'Eliminando...' : 'Eliminar'}
                                 </button>
@@ -1961,29 +1950,29 @@ export default function ConsultarResguardos({ folioParam }: { folioParam?: strin
 
             {/* Modal de confirmación para borrar varios artículos seleccionados */}
             {showDeleteSelectedModal && selectedResguardo && (
-                <div className="fixed inset-0 bg-black/90 flex items-center justify-center z-50 px-4 animate-fadeIn">
-                    <div className="bg-black rounded-2xl shadow-2xl border border-red-600/30 w-full max-w-md overflow-hidden transition-all duration-300 transform">
-                        <div className="relative p-6 bg-gradient-to-b from-black to-gray-900">
-                            <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-red-500/60 via-red-400 to-red-500/60"></div>
+                <div className={`fixed inset-0 ${isDarkMode ? 'bg-black/90' : 'bg-gray-900/80'} flex items-center justify-center z-50 px-4 animate-fadeIn`}>
+                    <div className={`${isDarkMode ? 'bg-black' : 'bg-white'} rounded-2xl shadow-2xl border ${isDarkMode ? 'border-red-600/30' : 'border-red-500/50'} w-full max-w-md overflow-hidden transition-all duration-300 transform`}>
+                        <div className={`relative p-6 ${isDarkMode ? 'bg-gradient-to-b from-black to-gray-900' : 'bg-gradient-to-b from-white to-gray-50'}`}>
+                            <div className={`absolute top-0 left-0 w-full h-1 bg-gradient-to-r ${isDarkMode ? 'from-red-500/60 via-red-400 to-red-500/60' : 'from-red-500 via-red-400 to-red-500'}`}></div>
                             <button
                                 onClick={() => setShowDeleteSelectedModal(false)}
-                                className="absolute top-3 right-3 p-2 rounded-full bg-black/60 hover:bg-gray-900 text-red-400 hover:text-red-500 border border-red-500/30 transition-colors"
+                                className={`absolute top-3 right-3 p-2 rounded-full ${isDarkMode ? 'bg-black/60 hover:bg-gray-900 text-red-400 hover:text-red-500 border border-red-500/30' : 'bg-white/80 hover:bg-gray-100 text-red-600 hover:text-red-700 border border-red-500/50'} transition-colors`}
                                 title="Cerrar"
                             >
                                 <X className="h-4 w-4" />
                             </button>
                             <div className="flex flex-col items-center text-center mb-4">
-                                <div className="p-3 bg-red-500/10 rounded-full border border-red-500/30 mb-3 animate-pulse">
-                                    <XOctagon className="h-8 w-8 text-red-500" />
+                                <div className={`p-3 ${isDarkMode ? 'bg-red-500/10 border-red-500/30' : 'bg-red-50 border-red-200'} rounded-full border mb-3 animate-pulse`}>
+                                    <XOctagon className={`h-8 w-8 ${isDarkMode ? 'text-red-500' : 'text-red-600'}`} />
                                 </div>
-                                <h3 className="text-2xl font-bold text-white">¿Eliminar artículos seleccionados?</h3>
-                                <p className="text-gray-400 mt-2">
-                                    Se eliminarán <b>{selectedArticulos.length}</b> artículos del resguardo <span className="text-red-300 font-bold">{selectedResguardo.folio}</span>:
+                                <h3 className={`text-2xl font-bold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>¿Eliminar artículos seleccionados?</h3>
+                                <p className={`mt-2 ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+                                    Se eliminarán <b className={isDarkMode ? 'text-white' : 'text-gray-900'}>{selectedArticulos.length}</b> artículos del resguardo <span className={`${isDarkMode ? 'text-red-300' : 'text-red-600'} font-bold`}>{selectedResguardo.folio}</span>:
                                 </p>
-                                <ul className="text-left mt-4 max-h-40 overflow-y-auto w-full text-sm text-gray-200">
+                                <ul className={`text-left mt-4 max-h-40 overflow-y-auto w-full text-sm ${isDarkMode ? 'text-gray-200' : 'text-gray-700'} ${isDarkMode ? 'scrollbar-thin scrollbar-thumb-gray-700 scrollbar-track-gray-900' : 'scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100'}`}>
                                     {selectedResguardo.articulos.filter(a => selectedArticulos.includes(a.num_inventario)).map(a => (
-                                        <li key={a.num_inventario} className="mb-1 flex items-center gap-2">
-                                            <FileText className="h-4 w-4 text-red-400" />
+                                        <li key={a.num_inventario} className={`mb-1 flex items-center gap-2 ${isDarkMode ? 'hover:bg-gray-800/50' : 'hover:bg-gray-100'} p-1 rounded transition-colors`}>
+                                            <FileText className={`h-4 w-4 ${isDarkMode ? 'text-red-400' : 'text-red-600'}`} />
                                             <span className="font-mono">{a.num_inventario}</span> - {a.descripcion}
                                         </li>
                                     ))}
@@ -1992,14 +1981,14 @@ export default function ConsultarResguardos({ folioParam }: { folioParam?: strin
                             <div className="flex gap-3 w-full mt-2">
                                 <button
                                     onClick={() => setShowDeleteSelectedModal(false)}
-                                    className="flex-1 py-2 px-4 border border-gray-700 text-gray-300 hover:bg-gray-800 rounded-lg transition-colors hover:border-blue-500/50"
+                                    className={`flex-1 py-2.5 px-4 border ${isDarkMode ? 'border-gray-700 text-gray-300 hover:bg-gray-800 hover:border-blue-500/50' : 'border-gray-300 text-gray-700 hover:bg-gray-100 hover:border-blue-400'} rounded-lg transition-colors font-medium`}
                                 >
                                     Cancelar
                                 </button>
                                 <button
                                     onClick={handleDeleteSelected}
                                     disabled={deleting}
-                                    className="flex-1 py-2 px-4 bg-gradient-to-r from-red-600 to-red-500 text-white font-bold rounded-lg hover:from-red-500 hover:to-red-400 transition-all transform hover:scale-[1.02] shadow-lg border border-red-700 disabled:opacity-60"
+                                    className={`flex-1 py-2.5 px-4 bg-gradient-to-r from-red-600 to-red-500 text-white font-bold rounded-lg hover:from-red-500 hover:to-red-400 transition-all transform hover:scale-[1.02] shadow-lg border ${isDarkMode ? 'border-red-700' : 'border-red-600/50'} disabled:opacity-60 disabled:cursor-not-allowed`}
                                 >
                                     {deleting ? 'Eliminando...' : 'Eliminar seleccionados'}
                                 </button>

@@ -1,5 +1,5 @@
 "use client"
-import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
+import { useState, useEffect, useRef, useCallback, useMemo, useDeferredValue } from 'react';
 import {
     Search, RefreshCw, ChevronLeft, ChevronRight,
     ArrowUpDown, AlertCircle, X, Save, Trash2, Check,
@@ -175,7 +175,7 @@ export default function ConsultasIteaGeneral() {
     // Usar el contexto de indexación de ITEA
     const { muebles, isIndexing: loading, error, reindex } = useIteaIndexation();
     const searchParams = useSearchParams();
-    
+
     const [imageFile, setImageFile] = useState<File | null>(null);
     const [imagePreview, setImagePreview] = useState<string | null>(null);
     const [uploading, setUploading] = useState(false);
@@ -204,6 +204,24 @@ export default function ConsultasIteaGeneral() {
     const [directorFormData, setDirectorFormData] = useState({ area: '' });
     const [savingDirector, setSavingDirector] = useState(false);
     const [message, setMessage] = useState<Message | null>(null);
+
+    // Defer search term to avoid blocking input
+    const deferredSearchTerm = useDeferredValue(searchTerm);
+
+    // Pre-calculate searchable vectors to avoid mapping on every keystroke
+    const searchableData = useMemo(() => {
+        if (!muebles || muebles.length === 0) return null;
+        return {
+            id: muebles.map(m => m.id_inv || '').filter(Boolean),
+            area: muebles.map(m => m.area || '').filter(Boolean),
+            usufinal: muebles.map(m => m.usufinal || '').filter(Boolean),
+            resguardante: muebles.map(m => m.resguardante || '').filter(Boolean),
+            descripcion: muebles.map(m => m.descripcion || '').filter(Boolean),
+            rubro: muebles.map(m => m.rubro || '').filter(Boolean),
+            estado: muebles.map(m => m.estado || '').filter(Boolean),
+            estatus: muebles.map(m => m.estatus || '').filter(Boolean),
+        };
+    }, [muebles]);
     const [showBajaModal, setShowBajaModal] = useState(false);
     const [bajaCause, setBajaCause] = useState('');
     const [showInactiveModal, setShowInactiveModal] = useState(false);
@@ -494,26 +512,6 @@ export default function ConsultasIteaGeneral() {
         setCurrentPage(1);
     }, [searchTerm, filters, sortField, sortDirection, rowsPerPage]);
 
-    // Detectar parámetro id en URL y abrir detalles automáticamente
-    useEffect(() => {
-        const idParam = searchParams.get('id');
-        if (idParam && muebles.length > 0) {
-            const itemId = parseInt(idParam, 10);
-            const item = muebles.find(m => m.id === itemId);
-            if (item) {
-                setSelectedItem(item);
-                setIsEditing(false);
-                setEditFormData(null);
-                // Scroll al detalle si es necesario
-                setTimeout(() => {
-                    if (detailRef.current) {
-                        detailRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                    }
-                }, 100);
-            }
-        }
-    }, [searchParams, muebles]);
-
     const handleSelectItem = (item: Mueble) => {
         setSelectedItem(item);
         setIsEditing(false);
@@ -665,7 +663,7 @@ export default function ConsultasIteaGeneral() {
     const confirmBaja = async () => {
         if (!selectedItem || !bajaCause) return;
         setShowBajaModal(false);
-        try{
+        try {
             const today = '2025-04-27'; // Fecha actual
             const { error } = await supabase
                 .from('mueblesitea')
@@ -782,6 +780,11 @@ export default function ConsultasIteaGeneral() {
         setEditFormData(null);
         setImageFile(null);
         setImagePreview(null);
+        // Limpiar el parámetro id de la URL
+        const params = new URLSearchParams(searchParams.toString());
+        params.delete('id');
+        const newUrl = params.toString() ? `${window.location.pathname}?${params.toString()}` : window.location.pathname;
+        router.replace(newUrl);
     };
 
     // Save current filter
@@ -806,108 +809,98 @@ export default function ConsultasIteaGeneral() {
     };
 
     // --- OMNIBOX MATCH TYPE DETECTION ---
+    // --- OMNIBOX MATCH TYPE DETECTION ---
     useEffect(() => {
-        if (!searchTerm || muebles.length === 0) {
+        if (!deferredSearchTerm || muebles.length === 0) {
             setSearchMatchType(null);
             return;
         }
-        const clean = (str: string) => (str || '').normalize('NFKD').replace(/\p{Diacritic}/gu, '').toLowerCase().trim();
-        const term = clean(searchTerm);
+        const term = deferredSearchTerm.toLowerCase().trim();
         let bestMatch = { type: null, value: '', score: 0 } as { type: ActiveFilter['type'], value: string, score: number };
+
+        // Optimización: Iteración simple sin regex pesado
         for (const item of muebles) {
             // Usufinal/Resguardante
-            if ((item.usufinal && clean(item.usufinal).includes(term)) || (item.resguardante && clean(item.resguardante).includes(term))) {
-                const exact = clean(item.usufinal || '') === term || clean(item.resguardante || '') === term;
+            if ((item.usufinal && (item.usufinal.toLowerCase().includes(term))) || (item.resguardante && item.resguardante.toLowerCase().includes(term))) {
+                const exact = (item.usufinal?.toLowerCase() === term) || (item.resguardante?.toLowerCase() === term);
                 const score = exact ? 10 : 9;
                 if (score > bestMatch.score) bestMatch = { type: 'usufinal', value: item.usufinal || item.resguardante || '', score };
             }
             // Área
-            if (item.area && clean(item.area).includes(term)) {
-                const exact = clean(item.area) === term;
+            else if (item.area && item.area.toLowerCase().includes(term)) {
+                const exact = item.area.toLowerCase() === term;
                 const score = exact ? 8 : 7;
                 if (score > bestMatch.score) bestMatch = { type: 'area', value: item.area, score };
             }
             // ID
-            if (item.id_inv && clean(item.id_inv).includes(term)) {
-                const exact = clean(item.id_inv) === term;
+            else if (item.id_inv && item.id_inv.toLowerCase().includes(term)) {
+                const exact = item.id_inv.toLowerCase() === term;
                 const score = exact ? 6 : 5;
                 if (score > bestMatch.score) bestMatch = { type: 'id', value: item.id_inv, score };
             }
             // Descripción
-            if (item.descripcion && clean(item.descripcion).includes(term)) {
-                const exact = clean(item.descripcion) === term;
+            else if (item.descripcion && item.descripcion.toLowerCase().includes(term)) {
+                const exact = item.descripcion.toLowerCase() === term;
                 const score = exact ? 4 : 3;
                 if (score > bestMatch.score) bestMatch = { type: 'descripcion', value: item.descripcion, score };
             }
-            // Rubro
-            if (item.rubro && clean(item.rubro).includes(term)) {
-                const exact = clean(item.rubro) === term;
-                const score = exact ? 2 : 1;
-                if (score > bestMatch.score) bestMatch = { type: 'rubro', value: item.rubro, score };
-            }
-            // Estado
-            if (item.estado && clean(item.estado).includes(term)) {
-                const score = 1;
-                if (score > bestMatch.score) bestMatch = { type: 'estado', value: item.estado, score };
-            }
-            // Estatus
-            if (item.estatus && clean(item.estatus).includes(term)) {
-                const score = 1;
-                if (score > bestMatch.score) bestMatch = { type: 'estatus', value: item.estatus, score };
-            }
-            // All other fields (for completeness, but not used for filter chips)
-            const otherFields: (keyof Mueble)[] = [
-                'valor', 'f_adq', 'formadq', 'proveedor', 'factura', 'ubicacion_es', 'ubicacion_mu', 'ubicacion_no', 'fechabaja', 'causadebaja', 'image_path'
-            ];
-            for (const field of otherFields) {
-                const val = item[field];
-                if (typeof val === 'string' && clean(val).includes(term)) {
-                    // Lower score for less relevant fields
-                    if (bestMatch.score < 0.5) bestMatch = { type: null, value: val, score: 0.5 };
-                }
-            }
+
+            // Short-circuit si encontramos un match exacto de alta prioridad
+            if (bestMatch.score >= 10) break;
         }
         setSearchMatchType(bestMatch.type);
-    }, [searchTerm, muebles]);
+    }, [deferredSearchTerm, muebles]);
 
     // --- OMNIBOX FILTERING ---
-    const clean = (str: string) => (str || '').normalize('NFKD').replace(/\p{Diacritic}/gu, '').toLowerCase();
-    // 3. Filtrado de la tabla: aplica también los filtros de tabla (filters)
-    const filteredMueblesOmni = muebles.filter(item => {
-        // Filtros de tabla (igual que inea)
-        if (filters.estado && clean(item.estado || '') !== clean(filters.estado)) return false;
-        if (filters.estatus && clean(item.estatus || '') !== clean(filters.estatus)) return false;
-        if (filters.area && clean(item.area || '') !== clean(filters.area)) return false;
-        if (filters.rubro && clean(item.rubro || '') !== clean(filters.rubro)) return false;
-        // Filtros omnibox
-        if (activeFilters.length === 0 && !searchTerm) return true;
-        const passesActiveFilters = activeFilters.every(filter => {
-            const filterTerm = clean(filter.term);
-            if (!filterTerm) return true;
-            switch (filter.type) {
-                case 'id': return clean(item.id_inv || '').includes(filterTerm);
-                case 'descripcion': return clean(item.descripcion || '').includes(filterTerm);
-                case 'rubro': return clean(item.rubro || '').includes(filterTerm);
-                case 'estado': return clean(item.estado || '').includes(filterTerm);
-                case 'estatus': return clean(item.estatus || '').includes(filterTerm);
-                case 'area': return clean(item.area || '').includes(filterTerm);
-                case 'usufinal': return clean(item.usufinal || '').includes(filterTerm);
-                case 'resguardante': return clean(item.resguardante || '').includes(filterTerm);
-                default: return true;
-            }
+    // --- OMNIBOX FILTERING ---
+    // 3. Filtrado de la tabla optimizado con memo y search term diferido
+    const filteredMueblesOmni = useMemo(() => {
+        const term = deferredSearchTerm.toLowerCase().trim();
+
+        return muebles.filter(item => {
+            // Filtros de tabla (usando toLowerCase para evitar regex)
+            if (filters.estado && (item.estado || '').toLowerCase() !== filters.estado.toLowerCase()) return false;
+            if (filters.estatus && (item.estatus || '').toLowerCase() !== filters.estatus.toLowerCase()) return false;
+            if (filters.area && (item.area || '').toLowerCase() !== filters.area.toLowerCase()) return false;
+            if (filters.rubro && (item.rubro || '').toLowerCase() !== filters.rubro.toLowerCase()) return false;
+
+            // Filtros omnibox
+            if (activeFilters.length === 0 && !term) return true;
+
+            const passesActiveFilters = activeFilters.every(filter => {
+                const filterTerm = filter.term.toLowerCase();
+                if (!filterTerm) return true;
+
+                switch (filter.type) {
+                    case 'id': return (item.id_inv?.toLowerCase() || '').includes(filterTerm);
+                    case 'descripcion': return (item.descripcion?.toLowerCase() || '').includes(filterTerm);
+                    case 'rubro': return (item.rubro?.toLowerCase() || '').includes(filterTerm);
+                    case 'estado': return (item.estado?.toLowerCase() || '').includes(filterTerm);
+                    case 'estatus': return (item.estatus?.toLowerCase() || '').includes(filterTerm);
+                    case 'area': return (item.area?.toLowerCase() || '').includes(filterTerm);
+                    case 'usufinal': return (item.usufinal?.toLowerCase() || '').includes(filterTerm);
+                    case 'resguardante': return (item.resguardante?.toLowerCase() || '').includes(filterTerm);
+                    default: return true;
+                }
+            });
+
+            if (!passesActiveFilters) return false;
+
+            // Búsqueda general estilo GlobalSearch (más eficiente)
+            if (!term) return true;
+
+            return (
+                (item.id_inv?.toLowerCase() || '').includes(term) ||
+                (item.descripcion?.toLowerCase() || '').includes(term) ||
+                (item.rubro?.toLowerCase() || '').includes(term) ||
+                (item.estado?.toLowerCase() || '').includes(term) ||
+                (item.estatus?.toLowerCase() || '').includes(term) ||
+                (item.area?.toLowerCase() || '').includes(term) ||
+                (item.usufinal?.toLowerCase() || '').includes(term) ||
+                (item.resguardante?.toLowerCase() || '').includes(term)
+            );
         });
-        const currentTerm = clean(searchTerm);
-        const passesCurrentSearch = !currentTerm ||
-            clean(item.id_inv || '').includes(currentTerm) ||
-            clean(item.descripcion || '').includes(currentTerm) ||
-            clean(item.rubro || '').includes(currentTerm) ||
-            clean(item.estado || '').includes(currentTerm) ||
-            clean(item.estatus || '').includes(currentTerm) ||
-            clean(item.area || '').includes(currentTerm) ||
-            clean(item.usufinal || '').includes(currentTerm) ||
-            clean(item.resguardante || '').includes(currentTerm);
-        return passesActiveFilters && passesCurrentSearch;
-    });
+    }, [muebles, filters, activeFilters, deferredSearchTerm]);
     const totalCount = filteredMueblesOmni.length;
     const totalPages = Math.max(1, Math.ceil(totalCount / rowsPerPage));
     const paginatedMuebles = filteredMueblesOmni
@@ -920,6 +913,48 @@ export default function ConsultasIteaGeneral() {
             return 0;
         })
         .slice((currentPage - 1) * rowsPerPage, currentPage * rowsPerPage);
+
+    // Detectar parámetro id en URL y abrir detalles automáticamente
+    useEffect(() => {
+        const idParam = searchParams.get('id');
+        if (idParam && muebles.length > 0) {
+            const itemId = parseInt(idParam, 10);
+            const item = muebles.find(m => m.id === itemId);
+            if (item) {
+                setSelectedItem(item);
+                setIsEditing(false);
+                setEditFormData(null);
+
+                // Calcular la página donde se encuentra el item
+                // Primero, obtener la lista filtrada y ordenada (igual que en paginatedMuebles)
+                const sortedFiltered = filteredMueblesOmni
+                    .slice()
+                    .sort((a, b) => {
+                        const aValue = a[sortField] ?? '';
+                        const bValue = b[sortField] ?? '';
+                        if (aValue < bValue) return sortDirection === 'asc' ? -1 : 1;
+                        if (aValue > bValue) return sortDirection === 'asc' ? 1 : -1;
+                        return 0;
+                    });
+
+                // Encontrar el índice del item en la lista ordenada
+                const itemIndex = sortedFiltered.findIndex(m => m.id === itemId);
+
+                if (itemIndex !== -1) {
+                    // Calcular la página basándose en el índice
+                    const targetPage = Math.floor(itemIndex / rowsPerPage) + 1;
+                    setCurrentPage(targetPage);
+                }
+
+                // Scroll al detalle si es necesario
+                setTimeout(() => {
+                    if (detailRef.current) {
+                        detailRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                    }
+                }, 100);
+            }
+        }
+    }, [searchParams, muebles, filteredMueblesOmni, sortField, sortDirection, rowsPerPage]);
 
     // Calcular totales directamente
     const filteredValue = filteredMueblesOmni.reduce((acc, item) => acc + (item.valor !== null && item.valor !== undefined ? Number(item.valor) : 0), 0);
@@ -1049,59 +1084,69 @@ export default function ConsultasIteaGeneral() {
     function handleInputBlur() {
         setTimeout(() => setShowSuggestions(false), 100);
     }
-    // Generar sugerencias al escribir
+    // Generar sugerencias al escribir (Optimizado con vectores)
     useEffect(() => {
-        if (!searchTerm || !muebles.length) {
+        if (!deferredSearchTerm || !searchableData) {
             setSuggestions([]);
             setShowSuggestions(false);
             setHighlightedIndex(-1);
             return;
         }
-        const clean = (str: string) => (str || '').normalize('NFKD').replace(/\p{Diacritic}/gu, '').toLowerCase().trim();
-        const term = clean(searchTerm);
+        const term = deferredSearchTerm.toLowerCase().trim();
+        if (term.length < 2) {
+            setSuggestions([]);
+            setShowSuggestions(false);
+            return;
+        }
+
         const seen = new Set<string>();
         const fields = [
-            { type: 'id' as ActiveFilter['type'], label: 'ID' },
-            { type: 'area' as ActiveFilter['type'], label: 'Área' },
-            { type: 'usufinal' as ActiveFilter['type'], label: 'Director' },
-            { type: 'resguardante' as ActiveFilter['type'], label: 'Resguardante' },
-            { type: 'descripcion' as ActiveFilter['type'], label: 'Descripción' },
-            { type: 'rubro' as ActiveFilter['type'], label: 'Rubro' },
-            { type: 'estado' as ActiveFilter['type'], label: 'Estado' },
-            { type: 'estatus' as ActiveFilter['type'], label: 'Estatus' },
+            { type: 'id' as ActiveFilter['type'], label: 'ID', data: searchableData.id },
+            { type: 'area' as ActiveFilter['type'], label: 'Área', data: searchableData.area },
+            { type: 'usufinal' as ActiveFilter['type'], label: 'Director', data: searchableData.usufinal },
+            { type: 'resguardante' as ActiveFilter['type'], label: 'Resguardante', data: searchableData.resguardante },
+            { type: 'descripcion' as ActiveFilter['type'], label: 'Descripción', data: searchableData.descripcion },
+            { type: 'rubro' as ActiveFilter['type'], label: 'Rubro', data: searchableData.rubro },
+            { type: 'estado' as ActiveFilter['type'], label: 'Estado', data: searchableData.estado },
+            { type: 'estatus' as ActiveFilter['type'], label: 'Estatus', data: searchableData.estatus },
         ];
+
         let allSuggestions: { value: string; type: ActiveFilter['type'] }[] = [];
+        let count = 0;
+        const maxSuggestions = 10;
+
+        // Iterate fields efficiently
         for (const f of fields) {
-            let values: string[] = [];
-            switch (f.type) {
-                case 'id': values = muebles.map(m => m.id_inv || '').filter(Boolean) as string[]; break;
-                case 'area': values = muebles.map(m => m.area || '').filter(Boolean) as string[]; break;
-                case 'usufinal': values = muebles.map(m => m.usufinal || '').filter(Boolean) as string[]; break;
-                case 'resguardante': values = muebles.map(m => m.resguardante || '').filter(Boolean) as string[]; break;
-                case 'descripcion': values = muebles.map(m => m.descripcion || '').filter(Boolean) as string[]; break;
-                case 'rubro': values = muebles.map(m => m.rubro || '').filter(Boolean) as string[]; break;
-                case 'estado': values = muebles.map(m => m.estado || '').filter(Boolean) as string[]; break;
-                case 'estatus': values = muebles.map(m => m.estatus || '').filter(Boolean) as string[]; break;
-                default: values = [];
-            }
-            for (const v of values) {
-                if (!v) continue;
-                const vClean = clean(v);
-                if (vClean.includes(term) && !seen.has(f.type + ':' + vClean)) {
-                    allSuggestions.push({ value: v, type: f.type });
-                    seen.add(f.type + ':' + vClean);
+            if (count >= maxSuggestions) break;
+
+            for (const v of f.data) {
+                const vLower = v.toLowerCase();
+                if (vLower.includes(term)) {
+                    // Create unique key
+                    const key = f.type + ':' + vLower;
+                    if (!seen.has(key)) {
+                        allSuggestions.push({ value: v, type: f.type });
+                        seen.add(key);
+                        count++;
+                        if (count >= maxSuggestions) break;
+                    }
                 }
             }
         }
-        // Prioridad: exactos primero, luego parciales, máx 7
-        allSuggestions = [
-            ...allSuggestions.filter(s => clean(s.value) === term),
-            ...allSuggestions.filter(s => clean(s.value) !== term)
-        ].slice(0, 7);
-        setSuggestions(allSuggestions);
+
+        // Priorize exact matches
+        allSuggestions.sort((a, b) => {
+            const aStarts = a.value.toLowerCase().startsWith(term);
+            const bStarts = b.value.toLowerCase().startsWith(term);
+            if (aStarts && !bStarts) return -1;
+            if (!aStarts && bStarts) return 1;
+            return 0;
+        });
+
+        setSuggestions(allSuggestions.slice(0, 7));
         setShowSuggestions(allSuggestions.length > 0);
         setHighlightedIndex(allSuggestions.length > 0 ? 0 : -1);
-    }, [searchTerm, muebles]);
+    }, [deferredSearchTerm, searchableData]);
 
     // --- OMNIBOX FILTER STATE (continuación) ---
     // Buscar folio de resguardo y detalles para los artículos mostrados
@@ -1504,15 +1549,12 @@ export default function ConsultasIteaGeneral() {
                                                     <tr
                                                         key={item.id}
                                                         onClick={() => handleSelectItem(item)}
-                                                        className={`group transition-all duration-300 cursor-pointer animate-fadeInUp ${selectedItem?.id === item.id
+                                                        className={`group transition-colors cursor-pointer ${selectedItem?.id === item.id
                                                             ? (isDarkMode ? 'bg-gray-800/30 border-l-4 border-gray-600' : 'bg-blue-50/50 border-l-4 border-blue-400')
                                                             : idx % 2 === 0
                                                                 ? (isDarkMode ? 'bg-black' : 'bg-white')
                                                                 : (isDarkMode ? 'bg-gray-900/30' : 'bg-gray-50/30')
                                                             } ${isDarkMode ? 'hover:bg-gray-800/10' : 'hover:bg-gray-100/50'}`}
-                                                        style={{
-                                                            animationDelay: `${idx * 25}ms`
-                                                        }}
                                                     >
                                                         <td className={`px-4 py-3 whitespace-nowrap text-sm font-medium ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
                                                             {item.id_inv}
@@ -1717,7 +1759,11 @@ export default function ConsultasIteaGeneral() {
                                 </h2>
                                 <button
                                     type="button"
-                                    onClick={closeDetail}
+                                    onClick={(e) => {
+                                        e.preventDefault();
+                                        e.stopPropagation();
+                                        closeDetail();
+                                    }}
                                     title="Cerrar detalle"
                                     className={`rounded-full p-2 focus:outline-none focus:ring-2 transition-colors ${isDarkMode ? 'text-gray-400 hover:text-white focus:ring-white hover:bg-gray-800' : 'text-gray-600 hover:text-gray-900 focus:ring-blue-500 hover:bg-gray-100'}`}
                                 >

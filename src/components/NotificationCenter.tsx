@@ -11,6 +11,7 @@ export default function NotificationsPanel({ onClose }: { onClose?: () => void }
     const [animateIn, setAnimateIn] = useState(false);
     const [modalAnimate, setModalAnimate] = useState(false);
     const [showRead, setShowRead] = useState(false);
+    const [showFilters, setShowFilters] = useState(false);
 
     // Extraer deleteNotification del hook
     const { notifications, loading, markAsRead, deleteNotification, refresh, doNotDisturb, setDoNotDisturb } = useNotifications();
@@ -124,8 +125,8 @@ export default function NotificationsPanel({ onClose }: { onClose?: () => void }
                 {/* Panel lateral */}
                 <div
                     className={`w-96 h-full flex flex-col shadow-xl transition-all duration-300 ${isDarkMode
-                            ? 'bg-black border-l border-gray-800'
-                            : 'bg-white border-l border-gray-200'
+                        ? 'bg-black/20 border-l border-white/10 backdrop-blur-2xl'
+                        : 'bg-white/30 border-l border-white/20 backdrop-blur-2xl'
                         } ${modalAnimate ? 'translate-x-0 opacity-100' : 'translate-x-8 opacity-0'}`}
                 >
                     {/* Indicador de tipo en la parte superior */}
@@ -137,8 +138,8 @@ export default function NotificationsPanel({ onClose }: { onClose?: () => void }
                             <button
                                 onClick={() => setModalOpen(false)}
                                 className={`flex items-center gap-2 transition-colors ${isDarkMode
-                                        ? 'text-gray-500 hover:text-white'
-                                        : 'text-gray-500 hover:text-gray-800'
+                                    ? 'text-gray-500 hover:text-white'
+                                    : 'text-gray-500 hover:text-gray-800'
                                     }`}
                             >
                                 <ArrowLeft size={18} />
@@ -178,14 +179,13 @@ export default function NotificationsPanel({ onClose }: { onClose?: () => void }
                         {/* Badges informativos */}
                         <div className="flex flex-wrap gap-2 mb-6">
                             <div className={`inline-flex px-2 py-1 rounded-md text-xs font-medium bg-opacity-10 ${selectedNotification.importance === 'high'
-                                    ? isDarkMode ? 'bg-red-900 text-red-400' : 'bg-red-100 text-red-700'
-                                    : selectedNotification.importance === 'medium'
-                                        ? isDarkMode ? 'bg-yellow-900 text-yellow-400' : 'bg-yellow-100 text-yellow-700'
-                                        : isDarkMode ? 'bg-blue-900 text-blue-400' : 'bg-blue-100 text-blue-700'
+                                ? isDarkMode ? 'bg-red-900 text-red-400' : 'bg-red-100 text-red-700'
+                                : selectedNotification.importance === 'medium'
+                                    ? isDarkMode ? 'bg-yellow-900 text-yellow-400' : 'bg-yellow-100 text-yellow-700'
+                                    : isDarkMode ? 'bg-blue-900 text-blue-400' : 'bg-blue-100 text-blue-700'
                                 }`}>
                                 {selectedNotification.importance}
                             </div>
-                            {/* Eliminado: device y category badges */}
                         </div>
 
                         {/* Descripción */}
@@ -205,8 +205,8 @@ export default function NotificationsPanel({ onClose }: { onClose?: () => void }
                                         <div
                                             key={key}
                                             className={`py-3 px-4 flex items-center justify-between ${index !== Object.entries(selectedNotification.data ?? {}).length - 1
-                                                    ? isDarkMode ? 'border-b border-gray-800/50' : 'border-b border-gray-200/50'
-                                                    : ''
+                                                ? isDarkMode ? 'border-b border-gray-800/50' : 'border-b border-gray-200/50'
+                                                : ''
                                                 }`}
                                         >
                                             <span className={`text-xs capitalize ${isDarkMode ? 'text-gray-500' : 'text-gray-600'
@@ -224,8 +224,8 @@ export default function NotificationsPanel({ onClose }: { onClose?: () => void }
 
                     {/* Footer con acciones */}
                     <div className={`px-6 py-4 border-t flex items-center justify-end ${isDarkMode
-                            ? 'bg-black border-gray-900'
-                            : 'bg-white border-gray-200'
+                        ? 'bg-transparent border-white/10'
+                        : 'bg-transparent border-white/20'
                         }`}>
                     </div>
                 </div>
@@ -235,91 +235,137 @@ export default function NotificationsPanel({ onClose }: { onClose?: () => void }
 
     return (
         <>
-            <div className={`flex flex-col w-full max-w-sm ml-auto rounded-lg overflow-hidden shadow-xl border transition-all duration-500 transform ${isDarkMode
-                    ? 'bg-black text-white border-gray-900'
-                    : 'bg-white text-gray-900 border-gray-200'
+            <div className={`flex flex-col w-[320px] h-[500px] rounded-2xl overflow-hidden shadow-2xl border transition-all duration-500 transform ${isDarkMode
+                ? 'bg-black/20 text-white border-white/10 backdrop-blur-2xl'
+                : 'bg-white/30 text-gray-900 border-white/20 backdrop-blur-2xl'
                 } ${animateIn ? 'translate-y-0 opacity-100' : 'translate-y-4 opacity-0'}`}>
+
                 {/* Barra superior minimalista */}
-                <div className="flex items-center justify-between px-5 pt-5 pb-4">
-                    <h1 className="text-base font-medium">Notificaciones</h1>
-                    <div className="flex items-center gap-2">
+                <div className="flex items-center justify-between px-6 pt-6 pb-4">
+                    <div className="flex items-center gap-3">
+                        <h1 className={`text-lg font-semibold tracking-tight ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
+                            Notificaciones
+                        </h1>
+                        {/* Botón de Filtros */}
+                        <button
+                            onClick={() => setShowFilters(!showFilters)}
+                            className={`p-1.5 rounded-full transition-all duration-300 ${showFilters
+                                ? isDarkMode ? 'bg-white/20 text-white' : 'bg-black/10 text-black'
+                                : isDarkMode ? 'text-gray-500 hover:text-white hover:bg-white/10' : 'text-gray-400 hover:text-gray-900 hover:bg-black/5'
+                                }`}
+                            title="Filtrar notificaciones"
+                        >
+                            <div className={`transition-transform duration-300 ${showFilters ? 'rotate-180' : 'rotate-0'}`}>
+                                <svg
+                                    xmlns="http://www.w3.org/2000/svg"
+                                    width="16"
+                                    height="16"
+                                    viewBox="0 0 24 24"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    strokeWidth="2"
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                >
+                                    <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3" />
+                                </svg>
+                            </div>
+                        </button>
+                    </div>
+
+                    {/* Botón No Molestar Rediseñado con Tooltip */}
+                    <div className="relative group">
                         <button
                             onClick={() => setDoNotDisturb(!doNotDisturb)}
-                            title={doNotDisturb ? 'Desactivar modo No Molestar' : 'Activar modo No Molestar'}
-                            className={`p-2 rounded-full transition-colors ${doNotDisturb
-                                    ? isDarkMode
-                                        ? 'bg-purple-900/30 text-purple-400'
-                                        : 'bg-purple-100 text-purple-600'
-                                    : isDarkMode
-                                        ? 'hover:bg-gray-800 text-gray-400 hover:text-gray-300'
-                                        : 'hover:bg-gray-100 text-gray-500 hover:text-gray-700'
+                            className={`relative p-2 rounded-full transition-all duration-500 ${doNotDisturb
+                                ? isDarkMode
+                                    ? 'bg-purple-500/20 text-purple-400'
+                                    : 'bg-purple-100 text-purple-600'
+                                : isDarkMode
+                                    ? 'hover:bg-white/10 text-gray-400 hover:text-white'
+                                    : 'hover:bg-black/5 text-gray-500 hover:text-gray-900'
                                 }`}
                         >
-                            <Moon size={16} />
+                            <div className={`transition-transform duration-500 ${doNotDisturb ? 'rotate-[-20deg] scale-110' : 'rotate-0 scale-100'}`}>
+                                <Moon size={20} strokeWidth={doNotDisturb ? 2.5 : 1.5} className={doNotDisturb ? "fill-current" : ""} />
+                            </div>
+
+                            {/* Badge animado */}
+                            <div className={`absolute -top-1 -right-1 transition-all duration-500 ${doNotDisturb ? 'opacity-100 scale-100' : 'opacity-0 scale-0'}`}>
+                                <span className="flex h-4 w-4 items-center justify-center rounded-full bg-purple-500 text-[8px] font-bold text-white shadow-sm ring-2 ring-white dark:ring-black">
+                                    Zz
+                                </span>
+                            </div>
                         </button>
-                        {onClose && (
-                            <button
-                                title='Cerrar panel'
-                                onClick={onClose}
-                                className={`p-2 rounded-full transition-colors ${isDarkMode
-                                        ? 'hover:bg-gray-800 text-gray-400 hover:text-gray-300'
-                                        : 'hover:bg-gray-100 text-gray-500 hover:text-gray-700'
-                                    }`}
-                            >
-                                <X size={14} />
-                            </button>
-                        )}
+
+                        {/* Tooltip Hover */}
+                        <div className="absolute right-0 top-full mt-2 opacity-0 group-hover:opacity-100 transition-all duration-300 transform translate-y-[-10px] group-hover:translate-y-0 pointer-events-none z-50 w-max">
+                            <div className={`px-2 py-1.5 rounded-lg text-[10px] font-medium shadow-xl border backdrop-blur-md ${isDarkMode
+                                ? 'bg-black/90 border-white/10 text-white'
+                                : 'bg-white/90 border-black/5 text-gray-800'
+                                }`}>
+                                {doNotDisturb ? 'Desactivar modo silencio' : 'Activar modo silencio'}
+                            </div>
+                        </div>
                     </div>
                 </div>
 
-                {/* Filtros minimal */}
-                <div className="px-5 relative">
-                    <div className="flex space-x-4 relative">
-                        {['all', 'unread', 'security', 'system'].map((filter) => (
+                {/* Filtros Chips - Collapsible */}
+                <div className={`px-6 overflow-hidden transition-all duration-300 ease-in-out ${showFilters ? 'max-h-24 opacity-100 pb-4' : 'max-h-0 opacity-0 pb-0'}`}>
+                    <div className="flex flex-wrap gap-2">
+                        {[
+                            { id: 'all', label: 'Todas' },
+                            { id: 'unread', label: 'No leídas' },
+                            { id: 'security', label: 'Seguridad' },
+                            { id: 'system', label: 'Sistema' }
+                        ].map((filter) => (
                             <button
-                                key={filter}
-                                className={`py-2 text-xs font-medium transition-colors ${activeFilter === filter
-                                        ? isDarkMode ? 'text-white' : 'text-gray-900'
-                                        : isDarkMode ? 'text-gray-600 hover:text-gray-400' : 'text-gray-500 hover:text-gray-700'
+                                key={filter.id}
+                                onClick={() => setActiveFilter(filter.id)}
+                                className={`px-3 py-1 text-xs font-medium rounded-full transition-all duration-300 border ${activeFilter === filter.id
+                                    ? isDarkMode
+                                        ? 'bg-white text-black border-white shadow-lg scale-105'
+                                        : 'bg-black text-white border-black shadow-lg scale-105'
+                                    : isDarkMode
+                                        ? 'bg-white/5 text-gray-400 border-white/10 hover:bg-white/10 hover:text-white'
+                                        : 'bg-black/5 text-gray-600 border-black/5 hover:bg-black/10 hover:text-black'
                                     }`}
-                                onClick={() => setActiveFilter(filter)}
                             >
-                                {filter === 'all' ? 'Todas' :
-                                    filter === 'unread' ? 'No leídas' :
-                                        filter === 'security' ? 'Seguridad' : 'Sistema'}
-
-                                {activeFilter === filter && (
-                                    <span className={`absolute bottom-0 left-0 w-full h-0.5 rounded-full ${isDarkMode ? 'bg-white' : 'bg-gray-900'
-                                        }`} />
-                                )}
+                                {filter.label}
                             </button>
                         ))}
                     </div>
-                    <div className={`absolute bottom-0 left-0 right-0 h-px ${isDarkMode ? 'bg-gray-900' : 'bg-gray-200'
-                        }`} />
                 </div>
 
                 {/* Lista de notificaciones */}
                 <div className="notifications-list overflow-y-auto">
                     {loading ? (
-                        <div className="flex items-center justify-center h-64">
-                            <div className="relative w-8 h-8">
-                                <div className={`absolute top-0 left-0 w-full h-full border-2 rounded-full ${isDarkMode ? 'border-gray-900' : 'border-gray-200'
-                                    }`}></div>
-                                <div className={`absolute top-0 left-0 w-full h-full border-2 border-r-transparent border-b-transparent border-l-transparent rounded-full animate-spin ${isDarkMode ? 'border-t-gray-400' : 'border-t-gray-600'
-                                    }`}></div>
-                            </div>
+                        <div className="space-y-0">
+                            {[...Array(5)].map((_, i) => (
+                                <div key={i} className={`px-5 py-4 border-b ${isDarkMode ? 'border-white/5' : 'border-black/5'} animate-pulse`}>
+                                    <div className="flex items-start space-x-3">
+                                        <div className={`w-2 h-2 rounded-full mt-1 ${isDarkMode ? 'bg-white/20' : 'bg-black/10'}`} />
+                                        <div className="flex-1">
+                                            <div className="flex justify-between mb-2">
+                                                <div className={`h-3 rounded w-1/3 ${isDarkMode ? 'bg-white/20' : 'bg-black/10'}`} />
+                                                <div className={`h-3 rounded w-10 ${isDarkMode ? 'bg-white/20' : 'bg-black/10'}`} />
+                                            </div>
+                                            <div className={`h-3 rounded w-3/4 ${isDarkMode ? 'bg-white/20' : 'bg-black/10'}`} />
+                                        </div>
+                                    </div>
+                                </div>
+                            ))}
                         </div>
                     ) : (
                         <>
                             {/* No leídas */}
                             {unreadNotifications.length === 0 && readNotifications.length === 0 && (
-                                <div className={`flex flex-col items-center justify-center py-16 ${isDarkMode ? 'text-gray-700' : 'text-gray-500'
+                                <div className={`flex flex-col items-center justify-center py-16 ${isDarkMode ? 'text-gray-400' : 'text-gray-500'
                                     }`}>
-                                    <div className={`w-12 h-12 rounded-full flex items-center justify-center mb-4 ${isDarkMode ? 'bg-gray-900' : 'bg-gray-100'
+                                    <div className={`w-12 h-12 rounded-full flex items-center justify-center mb-4 ${isDarkMode ? 'bg-white/10' : 'bg-black/5'
                                         }`}>
                                         <Bell size={20} strokeWidth={1.5} className={
-                                            isDarkMode ? 'text-gray-600' : 'text-gray-400'
+                                            isDarkMode ? 'text-gray-400' : 'text-gray-400'
                                         } />
                                     </div>
                                     <p className="text-xs">No hay notificaciones</p>
@@ -329,8 +375,8 @@ export default function NotificationsPanel({ onClose }: { onClose?: () => void }
                                 <div
                                     key={notification.id ?? `notification-${idx}`}
                                     className={`notification-item px-5 py-4 cursor-pointer transition-colors ${isDarkMode
-                                            ? 'bg-gray-900/20 hover:bg-gray-900/40'
-                                            : 'bg-gray-50/50 hover:bg-gray-100/70'
+                                        ? 'hover:bg-white/10'
+                                        : 'hover:bg-black/5'
                                         }`}
                                     onClick={() => openModal(notification)}
                                 >
@@ -340,24 +386,24 @@ export default function NotificationsPanel({ onClose }: { onClose?: () => void }
                                             <div className="flex items-start justify-between">
                                                 <p className={`text-xs font-medium ${isDarkMode ? 'text-white' : 'text-gray-900'
                                                     }`}>{notification.title}</p>
-                                                <p className={`ml-2 text-xs ${isDarkMode ? 'text-gray-700' : 'text-gray-500'
+                                                <p className={`ml-2 text-xs ${isDarkMode ? 'text-gray-400' : 'text-gray-500'
                                                     }`}>{formatRelativeTime(notification.created_at)}</p>
                                             </div>
-                                            <p className={`text-xs mt-1 line-clamp-1 ${isDarkMode ? 'text-gray-600' : 'text-gray-600'
+                                            <p className={`text-xs mt-1 line-clamp-1 ${isDarkMode ? 'text-gray-400' : 'text-gray-600'
                                                 }`}>{notification.description}</p>
                                             <div className="flex mt-2 items-center justify-between">
                                                 <div className="flex items-center space-x-2">
                                                     <span className={`inline-flex px-1.5 py-0.5 rounded text-xs ${notification.importance === 'high'
-                                                            ? isDarkMode ? 'bg-red-900/20 text-red-400' : 'bg-red-100 text-red-700'
-                                                            : notification.importance === 'medium'
-                                                                ? isDarkMode ? 'bg-yellow-900/20 text-yellow-400' : 'bg-yellow-100 text-yellow-700'
-                                                                : isDarkMode ? 'bg-blue-900/20 text-blue-400' : 'bg-blue-100 text-blue-700'
+                                                        ? isDarkMode ? 'bg-red-500/20 text-red-300' : 'bg-red-100 text-red-700'
+                                                        : notification.importance === 'medium'
+                                                            ? isDarkMode ? 'bg-yellow-500/20 text-yellow-300' : 'bg-yellow-100 text-yellow-700'
+                                                            : isDarkMode ? 'bg-blue-500/20 text-blue-300' : 'bg-blue-100 text-blue-700'
                                                         }`}>{notification.importance}</span>
                                                 </div>
                                                 <button
                                                     className={`p-1 rounded-full transition-colors ${isDarkMode
-                                                            ? 'hover:bg-gray-800 text-red-400 hover:text-white'
-                                                            : 'hover:bg-gray-200 text-red-500 hover:text-red-700'
+                                                        ? 'hover:bg-white/20 text-red-400 hover:text-red-300'
+                                                        : 'hover:bg-black/10 text-red-500 hover:text-red-700'
                                                         }`}
                                                     title="Borrar notificación"
                                                     onClick={async (e) => {
@@ -374,18 +420,18 @@ export default function NotificationsPanel({ onClose }: { onClose?: () => void }
                                                 </button>
                                             </div>
                                         </div>
-                                        <ChevronRight size={14} className={`mt-1 flex-shrink-0 ${isDarkMode ? 'text-gray-700' : 'text-gray-400'
+                                        <ChevronRight size={14} className={`mt-1 flex-shrink-0 ${isDarkMode ? 'text-gray-600' : 'text-gray-400'
                                             }`} />
                                     </div>
                                 </div>
                             ))}
                             {/* Leídas en desplegable */}
                             {readNotifications.length > 0 && (
-                                <div className="mt-2">
+                                <div className="mt-2 px-5">
                                     <button
-                                        className={`w-full flex items-center justify-between px-4 py-2 text-xs border rounded transition-colors mb-1 ${isDarkMode
-                                                ? 'bg-black/60 hover:bg-gray-900 border-gray-800'
-                                                : 'bg-gray-50 hover:bg-gray-100 border-gray-200'
+                                        className={`w-full flex items-center justify-between px-4 py-2 text-xs border rounded-lg transition-colors mb-1 ${isDarkMode
+                                            ? 'bg-white/5 hover:bg-white/10 border-white/10'
+                                            : 'bg-black/5 hover:bg-black/10 border-black/5'
                                             }`}
                                         onClick={() => setShowRead(v => !v)}
                                     >
@@ -395,13 +441,13 @@ export default function NotificationsPanel({ onClose }: { onClose?: () => void }
                                             }`}>({readNotifications.length})</span>
                                     </button>
                                     {showRead && (
-                                        <div className="space-y-1">
+                                        <div className="space-y-1 mt-2">
                                             {readNotifications.map((notification, idx) => (
                                                 <div
                                                     key={notification.id ?? `notification-read-${idx}`}
-                                                    className={`notification-item px-3 py-1 cursor-pointer transition-colors rounded flex items-center min-h-[28px] ${isDarkMode
-                                                            ? 'bg-black/40 hover:bg-gray-900/40'
-                                                            : 'bg-gray-50/60 hover:bg-gray-100/80'
+                                                    className={`notification-item px-3 py-2 cursor-pointer transition-colors rounded-lg flex items-center min-h-[28px] ${isDarkMode
+                                                        ? 'hover:bg-white/5'
+                                                        : 'hover:bg-black/5'
                                                         }`}
                                                     style={{ fontSize: '11px', lineHeight: '1.1' }}
                                                     onClick={() => openModal(notification)}
@@ -409,12 +455,12 @@ export default function NotificationsPanel({ onClose }: { onClose?: () => void }
                                                     <div className={`w-1.5 h-1.5 rounded-full mr-2 ${getTypeColor(notification.type)}`} />
                                                     <span className={`truncate flex-1 ${isDarkMode ? 'text-gray-500' : 'text-gray-600'
                                                         }`}>{notification.title}</span>
-                                                    <span className={`ml-2 ${isDarkMode ? 'text-gray-700' : 'text-gray-500'
+                                                    <span className={`ml-2 ${isDarkMode ? 'text-gray-600' : 'text-gray-400'
                                                         }`}>{formatRelativeTime(notification.created_at)}</span>
                                                     <button
                                                         className={`ml-2 p-1 rounded-full transition-colors ${isDarkMode
-                                                                ? 'hover:bg-gray-800 text-red-400 hover:text-white'
-                                                                : 'hover:bg-gray-200 text-red-500 hover:text-red-700'
+                                                            ? 'hover:bg-white/20 text-red-400 hover:text-red-300'
+                                                            : 'hover:bg-black/10 text-red-500 hover:text-red-700'
                                                             }`}
                                                         title="Borrar notificación"
                                                         onClick={async (e) => {
@@ -445,7 +491,7 @@ export default function NotificationsPanel({ onClose }: { onClose?: () => void }
                         scrollbar-width: none;
                     }
                     
-                    .notifications-list::-webkit-scrollbar {
+                    .notifications-list::-webkit-scrollbar, .scrollbar-hide::-webkit-scrollbar {
                         display: none;
                     }
 

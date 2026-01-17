@@ -124,8 +124,7 @@ export function useNotifications() {
             const { data, error } = await supabase
                 .from('notifications')
                 .insert([{
-                    ...notification,
-                    created_by: userId
+                    ...notification
                 }])
                 .select();
 

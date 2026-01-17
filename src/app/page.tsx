@@ -2,6 +2,9 @@
 import { useEffect, useState, useRef } from 'react';
 import { useTheme } from '@/context/ThemeContext';
 import { useInactivity } from '@/context/InactivityContext';
+import GravityBackground from '@/components/GravityBackground';
+import { Sparkles } from 'lucide-react';
+import confetti from 'canvas-confetti';
 
 export default function Inicio() {
   const { isDarkMode } = useTheme();
@@ -10,8 +13,40 @@ export default function Inicio() {
   const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
   const [currentTime, setCurrentTime] = useState('');
   const [currentDate, setCurrentDate] = useState('');
-  const particlesRef = useRef(null);
+  const [isGravityEnabled, setIsGravityEnabled] = useState(true);
+  const [isConfigLoaded, setIsConfigLoaded] = useState(false);
+  const [showCredits, setShowCredits] = useState(true);
   const containerRef = useRef<HTMLDivElement>(null);
+
+  // Cargar configuración al iniciar
+  useEffect(() => {
+    const saved = localStorage.getItem('gravityEnabled');
+    if (saved !== null) {
+      setIsGravityEnabled(saved === 'true');
+    }
+
+    // Check credits visibility (24h expiration)
+    const hiddenTimestamp = localStorage.getItem('creditsHiddenTimestamp');
+    if (hiddenTimestamp) {
+      const now = Date.now();
+      const savedTime = parseInt(hiddenTimestamp, 10);
+      // 24 hours = 86400000 ms
+      if (now - savedTime < 86400000) {
+        setShowCredits(false);
+      } else {
+        localStorage.removeItem('creditsHiddenTimestamp');
+      }
+    }
+
+    setIsConfigLoaded(true);
+  }, []);
+
+  // Guardar configuración solo cuando haya cambiado y ya esté cargada
+  useEffect(() => {
+    if (isConfigLoaded) {
+      localStorage.setItem('gravityEnabled', String(isGravityEnabled));
+    }
+  }, [isGravityEnabled, isConfigLoaded]);
 
   useEffect(() => {
     setIsLoaded(true);
@@ -54,69 +89,34 @@ export default function Inicio() {
 
     window.addEventListener('mousemove', handleMouseMove);
 
-    const particleInterval = setInterval(() => {
-      if (particlesRef.current) {
-        const particle = document.createElement('div');
-        particle.classList.add('particle');
-
-        // Posición aleatoria
-        const posX = Math.random() * 100;
-        const posY = Math.random() * 100;
-
-        // Tamaño aleatorio
-        const size = Math.random() * 3 + 1;
-
-        // Velocidad aleatoria
-        const speedX = (Math.random() - 0.5) * 2;
-        const speedY = (Math.random() - 0.5) * 2;
-
-        // Aplicar estilos
-        particle.style.left = `${posX}%`;
-        particle.style.top = `${posY}%`;
-        particle.style.width = `${size}px`;
-        particle.style.height = `${size}px`;
-        particle.style.opacity = (Math.random() * 0.5 + 0.3).toString();
-
-        // Añadir partícula al contenedor
-        (particlesRef.current as HTMLDivElement).appendChild(particle);
-
-        // Animar la partícula
-        let positionX = posX;
-        let positionY = posY;
-
-        const animate = () => {
-          positionX += speedX;
-          positionY += speedY;
-
-          particle.style.left = `${positionX}%`;
-          particle.style.top = `${positionY}%`;
-
-          // Eliminar si está fuera de los límites
-          if (positionX < -10 || positionX > 110 || positionY < -10 || positionY > 110) {
-            particle.remove();
-            return;
-          }
-
-          requestAnimationFrame(animate);
-        };
-
-        animate();
-
-        // Eliminar después de un tiempo
-        setTimeout(() => {
-          if (particle.parentNode === particlesRef.current) {
-            particle.remove();
-          }
-        }, 8000);
-      }
-    }, 100);
-
     return () => {
       window.removeEventListener('mousemove', handleMouseMove);
       clearInterval(interval);
-      clearInterval(particleInterval);
     };
   }, []);
+
+  const handleEasterEgg = (e: React.MouseEvent) => {
+    const rect = (e.target as HTMLElement).getBoundingClientRect();
+    const x = (rect.left + rect.width / 2) / window.innerWidth;
+    const y = (rect.top + rect.height / 2) / window.innerHeight;
+
+    confetti({
+      origin: { x, y },
+      particleCount: 150, // More particles
+      spread: 100, // Wider spread
+      startVelocity: 25, // More energetic pop
+      colors: isDarkMode ? ['#ffffff', '#3b82f6', '#8b5cf6'] : ['#000000', '#3b82f6', '#8b5cf6'],
+      ticks: 300,
+      gravity: 0.8, // Floats longer
+      scalar: 0.8, // Slightly larger
+      shapes: ['circle'],
+      disableForReducedMotion: true
+    });
+
+    // Save timestamp and hide for session (24h)
+    localStorage.setItem('creditsHiddenTimestamp', Date.now().toString());
+    setShowCredits(false);
+  };
 
   return (
     <div
@@ -128,10 +128,23 @@ export default function Inicio() {
       {!isInactive && (
         <div className={`absolute top-20 left-8 z-20 transition-all duration-500 ${isDarkMode ? 'text-white' : 'text-gray-800'
           } animate-in fade-in-0 slide-in-from-left-4 duration-700`}>
-          <div className={`backdrop-blur-sm rounded-xl p-4 shadow-2xl transition-all duration-500 ${isDarkMode
+          <div className={`relative group backdrop-blur-sm rounded-xl p-4 shadow-2xl transition-all duration-500 ${isDarkMode
             ? 'bg-black/5 border border-white/5'
             : 'bg-white/5 border border-white/10'
             }`}>
+
+            {/* Botón sutil para activar/desactivar efectos */}
+            <button
+              onClick={() => setIsGravityEnabled(!isGravityEnabled)}
+              className={`absolute top-2 right-2 p-1.5 rounded-full transition-all duration-500 opacity-0 group-hover:opacity-100 ${isGravityEnabled
+                ? (isDarkMode ? 'text-blue-400 bg-white/10' : 'text-blue-600 bg-black/5')
+                : 'text-gray-400 hover:bg-gray-500/10'
+                }`}
+              title={isGravityEnabled ? "Desactivar efectos" : "Activar efectos"}
+            >
+              <Sparkles size={12} className={isGravityEnabled ? 'fill-current' : ''} />
+            </button>
+
             <div className="text-4xl font-light tracking-wider mb-1">
               {currentTime}
             </div>
@@ -156,8 +169,8 @@ export default function Inicio() {
         <div className="wave wave3"></div>
       </div>
 
-      {/* Sistema de partículas */}
-      <div ref={particlesRef} className="absolute inset-0 overflow-hidden z-0"></div>
+      {/* Sistema de partículas (GravityBackground) */}
+      {isGravityEnabled && <GravityBackground />}
 
       {/* Efecto de luz que sigue al cursor */}
       <div
@@ -181,7 +194,7 @@ export default function Inicio() {
 
       {/* Logo con animación */}
       <div className="relative z-20">
-        <div className={`transform transition-all duration-1000 ${isLoaded ? 'scale-100 opacity-100' : 'scale-90 opacity-0'}`}>
+        <div className={`transform transition-all duration-1000 relative z-10 ${isLoaded ? 'scale-100 opacity-100' : 'scale-90 opacity-0'}`}>
           <img
             src={isDarkMode ? "/images/TLAX_logo.svg" : "/images/TLAX_logo_negro.png"}
             alt="Logo ITEA"
@@ -212,8 +225,22 @@ export default function Inicio() {
               </div>
             </div>
           ) : (
-            <p className={`text-center pt-2 transition-colors duration-500 ${isDarkMode ? 'text-gray-800' : 'text-white/30'
-              }`}>Derechos Reservados ©2025</p>
+            <div className="flex flex-col items-center gap-1 pt-4 relative z-50">
+              <p className={`text-[8px] tracking-widest uppercase transition-colors duration-500 ${isDarkMode ? 'text-gray-600' : 'text-gray-400'
+                }`}>
+                Derechos Reservados © 2025
+              </p>
+
+              {showCredits && (
+                <div
+                  className={`text-[8px] font-bold tracking-[0.2em] cursor-pointer transition-all duration-500 opacity-20 hover:opacity-40 hover:scale-105 ${isDarkMode ? 'text-white' : 'text-gray-900'
+                    }`}
+                  onClick={handleEasterEgg}
+                >
+                  Made By: <span className="text-blue-500">A</span>|<span className="text-purple-500">X</span>
+                </div>
+              )}
+            </div>
           )}
         </div>
 
@@ -232,13 +259,6 @@ export default function Inicio() {
       </div>
 
       <style jsx>{`
-        .particle {
-          position: absolute;
-          background: ${isDarkMode ? 'white' : '#3b82f6'};
-          border-radius: 50%;
-          pointer-events: none;
-        }
-        
         .bg-grid {
           background-image: ${isDarkMode
           ? 'linear-gradient(rgba(255, 255, 255, 0.05) 1px, transparent 1px), linear-gradient(90deg, rgba(255, 255, 255, 0.05) 1px, transparent 1px)'
@@ -291,6 +311,7 @@ export default function Inicio() {
           border: 1px solid ${isDarkMode ? 'rgba(255, 255, 255, 0.1)' : 'rgba(59, 130, 246, 0.2)'};
           border-radius: 50%;
           transform: translate(-50%, -50%);
+          pointer-events: none;
         }
         
         .orbit1 {
@@ -320,6 +341,7 @@ export default function Inicio() {
           top: 50%;
           left: 50%;
           transform: translate(-50%, -50%);
+          pointer-events: none;
         }
         
         .orbital-dot1 {

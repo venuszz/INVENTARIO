@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef, useMemo, useDeferredValue } from 'react';
 import {
     Search, ChevronLeft, ChevronRight, ArrowUpDown,
     AlertCircle, X, Save, ActivitySquare,
@@ -10,7 +10,6 @@ import {
     Plus
 } from 'lucide-react';
 import supabase from '@/app/lib/supabase/client';
-import Cookies from 'js-cookie';
 import { generateResguardoPDF } from './ResguardoPDFReport';
 import { useUserRole } from "@/hooks/useUserRole";
 import { useNotifications } from '@/hooks/useNotifications';
@@ -139,6 +138,24 @@ export default function CrearResguardos() {
     const [incompleteDirector, setIncompleteDirector] = useState<Directorio | null>(null);
     const [directorFormData, setDirectorFormData] = useState({ area: '', puesto: '' });
     const [searchTerm, setSearchTerm] = useState('');
+    // Defer search term to avoid blocking input
+    const deferredSearchTerm = useDeferredValue(searchTerm);
+
+    // Pre-calculate searchable vectors
+    const searchableData = useMemo(() => {
+        if (!allMuebles || allMuebles.length === 0) return null;
+        return {
+            id: allMuebles.map(m => m.id_inv || '').filter(Boolean),
+            area: allMuebles.map(m => m.area || '').filter(Boolean),
+            usufinal: allMuebles.map(m => m.usufinal || '').filter(Boolean),
+            resguardante: allMuebles.map(m => m.resguardante || '').filter(Boolean),
+            descripcion: allMuebles.map(m => m.descripcion || '').filter(Boolean),
+            rubro: allMuebles.map(m => m.rubro || '').filter(Boolean),
+            estado: allMuebles.map(m => m.estado || '').filter(Boolean),
+            estatus: allMuebles.map(m => m.estatus || '').filter(Boolean),
+        };
+    }, [allMuebles]);
+
     const [searchMatchType, setSearchMatchType] = useState<null | 'id' | 'descripcion' | 'rubro' | 'estado' | 'estatus' | 'area' | 'usufinal' | 'resguardante'>(null);
 
     const [activeFilters, setActiveFilters] = useState<ActiveFilter[]>([]);
@@ -208,52 +225,50 @@ export default function CrearResguardos() {
         formData.puesto.trim() !== '';
 
     // Filtrado maestro (omnibox) y paginación
-    const filteredMueblesOmni = allMuebles.filter(item => {
-        if (activeFilters.length === 0 && !searchTerm) return true;
+    // Filtrado maestro (omnibox) y paginación
+    const filteredMueblesOmni = useMemo(() => {
+        const term = deferredSearchTerm.toLowerCase().trim();
 
-        const clean = (str: string) => (str || '').normalize('NFKD').replace(/\p{Diacritic}/gu, '').toLowerCase();
-        const currentTerm = clean(searchTerm);
+        return allMuebles.filter(item => {
+            if (activeFilters.length === 0 && !term) return true;
 
-        // Aplicar filtros activos
-        const passesActiveFilters = activeFilters.every(filter => {
-            const filterTerm = clean(filter.term);
-            if (!filterTerm) return true;
+            // Aplicar filtros activos (optimizados)
+            const passesActiveFilters = activeFilters.every(filter => {
+                const filterTerm = filter.term.toLowerCase();
+                if (!filterTerm) return true;
 
-            switch (filter.type) {
-                case 'id':
-                    return clean(item.id_inv || '').includes(filterTerm);
-                case 'descripcion':
-                    return clean(item.descripcion || '').includes(filterTerm);
-                case 'rubro':
-                    return clean(item.rubro || '').includes(filterTerm);
-                case 'estado':
-                    return clean(item.estado || '').includes(filterTerm);
-                case 'estatus':
-                    return clean(item.estatus || '').includes(filterTerm);
-                case 'area':
-                    return clean(item.area || '').includes(filterTerm);
-                case 'usufinal':
-                case 'resguardante':
-                    return clean(item.usufinal || '').includes(filterTerm) ||
-                        clean(item.resguardante || '').includes(filterTerm);
-                default:
-                    return true;
-            }
+                switch (filter.type) {
+                    case 'id': return (item.id_inv?.toLowerCase() || '').includes(filterTerm);
+                    case 'descripcion': return (item.descripcion?.toLowerCase() || '').includes(filterTerm);
+                    case 'rubro': return (item.rubro?.toLowerCase() || '').includes(filterTerm);
+                    case 'estado': return (item.estado?.toLowerCase() || '').includes(filterTerm);
+                    case 'estatus': return (item.estatus?.toLowerCase() || '').includes(filterTerm);
+                    case 'area': return (item.area?.toLowerCase() || '').includes(filterTerm);
+                    case 'usufinal':
+                    case 'resguardante':
+                        return (item.usufinal?.toLowerCase() || '').includes(filterTerm) ||
+                            (item.resguardante?.toLowerCase() || '').includes(filterTerm);
+                    default: return true;
+                }
+            });
+
+            if (!passesActiveFilters) return false;
+
+            // Si hay término de búsqueda actual, aplicarlo también
+            if (!term) return true;
+
+            return (
+                (item.id_inv?.toLowerCase() || '').includes(term) ||
+                (item.descripcion?.toLowerCase() || '').includes(term) ||
+                (item.rubro?.toLowerCase() || '').includes(term) ||
+                (item.estado?.toLowerCase() || '').includes(term) ||
+                (item.estatus?.toLowerCase() || '').includes(term) ||
+                (item.area?.toLowerCase() || '').includes(term) ||
+                (item.usufinal?.toLowerCase() || '').includes(term) ||
+                (item.resguardante?.toLowerCase() || '').includes(term)
+            );
         });
-
-        // Si hay término de búsqueda actual, aplicarlo también
-        const passesCurrentSearch = !currentTerm ||
-            clean(item.id_inv || '').includes(currentTerm) ||
-            clean(item.descripcion || '').includes(currentTerm) ||
-            clean(item.rubro || '').includes(currentTerm) ||
-            clean(item.estado || '').includes(currentTerm) ||
-            clean(item.estatus || '').includes(currentTerm) ||
-            clean(item.area || '').includes(currentTerm) ||
-            clean(item.usufinal || '').includes(currentTerm) ||
-            clean(item.resguardante || '').includes(currentTerm);
-
-        return passesActiveFilters && passesCurrentSearch;
-    });
+    }, [allMuebles, activeFilters, deferredSearchTerm]);
     const totalCount = filteredMueblesOmni.length;
     const totalPages = Math.ceil(totalCount / rowsPerPage);
     const paginatedMuebles = filteredMueblesOmni.slice((currentPage - 1) * rowsPerPage, currentPage * rowsPerPage);
@@ -356,29 +371,6 @@ export default function CrearResguardos() {
         fetchAreasAndRelations();
     }, []);
 
-    async function fetchAllRows<T = unknown>(table: string, filter: object = {}, batchSize = 1000): Promise<T[]> {
-        let allRows: T[] = [];
-        let from = 0;
-        let to = batchSize - 1;
-        let keepFetching = true;
-        while (keepFetching) {
-            let query = supabase.from(table).select('*').range(from, to);
-            Object.entries(filter).forEach(([key, value]) => {
-                query = query.eq(key, value);
-            });
-            const { data, error } = await query;
-            if (error) throw error;
-            allRows = allRows.concat(data || []);
-            if (!data || data.length < batchSize) {
-                keepFetching = false;
-            } else {
-                from += batchSize;
-                to += batchSize;
-            }
-        }
-        return allRows;
-    }
-
     const fetchData = useCallback(async (
         sortField = 'id_inv',
         sortDir = 'asc'
@@ -425,62 +417,50 @@ export default function CrearResguardos() {
     }, [fetchData, sortField, sortDirection]);
 
     // Efecto para analizar coincidencia más cercana
+    // Efecto para analizar coincidencia más cercana (Optimizado)
     useEffect(() => {
-        const analyzeMatch = () => {
-            if (!searchTerm || !allMuebles.length) {
-                setSearchMatchType(null);
-                return;
+        if (!deferredSearchTerm || !allMuebles.length) {
+            setSearchMatchType(null);
+            return;
+        }
+
+        const term = deferredSearchTerm.toLowerCase().trim();
+        let bestMatch = { type: null, value: '', score: 0 } as { type: typeof searchMatchType, value: string, score: number };
+
+        const isMatch = (val: string | null | undefined) => val && val.toLowerCase().includes(term);
+        const isExact = (val: string | null | undefined) => val && val.toLowerCase() === term;
+
+        for (const item of allMuebles) {
+            // Coincidencia por responsable
+            if (isMatch(item.usufinal) || isMatch(item.resguardante)) {
+                const exact = isExact(item.usufinal) || isExact(item.resguardante);
+                const score = exact ? 6 : 5;
+                if (score > bestMatch.score) bestMatch = { type: 'usufinal', value: item.usufinal || item.resguardante || '', score };
             }
-            const clean = (str: string) => (str || '').normalize('NFKD').replace(/\p{Diacritic}/gu, '').toLowerCase().trim();
-            const term = clean(searchTerm);
-            let bestMatch = { type: null, value: '', score: 0 } as { type: typeof searchMatchType, value: string, score: number };
-            for (const item of allMuebles) {
-                // Coincidencia por responsable
-                if ((item.usufinal && clean(item.usufinal).includes(term)) || (item.resguardante && clean(item.resguardante).includes(term))) {
-                    const exact = clean(item.usufinal || '') === term || clean(item.resguardante || '') === term;
-                    const score = exact ? 6 : 5;
-                    if (score > bestMatch.score) bestMatch = { type: 'usufinal', value: item.usufinal || item.resguardante || '', score };
-                }
-                // Coincidencia por área
-                if (item.area && clean(item.area).includes(term)) {
-                    const exact = clean(item.area) === term;
-                    const score = exact ? 5 : 4;
-                    if (score > bestMatch.score) bestMatch = { type: 'area', value: item.area, score };
-                }
-                // Coincidencia por ID
-                if (item.id_inv && clean(item.id_inv).includes(term)) {
-                    const exact = clean(item.id_inv) === term;
-                    const score = exact ? 4 : 3;
-                    if (score > bestMatch.score) bestMatch = { type: 'id', value: item.id_inv, score };
-                }
-                // Coincidencia por descripción
-                if (item.descripcion && clean(item.descripcion).includes(term)) {
-                    const exact = clean(item.descripcion) === term;
-                    const score = exact ? 3 : 2;
-                    if (score > bestMatch.score) bestMatch = { type: 'descripcion', value: item.descripcion, score };
-                }
-                // Coincidencia por rubro
-                if (item.rubro && clean(item.rubro).includes(term)) {
-                    const exact = clean(item.rubro) === term;
-                    const score = exact ? 2 : 1;
-                    if (score > bestMatch.score) bestMatch = { type: 'rubro', value: item.rubro, score };
-                }
-                // Coincidencia por estado
-                if (item.estado && clean(item.estado).includes(term)) {
-                    const score = 1;
-                    if (score > bestMatch.score) bestMatch = { type: 'estado', value: item.estado, score };
-                }
-                // Coincidencia por estatus
-                if (item.estatus && clean(item.estatus).includes(term)) {
-                    const score = 1;
-                    if (score > bestMatch.score) bestMatch = { type: 'estatus', value: item.estatus, score };
-                }
+            // Coincidencia por área
+            else if (isMatch(item.area)) {
+                const exact = isExact(item.area);
+                const score = exact ? 5 : 4;
+                if (score > bestMatch.score) bestMatch = { type: 'area', value: item.area!, score };
             }
-            setSearchMatchType(bestMatch.type);
-        };
-        const debounce = setTimeout(analyzeMatch, 200);
-        return () => clearTimeout(debounce);
-    }, [searchTerm, allMuebles]);
+            // Coincidencia por ID
+            else if (isMatch(item.id_inv)) {
+                const exact = isExact(item.id_inv);
+                const score = exact ? 4 : 3;
+                if (score > bestMatch.score) bestMatch = { type: 'id', value: item.id_inv!, score };
+            }
+            // Coincidencia por descripción
+            else if (isMatch(item.descripcion)) {
+                const exact = isExact(item.descripcion);
+                const score = exact ? 3 : 2;
+                if (score > bestMatch.score) bestMatch = { type: 'descripcion', value: item.descripcion!, score };
+            }
+
+            // Short-circuit si encontramos un match exacto de alta prioridad
+            if (bestMatch.score >= 6) break;
+        }
+        setSearchMatchType(bestMatch.type);
+    }, [deferredSearchTerm, allMuebles]);
 
     const generateFolio = useCallback(async () => {
         try {
@@ -666,15 +646,6 @@ export default function CrearResguardos() {
             if (!folioToUse) return;
         }
 
-        let createdBy = '';
-        try {
-            const userDataCookie = Cookies.get('userData');
-            if (userDataCookie) {
-                const userData = JSON.parse(userDataCookie);
-                createdBy = `${userData.firstName || ''}${userData.lastName ? ' ' + userData.lastName : ''}`.trim();
-            }
-        } catch { }
-
         try {
             setLoading(true);
 
@@ -731,7 +702,6 @@ export default function CrearResguardos() {
                     rubro: mueble.rubro,
                     condicion: mueble.estado,
                     usufinal: resguardanteToUse,
-                    created_by: createdBy,
                     puesto: formData.puesto,
                     origen: mueble.origen || '',
                 });
@@ -944,6 +914,8 @@ export default function CrearResguardos() {
         if (!showDirectorSuggestions || filteredDirectorOptions.length === 0) return null;
         return (
             <ul
+                role="listbox"
+                aria-label="Lista de directores sugeridos"
                 className={`absolute left-0 top-full w-full mt-1 animate-fadeInUp max-h-80 overflow-y-auto rounded-lg shadow-2xl border backdrop-blur-xl ring-1 ring-inset transition-all duration-200 z-50 ${isDarkMode
                     ? 'border-gray-800 bg-black/95 ring-gray-900/60'
                     : 'border-gray-300 bg-white/95 ring-gray-200/60'
@@ -956,7 +928,7 @@ export default function CrearResguardos() {
                         <li
                             key={opt.id_directorio}
                             role="option"
-                            {...(isSelected && { 'aria-selected': 'true' })}
+                            aria-selected={isSelected}
                             onMouseDown={() => handleDirectorSuggestionClick(opt)}
                             onMouseEnter={() => setHighlightedDirectorIndex(i)}
                             className={`flex flex-col px-3 py-2 cursor-pointer select-none text-xs whitespace-normal break-words w-full border-b last:border-b-0 transition-colors ${isDarkMode
@@ -992,58 +964,68 @@ export default function CrearResguardos() {
     const inputRef = useRef<HTMLInputElement>(null);
 
     // Generar sugerencias al escribir
+    // Generar sugerencias al escribir (Optimizado con vectores)
     useEffect(() => {
-        if (!searchTerm || !allMuebles.length) {
+        if (!deferredSearchTerm || !searchableData) {
             setSuggestions([]);
             setShowSuggestions(false);
             setHighlightedIndex(-1);
             return;
         }
-        const clean = (str: string) => (str || '').normalize('NFKD').replace(/\p{Diacritic}/gu, '').toLowerCase().trim();
-        const term = clean(searchTerm);
+
+        const term = deferredSearchTerm.toLowerCase().trim();
+        if (term.length < 2) {
+            setSuggestions([]);
+            setShowSuggestions(false);
+            return;
+        }
+
         const seen = new Set<string>();
         const fields = [
-            { type: 'id' as ActiveFilter['type'], label: 'ID' },
-            { type: 'area' as ActiveFilter['type'], label: 'Área' },
-            { type: 'usufinal' as ActiveFilter['type'], label: 'Usuario Final' },
-            { type: 'resguardante' as ActiveFilter['type'], label: 'Resguardante' },
-            { type: 'descripcion' as ActiveFilter['type'], label: 'Descripción' },
-            { type: 'rubro' as ActiveFilter['type'], label: 'Rubro' },
-            { type: 'estado' as ActiveFilter['type'], label: 'Estado' },
-            { type: 'estatus' as ActiveFilter['type'], label: 'Estatus' },
+            { type: 'id' as ActiveFilter['type'], label: 'ID', data: searchableData.id },
+            { type: 'area' as ActiveFilter['type'], label: 'Área', data: searchableData.area },
+            { type: 'usufinal' as ActiveFilter['type'], label: 'Usuario Final', data: searchableData.usufinal },
+            { type: 'resguardante' as ActiveFilter['type'], label: 'Resguardante', data: searchableData.resguardante },
+            { type: 'descripcion' as ActiveFilter['type'], label: 'Descripción', data: searchableData.descripcion },
+            { type: 'rubro' as ActiveFilter['type'], label: 'Rubro', data: searchableData.rubro },
+            { type: 'estado' as ActiveFilter['type'], label: 'Estado', data: searchableData.estado },
+            { type: 'estatus' as ActiveFilter['type'], label: 'Estatus', data: searchableData.estatus },
         ];
+
         let allSuggestions: { value: string; type: ActiveFilter['type'] }[] = [];
+        let count = 0;
+        const maxSuggestions = 10;
+
         for (const f of fields) {
-            let values: string[] = [];
-            switch (f.type) {
-                case 'id': values = allMuebles.map(m => m.id_inv || '').filter(Boolean) as string[]; break;
-                case 'area': values = allMuebles.map(m => m.area || '').filter(Boolean) as string[]; break;
-                case 'usufinal': values = allMuebles.map(m => m.usufinal || '').filter(Boolean) as string[]; break;
-                case 'resguardante': values = allMuebles.map(m => m.resguardante || '').filter(Boolean) as string[]; break;
-                case 'descripcion': values = allMuebles.map(m => m.descripcion || '').filter(Boolean) as string[]; break;
-                case 'rubro': values = allMuebles.map(m => m.rubro || '').filter(Boolean) as string[]; break;
-                case 'estado': values = allMuebles.map(m => m.estado || '').filter(Boolean) as string[]; break;
-                case 'estatus': values = allMuebles.map(m => m.estatus || '').filter(Boolean) as string[]; break;
-                default: values = [];
-            }
-            for (const v of values) {
-                if (!v) continue;
-                const vClean = clean(v);
-                if (vClean.includes(term) && !seen.has(f.type + ':' + vClean)) {
-                    allSuggestions.push({ value: v, type: f.type });
-                    seen.add(f.type + ':' + vClean);
+            if (count >= maxSuggestions) break;
+
+            for (const v of f.data) {
+                const vLower = v.toLowerCase();
+                if (vLower.includes(term)) {
+                    const key = f.type + ':' + vLower;
+                    if (!seen.has(key)) {
+                        allSuggestions.push({ value: v, type: f.type });
+                        seen.add(key);
+                        count++;
+                        if (count >= maxSuggestions) break;
+                    }
                 }
             }
         }
-        // Prioridad: exactos primero, luego parciales, máx 7
-        allSuggestions = [
-            ...allSuggestions.filter(s => clean(s.value) === term),
-            ...allSuggestions.filter(s => clean(s.value) !== term)
-        ].slice(0, 7);
-        setSuggestions(allSuggestions);
+
+        // Prioridad: exactos primero
+        allSuggestions.sort((a, b) => {
+            const aStarts = a.value.toLowerCase().startsWith(term);
+            const bStarts = b.value.toLowerCase().startsWith(term);
+            if (aStarts && !bStarts) return -1;
+            if (!aStarts && bStarts) return 1;
+            return 0;
+        });
+
+        setSuggestions(allSuggestions.slice(0, 7));
         setShowSuggestions(allSuggestions.length > 0);
         setHighlightedIndex(allSuggestions.length > 0 ? 0 : -1);
-    }, [searchTerm, allMuebles]);
+    }, [deferredSearchTerm, searchableData]);
 
     function getTypeIcon(type: ActiveFilter['type']) {
         switch (type) {
@@ -1118,7 +1100,7 @@ export default function CrearResguardos() {
                         <li
                             key={s.value + s.type}
                             role="option"
-                            {...(isSelected && { 'aria-selected': 'true' })}
+                            aria-selected={isSelected}
                             onMouseDown={() => handleSuggestionClick(i)}
                             onMouseEnter={() => setHighlightedIndex(i)}
                             className={`flex items-center gap-2 px-3 py-2 cursor-pointer select-none text-xs whitespace-normal break-words w-full border-b last:border-b-0 transition-colors ${isDarkMode
@@ -1514,14 +1496,10 @@ export default function CrearResguardos() {
                                                         )}
                                                         {/* Tooltip visual mejorado */}
                                                         <span
-                                                            className={`absolute left-0 top-8 z-40 px-3 py-1.5 rounded-lg text-xs font-semibold shadow-xl border opacity-0 group-hover:opacity-100 group-hover:translate-y-1 transition-all pointer-events-none whitespace-nowrap ${isDarkMode
+                                                            className={`absolute left-0 top-8 z-40 px-3 py-1.5 rounded-lg text-xs font-semibold shadow-xl border opacity-0 group-hover:opacity-100 group-hover:translate-y-1 transition-all pointer-events-none whitespace-nowrap w-auto min-w-[180px] ${isDarkMode
                                                                 ? 'bg-black text-white border-white'
                                                                 : 'bg-white text-gray-900 border-gray-300'
                                                                 }`}
-                                                            style={{
-                                                                width: 'auto',
-                                                                minWidth: '180px',
-                                                            }}
                                                         >
                                                             Seleccionar todos los aríticulos de la página
                                                         </span>

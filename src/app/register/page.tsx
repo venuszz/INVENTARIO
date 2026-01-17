@@ -83,31 +83,33 @@ export default function RegisterPage() {
             const sanitizedUsername = username.replace(/[^a-zA-Z0-9]/g, '').toLowerCase();
             const uniqueEmail = `${sanitizedUsername}@inventario.com`;
 
-            const { data: existingUser, error: checkError } = await supabase
-                .from('users')
-                .select('username')
-                .eq('username', username)
-                .single();
+            // Verificar si el username ya existe usando RPC
+            const { data: usernameExists, error: checkError } = await supabase
+                .rpc('check_username_exists', { p_username: username });
 
-            if (existingUser) {
-                setError('Este nombre de usuario ya está en uso. Por favor, elige otro.');
-                setIsLoading(false);
-                return;
-            }
-
-            if (checkError && checkError.code !== 'PGRST116') {
+            if (checkError) {
                 setError('Ocurrió un error al verificar disponibilidad. Intenta de nuevo.');
                 setIsLoading(false);
                 return;
             }
 
-            const { data: existingEmail } = await supabase
-                .from('users')
-                .select('email')
-                .eq('email', uniqueEmail)
-                .single();
+            if (usernameExists) {
+                setError('Este nombre de usuario ya está en uso. Por favor, elige otro.');
+                setIsLoading(false);
+                return;
+            }
 
-            if (existingEmail) {
+            // Verificar si el email ya existe usando RPC
+            const { data: emailExists, error: emailCheckError } = await supabase
+                .rpc('check_email_exists', { p_email: uniqueEmail });
+
+            if (emailCheckError) {
+                setError('Ocurrió un error al verificar disponibilidad. Intenta de nuevo.');
+                setIsLoading(false);
+                return;
+            }
+
+            if (emailExists) {
                 setError('Este usuario ya está registrado. Por favor, elige otro nombre de usuario.');
                 setIsLoading(false);
                 return;

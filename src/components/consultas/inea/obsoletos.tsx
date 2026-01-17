@@ -12,7 +12,7 @@ import { useUserRole } from "@/hooks/useUserRole";
 import RoleGuard from "@/components/roleGuard";
 import { useNotifications } from '@/hooks/useNotifications';
 import { useTheme } from '@/context/ThemeContext';
-import { useSearchParams } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useIneaObsoletosIndexation } from '@/context/IneaObsoletosIndexationContext';
 
 interface Mueble {
@@ -151,6 +151,7 @@ const ImagePreview = ({ imagePath }: { imagePath: string | null }) => {
 };
 
 export default function ConsultasIneaBajas() {
+    const router = useRouter();
     const searchParams = useSearchParams();
     const { reindex: reindexObsoletos } = useIneaObsoletosIndexation();
     const [muebles, setMuebles] = useState<Mueble[]>([]);
@@ -720,22 +721,88 @@ export default function ConsultasIneaBajas() {
     // Detectar parámetro id en URL y abrir detalles automáticamente (solo una vez)
     useEffect(() => {
         const idParam = searchParams.get('id');
-        if (idParam && muebles.length > 0 && !selectedItem) {
-            const itemId = parseInt(idParam, 10);
-            const item = muebles.find(m => m.id === itemId);
-            if (item) {
-                setSelectedItem(item);
-                setIsEditing(false);
-                setEditFormData(null);
-                // Scroll al detalle si es necesario
-                setTimeout(() => {
-                    if (detailRef.current) {
-                        detailRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                    }
-                }, 100);
+        if (!idParam) return;
+        
+        const itemId = parseInt(idParam, 10);
+        if (isNaN(itemId)) return;
+        
+        // Si ya está seleccionado el item correcto, no hacer nada
+        if (selectedItem?.id === itemId) return;
+        
+        // Función para calcular la página del item
+        const calculateItemPage = async () => {
+            try {
+                // Construir la misma consulta que se usa en fetchMuebles pero solo para obtener IDs ordenados
+                let query = supabase
+                    .from('muebles')
+                    .select('id')
+                    .eq('estatus', 'BAJA');
+
+                if (searchTerm) {
+                    const searchFilter = `id_inv.ilike.%${searchTerm}%,descripcion.ilike.%${searchTerm}%,resguardante.ilike.%${searchTerm}%,usufinal.ilike.%${searchTerm}%`;
+                    query = query.or(searchFilter);
+                }
+
+                if (filters.estado) {
+                    query = query.eq('estado', filters.estado);
+                }
+
+                if (filters.area) {
+                    query = query.eq('area', filters.area);
+                }
+
+                if (filters.rubro) {
+                    query = query.eq('rubro', filters.rubro);
+                }
+
+                // Obtener todos los IDs ordenados (sin paginación)
+                const { data: allIds, error } = await query
+                    .order(sortField, { ascending: sortDirection === 'asc' })
+                    .select('id');
+
+                if (error) throw error;
+
+                // Encontrar el índice del item
+                const itemIndex = allIds?.findIndex((item: { id: number }) => item.id === itemId) ?? -1;
+
+                if (itemIndex !== -1) {
+                    // Calcular la página basándose en el índice
+                    const targetPage = Math.floor(itemIndex / rowsPerPage) + 1;
+                    setCurrentPage(targetPage);
+                }
+            } catch (error) {
+                console.error('Error calculating item page:', error);
             }
+        };
+
+        calculateItemPage();
+    }, [searchParams, muebles.length, searchTerm, filters, sortField, sortDirection, rowsPerPage, selectedItem?.id]);
+
+    // Buscar el item cuando se carguen los muebles después de cambiar la página
+    useEffect(() => {
+        const idParam = searchParams.get('id');
+        if (!idParam || muebles.length === 0) return;
+        
+        const itemId = parseInt(idParam, 10);
+        if (isNaN(itemId)) return;
+        
+        // Si ya está seleccionado el item correcto, no hacer nada
+        if (selectedItem?.id === itemId) return;
+        
+        // Buscar el item en los muebles cargados
+        const item = muebles.find(m => m.id === itemId);
+        if (item) {
+            setSelectedItem(item);
+            setIsEditing(false);
+            setEditFormData(null);
+            // Scroll al detalle
+            setTimeout(() => {
+                if (detailRef.current) {
+                    detailRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                }
+            }, 100);
         }
-    }, [searchParams, muebles.length]);
+    }, [muebles, searchParams, selectedItem?.id]);
 
     const handleSelectItem = (item: Mueble) => {
         setSelectedItem(item);
@@ -884,6 +951,11 @@ export default function ConsultasIneaBajas() {
         setEditFormData(null);
         setImageFile(null);
         setImagePreview(null);
+        // Limpiar el parámetro id de la URL
+        const params = new URLSearchParams(searchParams.toString());
+        params.delete('id');
+        const newUrl = params.toString() ? `${window.location.pathname}?${params.toString()}` : window.location.pathname;
+        router.replace(newUrl);
     };
 
     const clearFilters = () => {
@@ -1655,7 +1727,11 @@ export default function ConsultasIneaBajas() {
                                 </h2>
                                 <button
                                     type="button"
-                                    onClick={closeDetail}
+                                    onClick={(e) => {
+                                        e.preventDefault();
+                                        e.stopPropagation();
+                                        closeDetail();
+                                    }}
                                     title="Cerrar detalle"
                                     className={`rounded-full p-2 focus:outline-none focus:ring-2 transition-colors ${isDarkMode
                                         ? 'text-gray-400 hover:text-white focus:ring-gray-500 hover:bg-gray-800'
