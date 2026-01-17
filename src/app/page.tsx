@@ -1,52 +1,14 @@
 "use client";
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState } from 'react';
 import { useTheme } from '@/context/ThemeContext';
 import { useInactivity } from '@/context/InactivityContext';
-import GravityBackground from '@/components/GravityBackground';
-import { Sparkles } from 'lucide-react';
-import confetti from 'canvas-confetti';
 
 export default function Inicio() {
   const { isDarkMode } = useTheme();
   const { isInactive } = useInactivity();
   const [isLoaded, setIsLoaded] = useState(false);
-  const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
   const [currentTime, setCurrentTime] = useState('');
   const [currentDate, setCurrentDate] = useState('');
-  const [isGravityEnabled, setIsGravityEnabled] = useState(true);
-  const [isConfigLoaded, setIsConfigLoaded] = useState(false);
-  const [showCredits, setShowCredits] = useState(true);
-  const containerRef = useRef<HTMLDivElement>(null);
-
-  // Cargar configuración al iniciar
-  useEffect(() => {
-    const saved = localStorage.getItem('gravityEnabled');
-    if (saved !== null) {
-      setIsGravityEnabled(saved === 'true');
-    }
-
-    // Check credits visibility (24h expiration)
-    const hiddenTimestamp = localStorage.getItem('creditsHiddenTimestamp');
-    if (hiddenTimestamp) {
-      const now = Date.now();
-      const savedTime = parseInt(hiddenTimestamp, 10);
-      // 24 hours = 86400000 ms
-      if (now - savedTime < 86400000) {
-        setShowCredits(false);
-      } else {
-        localStorage.removeItem('creditsHiddenTimestamp');
-      }
-    }
-
-    setIsConfigLoaded(true);
-  }, []);
-
-  // Guardar configuración solo cuando haya cambiado y ya esté cargada
-  useEffect(() => {
-    if (isConfigLoaded) {
-      localStorage.setItem('gravityEnabled', String(isGravityEnabled));
-    }
-  }, [isGravityEnabled, isConfigLoaded]);
 
   useEffect(() => {
     setIsLoaded(true);
@@ -77,81 +39,26 @@ export default function Inicio() {
     updateDateTime();
     const interval = setInterval(updateDateTime, 1000);
 
-    const handleMouseMove = (e: MouseEvent) => {
-      if (containerRef.current) {
-        const rect = containerRef.current.getBoundingClientRect();
-        setMousePosition({
-          x: e.clientX - rect.left,
-          y: e.clientY - rect.top
-        });
-      }
-    };
-
-    window.addEventListener('mousemove', handleMouseMove);
-
     return () => {
-      window.removeEventListener('mousemove', handleMouseMove);
       clearInterval(interval);
     };
   }, []);
 
-  const handleEasterEgg = (e: React.MouseEvent) => {
-    const rect = (e.target as HTMLElement).getBoundingClientRect();
-    const x = (rect.left + rect.width / 2) / window.innerWidth;
-    const y = (rect.top + rect.height / 2) / window.innerHeight;
-
-    confetti({
-      origin: { x, y },
-      particleCount: 150, // More particles
-      spread: 100, // Wider spread
-      startVelocity: 25, // More energetic pop
-      colors: isDarkMode ? ['#ffffff', '#3b82f6', '#8b5cf6'] : ['#000000', '#3b82f6', '#8b5cf6'],
-      ticks: 300,
-      gravity: 0.8, // Floats longer
-      scalar: 0.8, // Slightly larger
-      shapes: ['circle'],
-      disableForReducedMotion: true
-    });
-
-    // Save timestamp and hide for session (24h)
-    localStorage.setItem('creditsHiddenTimestamp', Date.now().toString());
-    setShowCredits(false);
-  };
-
   return (
     <div
-      ref={containerRef}
       className={`flex flex-col items-center justify-center h-screen w-full overflow-hidden relative transition-colors duration-500 ${isDarkMode ? 'bg-black' : 'bg-gradient-to-br from-gray-50 via-white to-gray-100'
         }`}
     >
-      {/* Clock and Date Display - Solo visible cuando NO hay inactividad */}
+      {/* Clock and Date Display - Inmerso en el fondo */}
       {!isInactive && (
-        <div className={`absolute top-20 left-8 z-20 transition-all duration-500 ${isDarkMode ? 'text-white' : 'text-gray-800'
-          } animate-in fade-in-0 slide-in-from-left-4 duration-700`}>
-          <div className={`relative group backdrop-blur-sm rounded-xl p-4 shadow-2xl transition-all duration-500 ${isDarkMode
-            ? 'bg-black/5 border border-white/5'
-            : 'bg-white/5 border border-white/10'
+        <div className={`absolute top-20 left-8 z-10 transition-all duration-700 ${isDarkMode ? 'text-white/40' : 'text-gray-800/30'
+          }`}>
+          <div className="text-3xl font-extralight tracking-[0.3em] mb-1">
+            {currentTime}
+          </div>
+          <div className={`text-xs capitalize font-light tracking-wider transition-colors duration-500 ${isDarkMode ? 'text-white/30' : 'text-gray-600/25'
             }`}>
-
-            {/* Botón sutil para activar/desactivar efectos */}
-            <button
-              onClick={() => setIsGravityEnabled(!isGravityEnabled)}
-              className={`absolute top-2 right-2 p-1.5 rounded-full transition-all duration-500 opacity-0 group-hover:opacity-100 ${isGravityEnabled
-                ? (isDarkMode ? 'text-blue-400 bg-white/10' : 'text-blue-600 bg-black/5')
-                : 'text-gray-400 hover:bg-gray-500/10'
-                }`}
-              title={isGravityEnabled ? "Desactivar efectos" : "Activar efectos"}
-            >
-              <Sparkles size={12} className={isGravityEnabled ? 'fill-current' : ''} />
-            </button>
-
-            <div className="text-4xl font-light tracking-wider mb-1">
-              {currentTime}
-            </div>
-            <div className={`text-sm capitalize transition-colors duration-500 ${isDarkMode ? 'text-gray-300' : 'text-gray-600'
-              }`}>
-              {currentDate}
-            </div>
+            {currentDate}
           </div>
         </div>
       )}
@@ -169,41 +76,34 @@ export default function Inicio() {
         <div className="wave wave3"></div>
       </div>
 
-      {/* Sistema de partículas (GravityBackground) */}
-      {isGravityEnabled && <GravityBackground />}
-
-      {/* Efecto de luz que sigue al cursor */}
-      <div
-        className={`absolute w-64 h-64 rounded-full pointer-events-none z-0 blur-3xl transition-opacity duration-500 ${isDarkMode ? 'opacity-20' : 'opacity-30'
-          }`}
-        style={{
-          background: isDarkMode
-            ? 'radial-gradient(circle, rgba(255,255,255,0.8) 0%, rgba(255,255,255,0) 70%)'
-            : 'radial-gradient(circle, rgba(59,130,246,0.6) 0%, rgba(59,130,246,0) 70%)',
-          transform: `translate(${mousePosition.x - 128}px, ${mousePosition.y - 128}px)`,
-          transition: 'transform 0.1s ease-out'
-        }}
-      ></div>
-
-      {/* Líneas de conexión */}
-      <div className="absolute inset-0 bg-connections z-0"></div>
-
-      {/* Resplandor principal */}
-      <div className={`absolute rounded-full transform scale-100 transition-all duration-1000 w-96 h-96 blur-3xl z-10 animate-pulse ${isDarkMode ? 'bg-white opacity-10' : 'bg-gray-400 opacity-30'
-        }`}></div>
-
       {/* Logo con animación */}
       <div className="relative z-20">
-        <div className={`transform transition-all duration-1000 relative z-10 ${isLoaded ? 'scale-100 opacity-100' : 'scale-90 opacity-0'}`}>
+        <div className={`transform transition-all duration-1000 relative ${isLoaded ? 'scale-100 opacity-100' : 'scale-90 opacity-0'}`}>
+          {/* Anillo minimalista alrededor del logo */}
+          {!isInactive && (
+            <div className="absolute inset-0 flex items-center justify-center">
+              <div className={`w-[420px] h-[420px] rounded-full transition-all duration-700 ${
+                isDarkMode 
+                  ? 'border border-white/5' 
+                  : 'border border-gray-900/5'
+              }`} style={{ animation: 'rotate-slow 40s linear infinite' }}></div>
+              <div className={`absolute w-[380px] h-[380px] rounded-full transition-all duration-700 ${
+                isDarkMode 
+                  ? 'border border-white/3' 
+                  : 'border border-gray-900/3'
+              }`} style={{ animation: 'rotate-slow 50s linear infinite reverse' }}></div>
+            </div>
+          )}
+          
           <img
             src={isDarkMode ? "/images/TLAX_logo.svg" : "/images/TLAX_logo_negro.png"}
             alt="Logo ITEA"
-            className="h-80 w-auto object-contain animate-float"
+            className="h-80 w-auto object-contain animate-float relative z-10"
             onLoad={() => setIsLoaded(true)}
           />
 
           {/* Mensaje de inactividad */}
-          {isInactive ? (
+          {isInactive && (
             <div className="text-center pt-8 animate-in fade-in-0 zoom-in-95 duration-700">
               <div className="relative inline-block px-8 py-4">
                 <p className={`relative text-3xl font-medium tracking-wide transition-colors duration-500 ${isDarkMode ? 'text-white' : 'text-gray-900'
@@ -224,38 +124,39 @@ export default function Inicio() {
                 </div>
               </div>
             </div>
-          ) : (
-            <div className="flex flex-col items-center gap-1 pt-4 relative z-50">
-              <p className={`text-[8px] tracking-widest uppercase transition-colors duration-500 ${isDarkMode ? 'text-gray-600' : 'text-gray-400'
-                }`}>
-                Derechos Reservados © 2025
-              </p>
-
-              {showCredits && (
-                <div
-                  className={`text-[8px] font-bold tracking-[0.2em] cursor-pointer transition-all duration-500 opacity-20 hover:opacity-40 hover:scale-105 ${isDarkMode ? 'text-white' : 'text-gray-900'
-                    }`}
-                  onClick={handleEasterEgg}
-                >
-                  Made By: <span className="text-blue-500">A</span>|<span className="text-purple-500">X</span>
-                </div>
-              )}
-            </div>
           )}
         </div>
+      </div>
 
-        {/* Círculos orbitando alrededor del logo - Solo visible cuando NO hay inactividad */}
-        {!isInactive && (
-          <div className="absolute inset-0 z-0 animate-in fade-in-0 duration-1000">
-            <div className="orbit orbit1"></div>
-            <div className="orbit orbit2"></div>
-            <div className="orbit orbit3"></div>
+      {/* Derechos Reservados - Abajo a la izquierda */}
+      <div className={`absolute bottom-8 left-8 z-20 text-[10px] tracking-widest uppercase transition-colors duration-500 ${isDarkMode ? 'text-gray-600' : 'text-gray-400'
+        }`}>
+        Derechos Reservados © 2025
+      </div>
 
-            <div className="orbital-dot orbital-dot1"></div>
-            <div className="orbital-dot orbital-dot2"></div>
-            <div className="orbital-dot orbital-dot3"></div>
-          </div>
-        )}
+      {/* Created by - Abajo a la derecha, visible solo en hover */}
+      <div className={`absolute bottom-8 right-8 z-20 flex items-center gap-2 opacity-0 hover:opacity-100 transition-opacity duration-500`}>
+        <span className={`text-[10px] tracking-wider transition-colors duration-500 ${isDarkMode ? 'text-gray-600' : 'text-gray-400'
+          }`}>
+          Created by:
+        </span>
+        <img
+          src={isDarkMode ? "/images/axpert-logo-white.svg" : "/images/axpert-logo-black.svg"}
+          alt="Axpert"
+          className="h-4 w-auto object-contain"
+          onError={(e) => {
+            // Fallback si no existe la imagen
+            const target = e.target as HTMLImageElement;
+            target.style.display = 'none';
+            const parent = target.parentElement;
+            if (parent) {
+              const span = document.createElement('span');
+              span.className = isDarkMode ? 'text-white text-xs font-bold' : 'text-gray-900 text-xs font-bold';
+              span.innerHTML = '<span style="color: #3b82f6;">A</span>|<span style="color: #8b5cf6;">X</span>pert';
+              parent.appendChild(span);
+            }
+          }}
+        />
       </div>
 
       <style jsx>{`
@@ -269,14 +170,6 @@ export default function Inicio() {
           height: 100%;
         }
         
-        .bg-connections {
-          background-image: ${isDarkMode
-          ? 'radial-gradient(rgba(255, 255, 255, 0.15) 1px, transparent 1px), radial-gradient(rgba(255, 255, 255, 0.1) 1px, transparent 1px)'
-          : 'radial-gradient(rgba(59, 130, 246, 0.2) 1px, transparent 1px), radial-gradient(rgba(59, 130, 246, 0.15) 1px, transparent 1px)'
-        };
-          background-size: 40px 40px, 20px 20px;
-          background-position: 0 0, 10px 10px;
-        }
         
         .wave {
           position: absolute;
@@ -304,99 +197,19 @@ export default function Inicio() {
           opacity: 0.3;
         }
         
-        .orbit {
-          position: absolute;
-          top: 50%;
-          left: 50%;
-          border: 1px solid ${isDarkMode ? 'rgba(255, 255, 255, 0.1)' : 'rgba(59, 130, 246, 0.2)'};
-          border-radius: 50%;
-          transform: translate(-50%, -50%);
-          pointer-events: none;
-        }
-        
-        .orbit1 {
-          width: 300px;
-          height: 300px;
-          animation: spin 20s linear infinite;
-        }
-        
-        .orbit2 {
-          width: 400px;
-          height: 400px;
-          animation: spin 25s linear infinite reverse;
-        }
-        
-        .orbit3 {
-          width: 500px;
-          height: 500px;
-          animation: spin 30s linear infinite;
-        }
-        
-        .orbital-dot {
-          position: absolute;
-          width: 6px;
-          height: 6px;
-          background: ${isDarkMode ? 'white' : '#3b82f6'};
-          border-radius: 50%;
-          top: 50%;
-          left: 50%;
-          transform: translate(-50%, -50%);
-          pointer-events: none;
-        }
-        
-        .orbital-dot1 {
-          animation: orbit1 20s linear infinite;
-          box-shadow: 0 0 10px 2px rgba(100, 200, 255, 0.5);
-        }
-        
-        .orbital-dot2 {
-          animation: orbit2 25s linear infinite reverse;
-          box-shadow: 0 0 10px 2px rgba(255, 100, 255, 0.5);
-        }
-        
-        .orbital-dot3 {
-          animation: orbit3 30s linear infinite;
-          box-shadow: 0 0 10px 2px rgba(100, 255, 200, 0.5);
-        }
-        
-        @keyframes float {
-          0%, 100% { transform: translateY(0); }
-          50% { transform: translateY(-10px); }
-        }
-        
-        @keyframes pulse {
-          0%, 100% { opacity: 0.1; }
-          50% { opacity: 0.2; }
-        }
-        
         @keyframes rotate {
           from { transform: rotate(0deg); }
           to { transform: rotate(360deg); }
         }
         
-        @keyframes spin {
-          from { transform: translate(-50%, -50%) rotate(0deg); }
-          to { transform: translate(-50%, -50%) rotate(360deg); }
-        }
-        
-        @keyframes orbit1 {
-          from { transform: rotate(0deg) translateX(150px) rotate(0deg); }
-          to { transform: rotate(360deg) translateX(150px) rotate(-360deg); }
-        }
-        
-        @keyframes orbit2 {
-          from { transform: rotate(0deg) translateX(200px) rotate(0deg); }
-          to { transform: rotate(360deg) translateX(200px) rotate(-360deg); }
-        }
-        
-        @keyframes orbit3 {
-          from { transform: rotate(0deg) translateX(250px) rotate(0deg); }
-          to { transform: rotate(360deg) translateX(250px) rotate(-360deg); }
-        }
-        
         @keyframes float {
           0%, 100% { transform: translateY(0); }
           50% { transform: translateY(-10px); }
+        }
+        
+        @keyframes rotate-slow {
+          from { transform: rotate(0deg); }
+          to { transform: rotate(360deg); }
         }
         
         @keyframes bounce-dot {
