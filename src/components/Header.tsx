@@ -8,7 +8,6 @@ import Cookies from 'js-cookie';
 import { useRouter } from 'next/navigation';
 import supabase from '@/app/lib/supabase/client';
 import RoleGuard from "@/components/roleGuard";
-import NotificationsPanel from './NotificationCenter';
 import NotificationsUnderConstruction from './NotificationsUnderConstruction';
 import { useNotifications } from '@/hooks/useNotifications';
 import { useTheme } from "@/context/ThemeContext";
@@ -744,7 +743,7 @@ export default function NavigationBar() {
                             <RoleGuard roles={["superadmin", "admin"]} userRole={userData.rol}>
                                 <div className="relative" ref={notificationWrapperRef}>
                                     <button
-                                        onClick={() => setNotificationsOpen(!notificationsOpen)}
+                                        onClick={handleNotificationsClick}
                                         className={`p-2 rounded-full relative transition-all duration-200 hover:scale-110 ${isDarkMode
                                             ? 'text-gray-300 hover:text-white hover:bg-gray-800'
                                             : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
@@ -771,7 +770,7 @@ export default function NavigationBar() {
                                     </button>
                                     {notificationsOpen && (
                                         <div className="absolute right-0 top-full mt-2 z-50 animate-in slide-in-from-top-2 fade-in duration-200">
-                                            <NotificationsPanel onClose={() => setNotificationsOpen(false)} />
+                                            <NotificationsUnderConstruction />
                                         </div>
                                     )}
                                 </div>

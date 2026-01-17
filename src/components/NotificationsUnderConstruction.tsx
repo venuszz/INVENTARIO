@@ -35,7 +35,7 @@ export default function NotificationsUnderConstruction() {
     const containerBorder = isDarkMode ? 'border-zinc-800' : 'border-gray-200';
 
     return (
-        <div className={`w-full h-full flex flex-col transition-colors duration-300 ${isDarkMode ? 'bg-zinc-950' : 'bg-white'}`}>
+        <div className={`w-80 max-h-[500px] flex flex-col rounded-lg shadow-xl border transition-colors duration-300 ${isDarkMode ? 'bg-zinc-950 border-zinc-800' : 'bg-white border-gray-200'}`}>
             {/* Header */}
             <div className={`flex items-center gap-3 p-4 border-b ${containerBorder}`}>
                 <div className="relative">

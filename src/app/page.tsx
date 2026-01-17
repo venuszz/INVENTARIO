@@ -1,17 +1,21 @@
 "use client";
 import { useEffect, useState } from 'react';
 import { useTheme } from '@/context/ThemeContext';
-import { useInactivity } from '@/context/InactivityContext';
 
 export default function Inicio() {
   const { isDarkMode } = useTheme();
-  const { isInactive } = useInactivity();
   const [isLoaded, setIsLoaded] = useState(false);
   const [currentTime, setCurrentTime] = useState('');
   const [currentDate, setCurrentDate] = useState('');
+  const [ring1Speed, setRing1Speed] = useState(45);
+  const [ring2Speed, setRing2Speed] = useState(65);
 
   useEffect(() => {
     setIsLoaded(true);
+
+    // Velocidades aleatorias para los anillos (entre 40 y 80 segundos)
+    setRing1Speed(Math.floor(Math.random() * (80 - 40 + 1)) + 40);
+    setRing2Speed(Math.floor(Math.random() * (80 - 40 + 1)) + 40);
 
     // Muestra la hora y fecha actual
     const updateDateTime = () => {
@@ -49,51 +53,61 @@ export default function Inicio() {
       className={`flex flex-col items-center justify-center h-screen w-full overflow-hidden relative transition-colors duration-500 ${isDarkMode ? 'bg-black' : 'bg-gradient-to-br from-gray-50 via-white to-gray-100'
         }`}
     >
-      {/* Clock and Date Display - Inmerso en el fondo */}
-      {!isInactive && (
-        <div className={`absolute top-20 left-8 z-10 transition-all duration-700 ${isDarkMode ? 'text-white/40' : 'text-gray-800/30'
-          }`}>
-          <div className="text-3xl font-extralight tracking-[0.3em] mb-1">
-            {currentTime}
-          </div>
-          <div className={`text-xs capitalize font-light tracking-wider transition-colors duration-500 ${isDarkMode ? 'text-white/30' : 'text-gray-600/25'
-            }`}>
-            {currentDate}
-          </div>
-        </div>
-      )}
-
       {/* Fondo de gradiente animado */}
       <div className={`absolute inset-0 z-0 transition-opacity duration-500 ${isDarkMode ? 'bg-black opacity-80' : 'bg-white/20 opacity-60'
         }`}>
         <div className="absolute inset-0 bg-grid"></div>
       </div>
 
-      {/* Efecto de ondas en el fondo */}
-      <div className="absolute inset-0 z-0">
-        <div className="wave wave1"></div>
-        <div className="wave wave2"></div>
-        <div className="wave wave3"></div>
-      </div>
-
       {/* Logo con animación */}
       <div className="relative z-20">
         <div className={`transform transition-all duration-1000 relative ${isLoaded ? 'scale-100 opacity-100' : 'scale-90 opacity-0'}`}>
-          {/* Anillo minimalista alrededor del logo */}
-          {!isInactive && (
-            <div className="absolute inset-0 flex items-center justify-center">
-              <div className={`w-[420px] h-[420px] rounded-full transition-all duration-700 ${
-                isDarkMode 
-                  ? 'border border-white/5' 
-                  : 'border border-gray-900/5'
-              }`} style={{ animation: 'rotate-slow 40s linear infinite' }}></div>
-              <div className={`absolute w-[380px] h-[380px] rounded-full transition-all duration-700 ${
-                isDarkMode 
-                  ? 'border border-white/3' 
-                  : 'border border-gray-900/3'
-              }`} style={{ animation: 'rotate-slow 50s linear infinite reverse' }}></div>
-            </div>
-          )}
+          {/* Elementos dinámicos sutiles alrededor del logo */}
+          <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+            {/* Anillo exterior rotando lentamente - con espacio sin cerrar */}
+            <svg 
+              className="absolute w-[440px] h-[440px]"
+              style={{ animation: `rotate-slow ${ring1Speed}s linear infinite` }}
+            >
+              <circle
+                cx="220"
+                cy="220"
+                r="219"
+                fill="none"
+                stroke={isDarkMode ? 'rgba(255, 255, 255, 0.2)' : 'rgba(0, 0, 0, 0.15)'}
+                strokeWidth="1"
+                strokeDasharray="1300 100"
+                strokeLinecap="round"
+                className="transition-all duration-700"
+              />
+            </svg>
+            
+            {/* Anillo medio rotando en dirección opuesta - con espacio sin cerrar */}
+            <svg 
+              className="absolute w-[400px] h-[400px]"
+              style={{ animation: `rotate-slow ${ring2Speed}s linear infinite reverse` }}
+            >
+              <circle
+                cx="200"
+                cy="200"
+                r="199"
+                fill="none"
+                stroke={isDarkMode ? 'rgba(255, 255, 255, 0.15)' : 'rgba(0, 0, 0, 0.12)'}
+                strokeWidth="1"
+                strokeDasharray="1200 100"
+                strokeLinecap="round"
+                className="transition-all duration-700"
+              />
+            </svg>
+            
+            {/* Resplandor sutil con pulso */}
+            <div 
+              className={`absolute w-[360px] h-[360px] rounded-full blur-3xl ${
+                isDarkMode ? 'bg-white/[0.02]' : 'bg-gray-900/[0.02]'
+              }`}
+              style={{ animation: 'pulse-subtle 8s ease-in-out infinite' }}
+            ></div>
+          </div>
           
           <img
             src={isDarkMode ? "/images/TLAX_logo.svg" : "/images/TLAX_logo_negro.png"}
@@ -101,37 +115,13 @@ export default function Inicio() {
             className="h-80 w-auto object-contain animate-float relative z-10"
             onLoad={() => setIsLoaded(true)}
           />
-
-          {/* Mensaje de inactividad */}
-          {isInactive && (
-            <div className="text-center pt-8 animate-in fade-in-0 zoom-in-95 duration-700">
-              <div className="relative inline-block px-8 py-4">
-                <p className={`relative text-3xl font-medium tracking-wide transition-colors duration-500 ${isDarkMode ? 'text-white' : 'text-gray-900'
-                  }`}>
-                  <span className="animate-text-shimmer bg-gradient-to-r from-current via-current to-current bg-[length:200%_100%] bg-clip-text">
-                    Esperando Interacción A|X
-                  </span>
-                </p>
-
-                {/* Indicador de pulso debajo */}
-                <div className="flex justify-center mt-4 space-x-2">
-                  <div className={`w-2 h-2 rounded-full animate-pulse-scale ${isDarkMode ? 'bg-white' : 'bg-gray-900'
-                    }`} style={{ animationDelay: '0ms' }}></div>
-                  <div className={`w-2 h-2 rounded-full animate-pulse-scale ${isDarkMode ? 'bg-white' : 'bg-gray-900'
-                    }`} style={{ animationDelay: '200ms' }}></div>
-                  <div className={`w-2 h-2 rounded-full animate-pulse-scale ${isDarkMode ? 'bg-white' : 'bg-gray-900'
-                    }`} style={{ animationDelay: '400ms' }}></div>
-                </div>
-              </div>
-            </div>
-          )}
         </div>
       </div>
 
       {/* Derechos Reservados - Abajo a la izquierda */}
       <div className={`absolute bottom-8 left-8 z-20 text-[10px] tracking-widest uppercase transition-colors duration-500 ${isDarkMode ? 'text-gray-600' : 'text-gray-400'
         }`}>
-        Derechos Reservados © 2025
+        Derechos Reservados © 2026  
       </div>
 
       {/* Created by - Abajo a la derecha, visible solo en hover */}
@@ -141,65 +131,21 @@ export default function Inicio() {
           Created by:
         </span>
         <img
-          src={isDarkMode ? "/images/axpert-logo-white.svg" : "/images/axpert-logo-black.svg"}
+          src={isDarkMode ? "/images/WhiteLogo.png" : "/images/BlackLogo.png"}
           alt="Axpert"
           className="h-4 w-auto object-contain"
-          onError={(e) => {
-            // Fallback si no existe la imagen
-            const target = e.target as HTMLImageElement;
-            target.style.display = 'none';
-            const parent = target.parentElement;
-            if (parent) {
-              const span = document.createElement('span');
-              span.className = isDarkMode ? 'text-white text-xs font-bold' : 'text-gray-900 text-xs font-bold';
-              span.innerHTML = '<span style="color: #3b82f6;">A</span>|<span style="color: #8b5cf6;">X</span>pert';
-              parent.appendChild(span);
-            }
-          }}
         />
       </div>
 
       <style jsx>{`
         .bg-grid {
           background-image: ${isDarkMode
-          ? 'linear-gradient(rgba(255, 255, 255, 0.05) 1px, transparent 1px), linear-gradient(90deg, rgba(255, 255, 255, 0.05) 1px, transparent 1px)'
-          : 'linear-gradient(rgba(59, 130, 246, 0.1) 1px, transparent 1px), linear-gradient(90deg, rgba(59, 130, 246, 0.1) 1px, transparent 1px)'
+          ? 'linear-gradient(rgba(255, 255, 255, 0.08) 1px, transparent 1px), linear-gradient(90deg, rgba(255, 255, 255, 0.08) 1px, transparent 1px)'
+          : 'linear-gradient(rgba(0, 0, 0, 0.08) 1px, transparent 1px), linear-gradient(90deg, rgba(0, 0, 0, 0.08) 1px, transparent 1px)'
         };
           background-size: 20px 20px;
           width: 100%;
           height: 100%;
-        }
-        
-        
-        .wave {
-          position: absolute;
-          width: 200%;
-          height: 200%;
-          left: -50%;
-          background: ${isDarkMode ? 'rgba(255, 255, 255, 0.03)' : 'rgba(59, 130, 246, 0.05)'};
-          border-radius: 43%;
-        }
-        
-        .wave1 {
-          bottom: -80%;
-          animation: rotate 20000ms linear infinite;
-        }
-        
-        .wave2 {
-          bottom: -75%;
-          animation: rotate 25000ms linear infinite reverse;
-          opacity: 0.5;
-        }
-        
-        .wave3 {
-          bottom: -70%;
-          animation: rotate 30000ms linear infinite;
-          opacity: 0.3;
-        }
-        
-        @keyframes rotate {
-          from { transform: rotate(0deg); }
-          to { transform: rotate(360deg); }
         }
         
         @keyframes float {
@@ -210,6 +156,17 @@ export default function Inicio() {
         @keyframes rotate-slow {
           from { transform: rotate(0deg); }
           to { transform: rotate(360deg); }
+        }
+        
+        @keyframes pulse-subtle {
+          0%, 100% { 
+            opacity: 0.3;
+            transform: scale(1);
+          }
+          50% { 
+            opacity: 0.5;
+            transform: scale(1.02);
+          }
         }
         
         @keyframes bounce-dot {
