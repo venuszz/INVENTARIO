@@ -457,7 +457,7 @@ export function useIneaIndexation() {
       }
       // NO remover canal aquí para mantener conexión entre navegaciones
     };
-  }, [initializeModule, indexData, setupRealtimeSubscription, completeIndexation, muebles.length, isStoreHydrated]);
+  }, [initializeModule, indexData, setupRealtimeSubscription, isStoreHydrated]);
   
   // ============================================================================
   // RETORNO

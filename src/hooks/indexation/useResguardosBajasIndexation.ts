@@ -237,7 +237,7 @@ export function useResguardosBajasIndexation() {
     return () => {
       if (reconnectionTimeoutRef.current) clearTimeout(reconnectionTimeoutRef.current);
     };
-  }, [initializeModule, indexData, setupRealtimeSubscription, completeIndexation, resguardos.length, hasHydratedRef.current]);
+  }, [initializeModule, indexData, setupRealtimeSubscription]);
   
   return {
     isIndexing: indexationState?.isIndexing ?? false,

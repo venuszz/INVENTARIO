@@ -241,7 +241,7 @@ export function useNoListadoIndexation() {
     return () => {
       if (reconnectionTimeoutRef.current) clearTimeout(reconnectionTimeoutRef.current);
     };
-  }, [initializeModule, indexData, setupRealtimeSubscription, completeIndexation, muebles.length, isStoreHydrated]);
+  }, [initializeModule, indexData, setupRealtimeSubscription, isStoreHydrated]);
   
   return {
     isIndexing: indexationState?.isIndexing ?? false,

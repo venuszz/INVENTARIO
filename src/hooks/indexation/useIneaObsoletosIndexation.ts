@@ -314,12 +314,13 @@ export function useIneaObsoletosIndexation() {
       
       // Verificar si ya está indexado en esta sesión (sessionStorage)
       const currentState = useIndexationStore.getState().modules[MODULE_KEY];
-      const isAlreadyIndexed = currentState?.isIndexed && muebles.length > 0;
+      const currentMuebles = useIneaObsoletosStore.getState().muebles;
+      const isAlreadyIndexed = currentState?.isIndexed && currentMuebles.length > 0;
       
       console.log('🔍 [INEA OBSOLETOS] Verificando estado de indexación:', {
         moduleKey: MODULE_KEY,
         isIndexed: currentState?.isIndexed,
-        mueblesCount: muebles.length,
+        mueblesCount: currentMuebles.length,
         isAlreadyIndexed,
         lastIndexedAt: currentState?.lastIndexedAt,
       });
@@ -342,7 +343,7 @@ export function useIneaObsoletosIndexation() {
         clearTimeout(reconnectionTimeoutRef.current);
       }
     };
-  }, [initializeModule, indexData, setupRealtimeSubscription, completeIndexation, muebles.length]);
+  }, [initializeModule, indexData, setupRealtimeSubscription]);
   
   return {
     isIndexing: indexationState?.isIndexing ?? false,

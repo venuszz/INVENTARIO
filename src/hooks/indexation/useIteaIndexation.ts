@@ -246,7 +246,7 @@ export function useIteaIndexation() {
     return () => {
       if (reconnectionTimeoutRef.current) clearTimeout(reconnectionTimeoutRef.current);
     };
-  }, [initializeModule, indexData, setupRealtimeSubscription, completeIndexation, muebles.length, hasHydratedRef.current]);
+  }, [initializeModule, indexData, setupRealtimeSubscription]);
   
   return {
     isIndexing: indexationState?.isIndexing ?? false,

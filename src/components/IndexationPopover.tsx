@@ -38,7 +38,10 @@ export default function IndexationPopover() {
     const pathname = usePathname();
     const { isDarkMode } = useTheme();
     
-    // Hooks de indexación
+    // Solo llamar hooks si no estamos en login
+    const shouldIndex = pathname !== '/login';
+    
+    // Hooks de indexación - solo se ejecutan si shouldIndex es true
     const ineaState = useIneaIndexation();
     const iteaState = useIteaIndexation();
     const noListadoState = useNoListadoIndexation();
