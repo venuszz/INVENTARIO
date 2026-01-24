@@ -286,8 +286,15 @@ export function useIneaObsoletosIndexation() {
     setDisconnectedAt(MODULE_KEY, null);
   }, [indexationState, updateReconnectionStatus, resetReconnectionAttempts, setDisconnectedAt]);
   
+  // ============================================================================
+  // INICIALIZACIÓN
+  // ============================================================================
+  
+  // Esperar a que el store se hidrate desde IndexedDB
+  const isStoreHydrated = useHydrationStore(state => state.isHydrated('inea-obsoletos'));
+  
   useEffect(() => {
-    if (isInitializedRef.current) return;
+    if (isInitializedRef.current || !isStoreHydrated) return;
     
     // Solo ejecutar en el cliente (navegador)
     if (typeof window === 'undefined') return;
@@ -315,24 +322,28 @@ export function useIneaObsoletosIndexation() {
         return;
       }
       
-      // Verificar si ya está indexado en esta sesión (sessionStorage)
+      // Verificar si ya hay datos en IndexedDB (después de hidratación)
       const currentState = useIndexationStore.getState().modules[MODULE_KEY];
       const currentMuebles = useIneaObsoletosStore.getState().muebles;
-      const isAlreadyIndexed = currentState?.isIndexed && currentMuebles.length > 0;
+      const hasDataInIndexedDB = currentMuebles.length > 0;
+      const isAlreadyIndexed = currentState?.isIndexed && hasDataInIndexedDB;
       
       console.log('🔍 [INEA OBSOLETOS] Verificando estado de indexación:', {
         moduleKey: MODULE_KEY,
         isIndexed: currentState?.isIndexed,
-        mueblesCount: currentMuebles.length,
+        mueblesCount: muebles.length,
+        hasDataInIndexedDB,
         isAlreadyIndexed,
         lastIndexedAt: currentState?.lastIndexedAt,
+        isStoreHydrated,
       });
       
       if (isAlreadyIndexed) {
-        console.log('✅ [INEA OBSOLETOS] Already indexed in this session, skipping indexation');
+        console.log('✅ [INEA OBSOLETOS] Data found in IndexedDB, skipping indexation');
+        completeIndexation(MODULE_KEY);
         await setupRealtimeSubscription();
       } else {
-        console.log('⚠️ [INEA OBSOLETOS] Not indexed in this session, starting indexation');
+        console.log('⚠️ [INEA OBSOLETOS] No data in IndexedDB, starting full indexation');
         await indexData();
       }
       
@@ -346,7 +357,7 @@ export function useIneaObsoletosIndexation() {
         clearTimeout(reconnectionTimeoutRef.current);
       }
     };
-  }, [initializeModule, indexData, setupRealtimeSubscription]);
+  }, [initializeModule, indexData, setupRealtimeSubscription, isStoreHydrated, completeIndexation]);
   
   return {
     isIndexing: indexationState?.isIndexing ?? false,
