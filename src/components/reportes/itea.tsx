@@ -610,11 +610,23 @@ export default function ReportesIteaDashboard() {
                                                         nombre: formData.get('nombre'),
                                                         puesto: formData.get('puesto'),
                                                     };
-                                                    const { error } = await supabase
-                                                        .from('firmas')
-                                                        .update(updates)
-                                                        .eq('id', firma.id);
-                                                    if (!error) {
+                                                    
+                                                    try {
+                                                        // Usar el proxy para actualizar la firma
+                                                        const response = await fetch(`/api/supabase-proxy?target=${encodeURIComponent(`/rest/v1/firmas?id=eq.${firma.id}`)}`, {
+                                                            method: 'PATCH',
+                                                            credentials: 'include',
+                                                            headers: { 
+                                                                'Content-Type': 'application/json',
+                                                                'Prefer': 'return=representation'
+                                                            },
+                                                            body: JSON.stringify(updates)
+                                                        });
+                                                        
+                                                        if (!response.ok) {
+                                                            throw new Error('Error al actualizar la firma');
+                                                        }
+                                                        
                                                         // El realtime del hook actualizará automáticamente
                                                         setEditingFirma(null);
                                                         // Notificación de edición de firma exitosa
@@ -627,7 +639,7 @@ export default function ReportesIteaDashboard() {
                                                             importance: 'medium',
                                                             data: { changes: [`Edición de firma: ${firma.concepto}`], affectedTables: ['firmas'] }
                                                         });
-                                                    } else {
+                                                    } catch (error) {
                                                         setError('Error al actualizar la firma');
                                                         // Notificación de error al editar firma
                                                         await createNotification({

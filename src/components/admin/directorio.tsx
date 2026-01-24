@@ -1,8 +1,7 @@
 "use client"
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useCallback, useRef } from 'react';
 import { useTheme } from '@/context/ThemeContext';
 import { Plus, Trash2, Edit, AlertTriangle, CheckCircle, X, Search, RefreshCw, CheckSquare, XSquare } from 'lucide-react';
-import supabase from "@/app/lib/supabase/client";
 import { useNotifications } from '@/hooks/useNotifications';
 import SectionRealtimeToggle from '@/components/SectionRealtimeToggle';
 import { useAdminIndexation } from '@/hooks/indexation/useAdminIndexation';
@@ -32,7 +31,6 @@ export default function DirectorioManagementComponent() {
     } = useAdminIndexation();
     
     // Estados locales
-    const [loading, setLoading] = useState<boolean>(false);
     const [isAddingNew, setIsAddingNew] = useState<boolean>(false);
     const [editingId, setEditingId] = useState<number | null>(null);
     const [deletingId, setDeletingId] = useState<number | null>(null);
@@ -217,10 +215,6 @@ export default function DirectorioManagementComponent() {
         setIsSubmitting(true);
         setError('');
 
-        console.log('=== INICIANDO ACTUALIZACIÓN ===');
-        console.log('editEmployee:', editEmployee);
-        console.log('editSelectedAreas:', editSelectedAreas);
-
         try {
             // Validación
             if (!editEmployee.nombre || editEmployee.nombre.trim() === '') {
@@ -233,8 +227,6 @@ export default function DirectorioManagementComponent() {
             const nombreEmployee = editEmployee.nombre;
             const puestoEmployee = editEmployee.puesto || '';
 
-            console.log('Datos a actualizar:', { nombreEmployee, puestoEmployee, id: editEmployee.id_directorio });
-
             // Verificar si el nuevo nombre ya existe (excluyendo el empleado actual)
             const existingEmployee = directorioFromStore.find((item: Directorio) =>
                 item.nombre?.toUpperCase() === nombreEmployee &&
@@ -246,55 +238,76 @@ export default function DirectorioManagementComponent() {
                 throw new Error('El empleado ya existe');
             }
 
-            // SOLO actualizar áreas (sin tocar nombre/puesto) para probar
-            console.log('Actualizando solo áreas...');
+            // Actualizar nombre y puesto del empleado usando el proxy
+            const updateResponse = await fetch(`/api/supabase-proxy?target=${encodeURIComponent(`/rest/v1/directorio?id_directorio=eq.${editEmployee.id_directorio}`)}`, {
+                method: 'PATCH',
+                credentials: 'include',
+                headers: { 
+                    'Content-Type': 'application/json',
+                    'Prefer': 'return=representation'
+                },
+                body: JSON.stringify({ 
+                    nombre: nombreEmployee, 
+                    puesto: puestoEmployee 
+                })
+            });
 
-            // Actualizar áreas: eliminar todas y volver a insertar
-            console.log('Eliminando áreas existentes...');
-            const { error: deleteError } = await supabase
-                .from('directorio_areas')
-                .delete()
-                .eq('id_directorio', editEmployee.id_directorio);
+            if (!updateResponse.ok) {
+                const error = await updateResponse.json();
+                throw new Error(error.message || 'Error al actualizar empleado');
+            }
 
-            if (deleteError) {
-                console.error('Error al eliminar áreas:', deleteError);
-                throw new Error(`Error al eliminar áreas: ${deleteError.message}`);
-            } else {
-                console.log('Áreas eliminadas correctamente');
+            // Actualizar áreas: eliminar todas y volver a insertar usando el proxy
+            const deleteResponse = await fetch(`/api/supabase-proxy?target=${encodeURIComponent(`/rest/v1/directorio_areas?id_directorio=eq.${editEmployee.id_directorio}`)}`, {
+                method: 'DELETE',
+                credentials: 'include',
+                headers: { 'Content-Type': 'application/json' }
+            });
+
+            if (!deleteResponse.ok) {
+                throw new Error('Error al eliminar áreas existentes');
             }
 
             // Insertar nuevas áreas
-            console.log('Insertando nuevas áreas:', editSelectedAreas);
-            const areasToInsert = editSelectedAreas.map(id_area => ({
-                id_directorio: editEmployee.id_directorio,
-                id_area
-            }));
+            for (const id_area of editSelectedAreas) {
+                const insertResponse = await fetch('/api/supabase-proxy?target=/rest/v1/directorio_areas', {
+                    method: 'POST',
+                    credentials: 'include',
+                    headers: { 
+                        'Content-Type': 'application/json',
+                        'Prefer': 'return=minimal'
+                    },
+                    body: JSON.stringify({ 
+                        id_directorio: editEmployee.id_directorio, 
+                        id_area 
+                    })
+                });
 
-            const { data: insertData, error: insertError } = await supabase
-                .from('directorio_areas')
-                .insert(areasToInsert);
-
-            console.log('Resultado de inserción de áreas:', { insertData, insertError });
-
-            if (insertError) {
-                console.error('Error al insertar áreas:', insertError);
-                throw new Error(`Error al insertar áreas: ${insertError.message}`);
-            } else {
-                console.log('Todas las áreas insertadas correctamente');
+                if (!insertResponse.ok) {
+                    throw new Error('Error al insertar áreas');
+                }
             }
 
-            setMessage({ type: 'success', text: 'Áreas actualizadas correctamente' });
+            setMessage({ type: 'success', text: 'Empleado actualizado correctamente' });
             setEditingId(null);
             setEditEmployee({ id_directorio: 0, nombre: '', area: '', puesto: '' });
             setEditSelectedAreas([]);
             
-            console.log('Datos actualizados automáticamente por realtime');
-            console.log('=== ACTUALIZACIÓN COMPLETADA ===');
+            // El realtime del hook actualizará automáticamente el store y mostrará la notificación
+
+            // Notificación de edición
+            await createNotification({
+                title: 'Empleado actualizado',
+                description: `Se actualizó la información de ${nombreEmployee} en el directorio.`,
+                type: 'info',
+                category: 'directorio',
+                device: 'web',
+                importance: 'medium',
+                data: { changes: [`Edición: ${nombreEmployee}`], affectedTables: ['directorio', 'directorio_areas'] }
+            });
         } catch (error: unknown) {
-            console.error('=== ERROR EN ACTUALIZACIÓN ===');
-            console.error('Error completo:', error);
+            console.error('Error:', error);
             const errorMessage = (error instanceof Error) ? error.message : 'Ha ocurrido un error';
-            console.error('Mensaje de error:', errorMessage);
             setError(errorMessage);
             setMessage({ type: 'error', text: errorMessage });
 
@@ -310,7 +323,6 @@ export default function DirectorioManagementComponent() {
             });
         } finally {
             setIsSubmitting(false);
-            console.log('=== FIN DE ACTUALIZACIÓN ===');
         }
     };
 
@@ -608,24 +620,18 @@ export default function DirectorioManagementComponent() {
                                                 />
                                             </div>
                                         </td>
-                                        {/* Puesto como chip azul o aviso si no hay */}
+                                        {/* Puesto: input editable */}
                                         <td className="px-4 py-2 text-sm">
-                                            {newEmployee.puesto && newEmployee.puesto.trim() !== '' ? (
-                                                <span className={`flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-semibold transition-colors duration-500 ${isDarkMode
-                                                        ? 'bg-slate-600/20 text-slate-300 border border-slate-500/50'
-                                                        : 'bg-slate-100 text-slate-700 border border-slate-300'
-                                                    }`}>
-                                                    {newEmployee.puesto}
-                                                </span>
-                                            ) : (
-                                                <span className={`flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-semibold animate-fade-in transition-colors duration-500 ${isDarkMode
-                                                        ? 'text-amber-400 bg-amber-900/30 border border-amber-500'
-                                                        : 'text-amber-700 bg-amber-100 border border-amber-300'
-                                                    }`}>
-                                                    <AlertTriangle size={14} />
-                                                    <span>Sin puesto</span>
-                                                </span>
-                                            )}
+                                            <input
+                                                type="text"
+                                                value={newEmployee.puesto || ''}
+                                                onChange={(e) => setNewEmployee({ ...newEmployee, puesto: e.target.value.toUpperCase() })}
+                                                placeholder="Puesto"
+                                                className={`w-full rounded p-1.5 text-sm transition-all ${isDarkMode
+                                                        ? 'bg-black border border-gray-700 focus:border-white focus:ring focus:ring-gray-700 focus:ring-opacity-50 text-white'
+                                                        : 'bg-white border border-gray-300 focus:border-gray-500 focus:ring focus:ring-gray-500 focus:ring-opacity-50 text-gray-900'
+                                                    }`}
+                                            />
                                         </td>
                                         {/* Acciones */}
                                         <td className="px-4 py-2 text-sm text-right">
@@ -657,20 +663,7 @@ export default function DirectorioManagementComponent() {
                                     </tr>
                                 )}
 
-                                {loading ? (
-                                    <tr>
-                                        <td colSpan={4} className={`px-4 py-4 text-center text-sm transition-colors duration-500 ${isDarkMode ? 'text-white' : 'text-gray-900'
-                                            }`}>
-                                            <div className="flex justify-center items-center">
-                                                <div className={`w-5 h-5 border-2 rounded-full animate-spin mr-2 ${isDarkMode
-                                                        ? 'border-gray-500 border-t-white'
-                                                        : 'border-gray-300 border-t-gray-600'
-                                                    }`}></div>
-                                                Cargando directorio de personal...
-                                            </div>
-                                        </td>
-                                    </tr>
-                                ) : filteredDirectorio.length === 0 ? (
+                                {filteredDirectorio.length === 0 ? (
                                     <tr>
                                         <td colSpan={4} className={`px-4 py-4 text-center text-sm transition-colors duration-500 ${isDarkMode ? 'text-white' : 'text-gray-900'
                                             }`}>
@@ -751,24 +744,18 @@ export default function DirectorioManagementComponent() {
                                                             />
                                                         </div>
                                                     </td>
-                                                    {/* Puesto como chip azul o aviso si no hay */}
+                                                    {/* Puesto: input editable */}
                                                     <td className="px-4 py-2 text-sm">
-                                                        {editEmployee.puesto && editEmployee.puesto.trim() !== '' ? (
-                                                            <span className={`flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-semibold transition-colors duration-500 ${isDarkMode
-                                                                    ? 'bg-slate-600/20 text-slate-300 border border-slate-500/50'
-                                                                    : 'bg-slate-100 text-slate-700 border border-slate-300'
-                                                                }`}>
-                                                                {editEmployee.puesto}
-                                                            </span>
-                                                        ) : (
-                                                            <span className={`flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-semibold animate-fade-in transition-colors duration-500 ${isDarkMode
-                                                                    ? 'text-amber-400 bg-amber-900/30 border border-amber-500'
-                                                                    : 'text-amber-700 bg-amber-100 border border-amber-300'
-                                                                }`}>
-                                                                <AlertTriangle size={14} />
-                                                                <span>Sin puesto</span>
-                                                            </span>
-                                                        )}
+                                                        <input
+                                                            type="text"
+                                                            value={editEmployee.puesto || ''}
+                                                            onChange={(e) => setEditEmployee({ ...editEmployee, puesto: e.target.value.toUpperCase() })}
+                                                            placeholder="Puesto"
+                                                            className={`w-full rounded p-1.5 text-sm transition-all ${isDarkMode
+                                                                    ? 'bg-black border border-gray-700 focus:border-white focus:ring focus:ring-gray-700 focus:ring-opacity-50 text-white'
+                                                                    : 'bg-white border border-gray-300 focus:border-gray-500 focus:ring focus:ring-gray-500 focus:ring-opacity-50 text-gray-900'
+                                                                }`}
+                                                        />
                                                     </td>
                                                     {/* Acciones */}
                                                     <td className="px-4 py-2 text-sm text-right">
