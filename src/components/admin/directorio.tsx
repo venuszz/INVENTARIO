@@ -50,12 +50,14 @@ export default function DirectorioManagementComponent() {
     const fetchDirectorio = useCallback(async () => {
         try {
             setLoading(true);
-            const { data, error } = await supabase
-                .from('directorio')
-                .select('*')
-                .order('id_directorio', { ascending: true });
+            const response = await fetch('/api/supabase-proxy?target=/rest/v1/directorio?select=*&order=id_directorio.asc', {
+                credentials: 'include',
+                headers: { 'Content-Type': 'application/json' }
+            });
 
-            if (error) throw error;
+            if (!response.ok) throw new Error('Error al cargar directorio');
+            
+            const data = await response.json();
             setDirectorio(data || []);
         } catch (error) {
             console.error('Error cargando directorio:', error);
@@ -67,28 +69,47 @@ export default function DirectorioManagementComponent() {
 
     // NUEVO: Cargar áreas y relaciones
     const fetchAreas = useCallback(async () => {
-        const { data, error } = await supabase.from('area').select('*').order('nombre');
-        if (!error) setAreas(data || []);
+        const response = await fetch('/api/supabase-proxy?target=/rest/v1/area?select=*&order=nombre.asc', {
+            credentials: 'include',
+            headers: { 'Content-Type': 'application/json' }
+        });
+        if (response.ok) {
+            const data = await response.json();
+            setAreas(data || []);
+        }
     }, []);
 
-    const fetchDirectorAreas = useCallback(async (id_directorio: number) => {
-        const { data, error } = await supabase
-            .from('directorio_areas')
-            .select('id_area')
-            .eq('id_directorio', id_directorio);
-        if (!error) return (data || []).map((d: { id_area: number }) => d.id_area);
+    const fetchDirectorAreas = useCallback(async (id_directorio: number): Promise<number[]> => {
+        const url = `/api/supabase-proxy?target=/rest/v1/directorio_areas?select=id_area&id_directorio=eq.${id_directorio}`;
+        
+        const response = await fetch(url, {
+            credentials: 'include',
+            headers: { 'Content-Type': 'application/json' }
+        });
+        
+        if (response.ok) {
+            const data = await response.json();
+            const areaIds = (data || []).map((d: { id_area: number }) => d.id_area);
+            return areaIds;
+        }
         return [];
     }, []);
 
     const fetchAllDirectorAreas = useCallback(async () => {
-        const { data, error } = await supabase.from('directorio_areas').select('*');
-        if (!error && data) {
-            const map: { [id_directorio: number]: number[] } = {};
-            data.forEach((rel: { id_directorio: number, id_area: number }) => {
-                if (!map[rel.id_directorio]) map[rel.id_directorio] = [];
-                map[rel.id_directorio].push(rel.id_area);
-            });
-            setDirectorAreasMap(map);
+        const response = await fetch('/api/supabase-proxy?target=/rest/v1/directorio_areas?select=*', {
+            credentials: 'include',
+            headers: { 'Content-Type': 'application/json' }
+        });
+        if (response.ok) {
+            const data = await response.json();
+            if (data) {
+                const map: { [id_directorio: number]: number[] } = {};
+                data.forEach((rel: { id_directorio: number, id_area: number }) => {
+                    if (!map[rel.id_directorio]) map[rel.id_directorio] = [];
+                    map[rel.id_directorio].push(rel.id_area);
+                });
+                setDirectorAreasMap(map);
+            }
         }
     }, []);
 
@@ -99,12 +120,16 @@ export default function DirectorioManagementComponent() {
         fetchAllDirectorAreas();
     }, [fetchDirectorio, fetchAreas, fetchAllDirectorAreas]);
 
-    // NUEVO: Al editar, cargar áreas seleccionadas
+    // NUEVO: Al editar, cargar áreas seleccionadas desde el mapa
     useEffect(() => {
         if (editingId) {
-            fetchDirectorAreas(editingId).then(setEditSelectedAreas);
+            const areasFromMap = directorAreasMap[editingId] || [];
+            console.log('useEffect: Cargando áreas desde directorAreasMap:', areasFromMap);
+            setEditSelectedAreas([...areasFromMap]);
+        } else {
+            setEditSelectedAreas([]);
         }
-    }, [editingId, fetchDirectorAreas]);
+    }, [editingId, directorAreasMap]);
 
     // NUEVO: Al agregar, limpiar selección
     useEffect(() => {
@@ -148,10 +173,24 @@ export default function DirectorioManagementComponent() {
         setError('');
     };
 
-    const handleEdit = (employee: Directorio) => {
+    const handleEdit = async (employee: Directorio) => {
         setEditingId(employee.id_directorio);
         setEditEmployee({ ...employee });
-        fetchDirectorAreas(employee.id_directorio).then(setEditSelectedAreas);
+        
+        // Obtener áreas desde el mapa (las correctas que se muestran en la vista)
+        const areasFromMap = directorAreasMap[employee.id_directorio] || [];
+        console.log('Áreas desde directorAreasMap (CORRECTAS):', areasFromMap);
+        
+        // Cargar áreas desde la BD
+        const areaIds = await fetchDirectorAreas(employee.id_directorio);
+        const uniqueAreaIds = [...new Set(areaIds)];
+        console.log('Áreas desde fetchDirectorAreas (BD):', uniqueAreaIds);
+        
+        console.log(`Editando empleado ${employee.nombre} (ID: ${employee.id_directorio})`);
+        console.log(`Diferencia: Map tiene ${areasFromMap.length} áreas, BD tiene ${uniqueAreaIds.length} áreas`);
+        
+        // USAR LAS ÁREAS DEL MAPA EN LUGAR DE LA BD
+        setEditSelectedAreas([...areasFromMap]);
         setTimeout(() => editInputRef.current?.focus(), 100);
     };
 
@@ -197,19 +236,33 @@ export default function DirectorioManagementComponent() {
                 throw new Error('El empleado ya existe');
             }
 
-            // Agregar nuevo empleado
-            const { data, error } = await supabase
-                .from('directorio')
-                .insert([{ nombre: nombreEmployee, puesto: puestoEmployee }])
-                .select();
+            // Agregar nuevo empleado usando el proxy
+            const insertResponse = await fetch('/api/supabase-proxy?target=/rest/v1/directorio', {
+                method: 'POST',
+                credentials: 'include',
+                headers: { 
+                    'Content-Type': 'application/json',
+                    'Prefer': 'return=representation'
+                },
+                body: JSON.stringify({ nombre: nombreEmployee, puesto: puestoEmployee })
+            });
 
-            if (error) throw error;
+            if (!insertResponse.ok) throw new Error('Error al agregar empleado');
 
+            const data = await insertResponse.json();
             const newId = data?.[0]?.id_directorio;
 
             // Guardar áreas en directorio_areas
             for (const id_area of selectedAreas) {
-                await supabase.from('directorio_areas').insert({ id_directorio: newId, id_area });
+                await fetch('/api/supabase-proxy?target=/rest/v1/directorio_areas', {
+                    method: 'POST',
+                    credentials: 'include',
+                    headers: { 
+                        'Content-Type': 'application/json',
+                        'Prefer': 'return=minimal'
+                    },
+                    body: JSON.stringify({ id_directorio: newId, id_area })
+                });
             }
 
             setMessage({ type: 'success', text: 'Empleado agregado correctamente' });
@@ -256,6 +309,10 @@ export default function DirectorioManagementComponent() {
         setIsSubmitting(true);
         setError('');
 
+        console.log('=== INICIANDO ACTUALIZACIÓN ===');
+        console.log('editEmployee:', editEmployee);
+        console.log('editSelectedAreas:', editSelectedAreas);
+
         try {
             // Validación
             if (!editEmployee.nombre || editEmployee.nombre.trim() === '') {
@@ -268,6 +325,8 @@ export default function DirectorioManagementComponent() {
             const nombreEmployee = editEmployee.nombre;
             const puestoEmployee = editEmployee.puesto || '';
 
+            console.log('Datos a actualizar:', { nombreEmployee, puestoEmployee, id: editEmployee.id_directorio });
+
             // Verificar si el nuevo nombre ya existe (excluyendo el empleado actual)
             const existingEmployee = directorio.find((item: Directorio) =>
                 item.nombre?.toUpperCase() === nombreEmployee &&
@@ -279,41 +338,71 @@ export default function DirectorioManagementComponent() {
                 throw new Error('El empleado ya existe');
             }
 
-            // Editar empleado existente
-            const { error } = await supabase
-                .from('directorio')
-                .update({ nombre: nombreEmployee, puesto: puestoEmployee })
-                .eq('id_directorio', editEmployee.id_directorio);
-
-            if (error) throw error;
+            // SOLO actualizar áreas (sin tocar nombre/puesto) para probar
+            console.log('Actualizando solo áreas...');
 
             // Actualizar áreas: eliminar todas y volver a insertar
-            await supabase.from('directorio_areas').delete().eq('id_directorio', editEmployee.id_directorio);
-            for (const id_area of editSelectedAreas) {
-                await supabase.from('directorio_areas').insert({ id_directorio: editEmployee.id_directorio, id_area });
+            console.log('Eliminando áreas existentes...');
+            const { error: deleteError } = await supabase
+                .from('directorio_areas')
+                .delete()
+                .eq('id_directorio', editEmployee.id_directorio);
+
+            if (deleteError) {
+                console.error('Error al eliminar áreas:', deleteError);
+                throw new Error(`Error al eliminar áreas: ${deleteError.message}`);
+            } else {
+                console.log('Áreas eliminadas correctamente');
             }
 
-            setMessage({ type: 'success', text: 'Empleado actualizado correctamente' });
+            // Insertar nuevas áreas
+            console.log('Insertando nuevas áreas:', editSelectedAreas);
+            const areasToInsert = editSelectedAreas.map(id_area => ({
+                id_directorio: editEmployee.id_directorio,
+                id_area
+            }));
+
+            const { data: insertData, error: insertError } = await supabase
+                .from('directorio_areas')
+                .insert(areasToInsert);
+
+            console.log('Resultado de inserción de áreas:', { insertData, insertError });
+
+            if (insertError) {
+                console.error('Error al insertar áreas:', insertError);
+                throw new Error(`Error al insertar áreas: ${insertError.message}`);
+            } else {
+                console.log('Todas las áreas insertadas correctamente');
+            }
+
+            setMessage({ type: 'success', text: 'Áreas actualizadas correctamente' });
             setEditingId(null);
             setEditEmployee({ id_directorio: 0, nombre: '', area: '', puesto: '' });
             setEditSelectedAreas([]);
-            fetchDirectorio();
-            fetchAreas();
-            fetchAllDirectorAreas();
+            
+            console.log('Recargando datos...');
+            await fetchDirectorio();
+            await fetchAreas();
+            await fetchAllDirectorAreas();
+            console.log('Datos recargados');
 
             // Notificación de edición
             await createNotification({
-                title: 'Empleado actualizado',
-                description: `Se actualizó a ${nombreEmployee} con nuevas áreas asignadas.`,
+                title: 'Áreas actualizadas',
+                description: `Se actualizaron las áreas de ${nombreEmployee}.`,
                 type: 'info',
                 category: 'directorio',
                 device: 'web',
                 importance: 'medium',
-                data: { changes: [`Edición: ${nombreEmployee}`], affectedTables: ['directorio', 'directorio_areas'] }
+                data: { changes: [`Edición áreas: ${nombreEmployee}`], affectedTables: ['directorio_areas'] }
             });
+
+            console.log('=== ACTUALIZACIÓN COMPLETADA ===');
         } catch (error: unknown) {
-            console.error('Error:', error);
+            console.error('=== ERROR EN ACTUALIZACIÓN ===');
+            console.error('Error completo:', error);
             const errorMessage = (error instanceof Error) ? error.message : 'Ha ocurrido un error';
+            console.error('Mensaje de error:', errorMessage);
             setError(errorMessage);
             setMessage({ type: 'error', text: errorMessage });
 
@@ -329,6 +418,7 @@ export default function DirectorioManagementComponent() {
             });
         } finally {
             setIsSubmitting(false);
+            console.log('=== FIN DE ACTUALIZACIÓN ===');
         }
     };
 
@@ -336,12 +426,15 @@ export default function DirectorioManagementComponent() {
         setIsSubmitting(true);
         try {
             const empleado = directorio.find(e => e.id_directorio === id);
-            const { error } = await supabase
-                .from('directorio')
-                .delete()
-                .eq('id_directorio', id);
+            
+            // Eliminar empleado usando el proxy
+            const deleteResponse = await fetch(`/api/supabase-proxy?target=/rest/v1/directorio?id_directorio=eq.${id}`, {
+                method: 'DELETE',
+                credentials: 'include',
+                headers: { 'Content-Type': 'application/json' }
+            });
 
-            if (error) throw error;
+            if (!deleteResponse.ok) throw new Error('Error al eliminar empleado');
 
             setMessage({ type: 'success', text: 'Empleado eliminado correctamente' });
             setDeletingId(null);
@@ -379,6 +472,57 @@ export default function DirectorioManagementComponent() {
     };
 
     const handleCloseMessage = () => setMessage({ type: '', text: '' });
+
+    // NUEVO: Función para limpiar duplicados en directorio_areas
+    const cleanDuplicateAreas = async (id_directorio: number) => {
+        console.log('Limpiando duplicados para empleado:', id_directorio);
+        
+        // Obtener todas las relaciones actuales
+        const response = await fetch(`/api/supabase-proxy?target=/rest/v1/directorio_areas?select=*&id_directorio=eq.${id_directorio}`, {
+            credentials: 'include',
+            headers: { 'Content-Type': 'application/json' }
+        });
+        
+        if (response.ok) {
+            const data = await response.json();
+            console.log('Relaciones actuales:', data);
+            
+            // Encontrar duplicados
+            const areaIds = data.map((d: any) => d.id_area);
+            const uniqueAreaIds = [...new Set(areaIds)];
+            
+            if (areaIds.length !== uniqueAreaIds.length) {
+                console.log('Se encontraron duplicados. Limpiando...');
+                
+                // Eliminar todas las relaciones
+                await fetch(`/api/supabase-proxy?target=/rest/v1/directorio_areas?id_directorio=eq.${id_directorio}`, {
+                    method: 'DELETE',
+                    credentials: 'include',
+                    headers: { 'Content-Type': 'application/json' }
+                });
+                
+                // Reinsertar solo las únicas
+                for (const id_area of uniqueAreaIds) {
+                    await fetch('/api/supabase-proxy?target=/rest/v1/directorio_areas', {
+                        method: 'POST',
+                        credentials: 'include',
+                        headers: { 
+                            'Content-Type': 'application/json',
+                            'Prefer': 'return=minimal'
+                        },
+                        body: JSON.stringify({ id_directorio, id_area })
+                    });
+                }
+                
+                console.log('Duplicados eliminados. Áreas únicas:', uniqueAreaIds.length);
+                setMessage({ type: 'success', text: `Se limpiaron ${areaIds.length - uniqueAreaIds.length} duplicados` });
+                fetchAllDirectorAreas();
+            } else {
+                console.log('No se encontraron duplicados');
+                setMessage({ type: 'success', text: 'No se encontraron duplicados para este empleado' });
+            }
+        }
+    };
 
     return (
         <div className={`min-h-screen p-2 sm:p-4 md:p-6 lg:p-8 transition-colors duration-500 ${isDarkMode
@@ -537,7 +681,7 @@ export default function DirectorioManagementComponent() {
                                                 {selectedAreas.map(id_area => {
                                                     const areaObj = areas.find(a => a.id_area === id_area);
                                                     return areaObj ? (
-                                                        <span key={id_area} className={`flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-semibold transition-colors duration-500 ${isDarkMode
+                                                        <span key={`add-area-${id_area}`} className={`flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-semibold transition-colors duration-500 ${isDarkMode
                                                                 ? 'bg-emerald-900/40 text-emerald-200 border border-emerald-700'
                                                                 : 'bg-emerald-100 text-emerald-800 border border-emerald-300'
                                                             }`}>
@@ -565,17 +709,31 @@ export default function DirectorioManagementComponent() {
                                                     onChange={e => setAddAreaInput(e.target.value)}
                                                     onKeyDown={async (e) => {
                                                         if (e.key === 'Enter') {
+                                                            e.preventDefault();
                                                             const value = addAreaInput.trim().toUpperCase();
                                                             if (value && !areas.some(a => a.nombre === value)) {
-                                                                const { data, error } = await supabase.from('area').insert([{ nombre: value }]).select();
-                                                                if (!error && data && data[0]) {
-                                                                    setAreas([...areas, data[0]]);
-                                                                    setSelectedAreas([...selectedAreas, data[0].id_area]);
+                                                                const response = await fetch('/api/supabase-proxy?target=/rest/v1/area', {
+                                                                    method: 'POST',
+                                                                    credentials: 'include',
+                                                                    headers: { 
+                                                                        'Content-Type': 'application/json',
+                                                                        'Prefer': 'return=representation'
+                                                                    },
+                                                                    body: JSON.stringify({ nombre: value })
+                                                                });
+                                                                if (response.ok) {
+                                                                    const data = await response.json();
+                                                                    if (data && data[0]) {
+                                                                        setAreas([...areas, data[0]]);
+                                                                        // Evitar duplicados usando Set
+                                                                        setSelectedAreas(prev => [...new Set([...prev, data[0].id_area])]);
+                                                                    }
                                                                 }
                                                             } else if (value) {
                                                                 const areaObj = areas.find(a => a.nombre === value);
                                                                 if (areaObj && !selectedAreas.includes(areaObj.id_area)) {
-                                                                    setSelectedAreas([...selectedAreas, areaObj.id_area]);
+                                                                    // Evitar duplicados usando Set
+                                                                    setSelectedAreas(prev => [...new Set([...prev, areaObj.id_area])]);
                                                                 }
                                                             }
                                                             setAddAreaInput('');
@@ -679,26 +837,32 @@ export default function DirectorioManagementComponent() {
                                                     {/* Áreas: chips + input para agregar manualmente */}
                                                     <td className="px-4 py-2 text-sm">
                                                         <div className="flex flex-wrap gap-1 items-center">
-                                                            {editSelectedAreas.map(id_area => {
-                                                                const areaObj = areas.find(a => a.id_area === id_area);
-                                                                return areaObj ? (
-                                                                    <span key={id_area} className={`flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-semibold transition-colors duration-500 ${isDarkMode
-                                                                            ? 'bg-emerald-900/40 text-emerald-200 border border-emerald-700'
-                                                                            : 'bg-emerald-100 text-emerald-800 border border-emerald-300'
-                                                                        }`}>
-                                                                        {areaObj.nombre}
-                                                                        <button
-                                                                            type="button"
-                                                                            className={`ml-1 hover:text-red-400 focus:outline-none transition-colors ${isDarkMode ? 'text-emerald-300' : 'text-emerald-600'
-                                                                                }`}
-                                                                            onClick={() => setEditSelectedAreas(editSelectedAreas.filter(a => a !== id_area))}
-                                                                            title="Quitar área"
-                                                                        >
-                                                                            <X size={12} />
-                                                                        </button>
-                                                                    </span>
-                                                                ) : null;
-                                                            })}
+                                                            {editSelectedAreas.length > 0 ? (
+                                                                editSelectedAreas.map(id_area => {
+                                                                    const areaObj = areas.find(a => a.id_area === id_area);
+                                                                    return areaObj ? (
+                                                                        <span key={`edit-area-${id_area}`} className={`flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-semibold transition-colors duration-500 ${isDarkMode
+                                                                                ? 'bg-emerald-900/40 text-emerald-200 border border-emerald-700'
+                                                                                : 'bg-emerald-100 text-emerald-800 border border-emerald-300'
+                                                                            }`}>
+                                                                            {areaObj.nombre}
+                                                                            <button
+                                                                                type="button"
+                                                                                className={`ml-1 hover:text-red-400 focus:outline-none transition-colors ${isDarkMode ? 'text-emerald-300' : 'text-emerald-600'
+                                                                                    }`}
+                                                                                onClick={() => setEditSelectedAreas(editSelectedAreas.filter(a => a !== id_area))}
+                                                                                title="Quitar área"
+                                                                            >
+                                                                                <X size={12} />
+                                                                            </button>
+                                                                        </span>
+                                                                    ) : null;
+                                                                })
+                                                            ) : (
+                                                                <span className={`text-xs italic ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                                                                    Sin áreas asignadas
+                                                                </span>
+                                                            )}
                                                             <input
                                                                 type="text"
                                                                 placeholder="Agregar área..."
@@ -710,17 +874,31 @@ export default function DirectorioManagementComponent() {
                                                                 onChange={e => setEditAreaInput(e.target.value)}
                                                                 onKeyDown={async (e) => {
                                                                     if (e.key === 'Enter') {
+                                                                        e.preventDefault();
                                                                         const value = editAreaInput.trim().toUpperCase();
                                                                         if (value && !areas.some(a => a.nombre === value)) {
-                                                                            const { data, error } = await supabase.from('area').insert([{ nombre: value }]).select();
-                                                                            if (!error && data && data[0]) {
-                                                                                setAreas([...areas, data[0]]);
-                                                                                setEditSelectedAreas([...editSelectedAreas, data[0].id_area]);
+                                                                            const response = await fetch('/api/supabase-proxy?target=/rest/v1/area', {
+                                                                                method: 'POST',
+                                                                                credentials: 'include',
+                                                                                headers: { 
+                                                                                    'Content-Type': 'application/json',
+                                                                                    'Prefer': 'return=representation'
+                                                                                },
+                                                                                body: JSON.stringify({ nombre: value })
+                                                                            });
+                                                                            if (response.ok) {
+                                                                                const data = await response.json();
+                                                                                if (data && data[0]) {
+                                                                                    setAreas([...areas, data[0]]);
+                                                                                    // Evitar duplicados usando Set
+                                                                                    setEditSelectedAreas(prev => [...new Set([...prev, data[0].id_area])]);
+                                                                                }
                                                                             }
                                                                         } else if (value) {
                                                                             const areaObj = areas.find(a => a.nombre === value);
                                                                             if (areaObj && !editSelectedAreas.includes(areaObj.id_area)) {
-                                                                                setEditSelectedAreas([...editSelectedAreas, areaObj.id_area]);
+                                                                                // Evitar duplicados usando Set
+                                                                                setEditSelectedAreas(prev => [...new Set([...prev, areaObj.id_area])]);
                                                                             }
                                                                         }
                                                                         setEditAreaInput('');

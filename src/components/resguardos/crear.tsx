@@ -12,10 +12,12 @@ import {
 import supabase from '@/app/lib/supabase/client';
 import { generateResguardoPDF } from './ResguardoPDFReport';
 import { useUserRole } from "@/hooks/useUserRole";
+import { useSession } from "@/hooks/useSession";
 import { useNotifications } from '@/hooks/useNotifications';
 import { useTheme } from '@/context/ThemeContext';
-import { useIneaIndexation } from '@/context/IneaIndexationContext';
-import { useIteaIndexation } from '@/context/IteaIndexationContext';
+import { useIneaIndexation } from '@/hooks/indexation/useIneaIndexation';
+import { useIteaIndexation } from '@/hooks/indexation/useIteaIndexation';
+import { useNoListadoIndexation } from '@/hooks/indexation/useNoListadoIndexation';
 
 interface Mueble {
     id: number;
@@ -23,7 +25,7 @@ interface Mueble {
     descripcion: string | null;
     estado: string | null;
     estatus: string | null;
-    resguardante: string | null;
+    resguardante?: string | null;
     rubro: string | null;
     usufinal: string | null;
     area?: string | null;
@@ -121,8 +123,10 @@ function getColorClass(value: string | null | undefined, isDarkMode: boolean) {
 }
 
 export default function CrearResguardos() {
-    const { data: ineaData } = useIneaIndexation();
+    const { muebles: ineaData } = useIneaIndexation();
     const { muebles: iteaData } = useIteaIndexation();
+    const { muebles: noListadoData } = useNoListadoIndexation();
+    const { user } = useSession(); // ← AGREGADO: Obtener usuario de la sesión
     const [allMuebles, setAllMuebles] = useState<Mueble[]>([]);
     const [directorio, setDirectorio] = useState<Directorio[]>([]);
     const [selectedMuebles, setSelectedMuebles] = useState<Mueble[]>([]);
@@ -333,20 +337,36 @@ export default function CrearResguardos() {
     useEffect(() => {
         const fetchData = async () => {
             try {
-                const [directorioResult, firmasResult] = await Promise.all([
-                    supabase.from('directorio').select('*'),
-                    supabase.from('firmas').select('*').order('id', { ascending: true })
+                // Usar el proxy para acceder a las tablas protegidas
+                const [directorioResponse, firmasResponse] = await Promise.all([
+                    fetch('/api/supabase-proxy?target=/rest/v1/directorio?select=*', {
+                        credentials: 'include',
+                        headers: { 'Content-Type': 'application/json' }
+                    }),
+                    fetch('/api/supabase-proxy?target=/rest/v1/firmas?select=*&order=id.asc', {
+                        credentials: 'include',
+                        headers: { 'Content-Type': 'application/json' }
+                    })
                 ]);
 
-                if (directorioResult.error) throw directorioResult.error;
-                if (firmasResult.error) throw firmasResult.error;
+                if (!directorioResponse.ok) {
+                    const errorData = await directorioResponse.json();
+                    throw new Error(`Error directorio: ${errorData.error || directorioResponse.statusText}`);
+                }
+                
+                if (!firmasResponse.ok) {
+                    const errorData = await firmasResponse.json();
+                    throw new Error(`Error firmas: ${errorData.error || firmasResponse.statusText}`);
+                }
 
-                setDirectorio(directorioResult.data || []);
+                const directorioData = await directorioResponse.json();
+                const firmasData = await firmasResponse.json();
+                
+                setDirectorio(directorioData || []);
 
-                return firmasResult.data;
+                return firmasData;
             } catch (err) {
                 setError('Error al cargar los datos');
-                console.error(err);
                 return null;
             }
         };
@@ -356,16 +376,38 @@ export default function CrearResguardos() {
     // Cargar áreas y relaciones N:M al montar
     useEffect(() => {
         async function fetchAreasAndRelations() {
-            const { data: areasData } = await supabase.from('area').select('*').order('nombre');
-            setAreas(areasData || []);
-            const { data: rels } = await supabase.from('directorio_areas').select('*');
-            if (rels) {
-                const map: { [id_directorio: number]: number[] } = {};
-                rels.forEach((rel: { id_directorio: number, id_area: number }) => {
-                    if (!map[rel.id_directorio]) map[rel.id_directorio] = [];
-                    map[rel.id_directorio].push(rel.id_area);
-                });
-                setDirectorAreasMap(map);
+            try {
+                // Usar el proxy para acceder a las tablas protegidas
+                const [areasResponse, relsResponse] = await Promise.all([
+                    fetch('/api/supabase-proxy?target=/rest/v1/area?select=*&order=nombre.asc', {
+                        credentials: 'include',
+                        headers: { 'Content-Type': 'application/json' }
+                    }),
+                    fetch('/api/supabase-proxy?target=/rest/v1/directorio_areas?select=*', {
+                        credentials: 'include',
+                        headers: { 'Content-Type': 'application/json' }
+                    })
+                ]);
+
+                if (areasResponse.ok) {
+                    const areasData = await areasResponse.json();
+                    setAreas(areasData || []);
+                }
+
+                if (relsResponse.ok) {
+                    const rels = await relsResponse.json();
+                    
+                    if (rels) {
+                        const map: { [id_directorio: number]: number[] } = {};
+                        rels.forEach((rel: { id_directorio: number, id_area: number }) => {
+                            if (!map[rel.id_directorio]) map[rel.id_directorio] = [];
+                            map[rel.id_directorio].push(rel.id_area);
+                        });
+                        setDirectorAreasMap(map);
+                    }
+                }
+            } catch (error) {
+                // Error silencioso
             }
         }
         fetchAreasAndRelations();
@@ -389,6 +431,7 @@ export default function CrearResguardos() {
             let combinedData: Mueble[] = [
                 ...(ineaData.map((item: Mueble) => ({ ...item, origen: 'INEA' as const }))),
                 ...(iteaData.filter((item: Mueble) => item.estatus === 'ACTIVO').map((item: Mueble) => ({ ...item, origen: 'ITEA' as const }))),
+                ...(noListadoData.map((item: Mueble) => ({ ...item, origen: 'TLAXCALA' as const }))),
             ];
 
             combinedData = combinedData.filter(item => {
@@ -406,11 +449,10 @@ export default function CrearResguardos() {
             setError(null);
         } catch (err) {
             setError('Error al cargar los datos');
-            console.error(err);
         } finally {
             setLoading(false);
         }
-    }, [ineaData, iteaData]);
+    }, [ineaData, iteaData, noListadoData]);
 
     useEffect(() => {
         fetchData(sortField, sortDirection);
@@ -489,7 +531,6 @@ export default function CrearResguardos() {
             return newFolio;
         } catch (err) {
             setError('Error al generar el folio');
-            console.error(err);
             return null;
         }
     }, []);
@@ -532,8 +573,10 @@ export default function CrearResguardos() {
             setDirectorInputDisabled(false);
         } else if (!isAlreadySelected && newSelectedMuebles.length === 1) {
             const matchingDirector = directorio.find(dir => dir.nombre.toLowerCase() === mueble.usufinal?.toLowerCase());
+            
             if (matchingDirector) {
                 const areasForDirector = getAreasForDirector(matchingDirector.id_directorio.toString());
+                
                 if (!matchingDirector.puesto || !areasForDirector.length) {
                     setIncompleteDirector(matchingDirector);
                     setDirectorFormData({ area: matchingDirector.area || '', puesto: matchingDirector.puesto || '' });
@@ -572,44 +615,87 @@ export default function CrearResguardos() {
             // 1. Buscar o crear el área
             const areaNombre = directorFormData.area.trim();
             let id_area: number | null = null;
-            // Buscar área por nombre
-            const { data: areaData, error: areaError } = await supabase
-                .from('area')
-                .select('id_area')
-                .eq('nombre', areaNombre)
-                .maybeSingle();
-            if (areaError) throw areaError;
-            if (!areaData) {
+            
+            // Buscar área por nombre usando el proxy
+            const areaSearchResponse = await fetch(
+                `/api/supabase-proxy?target=/rest/v1/area?select=id_area&nombre=eq.${encodeURIComponent(areaNombre)}`,
+                {
+                    credentials: 'include',
+                    headers: { 'Content-Type': 'application/json' }
+                }
+            );
+            
+            if (!areaSearchResponse.ok) throw new Error('Error buscando área');
+            
+            const areaData = await areaSearchResponse.json();
+            
+            if (!areaData || areaData.length === 0) {
                 // Si no existe, crearla
-                const { data: newArea, error: insertAreaError } = await supabase
-                    .from('area')
-                    .insert({ nombre: areaNombre })
-                    .select('id_area')
-                    .single();
-                if (insertAreaError) throw insertAreaError;
-                id_area = newArea.id_area;
+                const createAreaResponse = await fetch(
+                    '/api/supabase-proxy?target=/rest/v1/area',
+                    {
+                        method: 'POST',
+                        credentials: 'include',
+                        headers: { 
+                            'Content-Type': 'application/json',
+                            'Prefer': 'return=representation'
+                        },
+                        body: JSON.stringify({ nombre: areaNombre })
+                    }
+                );
+                
+                if (!createAreaResponse.ok) throw new Error('Error creando área');
+                
+                const newArea = await createAreaResponse.json();
+                id_area = newArea[0].id_area;
             } else {
-                id_area = areaData.id_area;
+                id_area = areaData[0].id_area;
             }
 
             // 2. Actualizar solo el puesto
-            const { error: updateError } = await supabase
-                .from('directorio')
-                .update({ puesto: directorFormData.puesto })
-                .eq('id_directorio', incompleteDirector.id_directorio);
-            if (updateError) throw updateError;
+            const updateDirectorResponse = await fetch(
+                `/api/supabase-proxy?target=/rest/v1/directorio?id_directorio=eq.${incompleteDirector.id_directorio}`,
+                {
+                    method: 'PATCH',
+                    credentials: 'include',
+                    headers: { 
+                        'Content-Type': 'application/json',
+                        'Prefer': 'return=minimal'
+                    },
+                    body: JSON.stringify({ puesto: directorFormData.puesto })
+                }
+            );
+            
+            if (!updateDirectorResponse.ok) throw new Error('Error actualizando director');
 
             // 3. Eliminar relaciones viejas
-            await supabase
-                .from('directorio_areas')
-                .delete()
-                .eq('id_directorio', incompleteDirector.id_directorio);
+            await fetch(
+                `/api/supabase-proxy?target=/rest/v1/directorio_areas?id_directorio=eq.${incompleteDirector.id_directorio}`,
+                {
+                    method: 'DELETE',
+                    credentials: 'include',
+                    headers: { 'Content-Type': 'application/json' }
+                }
+            );
 
             // 4. Insertar nueva relación
-            const { error: relError } = await supabase
-                .from('directorio_areas')
-                .insert({ id_directorio: incompleteDirector.id_directorio, id_area });
-            if (relError) throw relError;
+            const createRelResponse = await fetch(
+                '/api/supabase-proxy?target=/rest/v1/directorio_areas',
+                {
+                    method: 'POST',
+                    credentials: 'include',
+                    headers: { 
+                        'Content-Type': 'application/json',
+                        'Prefer': 'return=minimal'
+                    },
+                    body: JSON.stringify({ 
+                        id_directorio: incompleteDirector.id_directorio, 
+                        id_area 
+                    })
+                }
+            );
+            
+            if (!createRelResponse.ok) throw new Error('Error creando relación');
 
             // 5. Actualizar estado local
             setDirectorio(prev => prev.map(d =>
@@ -628,40 +714,67 @@ export default function CrearResguardos() {
             setTimeout(() => setSuccessMessage(null), 3000);
         } catch (err) {
             setError('Error al actualizar la información del director');
-            console.error(err);
         } finally {
             setSavingDirector(false);
         }
     };
 
     const handleSubmit = async () => {
+        console.log('🚀 [RESGUARDO] Iniciando handleSubmit');
+        console.log('📋 [RESGUARDO] Validación de formulario:', { isFormValid, formData, selectedMueblesCount: selectedMuebles.length });
+        
         if (!isFormValid) {
+            console.error('❌ [RESGUARDO] Formulario inválido');
             setError('Complete todos los campos obligatorios');
             return;
         }
 
         let folioToUse = formData.folio;
+        console.log('📄 [RESGUARDO] Folio inicial:', folioToUse);
+        
         if (!folioToUse) {
+            console.log('⚠️ [RESGUARDO] Generando nuevo folio...');
             folioToUse = await generateFolio() || '';
-            if (!folioToUse) return;
+            console.log('📄 [RESGUARDO] Folio generado:', folioToUse);
+            if (!folioToUse) {
+                console.error('❌ [RESGUARDO] No se pudo generar el folio');
+                return;
+            }
         }
 
         try {
             setLoading(true);
+            console.log('⏳ [RESGUARDO] Loading activado');
 
+            // Validar que tengamos el usuario de la sesión
+            if (!user || !user.id) {
+                console.error('❌ [RESGUARDO] No hay usuario en sesión');
+                throw new Error('No se pudo obtener el usuario actual. Por favor, inicia sesión nuevamente.');
+            }
+            console.log('✅ [RESGUARDO] Usuario de sesión:', { id: user.id, email: user.email, provider: user.oauthProvider });
+
+            console.log('📝 [RESGUARDO] Consultando firmas...');
             const { data: firmasData, error: firmasError } = await supabase
                 .from('firmas')
                 .select('*')
                 .order('id', { ascending: true });
 
-            if (firmasError) throw firmasError;
+            if (firmasError) {
+                console.error('❌ [RESGUARDO] Error al consultar firmas:', firmasError);
+                throw firmasError;
+            }
+            console.log('✅ [RESGUARDO] Firmas obtenidas:', firmasData?.length || 0);
 
             setShowPDFButton(true);
+            console.log('📄 [RESGUARDO] Botón PDF activado');
 
-            setPdfData({
+            const directorNombre = directorio.find(d => d.id_directorio.toString() === formData.directorId)?.nombre?.toUpperCase() || '';
+            console.log('👤 [RESGUARDO] Director encontrado:', directorNombre);
+
+            const pdfDataToSet = {
                 folio: folioToUse,
                 fecha: new Date().toLocaleDateString(),
-                director: directorio.find(d => d.id_directorio.toString() === formData.directorId)?.nombre?.toUpperCase() || '',
+                director: directorNombre,
                 area: formData.area.trim().toUpperCase(),
                 puesto: formData.puesto.trim().toUpperCase(),
                 resguardante: formData.resguardante,
@@ -674,13 +787,26 @@ export default function CrearResguardos() {
                     resguardante: m.resguardanteAsignado || ''
                 })),
                 firmas: firmasData || []
-            });
+            };
+            console.log('📦 [RESGUARDO] PDF Data preparado:', pdfDataToSet);
+            setPdfData(pdfDataToSet);
 
-            const resguardoPromises = selectedMuebles.map(async (mueble) => {
-                const tableName = mueble.origen === 'ITEA' ? 'mueblesitea' : 'muebles';
-                const directorNombre = directorio.find(dir => dir.id_directorio.toString() === formData.directorId)?.nombre;
+            console.log('💾 [RESGUARDO] Iniciando guardado de artículos...');
+            const resguardoPromises = selectedMuebles.map(async (mueble, index) => {
+                const tableName = mueble.origen === 'ITEA' ? 'mueblesitea' : mueble.origen === 'TLAXCALA' ? 'mueblestlaxcala' : 'muebles';
                 const resguardanteToUse = mueble.resguardanteAsignado || formData.resguardante;
 
+                console.log(`📦 [RESGUARDO] Artículo ${index + 1}/${selectedMuebles.length}:`, {
+                    id: mueble.id,
+                    id_inv: mueble.id_inv,
+                    tableName,
+                    resguardante: resguardanteToUse,
+                    director: directorNombre,
+                    area: formData.area
+                });
+
+                // UPDATE del mueble
+                console.log(`🔄 [RESGUARDO] Actualizando ${tableName} id=${mueble.id}...`);
                 const { error: updateError } = await supabase
                     .from(tableName)
                     .update({
@@ -690,9 +816,14 @@ export default function CrearResguardos() {
                     })
                     .eq('id', mueble.id);
 
-                if (updateError) throw updateError;
+                if (updateError) {
+                    console.error(`❌ [RESGUARDO] Error UPDATE ${tableName}:`, updateError);
+                    throw updateError;
+                }
+                console.log(`✅ [RESGUARDO] UPDATE exitoso en ${tableName}`);
 
-                const { error: insertError } = await supabase.from('resguardos').insert({
+                // INSERT en resguardos
+                const resguardoData = {
                     folio: folioToUse,
                     f_resguardo: new Date(new Date().getFullYear(), new Date().getMonth(), new Date().getDate()).toISOString(),
                     area_resguardo: formData.area,
@@ -704,17 +835,29 @@ export default function CrearResguardos() {
                     usufinal: resguardanteToUse,
                     puesto: formData.puesto,
                     origen: mueble.origen || '',
-                });
+                    created_by: user.id, // ← AGREGADO: ID del usuario que crea el resguardo
+                };
+                console.log(`➕ [RESGUARDO] Insertando en resguardos:`, resguardoData);
 
-                if (insertError) throw insertError;
+                const { error: insertError } = await supabase.from('resguardos').insert(resguardoData);
+
+                if (insertError) {
+                    console.error(`❌ [RESGUARDO] Error INSERT resguardos:`, insertError);
+                    throw insertError;
+                }
+                console.log(`✅ [RESGUARDO] INSERT exitoso en resguardos`);
             });
 
+            console.log('⏳ [RESGUARDO] Esperando todas las promesas...');
             await Promise.all(resguardoPromises);
+            console.log('✅ [RESGUARDO] Todos los artículos guardados exitosamente');
 
             sessionStorage.setItem('pdfDownloaded', 'false');
+            console.log('💾 [RESGUARDO] SessionStorage actualizado');
 
             try {
-                const notificationDescription = `Se ha creado un nuevo resguardo para el área "${formData.area}" bajo la dirección de "${directorio.find(d => d.id_directorio.toString() === formData.directorId)?.nombre || ''}" con ${selectedMuebles.length} artículo(s).`;
+                console.log('🔔 [RESGUARDO] Creando notificación...');
+                const notificationDescription = `Se ha creado un nuevo resguardo para el área "${formData.area}" bajo la dirección de "${directorNombre}" con ${selectedMuebles.length} artículo(s).`;
                 await createNotification({
                     title: `Nuevo resguardo creado: ${folioToUse}`,
                     description: notificationDescription,
@@ -732,10 +875,12 @@ export default function CrearResguardos() {
                         affectedTables: ['resguardos', 'muebles', 'mueblesitea']
                     }
                 });
+                console.log('✅ [RESGUARDO] Notificación creada');
             } catch (notifErr) {
-                console.error('No se pudo crear la notificación:', notifErr);
+                console.warn('⚠️ [RESGUARDO] Error en notificación (no crítico):', notifErr);
             }
 
+            console.log('🧹 [RESGUARDO] Limpiando formulario...');
             setFormData(prev => ({
                 ...prev,
                 resguardante: ''
@@ -744,14 +889,22 @@ export default function CrearResguardos() {
             setSuccessMessage(`Resguardo ${folioToUse} creado correctamente con ${selectedMuebles.length} artículo(s)`);
             setTimeout(() => setSuccessMessage(null), 3000);
 
+            console.log('🔄 [RESGUARDO] Regenerando folio y recargando datos...');
             await generateFolio();
             fetchData(sortField, sortDirection);
+            console.log('✅ [RESGUARDO] Proceso completado exitosamente');
 
         } catch (err) {
+            console.error('❌ [RESGUARDO] ERROR CRÍTICO:', err);
+            console.error('📊 [RESGUARDO] Detalles del error:', {
+                message: err instanceof Error ? err.message : 'Error desconocido',
+                stack: err instanceof Error ? err.stack : undefined,
+                error: err
+            });
             setError('Error al guardar el resguardo');
-            console.error(err);
         } finally {
             setLoading(false);
+            console.log('🏁 [RESGUARDO] handleSubmit finalizado');
         }
     };
 
@@ -784,7 +937,6 @@ export default function CrearResguardos() {
             }
         } catch (error) {
             setError('Error al generar el PDF');
-            console.error(error);
         } finally {
             setGeneratingPDF(false);
             setShowPDFButton(false);
@@ -1161,6 +1313,16 @@ export default function CrearResguardos() {
             areaSuggestion = directorAreas[0]?.nombre || '';
         }
     }
+
+    // Detectar si hay conflicto entre el área del director y el área de los bienes
+    const hasAreaMismatch = useMemo(() => {
+        if (!formData.area || selectedMuebles.length === 0) return false;
+        const directorArea = formData.area.trim().toUpperCase();
+        return selectedMuebles.some(m => {
+            const muebleArea = (m.area || '').trim().toUpperCase();
+            return muebleArea && muebleArea !== directorArea;
+        });
+    }, [formData.area, selectedMuebles]);
 
     return (
         <div className={`min-h-screen p-2 sm:p-4 md:p-6 lg:p-8 transition-colors duration-500 ${isDarkMode
@@ -1592,7 +1754,9 @@ export default function CrearResguardos() {
                                                                         (isDarkMode ? 'bg-gray-900/30 text-white border-white group-hover:bg-gray-900/40' : 'bg-blue-100 text-blue-800 border-blue-400 group-hover:bg-blue-200') :
                                                                         mueble.origen === 'ITEA' ?
                                                                             (isDarkMode ? 'bg-pink-900/30 text-pink-200 border-pink-700 group-hover:bg-pink-900/40' : 'bg-pink-100 text-pink-800 border-pink-400 group-hover:bg-pink-200') :
-                                                                            (isDarkMode ? 'bg-gray-900/40 text-gray-400 border-gray-800 group-hover:bg-gray-900/60' : 'bg-gray-100 text-gray-600 border-gray-400 group-hover:bg-gray-200')}`}
+                                                                            mueble.origen === 'TLAXCALA' ?
+                                                                                (isDarkMode ? 'bg-purple-900/30 text-purple-200 border-purple-700 group-hover:bg-purple-900/40' : 'bg-purple-100 text-purple-800 border-purple-400 group-hover:bg-purple-200') :
+                                                                                (isDarkMode ? 'bg-gray-900/40 text-gray-400 border-gray-800 group-hover:bg-gray-900/60' : 'bg-gray-100 text-gray-600 border-gray-400 group-hover:bg-gray-200')}`}
                                                                 >
                                                                     {mueble.origen}
                                                                 </div>
@@ -1837,6 +2001,18 @@ export default function CrearResguardos() {
                                             <option key={a.id_area} value={a.nombre}>{a.nombre}</option>
                                         ))}
                                     </select>
+                                    {/* Badge de advertencia por área no coincidente */}
+                                    {hasAreaMismatch && (
+                                        <div className={`mt-2 flex items-center gap-2 px-3 py-2 rounded-lg border ${isDarkMode
+                                            ? 'bg-yellow-900/20 border-yellow-700/50 text-yellow-300'
+                                            : 'bg-yellow-50 border-yellow-300 text-yellow-800'
+                                            }`}>
+                                            <AlertTriangle className="h-4 w-4 flex-shrink-0 animate-pulse" />
+                                            <span className="text-xs font-medium">
+                                                El área del director no coincide con el área de algunos bienes seleccionados
+                                            </span>
+                                        </div>
+                                    )}
                                     {/* Chip de sugerencia de área debajo del select */}
                                     {formData.directorId && selectedMuebles.length > 0 && areaSuggestion && formData.area !== areaSuggestion && (
                                         <div className="mt-2 flex flex-wrap gap-2">
@@ -1958,7 +2134,9 @@ export default function CrearResguardos() {
                                                         (isDarkMode ? 'bg-blue-900/30 text-blue-300 border-blue-700' : 'bg-blue-100 text-blue-800 border-blue-400') :
                                                         mueble.origen === 'ITEA' ?
                                                             (isDarkMode ? 'bg-pink-900/30 text-pink-200 border-pink-700' : 'bg-pink-100 text-pink-800 border-pink-400') :
-                                                            (isDarkMode ? 'bg-gray-900/40 text-gray-400 border-gray-800' : 'bg-gray-100 text-gray-600 border-gray-400')}`}
+                                                            mueble.origen === 'TLAXCALA' ?
+                                                                (isDarkMode ? 'bg-purple-900/30 text-purple-200 border-purple-700' : 'bg-purple-100 text-purple-800 border-purple-400') :
+                                                                (isDarkMode ? 'bg-gray-900/40 text-gray-400 border-gray-800' : 'bg-gray-100 text-gray-600 border-gray-400')}`}
                                                 >
                                                     {mueble.origen}
                                                 </div>

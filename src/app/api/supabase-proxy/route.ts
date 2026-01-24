@@ -27,20 +27,18 @@ async function handleProxy(request: NextRequest) {
 
     if (!supabaseUrl || !supabaseAnonKey || !supabaseServiceKey) {
         return NextResponse.json(
-            { error: 'Supabase env missing' },
+            { error: 'Supabase configuration missing' },
             { status: 500 }
         );
     }
 
     const method = request.method;
-    const isReadMethod = method === 'GET' || method === 'HEAD';
     const isWriteMethod = method === 'POST' || method === 'PATCH' || method === 'PUT' || method === 'DELETE';
 
     // Leer cookies HttpOnly del servidor
     const authToken = request.cookies.get('authToken')?.value;
     const userDataCookie = request.cookies.get('userData')?.value;
     
-    // Validar que el usuario esté autenticado
     if (!authToken || !userDataCookie) {
         return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
@@ -52,7 +50,7 @@ async function handleProxy(request: NextRequest) {
         oauthProvider = parsed?.oauthProvider;
         userRole = parsed?.rol;
     } catch {
-        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+        return NextResponse.json({ error: 'Invalid session' }, { status: 401 });
     }
 
     const { searchParams } = new URL(request.url);
@@ -65,12 +63,14 @@ async function handleProxy(request: NextRequest) {
     const allowedPrefixes = [
         '/rest/v1/muebles',
         '/rest/v1/mueblesitea',
+        '/rest/v1/mueblestlaxcala',
         '/rest/v1/resguardos',
         '/rest/v1/resguardos_bajas',
         '/rest/v1/config',
         '/rest/v1/directorio',
         '/rest/v1/area',
         '/rest/v1/directorio_areas',
+        '/rest/v1/firmas',
         '/rest/v1/rpc/get_admin_notifications',
         '/rest/v1/users',
         '/rest/v1/notifications',
@@ -78,8 +78,9 @@ async function handleProxy(request: NextRequest) {
     ];
 
     const isAllowed = allowedPrefixes.some((p) => target.startsWith(p));
+    
     if (!isAllowed) {
-        return NextResponse.json({ error: 'Target not allowed' }, { status: 403 });
+        return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
     const isAdminTableTarget =
@@ -87,25 +88,31 @@ async function handleProxy(request: NextRequest) {
         target.startsWith('/rest/v1/directorio') ||
         target.startsWith('/rest/v1/area') ||
         target.startsWith('/rest/v1/directorio_areas') ||
+        target.startsWith('/rest/v1/firmas') ||
         target.startsWith('/rest/v1/notifications') ||
         target.startsWith('/rest/v1/admin_notification_states') ||
         target.startsWith('/rest/v1/users');
 
+    // Tablas de inventario que los admins pueden modificar
+    const isInventoryTableTarget =
+        target.startsWith('/rest/v1/muebles') ||
+        target.startsWith('/rest/v1/mueblesitea') ||
+        target.startsWith('/rest/v1/mueblestlaxcala') ||
+        target.startsWith('/rest/v1/resguardos');
+
     const isRpcNotifications = target.startsWith('/rest/v1/rpc/get_admin_notifications');
 
-    if (!isReadMethod && isWriteMethod) {
+    // Validar permisos de escritura
+    if (isWriteMethod) {
         const isAdminRole = userRole === 'admin' || userRole === 'superadmin';
+        
         if (!isAdminRole) {
             return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
         }
 
-        if (!isAdminTableTarget && !isRpcNotifications) {
-            return NextResponse.json({ error: 'Target not allowed' }, { status: 403 });
+        if (!isAdminTableTarget && !isInventoryTableTarget && !isRpcNotifications) {
+            return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
         }
-    }
-
-    if (method === 'POST' && isRpcNotifications === false && isAdminTableTarget === false) {
-        return NextResponse.json({ error: 'Target not allowed' }, { status: 403 });
     }
 
     const upstreamUrl = `${supabaseUrl}${target}`;
@@ -123,9 +130,7 @@ async function handleProxy(request: NextRequest) {
 
     upstreamHeaders.set('apikey', supabaseAnonKey);
     
-    // MEJORA DE SEGURIDAD: Usar authToken de cookie HttpOnly
-    // Para usuarios AXpert, usar service key (tokens externos no válidos en Supabase)
-    // Para usuarios locales, usar su authToken
+    // Usar service key para usuarios AXpert, authToken para usuarios locales
     if (oauthProvider === 'axpert') {
         upstreamHeaders.set('Authorization', `Bearer ${supabaseServiceKey}`);
     } else {
@@ -133,7 +138,11 @@ async function handleProxy(request: NextRequest) {
     }
 
     const hasBody = method === 'POST' || method === 'PATCH' || method === 'PUT';
-    const body = hasBody ? await request.arrayBuffer() : undefined;
+    let body: ArrayBuffer | undefined;
+    
+    if (hasBody) {
+        body = await request.arrayBuffer();
+    }
 
     try {
         const upstreamRes = await fetch(upstreamUrl, {
@@ -153,12 +162,21 @@ async function handleProxy(request: NextRequest) {
         if (upstreamPrefer) resHeaders.set('preference-applied', upstreamPrefer);
 
         const buf = await upstreamRes.arrayBuffer();
+
+        // Manejar 204 No Content
+        if (upstreamRes.status === 204) {
+            return new NextResponse(null, {
+                status: 204,
+                headers: resHeaders,
+            });
+        }
+
         return new NextResponse(buf, {
             status: upstreamRes.status,
             headers: resHeaders,
         });
     } catch (error) {
-        console.error('Supabase proxy error:', error);
+        console.error('Proxy error:', error instanceof Error ? error.message : 'Unknown error');
         return NextResponse.json(
             { error: 'Proxy request failed' },
             { status: 500 }

@@ -13,7 +13,7 @@ import RoleGuard from "@/components/roleGuard";
 import { useNotifications } from '@/hooks/useNotifications';
 import { useTheme } from '@/context/ThemeContext';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { useIteaObsoletosIndexation } from '@/context/IteaObsoletosIndexationContext';
+import { useIteaObsoletosIndexation } from '@/hooks/indexation/useIteaObsoletosIndexation';
 
 interface MuebleITEA {
     id: number;

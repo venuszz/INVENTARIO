@@ -14,8 +14,8 @@ import { useRouter } from 'next/navigation';
 import { BadgeCheck } from 'lucide-react';
 import ReactDOM from 'react-dom';
 import { useTheme } from '@/context/ThemeContext';
-import { useIneaIndexation } from '@/context/IneaIndexationContext';
-import { useIteaIndexation } from '@/context/IteaIndexationContext';
+import { useIneaIndexation } from '@/hooks/indexation/useIneaIndexation';
+import { useIteaIndexation } from '@/hooks/indexation/useIteaIndexation';
 
 // Tipo unificado para INEA/ITEA
 interface LevMueble {
@@ -71,10 +71,10 @@ export default function LevantamientoUnificado() {
 
     // Combinar datos de ambos contextos
     const muebles = useMemo(() => {
-        const ineaData = ineaContext.data.map(item => ({ ...item, origen: 'INEA' as const }));
+        const ineaData = ineaContext.muebles.map(item => ({ ...item, origen: 'INEA' as const }));
         const iteaData = iteaContext.muebles.map(item => ({ ...item, origen: 'ITEA' as const }));
         return [...ineaData, ...iteaData];
-    }, [ineaContext.data, iteaContext.muebles]);
+    }, [ineaContext.muebles, iteaContext.muebles]);
 
     // Estado de carga combinado
     const loading = ineaContext.isIndexing || iteaContext.isIndexing;

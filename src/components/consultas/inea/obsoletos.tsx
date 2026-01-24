@@ -13,7 +13,7 @@ import RoleGuard from "@/components/roleGuard";
 import { useNotifications } from '@/hooks/useNotifications';
 import { useTheme } from '@/context/ThemeContext';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { useIneaObsoletosIndexation } from '@/context/IneaObsoletosIndexationContext';
+import { useIneaObsoletosIndexation } from '@/hooks/indexation/useIneaObsoletosIndexation';
 
 interface Mueble {
     id: number;

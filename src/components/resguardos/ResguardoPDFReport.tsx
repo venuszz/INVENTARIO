@@ -64,6 +64,7 @@ export async function generateResguardoPDF(data: PdfData) {
     const origenColors: Record<string, { bg: [number, number, number], text: [number, number, number] }> = {
         'INEA': { bg: [0.063, 0.157, 0.251], text: [1, 1, 1] },
         'ITEA': { bg: [0.075, 0.196, 0.102], text: [1, 1, 1] },
+        'TLAXCALA': { bg: [0.6, 0.4, 0.8], text: [1, 1, 1] },
         'SIN ORIGEN': { bg: [0.5, 0.5, 0.5], text: [1, 1, 1] },
     };
 

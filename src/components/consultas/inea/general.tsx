@@ -10,7 +10,7 @@ import { useSession } from "@/hooks/useSession";
 import RoleGuard from "@/components/roleGuard";
 import { useNotifications } from '@/hooks/useNotifications';
 import { useTheme } from '@/context/ThemeContext';
-import { useIneaIndexation } from '@/context/IneaIndexationContext';
+import { useIneaIndexation } from '@/hooks/indexation/useIneaIndexation';
 import { useRouter, useSearchParams } from 'next/navigation';
 
 interface Mueble {
@@ -183,8 +183,8 @@ function getStatusBadgeColors(status: string | null | undefined) {
 }
 
 export default function ConsultasIneaGeneral() {
-    // Usar el contexto de indexación en lugar de estado local
-    const { data: muebles, isIndexing, reindex } = useIneaIndexation();
+    // Usar el nuevo hook de indexación
+    const { muebles, isIndexing, reindex } = useIneaIndexation();
     const { user } = useSession(); // Hook para obtener datos del usuario de manera segura
     const router = useRouter();
     const searchParams = useSearchParams();

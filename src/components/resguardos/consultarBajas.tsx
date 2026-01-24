@@ -12,7 +12,7 @@ import { useUserRole } from "@/hooks/useUserRole";
 import RoleGuard from "@/components/roleGuard";
 import { useNotifications } from '@/hooks/useNotifications';
 import { useTheme } from '@/context/ThemeContext';
-import { useResguardosBajasIndexation } from '@/context/ResguardosBajasIndexationContext';
+import { useResguardosBajasIndexation } from '@/hooks/indexation/useResguardosBajasIndexation';
 import { useSearchParams } from 'next/navigation';
 
 interface ResguardoBaja {

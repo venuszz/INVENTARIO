@@ -13,7 +13,7 @@ import { useUserRole } from "@/hooks/useUserRole";
 import RoleGuard from "@/components/roleGuard";
 import { useNotifications } from '@/hooks/useNotifications';
 import { useTheme } from '@/context/ThemeContext';
-import { useResguardosIndexation } from '@/context/ResguardosIndexationContext';
+import { useResguardosIndexation } from '@/hooks/indexation/useResguardosIndexation';
 import { useSearchParams } from 'next/navigation';
 
 interface Resguardo {

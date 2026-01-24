@@ -4,12 +4,6 @@ import "./globals.css";
 import HeaderContainer from "@/components/HeaderContainer";
 import { SpeedInsights } from '@vercel/speed-insights/next';
 import { ThemeProvider } from "@/context/ThemeContext";
-import { IneaIndexationProvider } from "@/context/IneaIndexationContext";
-import { IteaIndexationProvider } from "@/context/IteaIndexationContext";
-import { IneaObsoletosIndexationProvider } from "@/context/IneaObsoletosIndexationContext";
-import { IteaObsoletosIndexationProvider } from "@/context/IteaObsoletosIndexationContext";
-import { ResguardosIndexationProvider } from "@/context/ResguardosIndexationContext";
-import { ResguardosBajasIndexationProvider } from "@/context/ResguardosBajasIndexationContext";
 import { InactivityProvider } from "@/context/InactivityContext";
 import { NotificationProvider } from "@/context/NotificationContext";
 import IndexationPopover from "@/components/IndexationPopover";
@@ -47,26 +41,14 @@ export default function RootLayout({
         <ThemeProvider>
           <InactivityProvider>
             <NotificationProvider>
-              <IneaIndexationProvider>
-                <IteaIndexationProvider>
-                  <IneaObsoletosIndexationProvider>
-                    <IteaObsoletosIndexationProvider>
-                      <ResguardosIndexationProvider>
-                        <ResguardosBajasIndexationProvider>
-                          <div>
-                            <HeaderContainer />
-                          </div>
-                          <main className="flex-1 overflow-hidden">
-                            {children}
-                            <SpeedInsights />
-                          </main>
-                          <IndexationPopover />
-                        </ResguardosBajasIndexationProvider>
-                      </ResguardosIndexationProvider>
-                    </IteaObsoletosIndexationProvider>
-                  </IneaObsoletosIndexationProvider>
-                </IteaIndexationProvider>
-              </IneaIndexationProvider>
+              <div>
+                <HeaderContainer />
+              </div>
+              <main className="flex-1 overflow-hidden">
+                {children}
+                <SpeedInsights />
+              </main>
+              <IndexationPopover />
             </NotificationProvider>
           </InactivityProvider>
         </ThemeProvider>

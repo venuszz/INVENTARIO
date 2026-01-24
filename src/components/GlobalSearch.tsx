@@ -2,12 +2,13 @@
 import { useState, useEffect, useMemo, useRef, useDeferredValue } from 'react';
 import { Search, X, ChevronRight, FileText, Archive } from 'lucide-react';
 import { useTheme } from '@/context/ThemeContext';
-import { useIneaIndexation } from '@/context/IneaIndexationContext';
-import { useIteaIndexation } from '@/context/IteaIndexationContext';
-import { useIneaObsoletosIndexation } from '@/context/IneaObsoletosIndexationContext';
-import { useIteaObsoletosIndexation } from '@/context/IteaObsoletosIndexationContext';
-import { useResguardosIndexation } from '@/context/ResguardosIndexationContext';
-import { useResguardosBajasIndexation } from '@/context/ResguardosBajasIndexationContext';
+import { useIneaIndexation } from '@/hooks/indexation/useIneaIndexation';
+import { useIteaIndexation } from '@/hooks/indexation/useIteaIndexation';
+import { useNoListadoIndexation } from '@/hooks/indexation/useNoListadoIndexation';
+import { useResguardosIndexation } from '@/hooks/indexation/useResguardosIndexation';
+import { useIneaObsoletosIndexation } from '@/hooks/indexation/useIneaObsoletosIndexation';
+import { useIteaObsoletosIndexation } from '@/hooks/indexation/useIteaObsoletosIndexation';
+import { useResguardosBajasIndexation } from '@/hooks/indexation/useResguardosBajasIndexation';
 import { usePathname, useRouter } from 'next/navigation';
 
 interface SearchResult {
@@ -15,7 +16,7 @@ interface SearchResult {
     id_inv: string | null;
     descripcion: string | null;
     rubro: string | null;
-    valor: number | null;
+    valor: string | null; // Changed from number to string to match ITEA/NoListado types
     area: string | null;
     estado: string | null;
     estatus: string | null;
@@ -45,9 +46,10 @@ export default function GlobalSearch({ onExpandChange }: GlobalSearchProps) {
     const router = useRouter();
     const ineaContext = useIneaIndexation();
     const iteaContext = useIteaIndexation();
+    const noListadoContext = useNoListadoIndexation();
+    const resguardosContext = useResguardosIndexation();
     const ineaObsContext = useIneaObsoletosIndexation();
     const iteaObsContext = useIteaObsoletosIndexation();
-    const resguardosContext = useResguardosIndexation();
     const resguardosBajasContext = useResguardosBajasIndexation();
 
     const [searchTerm, setSearchTerm] = useState('');
@@ -59,12 +61,12 @@ export default function GlobalSearch({ onExpandChange }: GlobalSearchProps) {
 
     // Combinar datos indexados de INEA, ITEA y Obsoletos
     const allData = useMemo(() => {
-        const ineaData: SearchResult[] = ineaContext.data.map(item => ({
+        const ineaData: SearchResult[] = ineaContext.muebles.map(item => ({
             id: item.id,
             id_inv: item.id_inv,
             descripcion: item.descripcion,
             rubro: item.rubro,
-            valor: item.valor,
+            valor: item.valor !== null ? String(item.valor) : null,
             area: item.area,
             estado: item.estado,
             estatus: item.estatus,
@@ -85,12 +87,12 @@ export default function GlobalSearch({ onExpandChange }: GlobalSearchProps) {
             origen: 'ITEA' as const
         }));
 
-        const ineaObsData: SearchResult[] = ineaObsContext.data.map(item => ({
+        const ineaObsData: SearchResult[] = ineaObsContext.muebles.map(item => ({
             id: item.id,
             id_inv: item.id_inv,
             descripcion: item.descripcion,
             rubro: item.rubro,
-            valor: item.valor,
+            valor: item.valor !== null ? String(item.valor) : null,
             area: item.area,
             estado: item.estado,
             estatus: item.estatus,
@@ -98,7 +100,7 @@ export default function GlobalSearch({ onExpandChange }: GlobalSearchProps) {
             origen: 'INEA_OBS' as const
         }));
 
-        const iteaObsData: SearchResult[] = iteaObsContext.data.map(item => ({
+        const iteaObsData: SearchResult[] = iteaObsContext.muebles.map(item => ({
             id: item.id,
             id_inv: item.id_inv,
             descripcion: item.descripcion,
@@ -133,31 +135,31 @@ export default function GlobalSearch({ onExpandChange }: GlobalSearchProps) {
         }));
 
         // Agregar datos de resguardos de bajas
-        const resguardosBajasData: SearchResult[] = resguardosBajasContext.resguardosBajas.map(item => ({
+        const resguardosBajasData: SearchResult[] = resguardosBajasContext.resguardos.map(item => ({
             id: item.id,
-            id_inv: item.num_inventario,
-            descripcion: item.descripcion,
-            rubro: item.rubro,
+            id_inv: item.num_inventario as string | null,
+            descripcion: item.descripcion as string | null,
+            rubro: (item.rubro as string | null) ?? null,
             valor: null,
-            area: item.area_resguardo,
-            estado: item.condicion,
+            area: (item.area_resguardo as string | null) ?? null,
+            estado: (item.condicion as string | null) ?? null,
             estatus: null,
-            resguardante: item.usufinal,
+            resguardante: (item.usufinal as string | null) ?? null,
             origen: 'RESGUARDO_BAJA' as const,
-            folio_resguardo: item.folio_resguardo,
-            folio_baja: item.folio_baja,
-            f_resguardo: item.f_resguardo,
-            f_baja: item.f_baja,
-            dir_area: item.dir_area,
-            area_resguardo: item.area_resguardo,
-            usufinal: item.usufinal,
-            num_inventario: item.num_inventario,
-            condicion: item.condicion,
-            motivo_baja: item.motivo_baja
+            folio_resguardo: (item.folio_resguardo as string | null) ?? null,
+            folio_baja: (item.folio_baja as string | null) ?? null,
+            f_resguardo: (item.f_resguardo as string | null) ?? null,
+            f_baja: item.f_baja as string | null,
+            dir_area: (item.dir_area as string | null) ?? null,
+            area_resguardo: (item.area_resguardo as string | null) ?? null,
+            usufinal: (item.usufinal as string | null) ?? null,
+            num_inventario: item.num_inventario as string | null,
+            condicion: (item.condicion as string | null) ?? null,
+            motivo_baja: (item.motivo as string | null) ?? null
         }));
 
         return [...ineaData, ...iteaData, ...ineaObsData, ...iteaObsData, ...resguardosData, ...resguardosBajasData];
-    }, [ineaContext.data, iteaContext.muebles, ineaObsContext.data, iteaObsContext.data, resguardosContext.resguardos, resguardosBajasContext.resguardosBajas]);
+    }, [ineaContext.muebles, iteaContext.muebles, ineaObsContext.muebles, iteaObsContext.muebles, resguardosContext.resguardos, resguardosBajasContext.resguardos]);
 
     // Búsqueda en tiempo real - Usando el valor diferido para evitar lag
     const searchResults = useMemo(() => {

@@ -12,7 +12,8 @@ import RoleGuard from "@/components/roleGuard";
 import { useNotifications } from '@/hooks/useNotifications';
 import { useTheme } from '@/context/ThemeContext';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { useIteaIndexation } from '@/context/IteaIndexationContext';
+import { useIteaIndexation } from '@/hooks/indexation/useIteaIndexation';
+import type { MuebleITEA } from '@/types/indexation';
 
 // Utility function to format date strings as 'DD/MM/YYYY'
 function formatDate(dateString: string | null | undefined): string {
@@ -25,28 +26,8 @@ function formatDate(dateString: string | null | undefined): string {
     return `${day}/${month}/${year}`;
 }
 
-interface Mueble {
-    id: number;
-    id_inv: string | null;
-    rubro: string | null;
-    descripcion: string | null;
-    valor: number | null;
-    f_adq: string | null;
-    formadq: string | null;
-    proveedor: string | null;
-    factura: string | null;
-    ubicacion_es: string | null;
-    ubicacion_mu: string | null;
-    ubicacion_no: string | null;
-    estado: string | null;
-    estatus: string | null;
-    area: string | null;
-    usufinal: string | null;
-    fechabaja: string | null;
-    causadebaja: string | null;
-    resguardante: string | null;
-    image_path: string | null;
-}
+// Use the imported type instead of local definition
+type Mueble = MuebleITEA;
 
 interface FilterOptions {
     estados: string[];
@@ -743,7 +724,7 @@ export default function ConsultasIteaGeneral() {
                 newData.id_inv = value;
                 break;
             case 'valor':
-                newData.valor = value ? parseFloat(value) : null;
+                newData.valor = value || null;
                 break;
             case 'rubro':
             case 'descripcion':

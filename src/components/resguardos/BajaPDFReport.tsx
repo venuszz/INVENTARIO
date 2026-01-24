@@ -89,6 +89,7 @@ export async function generateBajaPDF({
     const origenColors: Record<string, { bg: [number, number, number], text: [number, number, number] }> = {
         'INEA': { bg: [0.8, 0.1, 0.1], text: [1, 1, 1] },
         'ITEA': { bg: [0.9, 0.2, 0.2], text: [1, 1, 1] },
+        'TLAXCALA': { bg: [0.6, 0.4, 0.8], text: [1, 1, 1] },
         'SIN ORIGEN': { bg: [1, 0.4, 0.4], text: [1, 1, 1] },
     };
 

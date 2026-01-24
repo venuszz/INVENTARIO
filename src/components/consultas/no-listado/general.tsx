@@ -10,7 +10,7 @@ import { useUserRole } from "@/hooks/useUserRole";
 import RoleGuard from "@/components/roleGuard";
 import { useNotifications } from '@/hooks/useNotifications';
 import { useTheme } from '@/context/ThemeContext';
-import { useIneaIndexation } from '@/context/IneaIndexationContext';
+import { useNoListadoIndexation } from '@/hooks/indexation/useNoListadoIndexation';
 import { useRouter, useSearchParams } from 'next/navigation';
 
 interface Mueble {
@@ -18,7 +18,7 @@ interface Mueble {
     id_inv: string;
     rubro: string | null;
     descripcion: string | null;
-    valor: number | null;
+    valor: string | null;
     f_adq: string | null;
     formadq: string | null;
     proveedor: string | null;
@@ -32,8 +32,8 @@ interface Mueble {
     usufinal: string | null;
     fechabaja: string | null;
     causadebaja: string | null;
-    resguardante: string | null;
-    image_path: string | null;
+    resguardante?: string | null;
+    image_path?: string | null;
 }
 
 interface FilterOptions {
@@ -88,7 +88,7 @@ const ImagePreview = ({ imagePath }: { imagePath: string | null }) => {
 
                 const { data, error } = await supabase
                     .storage
-                    .from('muebles.inea')
+                    .from('muebles.tlaxcala')
                     .createSignedUrl(imagePath, 3600);
 
                 if (error) throw error;
@@ -184,7 +184,7 @@ function getStatusBadgeColors(status: string | null | undefined) {
 
 export default function ConsultasNoListadoGeneral() {
     // Usar el contexto de indexación en lugar de estado local
-    const { data: muebles, isIndexing, reindex } = useIneaIndexation();
+    const { muebles, isIndexing, reindex } = useNoListadoIndexation();
     const { user } = useSession();
     const router = useRouter();
     const searchParams = useSearchParams();
@@ -340,12 +340,12 @@ export default function ConsultasNoListadoGeneral() {
         }
     }, []);
 
-    // Nueva función para obtener valores únicos de filtros desde la tabla muebles
+    // Nueva función para obtener valores únicos de filtros desde la tabla mueblestlaxcala
     const fetchUniqueFilterOptions = useCallback(async () => {
         try {
-            // Traer todos los valores únicos de estado, estatus, área y rubro de la tabla muebles
+            // Traer todos los valores únicos de estado, estatus, área y rubro de la tabla mueblestlaxcala
             const { data, error } = await supabase
-                .from('muebles')
+                .from('mueblestlaxcala')
                 .select('estado, estatus, area, rubro');
             if (error) throw error;
             const estados = Array.from(new Set(data?.map(item => item.estado).filter(Boolean)));
@@ -484,7 +484,7 @@ export default function ConsultasNoListadoGeneral() {
                 String(todayDate.getMonth() + 1).padStart(2, '0') + '-' +
                 String(todayDate.getDate()).padStart(2, '0');
             const { error } = await supabase
-                .from('muebles')
+                .from('mueblestlaxcala')
                 .update({ estatus: 'BAJA', causadebaja: bajaCause, fechabaja: today })
                 .eq('id', selectedItem.id);
             if (error) throw error;
@@ -511,7 +511,7 @@ export default function ConsultasNoListadoGeneral() {
                 category: 'inventario',
                 device: 'web',
                 importance: 'high',
-                data: { changes: [`Baja de artículo: ${selectedItem.id_inv}`], affectedTables: ['muebles', 'deprecated'] }
+                data: { changes: [`Baja de artículo: ${selectedItem.id_inv}`], affectedTables: ['mueblestlaxcala', 'deprecated'] }
             });
 
             // El contexto actualizará automáticamente via realtime
@@ -528,7 +528,7 @@ export default function ConsultasNoListadoGeneral() {
                 category: 'inventario',
                 device: 'web',
                 importance: 'high',
-                data: { affectedTables: ['muebles', 'deprecated'] }
+                data: { affectedTables: ['mueblestlaxcala', 'deprecated'] }
             });
         }
     };
@@ -538,9 +538,9 @@ export default function ConsultasNoListadoGeneral() {
 
     const fetchFilterOptions = useCallback(async () => {
         try {
-            // Obtener estados únicos (se mantiene igual)
+            // Obtener estados únicos desde mueblestlaxcala
             const { data: estados } = await supabase
-                .from('muebles')
+                .from('mueblestlaxcala')
                 .select('estado')
                 .filter('estado', 'not.is', null)
                 .limit(1000);
@@ -563,11 +563,11 @@ export default function ConsultasNoListadoGeneral() {
                 .select('concepto')
                 .eq('tipo', 'estatus');
 
-            // Obtener áreas desde la tabla areas (se mantiene igual)
+            // Obtener áreas desde la tabla area
             const { data: areasData } = await supabase
-                .from('areas')
-                .select('itea')
-                .not('itea', 'is', null);
+                .from('area')
+                .select('nombre')
+                .not('nombre', 'is', null);
 
             setFilterOptions(prev => ({
                 ...prev,
@@ -575,7 +575,7 @@ export default function ConsultasNoListadoGeneral() {
                 rubros: rubrosData?.map(item => item.concepto).filter(Boolean) || [],
                 formadq: formadqData?.map(item => item.concepto).filter(Boolean) || [],
                 estatus: estatusData?.map(item => item.concepto).filter(Boolean) || [],
-                areas: [...new Set(areasData?.map(item => item.itea).filter(Boolean))] as string[]
+                areas: [...new Set(areasData?.map(item => item.nombre).filter(Boolean))] as string[]
             }));
         } catch (error) {
             console.error('Error al cargar opciones de filtro:', error);
@@ -591,7 +591,7 @@ export default function ConsultasNoListadoGeneral() {
             const filePath = `${fileName}`;
 
             const { error: uploadError } = await supabase.storage
-                .from('muebles.inea')
+                .from('muebles.tlaxcala')
                 .upload(filePath, imageFile, {
                     cacheControl: '3600',
                     upsert: true
@@ -683,7 +683,7 @@ export default function ConsultasNoListadoGeneral() {
             }
 
             const { error } = await supabase
-                .from('muebles')
+                .from('mueblestlaxcala')
                 .update({ ...editFormData, image_path: imagePath })
                 .eq('id', editFormData.id);
 
@@ -697,7 +697,7 @@ export default function ConsultasNoListadoGeneral() {
                 category: 'inventario',
                 device: 'web',
                 importance: 'medium',
-                data: { changes: [`Edición de artículo: ${editFormData.id_inv}`], affectedTables: ['muebles'] }
+                data: { changes: [`Edición de artículo: ${editFormData.id_inv}`], affectedTables: ['mueblestlaxcala'] }
             });
 
             // El contexto actualizará automáticamente via realtime
@@ -724,7 +724,7 @@ export default function ConsultasNoListadoGeneral() {
                 category: 'inventario',
                 device: 'web',
                 importance: 'high',
-                data: { affectedTables: ['muebles'] }
+                data: { affectedTables: ['mueblestlaxcala'] }
             });
         } finally {
             setUploading(false);
@@ -741,7 +741,7 @@ export default function ConsultasNoListadoGeneral() {
         setShowInactiveModal(false);
         try {
             const { error } = await supabase
-                .from('muebles')
+                .from('mueblestlaxcala')
                 .update({ estatus: 'INACTIVO' })
                 .eq('id', selectedItem.id);
 
@@ -755,7 +755,7 @@ export default function ConsultasNoListadoGeneral() {
                 category: 'inventario',
                 device: 'web',
                 importance: 'medium',
-                data: { changes: [`Inactivación de artículo: ${selectedItem.id_inv}`], affectedTables: ['muebles'] }
+                data: { changes: [`Inactivación de artículo: ${selectedItem.id_inv}`], affectedTables: ['mueblestlaxcala'] }
             });
 
             // El contexto actualizará automáticamente via realtime
@@ -778,7 +778,7 @@ export default function ConsultasNoListadoGeneral() {
                 category: 'inventario',
                 device: 'web',
                 importance: 'high',
-                data: { affectedTables: ['muebles'] }
+                data: { affectedTables: ['mueblestlaxcala'] }
             });
         }
     };
@@ -808,7 +808,7 @@ export default function ConsultasNoListadoGeneral() {
                 newData.id_inv = value;
                 break;
             case 'valor':
-                newData.valor = value ? parseFloat(value) : null;
+                newData.valor = value || null;
                 break;
             case 'rubro':
             case 'descripcion':
@@ -2372,11 +2372,11 @@ export default function ConsultasNoListadoGeneral() {
                                                 }`}>
                                                 Fotografía del Bien
                                             </h3>
-                                            <ImagePreview imagePath={selectedItem.image_path} />
+                                            <ImagePreview imagePath={selectedItem.image_path ?? null} />
                                         </div>
                                         {/* Sección de detalles de resguardo si existe (minimalista) */}
                                         {(() => {
-                                            const folio = selectedItem?.id_inv ? foliosResguardo[selectedItem.id_inv] : undefined;
+                                            const folio = selectedItem?.id_inv ? (foliosResguardo[selectedItem.id_inv] || null) : null;
                                             const detalleResguardo = folio ? resguardoDetalles[folio] : undefined;
                                             if (folio && detalleResguardo) {
                                                 return (
@@ -2441,7 +2441,7 @@ export default function ConsultasNoListadoGeneral() {
                                                 <p className={`mt-2 font-medium ${isDarkMode ? 'text-white' : 'text-gray-900'
                                                     }`}>
                                                     {selectedItem.valor ?
-                                                        `$${selectedItem.valor.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` :
+                                                        `$${parseFloat(selectedItem.valor).toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` :
                                                         '$0.00'}
                                                 </p>
                                             </div>
