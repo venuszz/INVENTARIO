@@ -4,6 +4,7 @@ import { useTheme } from '@/context/ThemeContext';
 import { Plus, Save, Trash2, Edit, AlertTriangle, CheckCircle, X, Search, RefreshCw, Layers } from 'lucide-react';
 import supabase from "@/app/lib/supabase/client";
 import { useNotifications } from '@/hooks/useNotifications';
+import SectionRealtimeToggle from '@/components/SectionRealtimeToggle';
 
 interface ConfigItem {
     id: number;
@@ -38,6 +39,7 @@ export default function ConfigManagementComponent() {
     const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
     const [error, setError] = useState<string>('');
     const [activeTab, setActiveTab] = useState<string>('estatus');
+    const [realtimeConnected, setRealtimeConnected] = useState<boolean>(false);
 
     const inputRef = useRef<HTMLInputElement>(null);
     const editInputRef = useRef<HTMLInputElement>(null);
@@ -66,6 +68,24 @@ export default function ConfigManagementComponent() {
     // Cargar datos al montar el componente
     useEffect(() => {
         fetchConfigItems();
+    }, [fetchConfigItems]);
+
+    // Setup realtime subscription for config table
+    useEffect(() => {
+        const channel = supabase
+            .channel('config-changes')
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'config' }, () => {
+                fetchConfigItems();
+            })
+            .on('system', {}, (payload) => {
+                const { status } = payload;
+                setRealtimeConnected(status === 'SUBSCRIBED' || status === 'ok');
+            })
+            .subscribe();
+
+        return () => {
+            supabase.removeChannel(channel);
+        };
     }, [fetchConfigItems]);
 
     // Efecto para enfocar el input de edición cuando se activa
@@ -354,6 +374,10 @@ export default function ConfigManagementComponent() {
                             }`}>ADM</span>
                         Gestión de Configuración
                     </h1>
+                    <SectionRealtimeToggle 
+                        sectionName="Configuración" 
+                        isConnected={realtimeConnected} 
+                    />
                 </div>
 
                 {/* Tabs con efecto hover y gradientes */}

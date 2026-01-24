@@ -70,21 +70,43 @@ export default function IndexationPopover() {
     ], [ineaState, iteaState, ineaObsState, iteaObsState, noListadoState, resguardosState, resguardosBajasState]);
 
     const activeModules = useMemo(() => {
-        return modules.filter(module => {
+        const filtered = modules.filter(module => {
             // Don't show if dismissed
             if (dismissed.has(module.key)) return false;
             
-            // Don't show success state if count is 0
-            if (module.state.isIndexed && !module.state.isIndexing && !module.state.error && module.count === 0) {
-                return false;
-            }
+            // Show if indexing
+            if (module.state.isIndexing) return true;
             
-            // Show if indexing, has error, is indexed (with count > 0), or reconnecting
-            return module.state.isIndexing || 
-                   module.state.error || 
-                   module.state.isIndexed || 
-                   module.state.reconnectionStatus !== 'idle';
+            // Show if has error
+            if (module.state.error) return true;
+            
+            // Show if reconnecting or reconciling
+            if (module.state.reconnectionStatus !== 'idle') return true;
+            
+            // Show if indexed successfully with data (count > 0)
+            if (module.state.isIndexed && !module.state.isIndexing && module.count > 0) return true;
+            
+            // Don't show if indexed but no data (count === 0)
+            return false;
         });
+        
+        // Debug log
+        console.log('🔍 [IndexationPopover] Active modules:', {
+            total: modules.length,
+            active: filtered.length,
+            modules: modules.map(m => ({
+                key: m.key,
+                isIndexed: m.state.isIndexed,
+                isIndexing: m.state.isIndexing,
+                count: m.count,
+                dismissed: dismissed.has(m.key),
+                reconnectionStatus: m.state.reconnectionStatus,
+                error: m.state.error,
+                included: filtered.includes(m)
+            }))
+        });
+        
+        return filtered;
     }, [modules, dismissed]);
 
     const stats = useMemo(() => {
@@ -96,21 +118,6 @@ export default function IndexationPopover() {
             if (module.state.isIndexed && !module.state.isIndexing) indexed++;
             if (module.state.error) errors++;
         });
-        
-        // Debug para producción
-        if (process.env.NODE_ENV === 'production') {
-            console.log('📊 [IndexationPopover] Stats:', {
-                activeModules: activeModules.map(m => ({
-                    key: m.key,
-                    name: m.name,
-                    isIndexing: m.state.isIndexing,
-                    isIndexed: m.state.isIndexed,
-                    error: m.state.error,
-                    count: m.count,
-                })),
-                stats: { indexing, indexed, errors }
-            });
-        }
         
         return { indexing, indexed, errors };
     }, [activeModules]);

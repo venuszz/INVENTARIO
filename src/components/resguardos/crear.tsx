@@ -18,6 +18,7 @@ import { useTheme } from '@/context/ThemeContext';
 import { useIneaIndexation } from '@/hooks/indexation/useIneaIndexation';
 import { useIteaIndexation } from '@/hooks/indexation/useIteaIndexation';
 import { useNoListadoIndexation } from '@/hooks/indexation/useNoListadoIndexation';
+import SectionRealtimeToggle from '@/components/SectionRealtimeToggle';
 
 interface Mueble {
     id: number;
@@ -123,9 +124,9 @@ function getColorClass(value: string | null | undefined, isDarkMode: boolean) {
 }
 
 export default function CrearResguardos() {
-    const { muebles: ineaData } = useIneaIndexation();
-    const { muebles: iteaData } = useIteaIndexation();
-    const { muebles: noListadoData } = useNoListadoIndexation();
+    const { muebles: ineaData, realtimeConnected: ineaConnected } = useIneaIndexation();
+    const { muebles: iteaData, realtimeConnected: iteaConnected } = useIteaIndexation();
+    const { muebles: noListadoData, realtimeConnected: noListadoConnected } = useNoListadoIndexation();
     const { user } = useSession(); // ← AGREGADO: Obtener usuario de la sesión
     const [allMuebles, setAllMuebles] = useState<Mueble[]>([]);
     const [directorio, setDirectorio] = useState<Directorio[]>([]);
@@ -1360,6 +1361,10 @@ export default function CrearResguardos() {
                         </span>
                     </h1>
                     <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-4">
+                        <SectionRealtimeToggle 
+                            sectionName="Inventarios" 
+                            isConnected={ineaConnected || iteaConnected || noListadoConnected} 
+                        />
                         <p className={`text-sm sm:text-base flex items-center gap-2 ${isDarkMode ? 'text-gray-400' : 'text-gray-600'
                             }`}>
                             <ListChecks className={`h-4 w-4 animate-pulse ${isDarkMode ? 'text-white' : 'text-gray-900'

@@ -4,6 +4,7 @@ import { useTheme } from '@/context/ThemeContext';
 import { Plus, Trash2, Edit, AlertTriangle, CheckCircle, X, Search, RefreshCw, CheckSquare, XSquare } from 'lucide-react';
 import supabase from "@/app/lib/supabase/client";
 import { useNotifications } from '@/hooks/useNotifications';
+import SectionRealtimeToggle from '@/components/SectionRealtimeToggle';
 
 interface Directorio {
     id_directorio: number;
@@ -31,6 +32,7 @@ export default function DirectorioManagementComponent() {
     const [message, setMessage] = useState<Message>({ type: '', text: '' });
     const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
     const [error, setError] = useState<string>('');
+    const [realtimeConnected, setRealtimeConnected] = useState<boolean>(false);
 
     // NUEVO: Estado para áreas y relaciones
     const [areas, setAreas] = useState<{ id_area: number; nombre: string }[]>([]);
@@ -119,6 +121,24 @@ export default function DirectorioManagementComponent() {
         fetchAreas();
         fetchAllDirectorAreas();
     }, [fetchDirectorio, fetchAreas, fetchAllDirectorAreas]);
+
+    // Setup realtime subscription for directorio table
+    useEffect(() => {
+        const channel = supabase
+            .channel('directorio-changes')
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'directorio' }, () => {
+                fetchDirectorio();
+            })
+            .on('system', {}, (payload) => {
+                const { status } = payload;
+                setRealtimeConnected(status === 'SUBSCRIBED' || status === 'ok');
+            })
+            .subscribe();
+
+        return () => {
+            supabase.removeChannel(channel);
+        };
+    }, [fetchDirectorio]);
 
     // NUEVO: Al editar, cargar áreas seleccionadas desde el mapa
     useEffect(() => {
@@ -546,6 +566,10 @@ export default function DirectorioManagementComponent() {
                             }`}>DIR</span>
                         Directorio de Personal Autorizado
                     </h1>
+                    <SectionRealtimeToggle 
+                        sectionName="Directorio" 
+                        isConnected={realtimeConnected} 
+                    />
                 </div>
 
                 {/* Mensajes con animación mejorada */}

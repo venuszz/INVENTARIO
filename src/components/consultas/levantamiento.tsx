@@ -16,8 +16,10 @@ import ReactDOM from 'react-dom';
 import { useTheme } from '@/context/ThemeContext';
 import { useIneaIndexation } from '@/hooks/indexation/useIneaIndexation';
 import { useIteaIndexation } from '@/hooks/indexation/useIteaIndexation';
+import { useNoListadoIndexation } from '@/hooks/indexation/useNoListadoIndexation';
+import SectionRealtimeToggle from '@/components/SectionRealtimeToggle';
 
-// Tipo unificado para INEA/ITEA
+// Tipo unificado para INEA/ITEA/TLAXCALA
 interface LevMueble {
     id: number;
     id_inv: string;
@@ -39,7 +41,7 @@ interface LevMueble {
     causadebaja: string | null;
     resguardante: string | null;
     image_path: string | null;
-    origen: 'INEA' | 'ITEA';
+    origen: 'INEA' | 'ITEA' | 'TLAXCALA';
 }
 
 interface Message {
@@ -50,6 +52,7 @@ interface Message {
 const getOrigenColors = (isDarkMode: boolean) => ({
     INEA: isDarkMode ? 'bg-white/90 text-gray-900 border border-white/80' : 'bg-blue-50 text-blue-900 border border-blue-200',
     ITEA: isDarkMode ? 'bg-white/80 text-gray-900 border border-white/70' : 'bg-green-50 text-green-900 border border-green-200',
+    TLAXCALA: isDarkMode ? 'bg-white/70 text-gray-900 border border-white/60' : 'bg-purple-50 text-purple-900 border border-purple-200',
 });
 
 const getEstatusColors = (isDarkMode: boolean) => ({
@@ -68,17 +71,22 @@ export default function LevantamientoUnificado() {
     // Usar los contextos de indexación
     const ineaContext = useIneaIndexation();
     const iteaContext = useIteaIndexation();
+    const tlaxcalaContext = useNoListadoIndexation();
 
-    // Combinar datos de ambos contextos
+    // Combinar datos de los tres contextos
     const muebles = useMemo(() => {
         const ineaData = ineaContext.muebles.map(item => ({ ...item, origen: 'INEA' as const }));
         const iteaData = iteaContext.muebles.map(item => ({ ...item, origen: 'ITEA' as const }));
-        return [...ineaData, ...iteaData];
-    }, [ineaContext.muebles, iteaContext.muebles]);
+        const tlaxcalaData = tlaxcalaContext.muebles.map(item => ({ ...item, origen: 'TLAXCALA' as const }));
+        return [...ineaData, ...iteaData, ...tlaxcalaData];
+    }, [ineaContext.muebles, iteaContext.muebles, tlaxcalaContext.muebles]);
 
     // Estado de carga combinado
-    const loading = ineaContext.isIndexing || iteaContext.isIndexing;
-    const error = ineaContext.error || iteaContext.error;
+    const loading = ineaContext.isIndexing || iteaContext.isIndexing || tlaxcalaContext.isIndexing;
+    const error = ineaContext.error || iteaContext.error || tlaxcalaContext.error;
+    
+    // Estado de conexión en tiempo real combinado (muestra Online si cualquiera está conectado)
+    const realtimeConnected = ineaContext.realtimeConnected || iteaContext.realtimeConnected || tlaxcalaContext.realtimeConnected;
 
     const role = useUserRole();
     const isAdmin = role === "admin" || role === "superadmin";
@@ -555,13 +563,14 @@ export default function LevantamientoUnificado() {
         }
     };
 
-    // Función para reindexar ambos contextos
+    // Función para reindexar los tres contextos
     const handleReindex = useCallback(async () => {
         await Promise.all([
             ineaContext.reindex(),
-            iteaContext.reindex()
+            iteaContext.reindex(),
+            tlaxcalaContext.reindex()
         ]);
-    }, [ineaContext, iteaContext]);
+    }, [ineaContext, iteaContext, tlaxcalaContext]);
 
     useEffect(() => {
         fetchFilterOptions();
@@ -918,11 +927,17 @@ export default function LevantamientoUnificado() {
             <div className={`min-h-screen p-2 sm:p-4 md:p-6 lg:p-8 ${isDarkMode ? 'bg-black text-white' : 'bg-gray-50 text-gray-900'}`}>
                 <div className={`w-full mx-auto rounded-lg sm:rounded-xl shadow-2xl overflow-hidden border ${isDarkMode ? 'bg-black border-gray-800' : 'bg-white border-gray-200'}`}>
                     <div className={`p-4 sm:p-6 flex flex-col sm:flex-row justify-between items-start sm:items-center border-b gap-2 sm:gap-0 ${isDarkMode ? 'bg-black border-gray-800' : 'bg-white border-gray-200'}`}>
-                        <h1 className={`text-xl sm:text-2xl md:text-3xl font-bold flex items-center ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
-                            <span className={`mr-2 sm:mr-3 p-1 sm:p-2 rounded-lg border text-sm sm:text-base ${isDarkMode ? 'bg-gray-900 text-white border-gray-700' : 'bg-gray-100 text-gray-900 border-gray-300'}`}>LEV</span>
-                            Levantamiento de Inventario (INEA + ITEA)
-                        </h1>
-                        <p className={`text-sm sm:text-base ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>Vista unificada de todos los bienes registrados</p>
+                        <div className="flex flex-col gap-1">
+                            <h1 className={`text-xl sm:text-2xl md:text-3xl font-bold flex items-center ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
+                                <span className={`mr-2 sm:mr-3 p-1 sm:p-2 rounded-lg border text-sm sm:text-base ${isDarkMode ? 'bg-gray-900 text-white border-gray-700' : 'bg-gray-100 text-gray-900 border-gray-300'}`}>LEV</span>
+                                Levantamiento de Inventario (INEA + ITEA + TLAXCALA)
+                            </h1>
+                            <p className={`text-sm sm:text-base ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>Vista unificada de todos los bienes registrados (3 fuentes)</p>
+                        </div>
+                        <SectionRealtimeToggle 
+                            sectionName="Inventarios" 
+                            isConnected={realtimeConnected} 
+                        />
                     </div>
                     <div className="flex flex-col gap-4 p-4">
                         <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-4">
