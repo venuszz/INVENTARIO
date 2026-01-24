@@ -13,14 +13,17 @@ import type { StateStorage } from 'zustand/middleware';
 
 /**
  * Configura localforage para usar IndexedDB con nombre personalizado
+ * Solo se ejecuta en el navegador (no durante SSR)
  */
-localforage.config({
-  driver: localforage.INDEXEDDB,
-  name: 'inventario-db',
-  version: 1.0,
-  storeName: 'muebles_store',
-  description: 'Base de datos local para almacenar datos de muebles',
-});
+if (typeof window !== 'undefined') {
+  localforage.config({
+    driver: localforage.INDEXEDDB,
+    name: 'inventario-db',
+    version: 1.0,
+    storeName: 'muebles_store',
+    description: 'Base de datos local para almacenar datos de muebles',
+  });
+}
 
 // ============================================================================
 // STORAGE ADAPTER
@@ -58,6 +61,11 @@ export const indexedDBStorage: StateStorage = {
    * @returns Promise con el valor parseado o null si no existe
    */
   getItem: async (name: string): Promise<string | null> => {
+    // Durante SSR, retornar null inmediatamente
+    if (typeof window === 'undefined') {
+      return null;
+    }
+    
     try {
       const value = await localforage.getItem<string>(name);
       console.log(`📦 [IndexedDB] GET "${name}":`, value ? `${value.length} chars` : 'null');
@@ -75,6 +83,11 @@ export const indexedDBStorage: StateStorage = {
    * @param value - Valor a guardar (string JSON)
    */
   setItem: async (name: string, value: string): Promise<void> => {
+    // Durante SSR, no hacer nada
+    if (typeof window === 'undefined') {
+      return;
+    }
+    
     try {
       await localforage.setItem(name, value);
       console.log(`💾 [IndexedDB] SET "${name}":`, `${value.length} chars`);
@@ -93,6 +106,11 @@ export const indexedDBStorage: StateStorage = {
    * @param name - Clave del item a eliminar
    */
   removeItem: async (name: string): Promise<void> => {
+    // Durante SSR, no hacer nada
+    if (typeof window === 'undefined') {
+      return;
+    }
+    
     try {
       await localforage.removeItem(name);
       console.log(`🗑️ [IndexedDB] REMOVE "${name}"`);
