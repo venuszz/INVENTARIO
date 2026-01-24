@@ -13,6 +13,7 @@ import { useTheme } from "@/context/ThemeContext";
 import GlobalSearch from './GlobalSearch';
 import { useSession } from '@/hooks/useSession';
 import { clearAllIndexationData } from '@/lib/clearIndexationData';
+import { motion, AnimatePresence } from 'framer-motion';
 
 
 type MenuItem = {
@@ -423,7 +424,7 @@ export default function NavigationBar() {
     const isActive = (path: string) => pathname === path || pathname.startsWith(path + '/');
 
     return (
-        <nav className={`${pathname === '/' ? (isDarkMode ? 'text-white' : 'text-gray-900') : (isDarkMode ? 'bg-black text-white' : 'bg-white text-gray-900')} ${pathname === '/' ? '' : 'shadow-lg'} ${pathname === '/' ? 'fixed top-0 left-0 right-0' : 'relative'} z-50 transition-colors duration-300`}>
+        <nav className={`${pathname === '/' ? (isDarkMode ? 'text-white' : 'text-gray-900') : (isDarkMode ? 'bg-black text-white' : 'bg-white text-gray-900')} ${pathname === '/' ? 'fixed top-0 left-0 right-0' : 'relative'} z-50 transition-colors duration-300`}>
             {/* Desktop Navigation */}
             <div className="max-w-7xl mx-auto px-4">
                 <div className="flex items-center h-16 relative">
@@ -453,69 +454,114 @@ export default function NavigationBar() {
                     <div ref={menuContainerRef} className="flex-1 flex justify-center relative z-10">
                         <div className="hidden md:flex md:space-x-1">
                             <RoleGuard roles={["admin", "superadmin"]} userRole={userData.rol}>
-                                <div
+                                <motion.div
                                     className="relative"
                                     onMouseEnter={() => handleMenuHover("Inventario")}
                                     onMouseLeave={() => handleMenuHover(null)}
+                                    initial={{ opacity: 0, y: -10 }}
+                                    animate={{ opacity: 1, y: 0 }}
+                                    transition={{ duration: 0.3 }}
                                 >
-                                    <button
-                                        className={`flex items-center px-4 py-2 rounded-md transition-all duration-500 ease-in-out transform ${isActive("/inventario")
-                                            ? isDarkMode ? 'text-white bg-white/10 border border-white/20 scale-105' : 'text-gray-900 bg-gray-100 border border-gray-300 scale-105'
+                                    <motion.button
+                                        className={`flex items-center px-4 py-2 rounded-lg text-sm font-medium transition-all duration-300 border ${isActive("/inventario")
+                                            ? isDarkMode ? 'text-white bg-white/5 border-white/20' : 'text-black bg-black/5 border-black/20'
                                             : isDarkMode
-                                                ? `text-gray-300 hover:text-white hover:scale-105 ${pathname === '/' ? 'hover:bg-white/10' : 'hover:bg-gray-800'}`
-                                                : `text-gray-600 hover:text-gray-900 hover:scale-105 ${pathname === '/' ? 'hover:bg-black/5' : 'hover:bg-gray-100'}`
+                                                ? `text-white/60 hover:text-white border-transparent hover:border-white/10 ${pathname === '/' ? 'hover:bg-white/5' : 'hover:bg-white/5'}`
+                                                : `text-black/60 hover:text-black border-transparent hover:border-black/10 ${pathname === '/' ? 'hover:bg-black/5' : 'hover:bg-black/5'}`
                                             }`}
+                                        whileHover={{ scale: 1.02 }}
+                                        whileTap={{ scale: 0.98 }}
                                     >
-                                        <span className="mr-2"><Database className="w-4 h-4" /></span>
+                                        <Database className="w-4 h-4 mr-2" />
                                         Inventario
-                                        <ChevronDown className={`ml-1 w-3 h-3 transition-transform duration-500 ease-in-out ${openMenu === "Inventario" ? 'rotate-180' : ''}`} />
-                                    </button>
-                                    {openMenu === "Inventario" && (
-                                        <div data-dropdown="true" className={`absolute left-0 mt-1 w-56 rounded-md ${pathname === '/' ? (isDarkMode ? 'bg-black/20 border-white/20 backdrop-blur-md' : 'bg-white/20 border-gray-200/30 backdrop-blur-md') : (isDarkMode ? 'bg-black border-white/10' : 'bg-white border-gray-200')} shadow-lg z-20 border animate-in slide-in-from-top-2 fade-in duration-300`}>
-                                            <div className="py-1">
-                                                <RoleGuard roles={["admin", "superadmin"]} userRole={userData.rol}>
-                                                    <Link
-                                                        href="/inventario/registro"
-                                                        onClick={closeAll}
-                                                        className={`block px-4 py-2 text-sm transition-all duration-200 ${pathname === "/inventario/registro"
-                                                            ? isDarkMode ? 'text-white bg-white/10 border-r-2 border-white' : 'text-gray-900 bg-gray-100 border-r-2 border-gray-900'
-                                                            : isDarkMode
-                                                                ? `text-gray-300 hover:text-white hover:translate-x-1 ${pathname === '/' ? 'hover:bg-white/10' : 'hover:bg-gray-800'}`
-                                                                : `text-gray-600 hover:text-gray-900 hover:translate-x-1 ${pathname === '/' ? 'hover:bg-black/5' : 'hover:bg-gray-100'}`
-                                                            }`}
-                                                    >
-                                                        Registro de nuevos bienes
-                                                    </Link>
-                                                </RoleGuard>
-                                            </div>
-                                        </div>
-                                    )}
-                                </div>
+                                        <motion.div
+                                            animate={{ rotate: openMenu === "Inventario" ? 180 : 0 }}
+                                            transition={{ duration: 0.3 }}
+                                        >
+                                            <ChevronDown className="ml-1 w-3 h-3" />
+                                        </motion.div>
+                                    </motion.button>
+                                    <AnimatePresence>
+                                        {openMenu === "Inventario" && (
+                                            <motion.div 
+                                                data-dropdown="true" 
+                                                className={`absolute left-0 mt-2 w-56 rounded-lg border overflow-hidden z-20 ${
+                                                    pathname === '/' 
+                                                        ? (isDarkMode ? 'bg-black/95 border-white/10 backdrop-blur-md' : 'bg-white/95 border-black/10 backdrop-blur-md') 
+                                                        : (isDarkMode ? 'bg-black border-white/10' : 'bg-white border-black/10')
+                                                }`}
+                                                initial={{ opacity: 0, y: -10 }}
+                                                animate={{ opacity: 1, y: 0 }}
+                                                exit={{ opacity: 0, y: -10 }}
+                                                transition={{ duration: 0.2 }}
+                                            >
+                                                <div className="py-1">
+                                                    <RoleGuard roles={["admin", "superadmin"]} userRole={userData.rol}>
+                                                        <Link
+                                                            href="/inventario/registro"
+                                                            onClick={closeAll}
+                                                            className={`block px-4 py-2.5 text-sm transition-all duration-200 ${pathname === "/inventario/registro"
+                                                                ? isDarkMode ? 'text-white bg-white/10 border-l-2 border-white' : 'text-black bg-black/10 border-l-2 border-black'
+                                                                : isDarkMode
+                                                                    ? `text-white/60 hover:text-white hover:bg-white/5`
+                                                                    : `text-black/60 hover:text-black hover:bg-black/5`
+                                                                }`}
+                                                        >
+                                                            Registro de nuevos bienes
+                                                        </Link>
+                                                    </RoleGuard>
+                                                </div>
+                                            </motion.div>
+                                        )}
+                                    </AnimatePresence>
+                                </motion.div>
                             </RoleGuard >
                             {
-                                menuItems.slice(1, 4).map((item) => (
-                                    <div
+                                menuItems.slice(1, 4).map((item, index) => (
+                                    <motion.div
                                         key={item.title}
                                         className="relative"
                                         onMouseEnter={() => handleMenuHover(item.title)}
                                         onMouseLeave={() => handleMenuHover(null)}
+                                        initial={{ opacity: 0, y: -10 }}
+                                        animate={{ opacity: 1, y: 0 }}
+                                        transition={{ duration: 0.3, delay: index * 0.05 }}
                                     >
                                         {item.submenu ? (
                                             <>
-                                                <button
-                                                    className={`flex items-center px-4 py-2 rounded-md transition-all duration-500 ease-in-out transform ${isActive(item.path)
-                                                        ? isDarkMode ? 'text-white bg-white/10 border border-white/20 scale-105' : 'text-gray-900 bg-gray-100 border border-gray-300 scale-105'
+                                                <motion.button
+                                                    className={`flex items-center px-4 py-2 rounded-lg text-sm font-medium transition-all duration-300 border ${isActive(item.path)
+                                                        ? isDarkMode ? 'text-white bg-white/5 border-white/20' : 'text-black bg-black/5 border-black/20'
                                                         : isDarkMode
-                                                            ? `text-gray-300 hover:text-white hover:scale-105 ${pathname === '/' ? 'hover:bg-white/10' : 'hover:bg-gray-800'}`
-                                                            : `text-gray-600 hover:text-gray-900 hover:scale-105 ${pathname === '/' ? 'hover:bg-black/5' : 'hover:bg-gray-100'}`
+                                                            ? `text-white/60 hover:text-white border-transparent hover:border-white/10 ${pathname === '/' ? 'hover:bg-white/5' : 'hover:bg-white/5'}`
+                                                            : `text-black/60 hover:text-black border-transparent hover:border-black/10 ${pathname === '/' ? 'hover:bg-black/5' : 'hover:bg-black/5'}`
                                                         }`}
+                                                    whileHover={{ scale: 1.02 }}
+                                                    whileTap={{ scale: 0.98 }}
                                                 >
                                                     <span className="mr-2">{item.icon}</span>
                                                     {item.title}
-                                                    <ChevronDown className={`ml-1 w-3 h-3 transition-transform duration-500 ease-in-out ${openMenu === item.title ? 'rotate-180' : ''}`} />
-                                                </button>
-                                                {openMenu === item.title && (
-                                                    <div data-dropdown="true" className={`absolute left-0 mt-1 w-56 rounded-md ${pathname === '/' ? (isDarkMode ? 'bg-black/20 border-white/20 backdrop-blur-md' : 'bg-white/20 border-gray-200/30 backdrop-blur-md') : (isDarkMode ? 'bg-black border-white/10' : 'bg-white border-gray-200')} shadow-lg z-20 border animate-in slide-in-from-top-2 fade-in duration-300`}>
+                                                    <motion.div
+                                                        animate={{ rotate: openMenu === item.title ? 180 : 0 }}
+                                                        transition={{ duration: 0.3 }}
+                                                    >
+                                                        <ChevronDown className="ml-1 w-3 h-3" />
+                                                    </motion.div>
+                                                </motion.button>
+                                                <AnimatePresence>
+                                                    {openMenu === item.title && (
+                                                        <motion.div 
+                                                            data-dropdown="true" 
+                                                            className={`absolute left-0 mt-2 w-56 rounded-lg border overflow-hidden z-20 ${
+                                                                pathname === '/' 
+                                                                    ? (isDarkMode ? 'bg-black/95 border-white/10 backdrop-blur-md' : 'bg-white/95 border-black/10 backdrop-blur-md') 
+                                                                    : (isDarkMode ? 'bg-black border-white/10' : 'bg-white border-black/10')
+                                                            }`}
+                                                            initial={{ opacity: 0, y: -10 }}
+                                                            animate={{ opacity: 1, y: 0 }}
+                                                            exit={{ opacity: 0, y: -10 }}
+                                                            transition={{ duration: 0.2 }}
+                                                        >
                                                         <div className="py-1">
                                                             {item.submenu.map((subItem) => (
                                                                 <div key={subItem.title}>
@@ -526,48 +572,61 @@ export default function NavigationBar() {
                                                                             onMouseLeave={() => handleSubmenuHover(null)}
                                                                         >
                                                                             <button
-                                                                                className={`flex justify-between w-full px-4 py-2 text-sm transition-all duration-300 ${isActive(subItem.path)
-                                                                                    ? isDarkMode ? 'text-white bg-white/10 border-r-2 border-white' : 'text-gray-900 bg-gray-100 border-r-2 border-gray-900'
+                                                                                className={`flex justify-between w-full px-4 py-2.5 text-sm transition-all duration-200 ${isActive(subItem.path)
+                                                                                    ? isDarkMode ? 'text-white bg-white/10 border-l-2 border-white' : 'text-black bg-black/10 border-l-2 border-black'
                                                                                     : isDarkMode
-                                                                                        ? `text-gray-300 hover:text-white hover:translate-x-1 ${pathname === '/' ? 'hover:bg-white/10' : 'hover:bg-gray-800'}`
-                                                                                        : `text-gray-600 hover:text-gray-900 hover:translate-x-1 ${pathname === '/' ? 'hover:bg-black/5' : 'hover:bg-gray-100'}`
+                                                                                        ? `text-white/60 hover:text-white hover:bg-white/5`
+                                                                                        : `text-black/60 hover:text-black hover:bg-black/5`
                                                                                     }`}
                                                                             >
                                                                                 {subItem.title}
                                                                                 <ChevronRight className="w-3 h-3" />
                                                                             </button>
-                                                                            {openSubmenu === `${item.title}-${subItem.title}` && (
-                                                                                <div data-dropdown="true" className={`absolute left-full top-0 w-56 rounded-md ${pathname === '/' ? (isDarkMode ? 'bg-black/20 border-white/20 backdrop-blur-md' : 'bg-white/20 border-gray-200/30 backdrop-blur-md') : (isDarkMode ? 'bg-black border-white/10' : 'bg-white border-gray-200')} shadow-lg z-30 border animate-in slide-in-from-left-2 fade-in duration-300`}>
-                                                                                    <div className="py-1">
-                                                                                        {subItem.children.map((child) => (
-                                                                                            <Link
-                                                                                                key={child.title}
-                                                                                                href={child.path}
-                                                                                                onClick={closeAll}
-                                                                                                className={`block px-4 py-2 text-sm transition-all duration-200 ${pathname === child.path
-                                                                                                    ? isDarkMode ? 'text-white bg-white/10 border-r-2 border-white' : 'text-gray-900 bg-gray-100 border-r-2 border-gray-900'
-                                                                                                    : isDarkMode
-                                                                                                        ? `text-gray-300 hover:text-white hover:translate-x-1 ${pathname === '/' ? 'hover:bg-white/10' : 'hover:bg-gray-800'}`
-                                                                                                        : `text-gray-600 hover:text-gray-900 hover:translate-x-1 ${pathname === '/' ? 'hover:bg-black/5' : 'hover:bg-gray-100'}`
-                                                                                                    }`}
-                                                                                            >
-                                                                                                {child.title}
-                                                                                            </Link>
-                                                                                        ))}
-                                                                                    </div>
-                                                                                </div>
-                                                                            )}
+                                                                            <AnimatePresence>
+                                                                                {openSubmenu === `${item.title}-${subItem.title}` && (
+                                                                                    <motion.div 
+                                                                                        data-dropdown="true" 
+                                                                                        className={`absolute left-full top-0 ml-1 w-56 rounded-lg border overflow-hidden z-30 ${
+                                                                                            pathname === '/' 
+                                                                                                ? (isDarkMode ? 'bg-black/95 border-white/10 backdrop-blur-md' : 'bg-white/95 border-black/10 backdrop-blur-md') 
+                                                                                                : (isDarkMode ? 'bg-black border-white/10' : 'bg-white border-black/10')
+                                                                                        }`}
+                                                                                        initial={{ opacity: 0, x: -10 }}
+                                                                                        animate={{ opacity: 1, x: 0 }}
+                                                                                        exit={{ opacity: 0, x: -10 }}
+                                                                                        transition={{ duration: 0.2 }}
+                                                                                    >
+                                                                                        <div className="py-1">
+                                                                                            {subItem.children.map((child) => (
+                                                                                                <Link
+                                                                                                    key={child.title}
+                                                                                                    href={child.path}
+                                                                                                    onClick={closeAll}
+                                                                                                    className={`block px-4 py-2.5 text-sm transition-all duration-200 ${pathname === child.path
+                                                                                                        ? isDarkMode ? 'text-white bg-white/10 border-l-2 border-white' : 'text-black bg-black/10 border-l-2 border-black'
+                                                                                                        : isDarkMode
+                                                                                                            ? `text-white/60 hover:text-white hover:bg-white/5`
+                                                                                                            : `text-black/60 hover:text-black hover:bg-black/5`
+                                                                                                        }`}
+                                                                                                >
+                                                                                                    {child.title}
+                                                                                                </Link>
+                                                                                            ))}
+                                                                                        </div>
+                                                                                    </motion.div>
+                                                                                )}
+                                                                            </AnimatePresence>
                                                                         </div>
                                                                     ) : subItem.title === 'Crear resguardo' ? (
                                                                         <RoleGuard roles={["admin", "superadmin"]} userRole={userData.rol}>
                                                                             <Link
                                                                                 href={subItem.path}
                                                                                 onClick={closeAll}
-                                                                                className={`block px-4 py-2 text-sm transition-all duration-200 ${pathname === subItem.path
-                                                                                    ? isDarkMode ? 'text-white bg-white/10 border-r-2 border-white' : 'text-gray-900 bg-gray-100 border-r-2 border-gray-900'
+                                                                                className={`block px-4 py-2.5 text-sm transition-all duration-200 ${pathname === subItem.path
+                                                                                    ? isDarkMode ? 'text-white bg-white/10 border-l-2 border-white' : 'text-black bg-black/10 border-l-2 border-black'
                                                                                     : isDarkMode
-                                                                                        ? `text-gray-300 hover:text-white hover:translate-x-1 ${pathname === '/' ? 'hover:bg-white/10' : 'hover:bg-gray-800'}`
-                                                                                        : `text-gray-600 hover:text-gray-900 hover:translate-x-1 ${pathname === '/' ? 'hover:bg-black/5' : 'hover:bg-gray-100'}`
+                                                                                        ? `text-white/60 hover:text-white hover:bg-white/5`
+                                                                                        : `text-black/60 hover:text-black hover:bg-black/5`
                                                                                     }`}
                                                                             >
                                                                                 {subItem.title}
@@ -577,11 +636,11 @@ export default function NavigationBar() {
                                                                         <Link
                                                                             href={subItem.path}
                                                                             onClick={closeAll}
-                                                                            className={`block px-4 py-2 text-sm transition-all duration-200 ${pathname === subItem.path
-                                                                                ? isDarkMode ? 'text-white bg-white/10 border-r-2 border-white' : 'text-gray-900 bg-gray-100 border-r-2 border-gray-900'
+                                                                            className={`block px-4 py-2.5 text-sm transition-all duration-200 ${pathname === subItem.path
+                                                                                ? isDarkMode ? 'text-white bg-white/10 border-l-2 border-white' : 'text-black bg-black/10 border-l-2 border-black'
                                                                                 : isDarkMode
-                                                                                    ? `text-gray-300 hover:text-white hover:translate-x-1 ${pathname === '/' ? 'hover:bg-white/10' : 'hover:bg-gray-800'}`
-                                                                                    : `text-gray-600 hover:text-gray-900 hover:translate-x-1 ${pathname === '/' ? 'hover:bg-black/5' : 'hover:bg-gray-100'}`
+                                                                                    ? `text-white/60 hover:text-white hover:bg-white/5`
+                                                                                    : `text-black/60 hover:text-black hover:bg-black/5`
                                                                                 }`}
                                                                         >
                                                                             {subItem.title}
@@ -590,74 +649,106 @@ export default function NavigationBar() {
                                                                 </div>
                                                             ))}
                                                         </div>
-                                                    </div>
+                                                    </motion.div>
                                                 )}
+                                            </AnimatePresence>
                                             </>
                                         ) : (
-                                            <Link
-                                                href={item.path}
-                                                onClick={closeAll}
-                                                className={`flex items-center px-4 py-2 rounded-md transition-all duration-500 ease-in-out transform ${isActive(item.path)
-                                                    ? 'text-white bg-white/10 border border-white/20 scale-105'
-                                                    : 'text-gray-300 hover:text-white hover:bg-gray-800 hover:scale-105'
-                                                    }`}
+                                            <motion.div
+                                                initial={{ opacity: 0, y: -10 }}
+                                                animate={{ opacity: 1, y: 0 }}
+                                                transition={{ duration: 0.3 }}
                                             >
-                                                <span className="mr-2">{item.icon}</span>
-                                                {item.title}
-                                            </Link>
+                                                <Link
+                                                    href={item.path}
+                                                    onClick={closeAll}
+                                                    className={`flex items-center px-4 py-2 rounded-lg text-sm font-medium transition-all duration-300 border ${isActive(item.path)
+                                                        ? isDarkMode ? 'text-white bg-white/5 border-white/20' : 'text-black bg-black/5 border-black/20'
+                                                        : isDarkMode
+                                                            ? `text-white/60 hover:text-white border-transparent hover:border-white/10`
+                                                            : `text-black/60 hover:text-black border-transparent hover:border-black/10`
+                                                        }`}
+                                                >
+                                                    <span className="mr-2">{item.icon}</span>
+                                                    {item.title}
+                                                </Link>
+                                            </motion.div>
                                         )}
-                                    </div>
+                                    </motion.div>
                                 ))
                             }
                             < RoleGuard roles={["admin", "superadmin"]} userRole={userData.rol} >
-                                <div
+                                <motion.div
                                     className="relative"
                                     onMouseEnter={() => handleMenuHover("Administración")}
                                     onMouseLeave={() => handleMenuHover(null)}
+                                    initial={{ opacity: 0, y: -10 }}
+                                    animate={{ opacity: 1, y: 0 }}
+                                    transition={{ duration: 0.3, delay: 0.2 }}
                                 >
-                                    <button
-                                        className={`flex items-center px-4 py-2 rounded-md transition-all duration-500 ease-in-out transform ${isActive("/admin")
-                                            ? isDarkMode ? 'text-white bg-white/10 border border-white/20 scale-105' : 'text-gray-900 bg-gray-100 border border-gray-300 scale-105'
+                                    <motion.button
+                                        className={`flex items-center px-4 py-2 rounded-lg text-sm font-medium transition-all duration-300 border ${isActive("/admin")
+                                            ? isDarkMode ? 'text-white bg-white/5 border-white/20' : 'text-black bg-black/5 border-black/20'
                                             : isDarkMode
-                                                ? `text-gray-300 hover:text-white hover:scale-105 ${pathname === '/' ? 'hover:bg-white/10' : 'hover:bg-gray-800'}`
-                                                : `text-gray-600 hover:text-gray-900 hover:scale-105 ${pathname === '/' ? 'hover:bg-black/5' : 'hover:bg-gray-100'}`
+                                                ? `text-white/60 hover:text-white border-transparent hover:border-white/10 ${pathname === '/' ? 'hover:bg-white/5' : 'hover:bg-white/5'}`
+                                                : `text-black/60 hover:text-black border-transparent hover:border-black/10 ${pathname === '/' ? 'hover:bg-black/5' : 'hover:bg-black/5'}`
                                             }`}
+                                        whileHover={{ scale: 1.02 }}
+                                        whileTap={{ scale: 0.98 }}
                                     >
-                                        <span className="mr-2"><Settings className="w-4 h-4" /></span>
+                                        <Settings className="w-4 h-4 mr-2" />
                                         Administración
-                                        <ChevronDown className={`ml-1 w-3 h-3 transition-transform duration-500 ease-in-out ${openMenu === "Administración" ? 'rotate-180' : ''}`} />
-                                    </button>
-                                    {openMenu === "Administración" && (
-                                        <div data-dropdown="true" className={`absolute left-0 mt-1 w-56 rounded-md ${pathname === '/' ? (isDarkMode ? 'bg-black/20 border-white/20 backdrop-blur-md' : 'bg-white/20 border-gray-200/30 backdrop-blur-md') : (isDarkMode ? 'bg-black border-white/10' : 'bg-white border-gray-200')} shadow-lg z-20 border animate-in slide-in-from-top-2 fade-in duration-300`}>
-                                            <div className="py-1">
-                                                <Link
-                                                    href="/admin/areas"
-                                                    onClick={closeAll}
-                                                    className={`block px-4 py-2 text-sm transition-all duration-200 ${pathname === "/admin/areas"
-                                                        ? isDarkMode ? 'text-white bg-white/10 border-r-2 border-white' : 'text-gray-900 bg-gray-100 border-r-2 border-gray-900'
-                                                        : isDarkMode
-                                                            ? `text-gray-300 hover:text-white hover:translate-x-1 ${pathname === '/' ? 'hover:bg-white/10' : 'hover:bg-gray-800'}`
-                                                            : `text-gray-600 hover:text-gray-900 hover:translate-x-1 ${pathname === '/' ? 'hover:bg-black/5' : 'hover:bg-gray-100'}`
-                                                        }`}
-                                                >
-                                                    Configuración General
-                                                </Link>
-                                                <Link
-                                                    href="/admin/personal"
-                                                    onClick={closeAll}
-                                                    className={`block px-4 py-2 text-sm transition-all duration-200 ${pathname === "/admin/personal"
-                                                        ? isDarkMode ? 'text-white bg-white/10 border-r-2 border-white' : 'text-gray-900 bg-gray-100 border-r-2 border-gray-900'
-                                                        : isDarkMode
-                                                            ? `text-gray-300 hover:text-white hover:translate-x-1 ${pathname === '/' ? 'hover:bg-white/10' : 'hover:bg-gray-800'}`
-                                                            : `text-gray-600 hover:text-gray-900 hover:translate-x-1 ${pathname === '/' ? 'hover:bg-black/5' : 'hover:bg-gray-100'}`
-                                                        }`}
-                                                >
-                                                    Directorio de Personal
-                                                </Link>
-                                            </div>
-                                        </div>
-                                    )}
-                                </div>
+                                        <motion.div
+                                            animate={{ rotate: openMenu === "Administración" ? 180 : 0 }}
+                                            transition={{ duration: 0.3 }}
+                                        >
+                                            <ChevronDown className="ml-1 w-3 h-3" />
+                                        </motion.div>
+                                    </motion.button>
+                                    <AnimatePresence>
+                                        {openMenu === "Administración" && (
+                                            <motion.div 
+                                                data-dropdown="true" 
+                                                className={`absolute left-0 mt-2 w-56 rounded-lg border overflow-hidden z-20 ${
+                                                    pathname === '/' 
+                                                        ? (isDarkMode ? 'bg-black/95 border-white/10 backdrop-blur-md' : 'bg-white/95 border-black/10 backdrop-blur-md') 
+                                                        : (isDarkMode ? 'bg-black border-white/10' : 'bg-white border-black/10')
+                                                }`}
+                                                initial={{ opacity: 0, y: -10 }}
+                                                animate={{ opacity: 1, y: 0 }}
+                                                exit={{ opacity: 0, y: -10 }}
+                                                transition={{ duration: 0.2 }}
+                                            >
+                                                <div className="py-1">
+                                                    <Link
+                                                        href="/admin/areas"
+                                                        onClick={closeAll}
+                                                        className={`block px-4 py-2.5 text-sm transition-all duration-200 ${pathname === "/admin/areas"
+                                                            ? isDarkMode ? 'text-white bg-white/10 border-l-2 border-white' : 'text-black bg-black/10 border-l-2 border-black'
+                                                            : isDarkMode
+                                                                ? `text-white/60 hover:text-white hover:bg-white/5`
+                                                                : `text-black/60 hover:text-black hover:bg-black/5`
+                                                            }`}
+                                                    >
+                                                        Configuración General
+                                                    </Link>
+                                                    <Link
+                                                        href="/admin/personal"
+                                                        onClick={closeAll}
+                                                        className={`block px-4 py-2.5 text-sm transition-all duration-200 ${pathname === "/admin/personal"
+                                                            ? isDarkMode ? 'text-white bg-white/10 border-l-2 border-white' : 'text-black bg-black/10 border-l-2 border-black'
+                                                            : isDarkMode
+                                                                ? `text-white/60 hover:text-white hover:bg-white/5`
+                                                                : `text-black/60 hover:text-black hover:bg-black/5`
+                                                            }`}
+                                                    >
+                                                        Directorio de Personal
+                                                    </Link>
+                                                </div>
+                                            </motion.div>
+                                        )}
+                                    </AnimatePresence>
+                                </motion.div>
                             </RoleGuard >
                         </div >
                     </div >

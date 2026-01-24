@@ -4,7 +4,6 @@ import "./globals.css";
 import HeaderContainer from "@/components/HeaderContainer";
 import { SpeedInsights } from '@vercel/speed-insights/next';
 import { ThemeProvider } from "@/context/ThemeContext";
-import { InactivityProvider } from "@/context/InactivityContext";
 import { NotificationProvider } from "@/context/NotificationContext";
 import IndexationPopover from "@/components/IndexationPopover";
 
@@ -39,18 +38,16 @@ export default function RootLayout({
         className={`${geistSans.variable} ${geistMono.variable} antialiased flex flex-col h-screen`}
       >
         <ThemeProvider>
-          <InactivityProvider>
-            <NotificationProvider>
-              <div>
-                <HeaderContainer />
-              </div>
-              <main className="flex-1 overflow-hidden">
-                {children}
-                <SpeedInsights />
-              </main>
-              <IndexationPopover />
-            </NotificationProvider>
-          </InactivityProvider>
+          <NotificationProvider>
+            <div>
+              <HeaderContainer />
+            </div>
+            <main className="flex-1 overflow-hidden">
+              {children}
+              <SpeedInsights />
+            </main>
+            <IndexationPopover />
+          </NotificationProvider>
         </ThemeProvider>
       </body>
     </html>
