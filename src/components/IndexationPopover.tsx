@@ -90,10 +90,13 @@ export default function IndexationPopover() {
             // Show if reconnecting or reconciling
             if (module.state.reconnectionStatus !== 'idle') return true;
             
+            // IMPORTANTE: NO mostrar módulos indexados con 0 registros
+            // Estos módulos vacíos no necesitan aparecer en el popover
+            if (module.state.isIndexed && !module.state.isIndexing && module.count === 0) return false;
+            
             // Show if indexed successfully with data (count > 0)
             if (module.state.isIndexed && !module.state.isIndexing && module.count > 0) return true;
             
-            // Don't show if indexed but no data (count === 0)
             return false;
         });
         
