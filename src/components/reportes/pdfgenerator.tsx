@@ -52,9 +52,62 @@ export const generatePDF = async ({ data, columns, title, fileName, firmas = [] 
     const headerFontSize = 7; // Increased header font size from 5 to 7
     const verticalPadding = 3;
 
+    // Función para sanitizar texto y remover caracteres no soportados por WinAnsi
+    const sanitizeText = (text: string): string => {
+        if (!text) return '';
+        // Reemplazar caracteres especiales comunes que no están en WinAnsi
+        return text
+            .replace(/Ω/g, 'Ohm')
+            .replace(/μ/g, 'u')
+            .replace(/α/g, 'alpha')
+            .replace(/β/g, 'beta')
+            .replace(/γ/g, 'gamma')
+            .replace(/δ/g, 'delta')
+            .replace(/π/g, 'pi')
+            .replace(/Σ/g, 'Sigma')
+            .replace(/θ/g, 'theta')
+            .replace(/λ/g, 'lambda')
+            .replace(/φ/g, 'phi')
+            .replace(/ψ/g, 'psi')
+            .replace(/€/g, 'EUR')
+            .replace(/£/g, 'GBP')
+            .replace(/¥/g, 'YEN')
+            .replace(/©/g, '(c)')
+            .replace(/®/g, '(R)')
+            .replace(/™/g, '(TM)')
+            .replace(/°/g, ' grados')
+            .replace(/±/g, '+/-')
+            .replace(/×/g, 'x')
+            .replace(/÷/g, '/')
+            .replace(/≤/g, '<=')
+            .replace(/≥/g, '>=')
+            .replace(/≠/g, '!=')
+            .replace(/≈/g, '~')
+            .replace(/∞/g, 'infinito')
+            .replace(/√/g, 'raiz')
+            .replace(/∑/g, 'suma')
+            .replace(/∫/g, 'integral')
+            .replace(/∂/g, 'd')
+            .replace(/∆/g, 'Delta')
+            .replace(/∏/g, 'Pi')
+            .replace(/∈/g, 'en')
+            .replace(/∉/g, 'no en')
+            .replace(/∅/g, 'vacio')
+            .replace(/∩/g, 'interseccion')
+            .replace(/∪/g, 'union')
+            .replace(/⊂/g, 'subconjunto')
+            .replace(/⊃/g, 'superconjunto')
+            .replace(/⊆/g, 'subconjunto o igual')
+            .replace(/⊇/g, 'superconjunto o igual')
+            // Remover cualquier otro carácter no ASCII que pueda causar problemas
+            .replace(/[^\x00-\xFF]/g, '?');
+    };
+
     // Función para dividir texto en líneas, incluyendo palabras largas
     const wrapText = (text: string, maxWidth: number, font: import('pdf-lib').PDFFont, fontSize: number) => {
-        const words = text.toString().split(' ');
+        // Sanitizar el texto antes de procesarlo
+        const sanitizedText = sanitizeText(text);
+        const words = sanitizedText.toString().split(' ');
         const lines: string[] = [];
         let currentLine = '';
 

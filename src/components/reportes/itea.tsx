@@ -1,11 +1,11 @@
 "use client";
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useTheme } from '@/context/ThemeContext';
 import {
-    FileText, Download, FileSpreadsheet, File,
+    FileText, Download, FileSpreadsheet, File, 
     FileDigit, X, AlertCircle,
-    UserX, MapPin, Trash2, CheckCircle,
-    Database, ListChecks, Settings2, Pencil
+    CheckCircle, Database, ListChecks, Settings2,
+    Pencil, UserX, MapPin, Trash2
 } from 'lucide-react';
 import supabase from '@/app/lib/supabase/client';
 import { generateExcel } from './excelgenerator';
@@ -15,28 +15,44 @@ import RoleGuard from "@/components/roleGuard";
 import { useNotifications } from '@/hooks/useNotifications';
 import { useAdminIndexation } from '@/hooks/indexation/useAdminIndexation';
 import type { Firma } from '@/types/admin';
+import { motion, AnimatePresence } from 'framer-motion';
 
-export default function ReportesIteaDashboard() {
+interface Mueble {
+    id: number;
+    id_inv: string;
+    rubro: string | null;
+    descripcion: string | null;
+    valor: number | null;
+    f_adq: string | null;
+    formadq: string | null;
+    proveedor: string | null;
+    factura: string | null;
+    ubicacion_es: string | null;
+    ubicacion_mu: string | null;
+    ubicacion_no: string | null;
+    estado: string | null;
+    estatus: string | null;
+    area: string | null;
+    usufinal: string | null;
+    fechabaja: string | null;
+    causadebaja: string | null;
+    resguardante: string | null;
+    image_path: string | null;
+}
+
+export default function ReportesIneaDashboard() {
     const { isDarkMode } = useTheme();
-    // Estado para controlar el modal de exportación
     const [exportModalOpen, setExportModalOpen] = useState(false);
     const [selectedReport, setSelectedReport] = useState('');
     const [error, setError] = useState<string | null>(null);
-
-    // Estados para la gestión de firmas
     const [firmasModalOpen, setFirmasModalOpen] = useState(false);
     const [editingFirma, setEditingFirma] = useState<Firma | null>(null);
-
-    // Loader de exportación
     const [isExporting, setIsExporting] = useState(false);
     const [exportingFormat, setExportingFormat] = useState<string | null>(null);
 
     const { createNotification } = useNotifications();
-    
-    // Usar firmas desde el hook de indexación admin
     const { firmas } = useAdminIndexation();
 
-    // Columnas a exportar
     const exportColumns = [
         { header: 'ID Inventario', key: 'id_inv', width: 18 },
         { header: 'Rubro', key: 'rubro', width: 18 },
@@ -58,7 +74,6 @@ export default function ReportesIteaDashboard() {
         { header: 'Resguardante', key: 'resguardante', width: 18 },
     ];
 
-    // Obtiene el filtro de estatus según el reporte
     function getEstatusFilter(report: string) {
         switch (report) {
             case 'Activos':
@@ -70,71 +85,48 @@ export default function ReportesIteaDashboard() {
             case 'Obsoletos':
                 return 'OBSOLETO';
             default:
-                return null; // General: sin filtro
+                return null;
         }
     }
 
-    // Datos de reportes ITEA con íconos coloridos y fondos adaptativos
     const reportes = [
         {
             id: 1,
             title: 'General',
             path: '/reportes/itea/general',
-            icon: <Database className="h-5 w-5" />,
-            color: isDarkMode ? 'bg-gray-900/40' : 'bg-blue-50',
-            borderColor: isDarkMode ? 'border-gray-600/50' : 'border-blue-200',
-            hoverColor: isDarkMode ? 'hover:border-gray-400' : 'hover:border-blue-400',
-            iconColor: isDarkMode ? 'text-blue-400' : 'text-blue-600'
+            icon: <Database className="h-5 w-5" />
         },
         {
             id: 2,
             title: 'Activos',
             path: '/reportes/itea/activos',
-            icon: <CheckCircle className="h-5 w-5" />,
-            color: isDarkMode ? 'bg-white/5' : 'bg-emerald-50',
-            borderColor: isDarkMode ? 'border-gray-700/50' : 'border-emerald-200',
-            hoverColor: isDarkMode ? 'hover:border-gray-500' : 'hover:border-emerald-400',
-            iconColor: isDarkMode ? 'text-emerald-400' : 'text-emerald-600'
+            icon: <CheckCircle className="h-5 w-5" />
         },
         {
             id: 3,
             title: 'Inactivos',
             path: '/reportes/itea/inactivos',
-            icon: <UserX className="h-5 w-5" />,
-            color: isDarkMode ? 'bg-gray-800/30' : 'bg-amber-50',
-            borderColor: isDarkMode ? 'border-gray-600/40' : 'border-amber-200',
-            hoverColor: isDarkMode ? 'hover:border-gray-400' : 'hover:border-amber-400',
-            iconColor: isDarkMode ? 'text-amber-400' : 'text-amber-600'
+            icon: <UserX className="h-5 w-5" />
         },
         {
             id: 4,
             title: 'No localizados',
             path: '/reportes/itea/no-localizados',
-            icon: <MapPin className="h-5 w-5" />,
-            color: isDarkMode ? 'bg-gray-950/50' : 'bg-rose-50',
-            borderColor: isDarkMode ? 'border-gray-800/60' : 'border-rose-200',
-            hoverColor: isDarkMode ? 'hover:border-gray-600' : 'hover:border-rose-400',
-            iconColor: isDarkMode ? 'text-rose-400' : 'text-rose-600'
+            icon: <MapPin className="h-5 w-5" />
         },
         {
             id: 5,
             title: 'Obsoletos',
             path: '/reportes/itea/obsoletos',
-            icon: <Trash2 className="h-5 w-5" />,
-            color: isDarkMode ? 'bg-white/10' : 'bg-violet-50',
-            borderColor: isDarkMode ? 'border-gray-700/50' : 'border-violet-200',
-            hoverColor: isDarkMode ? 'hover:border-gray-500' : 'hover:border-violet-400',
-            iconColor: isDarkMode ? 'text-violet-400' : 'text-violet-600'
-        },
+            icon: <Trash2 className="h-5 w-5" />
+        }
     ];
 
-    // Función para abrir el modal de exportación
     const openExportModal = (reportTitle: string) => {
         setSelectedReport(reportTitle);
         setExportModalOpen(true);
     };
 
-    // Exporta el reporte real trayendo todos los datos (paginación manual)
     const handleExport = async (format: string) => {
         setError(null);
         setIsExporting(true);
@@ -144,33 +136,9 @@ export default function ReportesIteaDashboard() {
             const estatus = getEstatusFilter(selectedReport);
             if (estatus) query = query.eq('estatus', estatus);
 
-            // Usar firmas desde el hook (ya están indexadas)
             const firmasData = firmas;
 
-            // Traer todos los datos paginando manualmente
-            interface MuebleItea {
-                id_inv: number;
-                rubro: string;
-                descripcion: string;
-                valor: number;
-                f_adq: string;
-                formadq: string;
-                proveedor: string;
-                factura: string;
-                ubicacion_es: string;
-                ubicacion_mu: string;
-                ubicacion_no: string;
-                estado: string;
-                estatus: string;
-                area: string;
-                usufinal: string;
-                fechabaja: string | null;
-                causadebaja: string | null;
-                resguardante: string;
-                [key: string]: string | number | null; // Add index signature
-            }
-
-            let allData: MuebleItea[] = [];
+            let allData: Mueble[] = [];
             let from = 0;
             const pageSize = 1000;
             let keepGoing = true;
@@ -192,19 +160,20 @@ export default function ReportesIteaDashboard() {
                 setError('No hay datos para exportar en este reporte.');
                 return;
             }
-            // Nombre de hoja de Excel simple y seguro
             let worksheetName = selectedReport.replace(/[^a-zA-Z0-9 ]/g, '').slice(0, 28);
             if (!worksheetName) worksheetName = 'Reporte';
-            const fileName = `reporte_itea_${selectedReport.toLowerCase().replace(/ /g, '_')}_${new Date().toISOString().slice(0, 10)}`;
+            const fileName = `reporte_itea_${selectedReport.toLowerCase().replace(/ /g, '_')}_${new Date().toISOString().slice(0,10)}`;
+
+            const exportData: Record<string, unknown>[] = allData.map(item => ({
+                ...item,
+                valor: item.valor?.toString() || '',
+                f_adq: item.f_adq || '',
+                fechabaja: item.fechabaja || ''
+            }));
+
             if (format === 'Excel') {
-                await generateExcel({ 
-                    data: allData as Record<string, unknown>[], 
-                    columns: exportColumns, 
-                    fileName, 
-                    worksheetName 
-                });
+                await generateExcel({ data: exportData, fileName, worksheetName });
             } else if (format === 'PDF') {
-                // Determinar el título específico según el tipo de reporte
                 let reportTitle;
                 switch(selectedReport) {
                     case 'Activos':
@@ -240,18 +209,17 @@ export default function ReportesIteaDashboard() {
                 ];
 
                 await generatePDF({ 
-                    data: allData, 
+                    data: exportData, 
                     columns: pdfColumns, 
                     title: reportTitle, 
                     fileName,
                     firmas: firmasData 
                 });
             } else {
-                // CSV with type-safe key access
                 const csv = [
-                    exportColumns.map(c => c.header).join(','), 
-                    ...allData.map(row => 
-                        exportColumns.map(c => `"${(row[c.key as keyof MuebleItea] ?? '')}"`)
+                    exportColumns.map(c => c.header).join(','),
+                    ...exportData.map(row => 
+                        exportColumns.map(c => `"${row[c.key] ?? ''}"`)
                         .join(',')
                     )
                 ].join('\n');
@@ -262,9 +230,8 @@ export default function ReportesIteaDashboard() {
                 a.click();
             }
             setExportModalOpen(false);
-            // Notificación de exportación exitosa
             await createNotification({
-                title: `Reporte ITEA exportado (${format})`,
+                title: `reporte ITEA exportado (${format})`,
                 description: `El usuario exportó el reporte ITEA en formato ${format} para la categoría "${selectedReport}".`,
                 type: 'success',
                 category: 'reportes',
@@ -272,10 +239,9 @@ export default function ReportesIteaDashboard() {
                 importance: 'medium',
                 data: { changes: [`Exportación de reporte: ${selectedReport}`], affectedTables: ['mueblesitea'] }
             });
-        } catch (error: unknown) {
+        } catch (error: Error | unknown) {
             setError('Error al exportar el reporte: ' + (error instanceof Error ? error.message : 'Error desconocido'));
             console.error(error);
-            // Notificación de error al exportar
             await createNotification({
                 title: 'Error al exportar reporte ITEA',
                 description: `Error al exportar el reporte ITEA: ${(error instanceof Error ? error.message : 'Error desconocido')}`,
@@ -294,530 +260,641 @@ export default function ReportesIteaDashboard() {
     const userRole = useUserRole();
 
     return (
-        <div className={`min-h-screen p-2 sm:p-4 md:p-6 lg:p-8 transition-colors duration-500 ${
+        <div className={`min-h-screen p-4 md:p-8 transition-colors duration-300 ${
             isDarkMode 
                 ? 'bg-black text-white' 
-                : 'bg-gradient-to-br from-gray-50 via-white to-violet-50 text-gray-900'
+                : 'bg-white text-black'
         }`}>
-            <div className={`w-full mx-auto rounded-lg sm:rounded-xl shadow-2xl overflow-hidden transition-all duration-500 transform ${
-                isDarkMode 
-                    ? 'bg-gradient-to-br from-gray-900/30 via-black to-gray-900/20 border border-gray-800/30' 
-                    : 'bg-gradient-to-br from-white via-violet-50/30 to-white border border-gray-200'
-            }`}>
+            <motion.div 
+                className="w-full max-w-5xl mx-auto"
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.4 }}
+            >
                 {/* Header */}
-                <div className={`p-4 sm:p-6 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 sm:gap-0 transition-colors duration-500 ${
-                    isDarkMode 
-                        ? 'bg-black/50 border-b border-gray-800/30' 
-                        : 'bg-white/80 border-b border-gray-200'
-                }`}>
-                    <h1 className={`text-xl sm:text-2xl md:text-3xl font-bold flex items-center transition-colors duration-500 ${
-                        isDarkMode ? 'text-white' : 'text-gray-900'
-                    }`}>
-                        <span className={`mr-2 sm:mr-3 p-1 sm:p-2 rounded-lg text-sm sm:text-base transition-colors duration-500 ${
-                            isDarkMode 
-                                ? 'bg-gray-900/30 text-white border border-gray-700/50' 
-                                : 'bg-gray-600 text-white border border-gray-700'
-                        }`}>
-                            <FileText className="h-4 w-4 inline mr-1" />
-                            REP
-                        </span>
-                        Reportes ITEA
-                    </h1>
-                    <div className="flex items-center gap-4">
-                        <RoleGuard roles={["admin", "superadmin"]} userRole={userRole}>
-                            <button
-                                onClick={() => setFirmasModalOpen(true)}
-                                className={`p-2 rounded-lg transition-colors ${
-                                    isDarkMode 
-                                        ? 'text-gray-400 hover:text-violet-400 border border-gray-800 hover:border-violet-500/30'
-                                        : 'text-gray-600 hover:text-violet-600 border border-gray-300 hover:border-violet-400/50'
-                                }`}
-                                title="Configurar Firmas"
-                            >
-                                <Settings2 className="h-5 w-5" />
-                            </button>
-                        </RoleGuard>
-                        <div className={`flex items-center gap-2 text-sm transition-colors duration-500 ${
-                            isDarkMode ? 'text-gray-400' : 'text-gray-600'
-                        }`}>
-                            <ListChecks className={`h-4 w-4 ${
-                                isDarkMode ? 'text-violet-400' : 'text-violet-600'
-                            }`} />
-                            <span>{reportes.length} categorías de reportes</span>
-                        </div>
+                <div className={`flex justify-between items-center mb-8 pb-6 border-b ${isDarkMode ? 'border-white/10' : 'border-black/10'}`}>
+                    <div>
+                        <h1 className="text-3xl font-light tracking-tight mb-1">
+                            Reportes ITEA
+                        </h1>
+                        <p className={`text-sm ${isDarkMode ? 'text-white/40' : 'text-black/40'}`}>
+                            Exporta reportes en diferentes formatos
+                        </p>
                     </div>
-                </div>
-
-                {/* Main content - Nueva disposición en forma de cartas hexagonales */}
-                <div className="p-4 sm:p-6 flex justify-center">
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 place-items-center w-full">
-                        {reportes.map((reporte) => (
-                            <div
-                                key={reporte.id}
-                                className={`${reporte.color} backdrop-blur-sm rounded-lg border ${reporte.borderColor} p-4 ${reporte.hoverColor} transition-all duration-300 shadow-lg hover:shadow-xl hover:scale-[1.02] flex flex-col items-center w-full min-h-[260px] relative overflow-hidden`}
-                            >
-                                {/* Efecto de brillo en la esquina */}
-                                <div className={`absolute -top-10 -right-10 w-20 h-20 bg-gradient-to-br transform rotate-45 ${
-                                    isDarkMode ? 'from-white/10 to-transparent' : 'from-violet-200/30 to-transparent'
-                                }`}></div>
-                                
-                                <div className="flex justify-between items-center mb-4 w-full relative">
-                                    <div className="flex items-center mx-auto">
-                                        <div className={`p-2 rounded-lg mr-3 border ${reporte.borderColor} transition-colors duration-500 ${
-                                            isDarkMode ? 'bg-black' : 'bg-white'
-                                        }`}>
-                                            <span className={reporte.iconColor}>{reporte.icon}</span>
-                                        </div>
-                                        <h3 className={`text-lg font-medium transition-colors duration-500 ${
-                                            isDarkMode ? 'text-white' : 'text-gray-900'
-                                        }`}>{reporte.title}</h3>
-                                    </div>
-                                </div>
-
-                                <p className={`mb-4 text-sm text-center transition-colors duration-500 ${
-                                    isDarkMode ? 'text-gray-400' : 'text-gray-600'
-                                }`}>
-                                    {reporte.title === 'General' ? 'Información completa de todos los registros del sistema' :
-                                        reporte.title === 'Activos' ? 'Registros actualmente en uso, con sus diferentes estados' :
-                                            reporte.title === 'Inactivos' ? 'Registros dados de baja temporalmente' :
-                                                reporte.title === 'No localizados' ? 'Registros con paradero desconocido' :
-                                                    'Registros marcados para desecho'}
-                                </p>
-
-                                <button
-                                    onClick={() => openExportModal(reporte.title)}
-                                    className={`w-full py-2.5 rounded-lg flex items-center justify-center gap-2 transition-all duration-300 border ${reporte.borderColor} hover:${reporte.hoverColor} group ${
-                                        isDarkMode ? 'bg-black/40 hover:bg-black/60' : 'bg-white/60 hover:bg-white/80'
-                                    }`}
-                                >
-                                    <Download size={16} className={`${reporte.iconColor} group-hover:scale-110 transition-transform duration-300`} />
-                                    <span className={reporte.iconColor}>Exportar</span>
-                                </button>
-                            </div>
-                        ))}
-                    </div>
-                </div>
-
-                {/* Footer con nuevo diseño */}
-                <div className={`p-4 text-center text-sm transition-colors duration-500 ${
-                    isDarkMode 
-                        ? 'bg-black/50 border-t border-gray-800/30 text-gray-300/70' 
-                        : 'bg-white/80 border-t border-gray-200 text-gray-600'
-                }`}>
-                    <p>Selecciona un reporte para exportarlo en PDF, Excel o CSV</p>
-                </div>
-            </div>
-
-            {/* Modal de exportación - Actualizado con el nuevo esquema de colores */}
-            {exportModalOpen && (
-                <div className={`fixed inset-0 flex items-center justify-center z-50 px-4 animate-fadeIn backdrop-blur-sm ${
-                    isDarkMode ? 'bg-black/90' : 'bg-black/60'
-                }`}>
-                    <div className={`rounded-2xl shadow-2xl w-full max-w-md overflow-hidden transition-all duration-300 transform flex flex-col items-center ${
-                        isDarkMode 
-                            ? 'bg-gradient-to-br from-gray-900/50 via-black to-gray-900/30 border border-gray-600/30' 
-                            : 'bg-gradient-to-br from-white via-violet-50/30 to-white border border-gray-300'
-                    }`}>
-                        <div className="relative p-6 flex flex-col items-center w-full">
-                            <div className={`absolute top-0 left-0 w-full h-1 bg-gradient-to-r ${
+                    <RoleGuard roles={["admin", "superadmin"]} userRole={userRole}>
+                        <motion.button
+                            onClick={() => setFirmasModalOpen(true)}
+                            className={`p-2 rounded-lg transition-colors ${
                                 isDarkMode 
-                                    ? 'from-gray-500/60 via-gray-400 to-gray-500/60' 
-                                    : 'from-violet-400/60 via-violet-500 to-violet-400/60'
-                            }`}></div>
-                            <button
-                                onClick={() => setExportModalOpen(false)}
-                                className={`absolute top-3 right-3 p-2 rounded-full transition-colors ${
-                                    isDarkMode 
-                                        ? 'bg-black/60 hover:bg-gray-900/30 text-gray-400 hover:text-gray-300 border border-gray-500/30'
-                                        : 'bg-white/80 hover:bg-gray-100 text-gray-600 hover:text-gray-800 border border-gray-300'
-                                }`}
-                                title="Cerrar"
-                            >
-                                <X className="h-4 w-4" />
-                            </button>
-                            <div className="flex flex-col items-center text-center mb-4 w-full">
-                                <div className={`p-3 rounded-full mb-3 mx-auto transition-colors duration-500 ${
-                                    isDarkMode 
-                                        ? 'bg-gray-500/10 border border-gray-500/30' 
-                                        : 'bg-violet-100 border border-violet-200'
-                                }`}>
-                                    <FileDigit className={`h-8 w-8 transition-colors duration-500 ${
-                                        isDarkMode ? 'text-gray-400' : 'text-violet-600'
-                                    }`} />
-                                </div>
-                                <h3 className={`text-2xl font-bold transition-colors duration-500 ${
-                                    isDarkMode ? 'text-white' : 'text-gray-900'
-                                }`}>Exportar Reporte</h3>
-                                <p className={`mt-2 transition-colors duration-500 ${
-                                    isDarkMode ? 'text-gray-400' : 'text-gray-600'
-                                }`}>
-                                    Selecciona el formato para exportar el reporte <span className={`font-bold ${
-                                        isDarkMode ? 'text-gray-300' : 'text-gray-800'
-                                    }`}>{selectedReport}</span>
-                                </p>
-                            </div>
-                            <div className="space-y-5 mt-6 w-full">
-                                <div className="grid grid-cols-3 gap-3">
-                                    <button
-                                        onClick={() => handleExport('PDF')}
-                                        className={`flex flex-col items-center justify-center p-4 rounded-xl transition-all transform hover:scale-[1.02] group ${
-                                            isDarkMode 
-                                                ? 'bg-black hover:bg-gray-900/20 border border-gray-800/30 hover:border-gray-600/50'
-                                                : 'bg-white hover:bg-gray-50 border border-gray-200 hover:border-gray-400'
-                                        }`}
-                                        disabled={isExporting}
-                                    >
-                                        <File size={32} className={`transition-colors mb-2 ${
-                                            isDarkMode 
-                                                ? 'text-gray-400 group-hover:text-gray-300' 
-                                                : 'text-gray-600 group-hover:text-gray-700'
-                                        }`} />
-                                        <span className={`font-medium ${
-                                            isDarkMode ? 'text-gray-100' : 'text-gray-800'
-                                        }`}>PDF</span>
-                                        <span className={`text-xs ${
-                                            isDarkMode ? 'text-gray-400' : 'text-gray-600'
-                                        }`}>Documento</span>
-                                    </button>
-                                    <button
-                                        onClick={() => handleExport('Excel')}
-                                        className={`flex flex-col items-center justify-center p-4 rounded-xl transition-all transform hover:scale-[1.02] group ${
-                                            isDarkMode 
-                                                ? 'bg-black hover:bg-gray-900/20 border border-gray-800/30 hover:border-gray-600/50'
-                                                : 'bg-white hover:bg-gray-50 border border-gray-200 hover:border-gray-400'
-                                        }`}
-                                        disabled={isExporting}
-                                    >
-                                        <FileSpreadsheet size={32} className={`transition-colors mb-2 ${
-                                            isDarkMode 
-                                                ? 'text-gray-400 group-hover:text-gray-300' 
-                                                : 'text-gray-600 group-hover:text-gray-700'
-                                        }`} />
-                                        <span className={`font-medium ${
-                                            isDarkMode ? 'text-gray-100' : 'text-gray-800'
-                                        }`}>Excel</span>
-                                        <span className={`text-xs ${
-                                            isDarkMode ? 'text-gray-400' : 'text-gray-600'
-                                        }`}>Hoja cálculo</span>
-                                    </button>
-                                    <button
-                                        onClick={() => handleExport('CSV')}
-                                        className={`flex flex-col items-center justify-center p-4 rounded-xl transition-all transform hover:scale-[1.02] group ${
-                                            isDarkMode 
-                                                ? 'bg-black hover:bg-gray-900/20 border border-gray-800/30 hover:border-gray-600/50'
-                                                : 'bg-white hover:bg-gray-50 border border-gray-200 hover:border-gray-400'
-                                        }`}
-                                        disabled={isExporting}
-                                    >
-                                        <FileText size={32} className={`transition-colors mb-2 ${
-                                            isDarkMode 
-                                                ? 'text-gray-400 group-hover:text-gray-300' 
-                                                : 'text-gray-600 group-hover:text-gray-700'
-                                        }`} />
-                                        <span className={`font-medium ${
-                                            isDarkMode ? 'text-gray-100' : 'text-gray-800'
-                                        }`}>CSV</span>
-                                        <span className={`text-xs ${
-                                            isDarkMode ? 'text-gray-400' : 'text-gray-600'
-                                        }`}>Datos crudos</span>
-                                    </button>
-                                </div>
-                                <div className="flex justify-end mt-4">
-                                    <button
-                                        onClick={() => setExportModalOpen(false)}
-                                        className={`px-4 py-2 rounded-lg transition-colors text-sm ${
-                                            isDarkMode 
-                                                ? 'bg-black hover:bg-violet-900/20 border border-violet-800/30 text-violet-300 hover:text-violet-200'
-                                                : 'bg-gray-100 hover:bg-gray-200 border border-gray-300 text-gray-700 hover:text-gray-800'
-                                        }`}
-                                    >
-                                        Cancelar
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            )}
-
-            {/* Modal de Firmas - Actualizado con el nuevo esquema de colores */}
-            {firmasModalOpen && (
-                <div className={`fixed inset-0 flex items-center justify-center z-50 px-4 backdrop-blur-md animate-fadeIn ${
-                    isDarkMode ? 'bg-black/95' : 'bg-black/60'
-                }`}>
-                    <div className={`w-full max-w-md rounded-2xl overflow-hidden transition-colors duration-500 ${
-                        isDarkMode 
-                            ? 'bg-gradient-to-br from-gray-900/30 via-black to-gray-900/20 border border-gray-800/30'
-                            : 'bg-gradient-to-br from-white via-violet-50/30 to-white border border-violet-200'
-                    }`}>
-                        {/* Barra superior */}
-                        <div className={`h-0.5 w-full bg-gradient-to-r ${
-                            isDarkMode 
-                                ? 'from-gray-700/80 via-gray-400 to-gray-700/80' 
-                                : 'from-violet-400/80 via-violet-500 to-violet-400/80'
-                        }`}></div>
-                        <div className="p-6">
-                            {/* Header */}
-                            <div className="flex items-center justify-between mb-5">
-                                <div className="flex items-center gap-3">
-                                    <div className={`p-2 rounded-lg transition-colors duration-500 ${
-                                        isDarkMode 
-                                            ? 'bg-black border border-violet-700/30' 
-                                            : 'bg-white border border-violet-200'
-                                    }`}>
-                                        <Settings2 className={`h-5 w-5 ${
-                                            isDarkMode ? 'text-violet-400' : 'text-violet-600'
-                                        }`} />
-                                    </div>
-                                    <h3 className={`text-lg font-semibold transition-colors duration-500 ${
-                                        isDarkMode ? 'text-white' : 'text-gray-900'
-                                    }`}>Configuración de Firmas</h3>
-                                </div>
-                                <button
-                                    onClick={() => setFirmasModalOpen(false)}
-                                    className={`p-1.5 rounded-lg transition-colors focus:outline-none ${
-                                        isDarkMode 
-                                            ? 'text-gray-500 hover:text-violet-400' 
-                                            : 'text-gray-600 hover:text-violet-600'
-                                    }`}
-                                    title="Cerrar"
-                                >
-                                    <X className="h-5 w-5" />
-                                </button>
-                            </div>
-
-                            <div className="space-y-3 mt-2">
-                                {firmas.map((firma) => {
-                                    const isEditing = editingFirma?.id === firma.id;
-                                    return (
-                                        <div 
-                                            key={firma.id} 
-                                            className={`group p-4 relative rounded-xl transition-all duration-300 ${
-                                                isEditing 
-                                                    ? isDarkMode 
-                                                        ? 'bg-gray-900/20 border border-gray-700/50' 
-                                                        : 'bg-violet-50 border border-violet-300'
-                                                    : isDarkMode
-                                                        ? 'bg-black border border-gray-800/30 hover:border-gray-600/40'
-                                                        : 'bg-white border border-violet-200 hover:border-violet-400/60'
-                                            }`}
-                                        >
-                                            {isEditing ? (
-                                                <form onSubmit={async (e) => {
-                                                    e.preventDefault();
-                                                    const formData = new FormData(e.currentTarget);
-                                                    const updates = {
-                                                        nombre: formData.get('nombre'),
-                                                        puesto: formData.get('puesto'),
-                                                    };
-                                                    
-                                                    try {
-                                                        // Usar el proxy para actualizar la firma
-                                                        const response = await fetch(`/api/supabase-proxy?target=${encodeURIComponent(`/rest/v1/firmas?id=eq.${firma.id}`)}`, {
-                                                            method: 'PATCH',
-                                                            credentials: 'include',
-                                                            headers: { 
-                                                                'Content-Type': 'application/json',
-                                                                'Prefer': 'return=representation'
-                                                            },
-                                                            body: JSON.stringify(updates)
-                                                        });
-                                                        
-                                                        if (!response.ok) {
-                                                            throw new Error('Error al actualizar la firma');
-                                                        }
-                                                        
-                                                        // El realtime del hook actualizará automáticamente
-                                                        setEditingFirma(null);
-                                                        // Notificación de edición de firma exitosa
-                                                        await createNotification({
-                                                            title: 'Firma editada',
-                                                            description: `La firma "${firma.concepto}" fue editada correctamente (ITEA).`,
-                                                            type: 'info',
-                                                            category: 'firmas',
-                                                            device: 'web',
-                                                            importance: 'medium',
-                                                            data: { changes: [`Edición de firma: ${firma.concepto}`], affectedTables: ['firmas'] }
-                                                        });
-                                                    } catch (error) {
-                                                        setError('Error al actualizar la firma');
-                                                        // Notificación de error al editar firma
-                                                        await createNotification({
-                                                            title: 'Error al editar firma',
-                                                            description: 'Error al editar la firma (ITEA).',
-                                                            type: 'danger',
-                                                            category: 'firmas',
-                                                            device: 'web',
-                                                            importance: 'high',
-                                                            data: { affectedTables: ['firmas'] }
-                                                        });
-                                                    }
-                                                }} className="space-y-3">
-                                                    <h4 className={`font-medium text-sm mb-2 transition-colors duration-500 ${
-                                                        isDarkMode ? 'text-violet-400' : 'text-violet-700'
-                                                    }`}>{firma.concepto}</h4>
-                                                    <div className="space-y-3">
-                                                        <div>
-                                                            <label className={`block text-xs font-medium mb-1 transition-colors duration-500 ${
-                                                                isDarkMode ? 'text-violet-400/70' : 'text-violet-700/80'
-                                                            }`}>
-                                                                Nombre
-                                                            </label>
-                                                            <input
-                                                                type="text"
-                                                                name="nombre"
-                                                                defaultValue={firma.nombre || ''}
-                                                                className={`w-full px-3 py-2 rounded-lg focus:outline-none focus:ring-1 text-sm transition-all ${
-                                                                    isDarkMode 
-                                                                        ? 'bg-black border border-gray-800 focus:border-violet-700/60 focus:ring-violet-700/30 text-white'
-                                                                        : 'bg-white border border-gray-300 focus:border-violet-500 focus:ring-violet-500/30 text-gray-900'
-                                                                }`}
-                                                                autoFocus
-                                                                title="Nombre de la persona que firma"
-                                                                placeholder="Nombre completo"
-                                                            />
-                                                        </div>
-                                                        <div>
-                                                            <label className={`block text-xs font-medium mb-1 transition-colors duration-500 ${
-                                                                isDarkMode ? 'text-violet-400/70' : 'text-violet-700/80'
-                                                            }`}>
-                                                                Puesto
-                                                            </label>
-                                                            <input
-                                                                type="text"
-                                                                name="puesto"
-                                                                defaultValue={firma.puesto || ''}
-                                                                className={`w-full px-3 py-2 rounded-lg focus:outline-none focus:ring-1 text-sm transition-all ${
-                                                                    isDarkMode 
-                                                                        ? 'bg-black border border-gray-800 focus:border-violet-700/60 focus:ring-violet-700/30 text-white'
-                                                                        : 'bg-white border border-gray-300 focus:border-violet-500 focus:ring-violet-500/30 text-gray-900'
-                                                                }`}
-                                                                title="Puesto de la persona que firma"
-                                                                placeholder="Cargo o puesto"
-                                                            />
-                                                        </div>
-                                                    </div>
-                                                    <div className="flex justify-end gap-2 pt-2">
-                                                        <button
-                                                            type="button"
-                                                            onClick={() => setEditingFirma(null)}
-                                                            className={`px-3 py-1.5 rounded-md text-xs font-medium transition-all focus:outline-none ${
-                                                                isDarkMode 
-                                                                    ? 'bg-gray-900 hover:bg-gray-800 text-gray-400'
-                                                                    : 'bg-gray-200 hover:bg-gray-300 text-gray-600'
-                                                            }`}
-                                                        >
-                                                            Cancelar
-                                                        </button>
-                                                        <button
-                                                            type="submit"
-                                                            className="px-3 py-1.5 bg-gradient-to-r from-violet-800 to-violet-700 hover:from-violet-700 hover:to-violet-600 rounded-md text-white text-xs font-medium transition-all focus:outline-none"
-                                                        >
-                                                            Guardar
-                                                        </button>
-                                                    </div>
-                                                </form>
-                                            ) : (
-                                                <div className="flex justify-between items-start">
-                                                    <div>
-                                                        <h4 className={`font-medium text-sm transition-colors duration-500 ${
-                                                            isDarkMode ? 'text-violet-400' : 'text-violet-700'
-                                                        }`}>{firma.concepto}</h4>
-                                                        <p className={`text-sm mt-1.5 transition-colors duration-500 ${
-                                                            isDarkMode ? 'text-white' : 'text-gray-900'
-                                                        }`}>{firma.nombre || 'Sin asignar'}</p>
-                                                        <p className={`text-xs mt-0.5 transition-colors duration-500 ${
-                                                            isDarkMode ? 'text-gray-500' : 'text-gray-600'
-                                                        }`}>{firma.puesto || 'Sin asignar'}</p>
-                                                    </div>
-                                                    <button
-                                                        onClick={() => setEditingFirma(firma)}
-                                                        className={`p-1.5 rounded-md opacity-0 group-hover:opacity-100 transition-all focus:outline-none ${
-                                                            isDarkMode 
-                                                                ? 'bg-black text-gray-500 hover:text-violet-400 border border-gray-800 hover:border-violet-700/30'
-                                                                : 'bg-white text-gray-600 hover:text-violet-600 border border-gray-300 hover:border-violet-400/50'
-                                                        }`}
-                                                        title="Editar firma"
-                                                    >
-                                                        <Pencil className="h-3.5 w-3.5" />
-                                                    </button>
-                                                </div>
-                                            )}
-                                        </div>
-                                    );
-                                })}
-                            </div>
-
-                            {/* Línea separadora */}
-                            <div className={`mt-5 mb-4 h-px w-full bg-gradient-to-r from-transparent to-transparent ${
-                                isDarkMode ? 'via-violet-800/30' : 'via-violet-300/50'
-                            }`}></div>
-                        </div>
-                    </div>
-                </div>
-            )}
-
-            {/* Error Alert - Actualizado con el nuevo esquema de colores */}
-            {error && (
-                <div className={`fixed bottom-4 left-4 right-4 md:left-auto md:right-4 md:w-96 px-4 py-3 rounded-lg shadow-lg z-50 backdrop-blur-sm animate-fade-in transition-colors duration-500 ${
-                    isDarkMode 
-                        ? 'bg-rose-900/80 text-rose-100 border border-rose-800'
-                        : 'bg-white/90 text-rose-800 border border-rose-300'
-                }`}>
-                    <div className="flex items-center">
-                        <AlertCircle className={`h-5 w-5 mr-3 flex-shrink-0 transition-colors duration-500 ${
-                            isDarkMode ? 'text-rose-400' : 'text-rose-600'
-                        }`} />
-                        <div className="flex-1 min-w-0">
-                            <p className="text-sm font-medium">{error}</p>
-                        </div>
-                        <button
-                            title='Cerrar alerta'
-                            onClick={() => setError(null)}
-                            className={`ml-4 flex-shrink-0 p-1 rounded-full transition-colors ${
-                                isDarkMode 
-                                    ? 'text-rose-200 hover:text-white hover:bg-rose-800/60'
-                                    : 'text-rose-600 hover:text-rose-800 hover:bg-rose-200/60'
+                                    ? 'hover:bg-white/5'
+                                    : 'hover:bg-black/5'
                             }`}
+                            title="Configurar Firmas"
+                            whileHover={{ scale: 1.05 }}
+                            whileTap={{ scale: 0.95 }}
                         >
-                            <X className="h-4 w-4" />
-                        </button>
-                    </div>
+                            <Settings2 size={20} />
+                        </motion.button>
+                    </RoleGuard>
                 </div>
-            )}
 
-            {/* Loader de exportación moderno */}
-            {isExporting && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm animate-fadeIn">
-                    <div className="bg-gradient-to-br from-gray-900/60 via-black to-gray-900/30 rounded-2xl shadow-2xl border border-gray-600/30 w-full max-w-xs p-8 flex flex-col items-center relative">
-                        {/* Barra animada */}
-                        <div className="w-full h-2 bg-gray-900/30 rounded-full overflow-hidden mb-6 mt-2">
-                            <div className="h-full bg-gradient-to-r from-gray-400 via-gray-500 to-gray-600 animate-loader-bar rounded-full" style={{ width: '40%' }}></div>
+                {/* Main content */}
+                <motion.div 
+                    className="space-y-1"
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    transition={{ delay: 0.2 }}
+                >
+                    <AnimatePresence mode="popLayout">
+                        {reportes.map((reporte, index) => (
+                            <motion.div
+                                key={reporte.id}
+                                layout
+                                initial={{ opacity: 0, x: -20 }}
+                                animate={{ opacity: 1, x: 0 }}
+                                exit={{ opacity: 0, scale: 0.95 }}
+                                transition={{ 
+                                    delay: index * 0.05,
+                                    layout: { type: 'spring', stiffness: 350, damping: 30 }
+                                }}
+                                className={`group flex items-center justify-between px-4 py-3.5 rounded-lg border transition-all ${
+                                    isDarkMode
+                                        ? 'bg-black border-white/5 hover:border-white/10 hover:bg-white/[0.02]'
+                                        : 'bg-white border-black/5 hover:border-black/10 hover:bg-black/[0.02]'
+                                }`}
+                            >
+                                <div className="flex items-center gap-3">
+                                    <motion.div 
+                                        className={`p-2 rounded-lg transition-colors ${
+                                            isDarkMode ? 'bg-white/5' : 'bg-black/5'
+                                        }`}
+                                        whileHover={{ scale: 1.1, rotate: 5 }}
+                                        transition={{ type: 'spring', stiffness: 400 }}
+                                    >
+                                        {reporte.icon}
+                                    </motion.div>
+                                    <div>
+                                        <h3 className="text-sm font-medium">{reporte.title}</h3>
+                                        <p className={`text-xs ${isDarkMode ? 'text-white/40' : 'text-black/40'}`}>
+                                            {reporte.title === 'General' ? 'Información completa de todos los registros' :
+                                                reporte.title === 'Activos' ? 'Bienes muebles en estado activo' :
+                                                    reporte.title === 'Inactivos' ? 'Bienes muebles inactivos' :
+                                                        reporte.title === 'No localizados' ? 'Bienes muebles no localizados' :
+                                                            'Bienes muebles obsoletos'}
+                                        </p>
+                                    </div>
+                                </div>
+                                <motion.button
+                                    onClick={() => openExportModal(reporte.title)}
+                                    className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all flex items-center gap-2 ${
+                                        isDarkMode
+                                            ? 'bg-white text-black hover:bg-white/90'
+                                            : 'bg-black text-white hover:bg-black/90'
+                                    }`}
+                                    whileHover={{ scale: 1.05 }}
+                                    whileTap={{ scale: 0.95 }}
+                                >
+                                    <Download size={14} />
+                                    Exportar
+                                </motion.button>
+                            </motion.div>
+                        ))}
+                    </AnimatePresence>
+                </motion.div>
+
+                {/* Footer */}
+                <motion.div 
+                    className={`mt-8 pt-4 border-t text-xs ${isDarkMode ? 'border-white/10 text-white/40' : 'border-black/10 text-black/40'}`}
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    transition={{ delay: 0.4 }}
+                >
+                    {reportes.length} categorías de reportes disponibles
+                </motion.div>
+            </motion.div>
+
+            {/* Modal de exportación */}
+            <AnimatePresence>
+                {exportModalOpen && (
+                    <motion.div 
+                        className={`fixed inset-0 flex items-center justify-center z-50 px-4 backdrop-blur-sm ${
+                            isDarkMode ? 'bg-black/90' : 'bg-black/60'
+                        }`}
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        onClick={() => setExportModalOpen(false)}
+                    >
+                        <motion.div 
+                            className={`rounded-xl w-full max-w-lg overflow-hidden transition-all ${
+                                isDarkMode 
+                                    ? 'bg-black border border-white/10' 
+                                    : 'bg-white border border-black/10'
+                            }`}
+                            initial={{ scale: 0.9, opacity: 0, y: 20 }}
+                            animate={{ scale: 1, opacity: 1, y: 0 }}
+                            exit={{ scale: 0.9, opacity: 0, y: 20 }}
+                            transition={{ type: 'spring', damping: 25, stiffness: 300 }}
+                            onClick={(e) => e.stopPropagation()}
+                        >
+                            <div className="p-6">
+                                <div className="flex items-start justify-between mb-6">
+                                    <div className="flex items-center gap-3">
+                                        <motion.div 
+                                            className={`p-3 rounded-lg ${
+                                                isDarkMode ? 'bg-white/5' : 'bg-black/5'
+                                            }`}
+                                            initial={{ rotate: -10 }}
+                                            animate={{ rotate: 0 }}
+                                            transition={{ type: 'spring', stiffness: 200 }}
+                                        >
+                                            <FileDigit size={24} />
+                                        </motion.div>
+                                        <div>
+                                            <h3 className="text-xl font-medium">Exportar Reporte</h3>
+                                            <p className={`text-sm mt-0.5 ${isDarkMode ? 'text-white/60' : 'text-black/60'}`}>
+                                                {selectedReport}
+                                            </p>
+                                        </div>
+                                    </div>
+                                    <motion.button
+                                        onClick={() => setExportModalOpen(false)}
+                                        className={`p-1.5 rounded-lg transition-colors ${
+                                            isDarkMode 
+                                                ? 'hover:bg-white/5'
+                                                : 'hover:bg-black/5'
+                                        }`}
+                                        whileHover={{ scale: 1.1, rotate: 90 }}
+                                        whileTap={{ scale: 0.9 }}
+                                        title="Cerrar"
+                                    >
+                                        <X size={18} />
+                                    </motion.button>
+                                </div>
+                                
+                                <p className={`text-sm mb-6 ${isDarkMode ? 'text-white/50' : 'text-black/50'}`}>
+                                    Selecciona el formato de exportación
+                                </p>
+                                
+                                <div className="grid grid-cols-3 gap-4">
+                                    <motion.button
+                                        onClick={() => handleExport('PDF')}
+                                        className={`relative flex flex-col items-center justify-center p-6 rounded-xl transition-all border overflow-hidden group ${
+                                            isDarkMode 
+                                                ? 'border-white/10 hover:border-white/20 hover:bg-white/5'
+                                                : 'border-black/10 hover:border-black/20 hover:bg-black/5'
+                                        }`}
+                                        disabled={isExporting}
+                                        whileHover={{ scale: 1.05, y: -5 }}
+                                        whileTap={{ scale: 0.95 }}
+                                        initial={{ opacity: 0, y: 20 }}
+                                        animate={{ opacity: 1, y: 0 }}
+                                        transition={{ delay: 0.1 }}
+                                    >
+                                        <motion.div
+                                            className="absolute inset-0 bg-gradient-to-br from-transparent via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity"
+                                            style={{
+                                                background: isDarkMode 
+                                                    ? 'radial-gradient(circle at center, rgba(255,255,255,0.03) 0%, transparent 70%)'
+                                                    : 'radial-gradient(circle at center, rgba(0,0,0,0.03) 0%, transparent 70%)'
+                                            }}
+                                        />
+                                        <motion.div
+                                            whileHover={{ rotate: [0, -10, 10, -10, 0] }}
+                                            transition={{ duration: 0.5 }}
+                                        >
+                                            <File size={32} className="mb-3" />
+                                        </motion.div>
+                                        <span className="text-sm font-medium mb-1">PDF</span>
+                                        <span className={`text-xs ${isDarkMode ? 'text-white/40' : 'text-black/40'}`}>
+                                            Documento
+                                        </span>
+                                    </motion.button>
+                                    
+                                    <motion.button
+                                        onClick={() => handleExport('Excel')}
+                                        className={`relative flex flex-col items-center justify-center p-6 rounded-xl transition-all border overflow-hidden group ${
+                                            isDarkMode 
+                                                ? 'border-white/10 hover:border-white/20 hover:bg-white/5'
+                                                : 'border-black/10 hover:border-black/20 hover:bg-black/5'
+                                        }`}
+                                        disabled={isExporting}
+                                        whileHover={{ scale: 1.05, y: -5 }}
+                                        whileTap={{ scale: 0.95 }}
+                                        initial={{ opacity: 0, y: 20 }}
+                                        animate={{ opacity: 1, y: 0 }}
+                                        transition={{ delay: 0.15 }}
+                                    >
+                                        <motion.div
+                                            className="absolute inset-0 bg-gradient-to-br from-transparent via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity"
+                                            style={{
+                                                background: isDarkMode 
+                                                    ? 'radial-gradient(circle at center, rgba(255,255,255,0.03) 0%, transparent 70%)'
+                                                    : 'radial-gradient(circle at center, rgba(0,0,0,0.03) 0%, transparent 70%)'
+                                            }}
+                                        />
+                                        <motion.div
+                                            whileHover={{ rotate: [0, -10, 10, -10, 0] }}
+                                            transition={{ duration: 0.5 }}
+                                        >
+                                            <FileSpreadsheet size={32} className="mb-3" />
+                                        </motion.div>
+                                        <span className="text-sm font-medium mb-1">Excel</span>
+                                        <span className={`text-xs ${isDarkMode ? 'text-white/40' : 'text-black/40'}`}>
+                                            Hoja de cálculo
+                                        </span>
+                                    </motion.button>
+                                    
+                                    <motion.button
+                                        onClick={() => handleExport('CSV')}
+                                        className={`relative flex flex-col items-center justify-center p-6 rounded-xl transition-all border overflow-hidden group ${
+                                            isDarkMode 
+                                                ? 'border-white/10 hover:border-white/20 hover:bg-white/5'
+                                                : 'border-black/10 hover:border-black/20 hover:bg-black/5'
+                                        }`}
+                                        disabled={isExporting}
+                                        whileHover={{ scale: 1.05, y: -5 }}
+                                        whileTap={{ scale: 0.95 }}
+                                        initial={{ opacity: 0, y: 20 }}
+                                        animate={{ opacity: 1, y: 0 }}
+                                        transition={{ delay: 0.2 }}
+                                    >
+                                        <motion.div
+                                            className="absolute inset-0 bg-gradient-to-br from-transparent via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity"
+                                            style={{
+                                                background: isDarkMode 
+                                                    ? 'radial-gradient(circle at center, rgba(255,255,255,0.03) 0%, transparent 70%)'
+                                                    : 'radial-gradient(circle at center, rgba(0,0,0,0.03) 0%, transparent 70%)'
+                                            }}
+                                        />
+                                        <motion.div
+                                            whileHover={{ rotate: [0, -10, 10, -10, 0] }}
+                                            transition={{ duration: 0.5 }}
+                                        >
+                                            <FileText size={32} className="mb-3" />
+                                        </motion.div>
+                                        <span className="text-sm font-medium mb-1">CSV</span>
+                                        <span className={`text-xs ${isDarkMode ? 'text-white/40' : 'text-black/40'}`}>
+                                            Datos crudos
+                                        </span>
+                                    </motion.button>
+                                </div>
+                            </div>
+                        </motion.div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
+
+            {/* Modal de Firmas */}
+            <AnimatePresence>
+                {firmasModalOpen && (
+                    <motion.div 
+                        className={`fixed inset-0 flex items-center justify-center z-50 px-4 backdrop-blur-sm ${
+                            isDarkMode ? 'bg-black/90' : 'bg-black/60'
+                        }`}
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        onClick={() => setFirmasModalOpen(false)}
+                    >
+                        <motion.div 
+                            className={`w-full max-w-md rounded-xl overflow-hidden transition-colors ${
+                                isDarkMode 
+                                    ? 'bg-black border border-white/10'
+                                    : 'bg-white border border-black/10'
+                            }`}
+                            initial={{ scale: 0.9, opacity: 0, y: 20 }}
+                            animate={{ scale: 1, opacity: 1, y: 0 }}
+                            exit={{ scale: 0.9, opacity: 0, y: 20 }}
+                            transition={{ type: 'spring', damping: 25, stiffness: 300 }}
+                            onClick={(e) => e.stopPropagation()}
+                        >
+                            <div className="p-6">
+                                <div className="flex items-center justify-between mb-5">
+                                    <div className="flex items-center gap-3">
+                                        <motion.div 
+                                            className={`p-2 rounded-lg transition-colors ${
+                                                isDarkMode 
+                                                    ? 'bg-white/5' 
+                                                    : 'bg-black/5'
+                                            }`}
+                                            whileHover={{ rotate: 180 }}
+                                            transition={{ duration: 0.3 }}
+                                        >
+                                            <Settings2 size={18} />
+                                        </motion.div>
+                                        <h3 className="text-lg font-medium">Configuración de Firmas</h3>
+                                    </div>
+                                    <motion.button
+                                        onClick={() => setFirmasModalOpen(false)}
+                                        className={`p-1.5 rounded-lg transition-colors ${
+                                            isDarkMode 
+                                                ? 'hover:bg-white/5' 
+                                                : 'hover:bg-black/5'
+                                        }`}
+                                        whileHover={{ scale: 1.1, rotate: 90 }}
+                                        whileTap={{ scale: 0.9 }}
+                                        title="Cerrar"
+                                    >
+                                        <X size={16} />
+                                    </motion.button>
+                                </div>
+
+                                <div className="space-y-3 mt-2">
+                                    <AnimatePresence mode="popLayout">
+                                        {firmas.map((firma, index) => {
+                                            const isEditing = editingFirma?.id === firma.id;
+                                            return (
+                                                <motion.div 
+                                                    key={firma.id}
+                                                    layout
+                                                    initial={{ opacity: 0, x: -20 }}
+                                                    animate={{ opacity: 1, x: 0 }}
+                                                    exit={{ opacity: 0, x: 20 }}
+                                                    transition={{ 
+                                                        delay: index * 0.05,
+                                                        layout: { type: 'spring', stiffness: 350, damping: 30 }
+                                                    }}
+                                                    className={`group p-4 relative rounded-lg transition-all border ${
+                                                        isEditing 
+                                                            ? isDarkMode 
+                                                                ? 'bg-white/5 border-white/20' 
+                                                                : 'bg-black/5 border-black/20'
+                                                            : isDarkMode
+                                                                ? 'bg-black border-white/5 hover:border-white/10'
+                                                                : 'bg-white border-black/5 hover:border-black/10'
+                                                    }`}
+                                                >
+                                                    {isEditing ? (
+                                                        <motion.form 
+                                                            onSubmit={async (e) => {
+                                                                e.preventDefault();
+                                                                const formData = new FormData(e.currentTarget);
+                                                                const updates = {
+                                                                    nombre: formData.get('nombre'),
+                                                                    puesto: formData.get('puesto'),
+                                                                };
+                                                                
+                                                                try {
+                                                                    const response = await fetch(`/api/supabase-proxy?target=${encodeURIComponent(`/rest/v1/firmas?id=eq.${firma.id}`)}`, {
+                                                                        method: 'PATCH',
+                                                                        credentials: 'include',
+                                                                        headers: { 
+                                                                            'Content-Type': 'application/json',
+                                                                            'Prefer': 'return=representation'
+                                                                        },
+                                                                        body: JSON.stringify(updates)
+                                                                    });
+                                                                    
+                                                                    if (!response.ok) {
+                                                                        throw new Error('Error al actualizar la firma');
+                                                                    }
+                                                                    
+                                                                    setEditingFirma(null);
+                                                                    
+                                                                    await createNotification({
+                                                                        title: 'Firma editada',
+                                                                        description: `La firma "${firma.concepto}" fue editada correctamente.`,
+                                                                        type: 'info',
+                                                                        category: 'firmas',
+                                                                        device: 'web',
+                                                                        importance: 'medium',
+                                                                        data: { changes: [`Edición de firma: ${firma.concepto}`], affectedTables: ['firmas'] }
+                                                                    });
+                                                                } catch (error) {
+                                                                    setError('Error al actualizar la firma');
+                                                                    await createNotification({
+                                                                        title: 'Error al editar firma',
+                                                                        description: 'Error al editar la firma.',
+                                                                        type: 'danger',
+                                                                        category: 'firmas',
+                                                                        device: 'web',
+                                                                        importance: 'high',
+                                                                        data: { affectedTables: ['firmas'] }
+                                                                    });
+                                                                }
+                                                            }} 
+                                                            className="space-y-3"
+                                                            initial={{ opacity: 0 }}
+                                                            animate={{ opacity: 1 }}
+                                                        >
+                                                            <h4 className={`font-medium text-sm mb-2 ${
+                                                                isDarkMode ? 'text-white/80' : 'text-black/80'
+                                                            }`}>{firma.concepto}</h4>
+                                                            
+                                                            <div className="space-y-3">
+                                                                <div>
+                                                                    <label className={`block text-xs font-medium mb-1 ${
+                                                                        isDarkMode ? 'text-white/60' : 'text-black/60'
+                                                                    }`}>
+                                                                        Nombre
+                                                                    </label>
+                                                                    <input
+                                                                        type="text"
+                                                                        name="nombre"
+                                                                        defaultValue={firma.nombre || ''}
+                                                                        className={`w-full px-3 py-2 rounded-lg text-sm transition-all border ${
+                                                                            isDarkMode 
+                                                                                ? 'bg-black border-white/10 text-white focus:border-white/20'
+                                                                                : 'bg-white border-black/10 text-black focus:border-black/20'
+                                                                        } focus:outline-none`}
+                                                                        autoFocus
+                                                                        placeholder="Nombre completo"
+                                                                    />
+                                                                </div>
+                                                                <div>
+                                                                    <label className={`block text-xs font-medium mb-1 ${
+                                                                        isDarkMode ? 'text-white/60' : 'text-black/60'
+                                                                    }`}>
+                                                                        Puesto
+                                                                    </label>
+                                                                    <input
+                                                                        type="text"
+                                                                        name="puesto"
+                                                                        defaultValue={firma.puesto || ''}
+                                                                        className={`w-full px-3 py-2 rounded-lg text-sm transition-all border ${
+                                                                            isDarkMode 
+                                                                                ? 'bg-black border-white/10 text-white focus:border-white/20'
+                                                                                : 'bg-white border-black/10 text-black focus:border-black/20'
+                                                                        } focus:outline-none`}
+                                                                        placeholder="Cargo o puesto"
+                                                                    />
+                                                                </div>
+                                                            </div>
+                                                            
+                                                            <div className="flex justify-end gap-2 pt-2">
+                                                                <motion.button
+                                                                    type="button"
+                                                                    onClick={() => setEditingFirma(null)}
+                                                                    className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
+                                                                        isDarkMode 
+                                                                            ? 'hover:bg-white/5'
+                                                                            : 'hover:bg-black/5'
+                                                                    }`}
+                                                                    whileHover={{ scale: 1.02 }}
+                                                                    whileTap={{ scale: 0.98 }}
+                                                                >
+                                                                    Cancelar
+                                                                </motion.button>
+                                                                <motion.button
+                                                                    type="submit"
+                                                                    className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
+                                                                        isDarkMode
+                                                                            ? 'bg-white text-black hover:bg-white/90'
+                                                                            : 'bg-black text-white hover:bg-black/90'
+                                                                    }`}
+                                                                    whileHover={{ scale: 1.02 }}
+                                                                    whileTap={{ scale: 0.98 }}
+                                                                >
+                                                                    Guardar
+                                                                </motion.button>
+                                                            </div>
+                                                        </motion.form>
+                                                    ) : (
+                                                        <div className="flex justify-between items-start">
+                                                            <div>
+                                                                <h4 className="font-medium text-sm">{firma.concepto}</h4>
+                                                                <p className="text-sm mt-1.5">{firma.nombre || 'Sin asignar'}</p>
+                                                                <p className={`text-xs mt-0.5 ${
+                                                                    isDarkMode ? 'text-white/40' : 'text-black/40'
+                                                                }`}>{firma.puesto || 'Sin asignar'}</p>
+                                                            </div>
+                                                            <motion.button
+                                                                onClick={() => setEditingFirma(firma)}
+                                                                className={`p-1.5 rounded-lg opacity-0 group-hover:opacity-100 transition-all ${
+                                                                    isDarkMode 
+                                                                        ? 'hover:bg-white/5'
+                                                                        : 'hover:bg-black/5'
+                                                                }`}
+                                                                whileHover={{ scale: 1.1 }}
+                                                                whileTap={{ scale: 0.9 }}
+                                                                title="Editar firma"
+                                                            >
+                                                                <Pencil size={14} />
+                                                            </motion.button>
+                                                        </div>
+                                                    )}
+                                                </motion.div>
+                                            );
+                                        })}
+                                    </AnimatePresence>
+                                </div>
+                            </div>
+                        </motion.div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
+
+            {/* Error Alert */}
+            <AnimatePresence>
+                {error && (
+                    <motion.div 
+                        className={`fixed bottom-4 right-4 px-4 py-3 rounded-lg z-50 backdrop-blur-sm transition-colors border ${
+                            isDarkMode 
+                                ? 'bg-black/90 text-white border-white/10'
+                                : 'bg-white/90 text-black border-black/10'
+                        }`}
+                        initial={{ opacity: 0, y: 50, scale: 0.9 }}
+                        animate={{ opacity: 1, y: 0, scale: 1 }}
+                        exit={{ opacity: 0, y: 50, scale: 0.9 }}
+                        transition={{ type: 'spring', damping: 20, stiffness: 300 }}
+                    >
+                        <div className="flex items-center gap-3">
+                            <motion.div
+                                animate={{ rotate: [0, 10, -10, 10, 0] }}
+                                transition={{ duration: 0.5 }}
+                            >
+                                <AlertCircle size={18} />
+                            </motion.div>
+                            <p className="text-sm font-medium">{error}</p>
+                            <motion.button
+                                onClick={() => setError(null)}
+                                className={`p-1 rounded-lg transition-colors ${
+                                    isDarkMode 
+                                        ? 'hover:bg-white/10'
+                                        : 'hover:bg-black/10'
+                                }`}
+                                whileHover={{ scale: 1.1, rotate: 90 }}
+                                whileTap={{ scale: 0.9 }}
+                            >
+                                <X size={14} />
+                            </motion.button>
                         </div>
-                        <div className="flex flex-col items-center">
-                            <FileDigit className="h-10 w-10 text-gray-400 mb-4 animate-pulse" />
-                            <h3 className="text-lg font-bold text-white mb-2">{exportingFormat === 'PDF' ? 'Generando PDF...' : exportingFormat === 'Excel' ? 'Generando Excel...' : 'Generando CSV...'}</h3>
-                            <p className="text-gray-300 text-sm text-center max-w-xs">
+                    </motion.div>
+                )}
+            </AnimatePresence>
+
+            {/* Loader de exportación */}
+            <AnimatePresence>
+                {isExporting && (
+                    <motion.div 
+                        className={`fixed inset-0 z-50 flex items-center justify-center backdrop-blur-sm ${
+                            isDarkMode ? 'bg-black/80' : 'bg-black/60'
+                        }`}
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                    >
+                        <motion.div 
+                            className={`rounded-xl w-full max-w-xs p-8 flex flex-col items-center transition-colors border ${
+                                isDarkMode 
+                                    ? 'bg-black border-white/10'
+                                    : 'bg-white border-black/10'
+                            }`}
+                            initial={{ scale: 0.9, opacity: 0 }}
+                            animate={{ scale: 1, opacity: 1 }}
+                            exit={{ scale: 0.9, opacity: 0 }}
+                            transition={{ type: 'spring', damping: 20, stiffness: 300 }}
+                        >
+                            <div className={`w-full h-1 rounded-full overflow-hidden mb-6 ${
+                                isDarkMode ? 'bg-white/10' : 'bg-black/10'
+                            }`}>
+                                <motion.div 
+                                    className={`h-full rounded-full ${
+                                        isDarkMode 
+                                            ? 'bg-white'
+                                            : 'bg-black'
+                                    }`} 
+                                    style={{ width: '40%' }}
+                                    animate={{ x: ['-100%', '250%'] }}
+                                    transition={{ 
+                                        repeat: Infinity, 
+                                        duration: 1.5, 
+                                        ease: 'linear' 
+                                    }}
+                                />
+                            </div>
+                            <motion.div
+                                animate={{ 
+                                    scale: [1, 1.1, 1],
+                                    rotate: [0, 5, -5, 0]
+                                }}
+                                transition={{ 
+                                    repeat: Infinity, 
+                                    duration: 2,
+                                    ease: 'easeInOut'
+                                }}
+                            >
+                                <FileDigit size={40} className="mb-4" />
+                            </motion.div>
+                            <h3 className="text-lg font-medium mb-2">
+                                {exportingFormat === 'PDF' ? 'Generando PDF...' : exportingFormat === 'Excel' ? 'Generando Excel...' : 'Generando CSV...'}
+                            </h3>
+                            <motion.p 
+                                className={`text-sm text-center ${isDarkMode ? 'text-white/60' : 'text-black/60'}`}
+                                animate={{ opacity: [0.5, 1, 0.5] }}
+                                transition={{ repeat: Infinity, duration: 2 }}
+                            >
                                 {exportingFormat === 'PDF'
-                                    ? 'Por favor espera mientras se genera el PDF. Este proceso puede tardar varios minutos si hay muchos registros.'
+                                    ? 'Por favor espera mientras se genera el PDF'
                                     : exportingFormat === 'Excel'
-                                        ? 'Por favor espera mientras se genera el archivo Excel.'
-                                        : 'Por favor espera mientras se genera el archivo CSV.'}
-                            </p>
-                        </div>
-                    </div>
-                    {/* Animación de barra (keyframes) */}
-                    <style jsx>{`
-                        @keyframes loader-bar {
-                            0% { transform: translateX(-100%); }
-                            100% { transform: translateX(250%); }
-                        }
-                        .animate-loader-bar {
-                            animation: loader-bar 1.5s infinite linear;
-                        }
-                    `}</style>
-                </div>
-            )}
+                                        ? 'Por favor espera mientras se genera el Excel'
+                                        : 'Por favor espera mientras se genera el CSV'}
+                            </motion.p>
+                        </motion.div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
         </div>
     );
 }

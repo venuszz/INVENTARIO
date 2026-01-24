@@ -1,21 +1,16 @@
 "use client"
 import { useState, useEffect, useRef } from 'react';
 import { useTheme } from '@/context/ThemeContext';
-import { Plus, Save, Trash2, Edit, AlertTriangle, CheckCircle, X, Search, RefreshCw, Layers } from 'lucide-react';
-import supabase from "@/app/lib/supabase/client";
+import { Plus, Trash2, Edit, X, Search } from 'lucide-react';
 import { useNotifications } from '@/hooks/useNotifications';
 import SectionRealtimeToggle from '@/components/SectionRealtimeToggle';
 import { useAdminIndexation } from '@/hooks/indexation/useAdminIndexation';
+import { motion, AnimatePresence } from 'framer-motion';
 
 interface ConfigItem {
     id: number;
     tipo: string;
     concepto: string;
-}
-
-interface Message {
-    type: 'success' | 'error' | '';
-    text: string;
 }
 
 // Define los tipos de configuración disponibles
@@ -29,22 +24,19 @@ export default function ConfigManagementComponent() {
     const { isDarkMode } = useTheme();
     
     // Usar config desde el hook de indexación admin
-    const { config: configItems, realtimeConnected, reindex, isIndexing } = useAdminIndexation();
+    const { config: configItems, realtimeConnected } = useAdminIndexation();
     
     // Estados
-    const [formMode, setFormMode] = useState<'add' | ''>('');
     const [editingRow, setEditingRow] = useState<number | null>(null);
     const [deletingRow, setDeletingRow] = useState<number | null>(null);
-    const [currentItem, setCurrentItem] = useState<ConfigItem>({ id: 0, tipo: 'estatus', concepto: '' });
     const [editValue, setEditValue] = useState<string>('');
     const [searchTerm, setSearchTerm] = useState<string>('');
-    const [message, setMessage] = useState<Message>({ type: '', text: '' });
     const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
-    const [error, setError] = useState<string>('');
     const [activeTab, setActiveTab] = useState<string>('estatus');
+    const [newItemValue, setNewItemValue] = useState<string>('');
 
-    const inputRef = useRef<HTMLInputElement>(null);
     const editInputRef = useRef<HTMLInputElement>(null);
+    const newItemInputRef = useRef<HTMLInputElement>(null);
 
     const { createNotification } = useNotifications();
 
@@ -52,6 +44,7 @@ export default function ConfigManagementComponent() {
     useEffect(() => {
         if (editingRow !== null && editInputRef.current) {
             editInputRef.current.focus();
+            editInputRef.current.select();
         }
     }, [editingRow]);
 
@@ -63,48 +56,26 @@ export default function ConfigManagementComponent() {
     );
 
     // Manejadores de eventos
-    const handleAdd = () => {
-        setFormMode('add');
-        setCurrentItem({ id: 0, tipo: activeTab, concepto: '' });
-        setEditingRow(null);
-        setDeletingRow(null);
-        setTimeout(() => inputRef.current?.focus(), 100);
-    };
-
     const handleEdit = (item: ConfigItem) => {
-        // Si ya estamos editando otra fila, cancelar esa edición
         if (editingRow !== null && editingRow !== item.id) {
-            cancelRowEdit();
+            setEditingRow(null);
         }
-
         setEditingRow(item.id);
         setEditValue(item.concepto || '');
         setDeletingRow(null);
-        setFormMode('');
     };
 
     const handleDelete = (itemId: number) => {
-        // Si ya estamos confirmando borrar otra fila, cancelar esa confirmación
         if (deletingRow !== null && deletingRow !== itemId) {
             setDeletingRow(null);
         }
-
-        // Toggle el estado de borrado para esta fila
         setDeletingRow(deletingRow === itemId ? null : itemId);
         setEditingRow(null);
-        setFormMode('');
-    };
-
-    const handleCancel = () => {
-        setFormMode('');
-        setCurrentItem({ id: 0, tipo: activeTab, concepto: '' });
-        setError('');
     };
 
     const cancelRowEdit = () => {
         setEditingRow(null);
         setEditValue('');
-        setError('');
     };
 
     const cancelDelete = () => {
@@ -116,7 +87,6 @@ export default function ConfigManagementComponent() {
         try {
             const item = configItems.find(i => i.id === itemId);
             
-            // Usar el proxy para DELETE
             const response = await fetch('/api/supabase-proxy?target=' + encodeURIComponent(`/rest/v1/config?id=eq.${itemId}`), {
                 method: 'DELETE',
                 credentials: 'include',
@@ -130,12 +100,8 @@ export default function ConfigManagementComponent() {
                 throw new Error(error.message || 'Error al eliminar');
             }
 
-            setMessage({ type: 'success', text: 'Registro eliminado correctamente' });
             setDeletingRow(null);
-            
-            // El realtime del hook actualizará automáticamente el store y mostrará la notificación
 
-            // Notificación de eliminación
             await createNotification({
                 title: `Concepto eliminado (${item?.tipo})`,
                 description: `Se eliminó el concepto "${item?.concepto}" del tipo "${item?.tipo}" en configuración.`,
@@ -146,11 +112,7 @@ export default function ConfigManagementComponent() {
                 data: { changes: [`Eliminado: ${item?.concepto}`], affectedTables: ['config'] }
             });
         } catch (error: unknown) {
-            console.error('Error:', error);
             const errorMessage = (error instanceof Error) ? error.message : 'Ha ocurrido un error';
-            setMessage({ type: 'error', text: errorMessage || 'Ha ocurrido un error al eliminar el registro' });
-
-            // Notificación de error
             await createNotification({
                 title: 'Error al eliminar concepto',
                 description: errorMessage,
@@ -167,17 +129,14 @@ export default function ConfigManagementComponent() {
 
     const saveRowEdit = async (itemId: number) => {
         setIsSubmitting(true);
-        setError('');
 
         try {
-            // Validación
             if (!editValue || editValue.trim() === '') {
                 throw new Error('El concepto es obligatorio');
             }
 
-            const conceptoValue = editValue;
+            const conceptoValue = editValue.trim().toUpperCase();
 
-            // Verificar si el nuevo concepto ya existe (excluyendo el item actual)
             const existingItem = configItems.find(item =>
                 item.concepto?.toUpperCase() === conceptoValue &&
                 item.tipo === activeTab &&
@@ -190,8 +149,6 @@ export default function ConfigManagementComponent() {
 
             const oldItem = configItems.find(item => item.id === itemId);
 
-            // Editar configuración existente
-            // Usar el proxy para UPDATE
             const response = await fetch('/api/supabase-proxy?target=' + encodeURIComponent(`/rest/v1/config?id=eq.${itemId}&select=*`), {
                 method: 'PATCH',
                 credentials: 'include',
@@ -206,15 +163,9 @@ export default function ConfigManagementComponent() {
                 const error = await response.json();
                 throw new Error(error.message || 'Error al actualizar');
             }
-            
-            const data = await response.json();
 
-            setMessage({ type: 'success', text: 'Registro actualizado correctamente' });
             setEditingRow(null);
-            
-            // El realtime del hook actualizará automáticamente el store y mostrará la notificación
 
-            // Notificación de edición
             await createNotification({
                 title: `Concepto actualizado (${oldItem?.tipo})`,
                 description: `Se actualizó el concepto "${oldItem?.concepto}" a "${conceptoValue}" en el tipo "${oldItem?.tipo}" de configuración.`,
@@ -225,12 +176,7 @@ export default function ConfigManagementComponent() {
                 data: { changes: [`Edición: ${oldItem?.concepto} → ${conceptoValue}`], affectedTables: ['config'] }
             });
         } catch (error: unknown) {
-            console.error('Error:', error);
             const errorMessage = (error instanceof Error) ? error.message : 'Ha ocurrido un error';
-            setError(errorMessage);
-            setMessage({ type: 'error', text: errorMessage || 'Ha ocurrido un error al actualizar el registro' });
-
-            // Notificación de error
             await createNotification({
                 title: 'Error al editar concepto',
                 description: errorMessage,
@@ -245,20 +191,14 @@ export default function ConfigManagementComponent() {
         }
     };
 
-    const handleSubmit = async (e: React.FormEvent) => {
-        e.preventDefault();
+    const handleAddNewItem = async () => {
+        if (!newItemValue.trim()) return;
+        
         setIsSubmitting(true);
-        setError('');
 
         try {
-            // Validación de campos
-            if (!currentItem.concepto || currentItem.concepto.trim() === '') {
-                throw new Error('El concepto es obligatorio');
-            }
+            const conceptoValue = newItemValue.trim().toUpperCase();
 
-            const conceptoValue = currentItem.concepto;
-
-            // Verificar si el concepto ya existe
             const existingItem = configItems.find(item =>
                 item.concepto?.toUpperCase() === conceptoValue &&
                 item.tipo === activeTab
@@ -268,8 +208,6 @@ export default function ConfigManagementComponent() {
                 throw new Error('Este concepto ya existe');
             }
 
-            // Agregar nuevo item de configuración
-            // Usar el proxy para INSERT
             const response = await fetch('/api/supabase-proxy?target=' + encodeURIComponent('/rest/v1/config?select=*'), {
                 method: 'POST',
                 credentials: 'include',
@@ -284,16 +222,10 @@ export default function ConfigManagementComponent() {
                 const error = await response.json();
                 throw new Error(error.message || 'Error al insertar');
             }
-            
-            const data = await response.json();
 
-            setMessage({ type: 'success', text: 'Registro agregado correctamente' });
-            
-            // El realtime del hook actualizará automáticamente el store y mostrará la notificación
-            setFormMode('');
-            setCurrentItem({ id: 0, tipo: activeTab, concepto: '' });
+            setNewItemValue('');
+            newItemInputRef.current?.focus();
 
-            // Notificación de alta
             await createNotification({
                 title: `Concepto agregado (${activeTab})`,
                 description: `Se agregó el concepto "${conceptoValue}" al tipo "${activeTab}" en configuración.`,
@@ -304,12 +236,7 @@ export default function ConfigManagementComponent() {
                 data: { changes: [`Alta: ${conceptoValue}`], affectedTables: ['config'] }
             });
         } catch (error: unknown) {
-            console.error('Error:', error);
             const errorMessage = (error instanceof Error) ? error.message : 'Ha ocurrido un error';
-            setError(errorMessage);
-            setMessage({ type: 'error', text: errorMessage || 'Ha ocurrido un error al procesar la solicitud' });
-
-            // Notificación de error
             await createNotification({
                 title: 'Error al agregar concepto',
                 description: errorMessage,
@@ -324,488 +251,328 @@ export default function ConfigManagementComponent() {
         }
     };
 
-    const handleCloseMessage = () => setMessage({ type: '', text: '' });
-
     const handleTabChange = (tab: string) => {
         setActiveTab(tab);
         setSearchTerm('');
-        setFormMode('');
         setEditingRow(null);
         setDeletingRow(null);
-        setError('');
-    };
-
-    // Obtener el título según el tipo activo
-    const getActiveTabLabel = () => {
-        const activeTabObj = CONFIG_TYPES.find(type => type.id === activeTab);
-        return activeTabObj ? activeTabObj.label : 'Configuración';
+        setNewItemValue('');
     };
 
     return (
-        <div className={`min-h-screen p-2 sm:p-4 md:p-6 lg:p-8 animate-gradient-x transition-colors duration-500 ${isDarkMode
+        <div className={`h-[calc(100vh-4rem)] overflow-hidden transition-colors duration-300 ${isDarkMode
             ? 'bg-black text-white'
-            : 'bg-gradient-to-br from-gray-50 via-white to-gray-50 text-gray-900'
+            : 'bg-white text-black'
             }`}>
-            <div className={`w-full mx-auto rounded-lg sm:rounded-xl shadow-2xl overflow-hidden transition-all duration-500 transform ${isDarkMode
-                ? 'bg-black border-2 border-white/10'
-                : 'bg-white border-2 border-gray-200'
-                }`}>
-                {/* Header con título y efecto glassmorphism */}
-                <div className={`p-4 sm:p-6 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 sm:gap-0 transition-colors duration-500 ${isDarkMode
-                    ? 'bg-black border-b-2 border-white/10'
-                    : 'bg-white border-b-2 border-gray-200'
-                    }`}>
-                    <h1 className={`text-xl sm:text-2xl md:text-3xl font-bold flex items-center transition-colors duration-500 ${isDarkMode ? 'text-white' : 'text-gray-900'
-                        }`}>
-                        <span className={`mr-2 sm:mr-3 p-1 sm:p-2 rounded-lg text-sm sm:text-base shadow-lg transition-all duration-500 ${isDarkMode
-                            ? 'bg-white/5 text-white border border-white/10'
-                            : 'bg-gray-600 text-white border border-gray-700'
-                            }`}>ADM</span>
-                        Gestión de Configuración
-                    </h1>
+            <motion.div 
+                className={`h-full overflow-y-auto p-4 md:p-8 ${
+                    isDarkMode 
+                        ? 'scrollbar-thin scrollbar-track-white/5 scrollbar-thumb-white/20 hover:scrollbar-thumb-white/30'
+                        : 'scrollbar-thin scrollbar-track-black/5 scrollbar-thumb-black/20 hover:scrollbar-thumb-black/30'
+                }`}
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.4 }}
+            >
+                <div className="w-full max-w-5xl mx-auto pb-8">
+                {/* Header */}
+                <div className={`flex justify-between items-center mb-8 pb-6 border-b ${isDarkMode ? 'border-white/10' : 'border-black/10'}`}>
+                    <div>
+                        <h1 className="text-3xl font-light tracking-tight mb-1">
+                            Gestión de Configuración
+                        </h1>
+                        <p className={`text-sm ${isDarkMode ? 'text-white/40' : 'text-black/40'}`}>
+                            Administra los catálogos del sistema
+                        </p>
+                    </div>
                     <SectionRealtimeToggle 
                         sectionName="Configuración" 
                         isConnected={realtimeConnected} 
                     />
                 </div>
 
-                {/* Tabs con efecto hover y gradientes */}
-                <div className={`px-2 sm:px-4 md:px-6 pt-4 sm:pt-6 transition-colors duration-500 ${isDarkMode ? 'border-b border-gray-800' : 'border-b border-gray-200'
-                    }`}>
-                    <div className="flex flex-wrap gap-1 sm:gap-2">
-                        {CONFIG_TYPES.map((type) => (
-                            <button
-                                key={type.id}
-                                onClick={() => handleTabChange(type.id)}
-                                className={`px-3 py-2 rounded-t-lg text-sm font-medium transition-all duration-300 transform hover:scale-105 ${activeTab === type.id
-                                    ? isDarkMode
-                                        ? 'bg-white/5 text-white border-t border-l border-r border-white/10 shadow-lg'
-                                        : 'bg-gray-50 text-gray-700 border-t border-l border-r border-gray-200 shadow-lg'
-                                    : isDarkMode
-                                        ? 'text-gray-400 hover:text-white hover:bg-black hover:shadow-md'
-                                        : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100 hover:shadow-md'
-                                    }`}
-                            >
-                                <div className="flex items-center">
-                                    <Layers size={16} className={`mr-1.5 ${activeTab === type.id
-                                        ? isDarkMode ? 'text-white animate-pulse' : 'text-gray-600 animate-pulse'
-                                        : ''
-                                        }`} />
-                                    {type.label}
-                                </div>
-                            </button>
-                        ))}
-                    </div>
-                </div>
-
-                {/* Mensajes con animación mejorada */}
-                {message.text && (
-                    <div className={`mx-2 sm:mx-4 md:mx-6 mt-4 sm:mt-6 p-3 sm:p-4 rounded-lg flex items-center justify-between transition-all duration-500 animate-slide-in-right backdrop-blur-sm border shadow-lg ${message.type === 'success'
-                        ? isDarkMode
-                            ? 'bg-gradient-to-r from-green-900/80 via-green-800/80 to-green-900/80 border-green-500/30'
-                            : 'bg-gradient-to-r from-green-100 via-green-50 to-green-100 border-green-300 text-green-800'
-                        : isDarkMode
-                            ? 'bg-gradient-to-r from-red-900/80 via-red-800/80 to-red-900/80 border-red-500/30'
-                            : 'bg-gradient-to-r from-red-100 via-red-50 to-red-100 border-red-300 text-red-800'
-                        }`}>
-                        <div className="flex items-center">
-                            {message.type === 'success' ?
-                                <CheckCircle className="mr-2 sm:mr-3" size={20} /> :
-                                <AlertTriangle className="mr-2 sm:mr-3" size={20} />
-                            }
-                            <span className="font-medium text-sm sm:text-base">{message.text}</span>
-                        </div>
-                        <button
-                            onClick={handleCloseMessage}
-                            className={`p-1 rounded-full transition-colors ${isDarkMode ? 'hover:bg-black' : 'hover:bg-gray-200'
+                {/* Tabs */}
+                <div className="flex gap-8 mb-8">
+                    {CONFIG_TYPES.map((type, index) => (
+                        <motion.button
+                            key={type.id}
+                            onClick={() => handleTabChange(type.id)}
+                            className={`relative text-sm font-medium pb-3 transition-colors ${activeTab === type.id
+                                ? isDarkMode ? 'text-white' : 'text-black'
+                                : isDarkMode ? 'text-white/40 hover:text-white/60' : 'text-black/40 hover:text-black/60'
                                 }`}
-                            title='Cerrar'
+                            initial={{ opacity: 0, y: -10 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ delay: index * 0.1 }}
                         >
-                            <X size={16} />
-                        </button>
-                    </div>
-                )}
-
-                {/* Contenido principal con glassmorphism */}
-                <div className="px-2 sm:px-4 md:px-6 py-4 sm:py-6">
-                    {/* Búsqueda y botones con efectos */}
-                    <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 sm:mb-6 gap-2 sm:gap-0">
-                        <div className="w-full sm:w-auto relative mb-2 sm:mb-0 group">
-                            <input
-                                type="text"
-                                placeholder={`Buscar ${getActiveTabLabel().toLowerCase()}...`}
-                                value={searchTerm}
-                                onChange={(e) => setSearchTerm(e.target.value)}
-                                className={`w-full sm:w-64 rounded-lg p-2 pl-8 text-sm transition-all duration-300 ${isDarkMode
-                                    ? 'bg-black border border-white/10 focus:border-white/20 focus:ring-2 focus:ring-white/10 group-hover:border-white/20 text-white'
-                                    : 'bg-white border border-gray-300 focus:border-gray-500 focus:ring-2 focus:ring-gray-500/20 group-hover:border-gray-400 text-gray-900'
-                                    }`}
-                            />
-                            <Search size={18} className={`absolute left-2 top-2.5 transition-colors ${isDarkMode
-                                ? 'text-gray-500 group-hover:text-gray-400'
-                                : 'text-gray-400 group-hover:text-gray-600'
-                                }`} />
-                        </div>
-
-                        {/* Botones con gradientes y efectos hover */}
-                        <div className="flex gap-2">
-                            <button
-                                onClick={handleAdd}
-                                className={`flex items-center px-4 py-2 rounded-lg transition-all duration-300 text-sm transform hover:scale-105 hover:shadow-lg group ${isDarkMode
-                                    ? 'bg-white/5 hover:bg-white/10 border border-white/10 text-white'
-                                    : 'bg-gray-600 hover:bg-gray-700 border border-gray-700 text-white'
-                                    }`}
-                            >
-                                <Plus size={16} className={`mr-1.5 group-hover:rotate-90 transition-transform duration-300 ${isDarkMode ? 'text-white' : 'text-white'
-                                    }`} />
-                                Agregar {getActiveTabLabel()}
-                            </button>
-                            <button
-                                title='Recargar'
-                                onClick={reindex}
-                                className={`p-2 rounded-lg transition-all duration-300 transform hover:scale-105 hover:shadow-lg group ${isDarkMode
-                                    ? 'bg-black border border-white/10 hover:bg-white/5'
-                                    : 'bg-white border border-gray-300 hover:bg-gray-100'
-                                    }`}
-                            >
-                                <RefreshCw size={16} className={`group-hover:rotate-180 transition-transform duration-500 ${isDarkMode ? 'text-gray-300' : 'text-gray-600'
-                                    }`} />
-                            </button>
-                        </div>
-                    </div>
-
-                    {/* Formulario con efectos de glassmorphism */}
-                    {formMode === 'add' && (
-                        <div className={`mb-6 p-4 rounded-lg animate-fade-in shadow-xl hover:shadow-2xl transition-all duration-300 ${isDarkMode
-                            ? 'bg-black border-2 border-white/10'
-                            : 'bg-white border-2 border-gray-200'
-                            }`}>
-                            <h2 className={`text-lg font-semibold mb-4 pb-2 transition-colors duration-500 ${isDarkMode
-                                ? 'border-b border-white/10 text-white'
-                                : 'border-b border-gray-200 text-gray-900'
-                                }`}>
-                                Agregar Nuevo {getActiveTabLabel()}
-                            </h2>
-
-                            <form onSubmit={handleSubmit}>
-                                <div className="mb-4">
-                                    <label className={`block mb-1 text-sm font-medium transition-colors duration-500 ${isDarkMode ? 'text-white' : 'text-gray-700'
-                                        }`}>
-                                        Concepto <span className="text-red-500">*</span>
-                                    </label>
-                                    <input
-                                        ref={inputRef}
-                                        type="text"
-                                        value={currentItem.concepto || ''}
-                                        onChange={(e) => setCurrentItem({ ...currentItem, concepto: e.target.value.toUpperCase() })}
-                                        className={`w-full rounded-lg p-2 transition-all ${isDarkMode
-                                            ? `bg-black border ${error ? 'border-red-500' : 'border-gray-700'} focus:border-white focus:ring focus:ring-gray-700 focus:ring-opacity-50 text-white`
-                                            : `bg-white border ${error ? 'border-red-500' : 'border-gray-300'} focus:border-gray-500 focus:ring focus:ring-gray-500 focus:ring-opacity-50 text-gray-900`
-                                            }`}
-                                        placeholder={`Nombre del ${getActiveTabLabel().toLowerCase()}`}
-                                    />
-                                    {error && <p className="text-red-500 text-xs mt-1">{error}</p>}
-                                </div>
-                                <div className="flex items-center gap-2 mt-2">
-                                    {currentItem.concepto && currentItem.concepto.trim() !== '' ? (
-                                        <span className={`flex px-2 py-0.5 rounded-full text-xs font-semibold items-center gap-1 transition-colors duration-500 ${isDarkMode
-                                            ? 'bg-white/5 text-white border border-white/20'
-                                            : 'bg-gray-100 text-gray-800 border border-gray-200'
-                                            }`}>
-                                            {currentItem.concepto}
-                                        </span>
-                                    ) : (
-                                        <span className={`flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-semibold animate-fade-in ${isDarkMode
-                                            ? 'text-amber-400 bg-amber-900/30 border border-amber-500'
-                                            : 'text-amber-700 bg-amber-100 border border-amber-300'
-                                            }`}>
-                                            <AlertTriangle size={14} />
-                                            <span>Sin concepto</span>
-                                        </span>
-                                    )}
-                                </div>
-                                <div className="flex justify-end gap-2 mt-4">
-                                    <button
-                                        type="button"
-                                        onClick={handleCancel}
-                                        className={`px-3 py-1.5 rounded-lg transition-colors text-sm ${isDarkMode
-                                            ? 'bg-gray-800 hover:bg-gray-700 text-white'
-                                            : 'bg-gray-200 hover:bg-gray-300 text-gray-700'
-                                            }`}
-                                    >
-                                        Cancelar
-                                    </button>
-                                    <button
-                                        type="submit"
-                                        disabled={isSubmitting}
-                                        className={`px-3 py-1.5 rounded-lg transition-colors text-sm flex items-center ${isDarkMode
-                                            ? 'bg-white text-black hover:bg-gray-200'
-                                            : 'bg-gray-600 text-white hover:bg-gray-700'
-                                            }`}
-                                    >
-                                        {isSubmitting ? (
-                                            <>
-                                                <div className={`w-3 h-3 border-2 rounded-full animate-spin mr-2 ${isDarkMode
-                                                    ? 'border-gray-400 border-t-white'
-                                                    : 'border-gray-300 border-t-white'
-                                                    }`}></div>
-                                                Procesando...
-                                            </>
-                                        ) : (
-                                            <>
-                                                <Plus size={16} className="mr-1" />
-                                                Agregar
-                                            </>
-                                        )}
-                                    </button>
-                                </div>
-                            </form>
-                        </div>
-                    )}
-
-                    {/* Tabla con efectos mejorados */}
-                    <div className={`overflow-x-auto rounded-lg shadow-xl transition-colors duration-500 ${isDarkMode
-                        ? 'border-2 border-white/10 [&_::-webkit-scrollbar]:w-2 [&_::-webkit-scrollbar-track]:bg-transparent [&_::-webkit-scrollbar-thumb]:bg-white/10 [&_::-webkit-scrollbar-thumb:hover]:bg-white/20'
-                        : 'border-2 border-gray-200 [&_::-webkit-scrollbar]:w-2 [&_::-webkit-scrollbar-track]:bg-transparent [&_::-webkit-scrollbar-thumb]:bg-gray-300 [&_::-webkit-scrollbar-thumb:hover]:bg-gray-400'
-                        }`}>
-                        <table className={`min-w-full transition-colors duration-500 ${isDarkMode ? 'divide-y-2 divide-white/10' : 'divide-y-2 divide-gray-200'
-                            }`}>
-                            <thead className={isDarkMode ? "bg-black" : "bg-gray-50"}>
-                                <tr>
-                                    <th scope="col" className={`px-4 py-3 text-left text-xs font-medium uppercase tracking-wider transition-colors duration-500 ${isDarkMode ? 'text-gray-400' : 'text-gray-600'
-                                        }`}>
-                                        {getActiveTabLabel()}
-                                    </th>
-                                    <th scope="col" className={`px-4 py-3 text-right text-xs font-medium uppercase tracking-wider w-32 transition-colors duration-500 ${isDarkMode ? 'text-gray-400' : 'text-gray-600'
-                                        }`}>
-                                        Acciones
-                                    </th>
-                                </tr>
-                            </thead>
-                            <tbody className={`transition-all duration-300 overflow-y-auto max-h-[600px] scroll-smooth ${isDarkMode
-                                ? 'bg-black divide-y divide-white/10'
-                                : 'bg-white divide-y divide-gray-200'
-                                }`}>
-                                {isIndexing ? (
-                                    <tr>
-                                        <td colSpan={3} className={`px-4 py-4 text-center text-sm transition-colors duration-500 ${isDarkMode ? 'text-white' : 'text-gray-900'
-                                            }`}>
-                                            <div className="flex justify-center items-center">
-                                                <div className={`w-5 h-5 border-2 rounded-full animate-spin mr-2 ${isDarkMode
-                                                    ? 'border-gray-500 border-t-white'
-                                                    : 'border-gray-300 border-t-gray-600'
-                                                    }`}></div>
-                                                Cargando datos...
-                                            </div>
-                                        </td>
-                                    </tr>
-                                ) : filteredItems.length === 0 ? (
-                                    <tr>
-                                        <td colSpan={3} className={`px-4 py-4 text-center text-sm transition-colors duration-500 ${isDarkMode ? 'text-white' : 'text-gray-900'
-                                            }`}>
-                                            {searchTerm
-                                                ? `No se encontraron ${getActiveTabLabel().toLowerCase()} con el término de búsqueda.`
-                                                : `No hay ${getActiveTabLabel().toLowerCase()} registrados.`}
-                                        </td>
-                                    </tr>
-                                ) : (
-                                    filteredItems.map((item) => (
-                                        <tr key={item.id} className={`transition-colors ${deletingRow === item.id
-                                            ? isDarkMode ? 'bg-red-900 bg-opacity-20' : 'bg-red-100'
-                                            : isDarkMode ? 'hover:bg-gray-900' : 'hover:bg-gray-50'
-                                            }`}>
-                                            <td className="px-4 py-3 text-sm">
-                                                {editingRow === item.id ? (
-                                                    <div className="flex items-center space-x-2">
-                                                        <input
-                                                            ref={editInputRef}
-                                                            type="text"
-                                                            value={editValue}
-                                                            onChange={(e) => setEditValue(e.target.value.toUpperCase())}
-                                                            className={`w-full rounded-lg p-1 text-sm transition-all ${isDarkMode
-                                                                ? `bg-black border ${error && editingRow === item.id ? 'border-red-500' : 'border-gray-700'} focus:border-white focus:ring focus:ring-gray-700 focus:ring-opacity-50 text-white`
-                                                                : `bg-white border ${error && editingRow === item.id ? 'border-red-500' : 'border-gray-300'} focus:border-gray-500 focus:ring focus:ring-gray-500 focus:ring-opacity-50 text-gray-900`
-                                                                }`}
-                                                            placeholder={`Nombre del ${getActiveTabLabel().toLowerCase()}`}
-                                                            onKeyDown={(e) => {
-                                                                if (e.key === 'Enter') {
-                                                                    e.preventDefault();
-                                                                    saveRowEdit(item.id);
-                                                                } else if (e.key === 'Escape') {
-                                                                    cancelRowEdit();
-                                                                }
-                                                            }}
-                                                        />
-                                                        <div className="flex space-x-1">
-                                                            <button
-                                                                onClick={() => saveRowEdit(item.id)}
-                                                                className={`p-1 rounded-md transition-colors ${isDarkMode
-                                                                    ? 'bg-gray-800 hover:bg-gray-700'
-                                                                    : 'bg-gray-200 hover:bg-gray-300'
-                                                                    }`}
-                                                                title="Guardar"
-                                                                disabled={isSubmitting}
-                                                            >
-                                                                {isSubmitting ? (
-                                                                    <div className={`w-3 h-3 border-2 rounded-full animate-spin ${isDarkMode
-                                                                        ? 'border-gray-500 border-t-white'
-                                                                        : 'border-gray-400 border-t-gray-600'
-                                                                        }`}></div>
-                                                                ) : (
-                                                                    <Save size={16} />
-                                                                )}
-                                                            </button>
-                                                            <button
-                                                                onClick={cancelRowEdit}
-                                                                className={`p-1 rounded-md transition-colors ${isDarkMode ? 'hover:bg-gray-700' : 'hover:bg-gray-300'
-                                                                    }`}
-                                                                title="Cancelar"
-                                                            >
-                                                                <X size={16} />
-                                                            </button>
-                                                        </div>
-                                                    </div>
-                                                ) : (
-                                                    item.concepto && item.concepto.trim() !== '' ? (
-                                                        <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-semibold items-center gap-1 w-fit max-w-full transition-all duration-300 ${isDarkMode
-                                                            ? 'bg-white/5 text-white border border-white/20 hover:bg-white/10'
-                                                            : 'bg-gray-100 text-gray-800 border border-gray-200 hover:bg-gray-200'
-                                                            }`}>
-                                                            {item.concepto}
-                                                        </span>
-                                                    ) : (
-                                                        <span className={`flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-semibold animate-fade-in ${isDarkMode
-                                                            ? 'text-amber-400 bg-amber-900/30 border border-amber-500'
-                                                            : 'text-amber-700 bg-amber-100 border border-amber-300'
-                                                            }`}>
-                                                            <AlertTriangle size={14} />
-                                                            <span>Sin concepto</span>
-                                                        </span>
-                                                    )
-                                                )}
-                                                {error && editingRow === item.id && (
-                                                    <p className="text-red-500 text-xs mt-1">{error}</p>
-                                                )}
-                                            </td>
-                                            <td className="px-4 py-3 text-sm text-right">
-                                                {editingRow === item.id ? (
-                                                    <div className="flex justify-end space-x-1 opacity-50">
-                                                        <button
-                                                            title='Editar'
-                                                            className={`p-1 rounded-md transition-colors cursor-not-allowed ${isDarkMode ? 'hover:bg-gray-700' : 'hover:bg-gray-300'
-                                                                }`}
-                                                            disabled
-                                                        >
-                                                            <Edit size={16} />
-                                                        </button>
-                                                        <button
-                                                            title='Eliminar'
-                                                            className="p-1 hover:bg-red-900 rounded-md transition-colors cursor-not-allowed"
-                                                            disabled
-                                                        >
-                                                            <Trash2 size={16} />
-                                                        </button>
-                                                    </div>
-                                                ) : deletingRow === item.id ? (
-                                                    <div className="flex justify-end space-x-1 items-center">
-                                                        <span className="text-xs mr-2 text-red-300">¿Eliminar?</span>
-                                                        <button
-                                                            onClick={() => confirmDelete(item.id)}
-                                                            className="p-1 bg-red-700 hover:bg-red-600 rounded-md transition-colors"
-                                                            title="Confirmar eliminación"
-                                                            disabled={isSubmitting}
-                                                        >
-                                                            {isSubmitting ? (
-                                                                <div className={`w-3 h-3 border-2 rounded-full animate-spin ${isDarkMode
-                                                                    ? 'border-gray-500 border-t-white'
-                                                                    : 'border-red-300 border-t-white'
-                                                                    }`}></div>
-                                                            ) : (
-                                                                <CheckCircle size={16} />
-                                                            )}
-                                                        </button>
-                                                        <button
-                                                            onClick={cancelDelete}
-                                                            className={`p-1 rounded-md transition-colors ${isDarkMode
-                                                                ? 'bg-gray-800 hover:bg-gray-700'
-                                                                : 'bg-gray-200 hover:bg-gray-300'
-                                                                }`}
-                                                            title="Cancelar"
-                                                        >
-                                                            <X size={16} />
-                                                        </button>
-                                                    </div>
-                                                ) : (
-                                                    <div className="flex justify-end space-x-1">
-                                                        <button
-                                                            onClick={() => handleEdit(item)}
-                                                            className={`p-1 rounded-md transition-colors ${isDarkMode ? 'hover:bg-gray-700' : 'hover:bg-gray-200'
-                                                                }`}
-                                                            title="Editar"
-                                                        >
-                                                            <Edit size={16} />
-                                                        </button>
-                                                        <button
-                                                            onClick={() => handleDelete(item.id)}
-                                                            className="p-1 hover:bg-red-900 rounded-md transition-colors"
-                                                            title="Eliminar"
-                                                        >
-                                                            <Trash2 size={16} />
-                                                        </button>
-                                                    </div>
-                                                )}
-                                            </td>
-                                        </tr>
-                                    ))
-                                )}
-                            </tbody>
-                        </table>
-                    </div>
-
-                    {/* Contador de resultados */}
-                    <div className={`mt-4 text-sm transition-colors duration-500 ${isDarkMode ? 'text-gray-400' : 'text-gray-600'
-                        }`}>
-                        Mostrando {filteredItems.length} de {configItems.filter(item => item.tipo === activeTab).length} {getActiveTabLabel().toLowerCase()}
-                    </div>
+                            {type.label}
+                            {activeTab === type.id && (
+                                <motion.div
+                                    className={`absolute bottom-0 left-0 right-0 h-0.5 ${isDarkMode ? 'bg-white' : 'bg-black'}`}
+                                    layoutId="activeTab"
+                                    transition={{ type: 'spring', stiffness: 380, damping: 30 }}
+                                />
+                            )}
+                        </motion.button>
+                    ))}
                 </div>
-            </div>
 
-            {/* Estilos CSS con nuevas animaciones */}
-            <style jsx>{`
-                @keyframes gradient-x {
-                    0% { background-position: 0% 50%; }
-                    50% { background-position: 100% 50%; }
-                    100% { background-position: 0% 50%; }
-                }
+                {/* Search and Add */}
+                <motion.div 
+                    className="mb-8 space-y-3"
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    transition={{ delay: 0.2 }}
+                >
+                    {/* Search */}
+                    <div className="relative">
+                        <Search size={16} className={`absolute left-3 top-1/2 -translate-y-1/2 ${isDarkMode ? 'text-white/40' : 'text-black/40'}`} />
+                        <input
+                            type="text"
+                            placeholder="Buscar..."
+                            value={searchTerm}
+                            onChange={(e) => setSearchTerm(e.target.value)}
+                            className={`w-full pl-9 pr-4 py-2 rounded-lg border text-sm transition-all ${isDarkMode
+                                ? 'bg-black border-white/10 text-white placeholder:text-white/40 focus:border-white/20'
+                                : 'bg-white border-black/10 text-black placeholder:text-black/40 focus:border-black/20'
+                                } focus:outline-none`}
+                        />
+                    </div>
 
-                @keyframes slide-in-right {
-                    from { transform: translateX(100%); opacity: 0; }
-                    to { transform: translateX(0); opacity: 1; }
-                }
+                    {/* Add New Item - Inline style */}
+                    <div className={`flex items-center gap-3 px-3 py-2 rounded-lg border transition-all ${
+                        newItemValue.trim() 
+                            ? isDarkMode 
+                                ? 'border-white/20 bg-white/[0.02]' 
+                                : 'border-black/20 bg-black/[0.02]'
+                            : isDarkMode
+                                ? 'border-white/10'
+                                : 'border-black/10'
+                    }`}>
+                        <Plus size={16} className={`flex-shrink-0 ${isDarkMode ? 'text-white/40' : 'text-black/40'}`} />
+                        <input
+                            ref={newItemInputRef}
+                            type="text"
+                            placeholder="Agregar concepto..."
+                            value={newItemValue}
+                            onChange={(e) => setNewItemValue(e.target.value.toUpperCase())}
+                            onKeyDown={(e) => {
+                                if (e.key === 'Enter' && newItemValue.trim()) {
+                                    handleAddNewItem();
+                                }
+                            }}
+                            className={`flex-1 bg-transparent border-none text-sm transition-colors ${isDarkMode
+                                ? 'text-white placeholder:text-white/40'
+                                : 'text-black placeholder:text-black/40'
+                                } focus:outline-none`}
+                        />
+                        <AnimatePresence>
+                            {newItemValue.trim() && (
+                                <motion.button
+                                    onClick={handleAddNewItem}
+                                    disabled={isSubmitting}
+                                    className={`flex-shrink-0 px-3 py-1 rounded text-xs font-medium transition-all ${
+                                        isSubmitting
+                                            ? isDarkMode
+                                                ? 'bg-white/5 text-white/20 cursor-not-allowed'
+                                                : 'bg-black/5 text-black/20 cursor-not-allowed'
+                                            : isDarkMode
+                                                ? 'bg-white text-black hover:bg-white/90'
+                                                : 'bg-black text-white hover:bg-black/90'
+                                    }`}
+                                    initial={{ opacity: 0, scale: 0.8, width: 0 }}
+                                    animate={{ opacity: 1, scale: 1, width: 'auto' }}
+                                    exit={{ opacity: 0, scale: 0.8, width: 0 }}
+                                    transition={{ duration: 0.2 }}
+                                    whileHover={!isSubmitting ? { scale: 1.05 } : {}}
+                                    whileTap={!isSubmitting ? { scale: 0.95 } : {}}
+                                >
+                                    {isSubmitting ? (
+                                        <div className="w-3 h-3 border-2 border-current border-t-transparent rounded-full animate-spin" />
+                                    ) : (
+                                        'Enter'
+                                    )}
+                                </motion.button>
+                            )}
+                        </AnimatePresence>
+                    </div>
+                </motion.div>
 
-                @keyframes fade-in {
-                    from { opacity: 0; transform: translateY(-10px); }
-                    to { opacity: 1; transform: translateY(0); }
-                }
+                {/* Lista de items */}
+                <motion.div 
+                    className="space-y-1"
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    transition={{ delay: 0.3 }}
+                >
+                    <AnimatePresence mode="popLayout">
+                        {filteredItems.length === 0 ? (
+                            <motion.div 
+                                className={`text-center py-16 text-sm ${isDarkMode ? 'text-white/40' : 'text-black/40'}`}
+                                initial={{ opacity: 0, y: 10 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                exit={{ opacity: 0, y: -10 }}
+                            >
+                                {searchTerm ? 'No se encontraron resultados' : 'No hay conceptos registrados'}
+                            </motion.div>
+                        ) : (
+                            filteredItems.map((item, index) => (
+                                <motion.div
+                                    key={item.id}
+                                    layout
+                                    initial={{ opacity: 0, y: 20 }}
+                                    animate={{ opacity: 1, y: 0 }}
+                                    exit={{ opacity: 0, scale: 0.95 }}
+                                    transition={{ 
+                                        layout: { type: 'spring', stiffness: 350, damping: 30 },
+                                        opacity: { duration: 0.2 },
+                                        y: { duration: 0.3 }
+                                    }}
+                                    className={`group flex items-center justify-between px-4 py-3.5 rounded-lg border transition-all ${
+                                        deletingRow === item.id
+                                            ? isDarkMode
+                                                ? 'bg-red-500/10 border-red-500/30'
+                                                : 'bg-red-50 border-red-200'
+                                            : isDarkMode
+                                                ? 'bg-black border-white/5 hover:border-white/10 hover:bg-white/[0.02]'
+                                                : 'bg-white border-black/5 hover:border-black/10 hover:bg-black/[0.02]'
+                                    }`}
+                                >
+                                    {editingRow === item.id ? (
+                                        <>
+                                            <input
+                                                ref={editInputRef}
+                                                type="text"
+                                                value={editValue}
+                                                onChange={(e) => setEditValue(e.target.value.toUpperCase())}
+                                                onKeyDown={(e) => {
+                                                    if (e.key === 'Enter') {
+                                                        saveRowEdit(item.id);
+                                                    } else if (e.key === 'Escape') {
+                                                        cancelRowEdit();
+                                                    }
+                                                }}
+                                                className={`flex-1 px-3 py-1.5 rounded-lg border text-sm transition-colors ${isDarkMode
+                                                    ? 'bg-black border-white/20 text-white focus:border-white/40'
+                                                    : 'bg-white border-black/20 text-black focus:border-black/40'
+                                                    } focus:outline-none`}
+                                                disabled={isSubmitting}
+                                            />
+                                            <div className="flex gap-2 ml-3">
+                                                <motion.button
+                                                    onClick={() => saveRowEdit(item.id)}
+                                                    disabled={isSubmitting}
+                                                    className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${isDarkMode
+                                                        ? 'bg-white text-black hover:bg-white/90'
+                                                        : 'bg-black text-white hover:bg-black/90'
+                                                        }`}
+                                                    whileHover={{ scale: 1.02 }}
+                                                    whileTap={{ scale: 0.98 }}
+                                                >
+                                                    {isSubmitting ? (
+                                                        <div className="w-3 h-3 border-2 border-current border-t-transparent rounded-full animate-spin" />
+                                                    ) : (
+                                                        'Guardar'
+                                                    )}
+                                                </motion.button>
+                                                <motion.button
+                                                    onClick={cancelRowEdit}
+                                                    className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${isDarkMode
+                                                        ? 'hover:bg-white/5'
+                                                        : 'hover:bg-black/5'
+                                                        }`}
+                                                    whileHover={{ scale: 1.02 }}
+                                                    whileTap={{ scale: 0.98 }}
+                                                >
+                                                    Cancelar
+                                                </motion.button>
+                                            </div>
+                                        </>
+                                    ) : deletingRow === item.id ? (
+                                        <>
+                                            <span className={`text-sm ${isDarkMode ? 'text-red-400' : 'text-red-600'}`}>
+                                                ¿Eliminar "{item.concepto}"?
+                                            </span>
+                                            <div className="flex gap-2">
+                                                <motion.button
+                                                    onClick={() => confirmDelete(item.id)}
+                                                    disabled={isSubmitting}
+                                                    className="px-3 py-1.5 rounded-lg text-xs font-medium bg-red-500 text-white hover:bg-red-600 transition-all"
+                                                    whileHover={{ scale: 1.02 }}
+                                                    whileTap={{ scale: 0.98 }}
+                                                >
+                                                    {isSubmitting ? (
+                                                        <div className="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                                                    ) : (
+                                                        'Confirmar'
+                                                    )}
+                                                </motion.button>
+                                                <motion.button
+                                                    onClick={cancelDelete}
+                                                    className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${isDarkMode
+                                                        ? 'hover:bg-white/5'
+                                                        : 'hover:bg-black/5'
+                                                        }`}
+                                                    whileHover={{ scale: 1.02 }}
+                                                    whileTap={{ scale: 0.98 }}
+                                                >
+                                                    Cancelar
+                                                </motion.button>
+                                            </div>
+                                        </>
+                                    ) : (
+                                        <>
+                                            <span className="text-sm font-medium">{item.concepto}</span>
+                                            <motion.div 
+                                                className="flex gap-1"
+                                                initial={{ opacity: 0 }}
+                                                animate={{ opacity: 1 }}
+                                                transition={{ duration: 0.2 }}
+                                            >
+                                                <motion.button
+                                                    onClick={() => handleEdit(item)}
+                                                    className={`p-2 rounded-lg transition-colors ${isDarkMode
+                                                        ? 'hover:bg-white/5'
+                                                        : 'hover:bg-black/5'
+                                                        }`}
+                                                    title="Editar"
+                                                    whileHover={{ scale: 1.1 }}
+                                                    whileTap={{ scale: 0.95 }}
+                                                >
+                                                    <Edit size={14} />
+                                                </motion.button>
+                                                <motion.button
+                                                    onClick={() => handleDelete(item.id)}
+                                                    className={`p-2 rounded-lg transition-colors ${isDarkMode
+                                                        ? 'hover:bg-red-500/10 hover:text-red-400'
+                                                        : 'hover:bg-red-50 hover:text-red-600'
+                                                        }`}
+                                                    title="Eliminar"
+                                                    whileHover={{ scale: 1.1 }}
+                                                    whileTap={{ scale: 0.95 }}
+                                                >
+                                                    <Trash2 size={14} />
+                                                </motion.button>
+                                            </motion.div>
+                                        </>
+                                    )}
+                                </motion.div>
+                            ))
+                        )}
+                    </AnimatePresence>
+                </motion.div>
 
-                .animate-gradient-x {
-                    animation: gradient-x 15s ease infinite;
-                    background-size: 200% 200%;
-                }
-
-                .animate-slide-in-right {
-                    animation: slide-in-right 0.3s ease-out forwards;
-                }
-
-                .animate-text {
-                    animation: gradient-x 4s linear infinite;
-                    background-size: 200% auto;
-                }
-
-                .animate-fade-in {
-                    animation: fade-in 0.3s ease-out forwards;
-                }
-            `}</style>
+                {/* Footer */}
+                <motion.div 
+                    className={`mt-8 pt-4 border-t text-xs ${isDarkMode ? 'border-white/10 text-white/40' : 'border-black/10 text-black/40'}`}
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    transition={{ delay: 0.4 }}
+                >
+                    {filteredItems.length} de {configItems.filter(item => item.tipo === activeTab).length} conceptos
+                </motion.div>
+                </div>
+            </motion.div>
         </div>
     );
 }

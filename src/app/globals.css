@@ -16,7 +16,7 @@ body {
   background: var(--background);
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
-  overflow-y: hidden;
+  overflow: hidden;
 }
 
 /* Custom modal shadow for firmas modal */
@@ -250,4 +250,75 @@ body, * {
   );
   background-size: 1000px 100%;
   animation: shimmer 2s infinite linear;
+}
+
+/* Custom Scrollbar Styles - Minimalista */
+.scrollbar-thin {
+  scrollbar-width: thin;
+}
+
+.scrollbar-thin::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+.scrollbar-thin::-webkit-scrollbar-track {
+  background: transparent;
+  border-radius: 5px;
+  margin: 4px 0;
+}
+
+.scrollbar-thin::-webkit-scrollbar-thumb {
+  border-radius: 5px;
+  transition: background-color 0.2s ease;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+
+/* Dark mode scrollbar */
+.scrollbar-track-white\/5::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.scrollbar-thumb-white\/20::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.15);
+  border-color: rgba(0, 0, 0, 0.5);
+}
+
+.scrollbar-thumb-white\/20:hover::-webkit-scrollbar-thumb,
+.hover\:scrollbar-thumb-white\/30::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.25);
+}
+
+/* Light mode scrollbar */
+.scrollbar-track-black\/5::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.03);
+}
+
+.scrollbar-thumb-black\/20::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.15);
+  border-color: rgba(255, 255, 255, 0.5);
+}
+
+.scrollbar-thumb-black\/20:hover::-webkit-scrollbar-thumb,
+.hover\:scrollbar-thumb-black\/30::-webkit-scrollbar-thumb:hover {
+  background: rgba(0, 0, 0, 0.25);
+}
+
+/* Smooth scrolling */
+.scrollbar-thin {
+  scroll-behavior: smooth;
+}
+
+/* Firefox scrollbar */
+.scrollbar-thin {
+  scrollbar-color: rgba(0, 0, 0, 0.15) rgba(0, 0, 0, 0.03);
+}
+
+.scrollbar-track-white\/5.scrollbar-thumb-white\/20 {
+  scrollbar-color: rgba(255, 255, 255, 0.15) rgba(255, 255, 255, 0.03);
+}
+
+.scrollbar-track-black\/5.scrollbar-thumb-black\/20 {
+  scrollbar-color: rgba(0, 0, 0, 0.15) rgba(0, 0, 0, 0.03);
 }
