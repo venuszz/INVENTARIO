@@ -209,25 +209,26 @@ export function useResguardosBajasIndexation() {
       // Verificar si ya hay datos en IndexedDB (después de hidratación)
       const currentState = useIndexationStore.getState().modules[MODULE_KEY];
       const currentResguardos = useResguardosBajasStore.getState().resguardos;
-      const hasDataInIndexedDB = currentResguardos.length > 0;
-      const isAlreadyIndexed = currentState?.isIndexed && hasDataInIndexedDB;
+      
+      // Si el módulo ya fue indexado (incluso con 0 registros), no reindexar
+      // Esto previene loops infinitos en módulos vacíos
+      const isAlreadyIndexed = currentState?.isIndexed && currentState?.lastIndexedAt;
       
       console.log('🔍 [RESGUARDOS BAJAS] Verificando estado de indexación:', {
         moduleKey: MODULE_KEY,
         isIndexed: currentState?.isIndexed,
-        resguardosCount: resguardos.length,
-        hasDataInIndexedDB,
+        resguardosCount: currentResguardos.length,
         isAlreadyIndexed,
         lastIndexedAt: currentState?.lastIndexedAt,
         isStoreHydrated,
       });
       
       if (isAlreadyIndexed) {
-        console.log('✅ [RESGUARDOS BAJAS] Data found in IndexedDB, skipping indexation');
+        console.log('✅ [RESGUARDOS BAJAS] Already indexed, skipping indexation');
         completeIndexation(MODULE_KEY);
         await setupRealtimeSubscription();
       } else {
-        console.log('⚠️ [RESGUARDOS BAJAS] No data in IndexedDB, starting full indexation');
+        console.log('⚠️ [RESGUARDOS BAJAS] Not indexed yet, starting full indexation');
         await indexData();
       }
       isInitializedRef.current = true;

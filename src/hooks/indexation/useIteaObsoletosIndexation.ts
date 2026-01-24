@@ -222,14 +222,15 @@ export function useIteaObsoletosIndexation() {
       // Verificar si ya hay datos en IndexedDB (después de hidratación)
       const currentState = useIndexationStore.getState().modules[MODULE_KEY];
       const currentMuebles = useIteaObsoletosStore.getState().muebles;
-      const hasDataInIndexedDB = currentMuebles.length > 0;
-      const isAlreadyIndexed = currentState?.isIndexed && hasDataInIndexedDB;
+      
+      // Si el módulo ya fue indexado (incluso con 0 registros), no reindexar
+      // Esto previene loops infinitos en módulos vacíos
+      const isAlreadyIndexed = currentState?.isIndexed && currentState?.lastIndexedAt;
       
       console.log('🔍 [ITEA OBSOLETOS] Verificando estado de indexación:', {
         moduleKey: MODULE_KEY,
         isIndexed: currentState?.isIndexed,
-        mueblesCount: muebles.length,
-        hasDataInIndexedDB,
+        mueblesCount: currentMuebles.length,
         isAlreadyIndexed,
         lastIndexedAt: currentState?.lastIndexedAt,
         isStoreHydrated,
@@ -237,11 +238,11 @@ export function useIteaObsoletosIndexation() {
       });
       
       if (isAlreadyIndexed) {
-        console.log('✅ [ITEA OBSOLETOS] Data found in IndexedDB, skipping indexation');
+        console.log('✅ [ITEA OBSOLETOS] Already indexed, skipping indexation');
         completeIndexation(MODULE_KEY);
         await setupRealtimeSubscription();
       } else {
-        console.log('⚠️ [ITEA OBSOLETOS] No data in IndexedDB, starting full indexation');
+        console.log('⚠️ [ITEA OBSOLETOS] Not indexed yet, starting full indexation');
         await indexData();
       }
       isInitializedRef.current = true;
