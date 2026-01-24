@@ -5,6 +5,7 @@ import { Plus, Save, Trash2, Edit, AlertTriangle, CheckCircle, X, Search, Refres
 import supabase from "@/app/lib/supabase/client";
 import { useNotifications } from '@/hooks/useNotifications';
 import SectionRealtimeToggle from '@/components/SectionRealtimeToggle';
+import { useAdminIndexation } from '@/hooks/indexation/useAdminIndexation';
 
 interface ConfigItem {
     id: number;
@@ -26,9 +27,12 @@ const CONFIG_TYPES = [
 
 export default function ConfigManagementComponent() {
     const { isDarkMode } = useTheme();
+    
+    // Usar config desde el hook de indexación admin
+    const { config: configItems, realtimeConnected, reindex } = useAdminIndexation();
+    
     // Estados
-    const [configItems, setConfigItems] = useState<ConfigItem[]>([]);
-    const [loading, setLoading] = useState<boolean>(true);
+    const [loading, setLoading] = useState<boolean>(false);
     const [formMode, setFormMode] = useState<'add' | ''>('');
     const [editingRow, setEditingRow] = useState<number | null>(null);
     const [deletingRow, setDeletingRow] = useState<number | null>(null);
@@ -39,54 +43,11 @@ export default function ConfigManagementComponent() {
     const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
     const [error, setError] = useState<string>('');
     const [activeTab, setActiveTab] = useState<string>('estatus');
-    const [realtimeConnected, setRealtimeConnected] = useState<boolean>(false);
 
     const inputRef = useRef<HTMLInputElement>(null);
     const editInputRef = useRef<HTMLInputElement>(null);
 
     const { createNotification } = useNotifications();
-
-    // Cargar datos de configuración
-    const fetchConfigItems = useCallback(async () => {
-        try {
-            setLoading(true);
-            const { data, error } = await supabase
-                .from('config')
-                .select('*')
-                .order('id', { ascending: true });
-
-            if (error) throw error;
-            setConfigItems(data || []);
-        } catch (error) {
-            console.error('Error cargando configuraciones:', error);
-            setError('Error al cargar las configuraciones');
-        } finally {
-            setLoading(false);
-        }
-    }, []);
-
-    // Cargar datos al montar el componente
-    useEffect(() => {
-        fetchConfigItems();
-    }, [fetchConfigItems]);
-
-    // Setup realtime subscription for config table
-    useEffect(() => {
-        const channel = supabase
-            .channel('config-changes')
-            .on('postgres_changes', { event: '*', schema: 'public', table: 'config' }, () => {
-                fetchConfigItems();
-            })
-            .on('system', {}, (payload) => {
-                const { status } = payload;
-                setRealtimeConnected(status === 'SUBSCRIBED' || status === 'ok');
-            })
-            .subscribe();
-
-        return () => {
-            supabase.removeChannel(channel);
-        };
-    }, [fetchConfigItems]);
 
     // Efecto para enfocar el input de edición cuando se activa
     useEffect(() => {
@@ -164,7 +125,7 @@ export default function ConfigManagementComponent() {
 
             setMessage({ type: 'success', text: 'Registro eliminado correctamente' });
             setDeletingRow(null);
-            fetchConfigItems();
+            // El realtime del hook actualizará automáticamente
 
             // Notificación de eliminación
             await createNotification({
@@ -232,7 +193,7 @@ export default function ConfigManagementComponent() {
 
             setMessage({ type: 'success', text: 'Registro actualizado correctamente' });
             setEditingRow(null);
-            fetchConfigItems();
+            // El realtime del hook actualizará automáticamente
 
             // Notificación de edición
             await createNotification({
@@ -299,8 +260,7 @@ export default function ConfigManagementComponent() {
 
             setMessage({ type: 'success', text: 'Registro agregado correctamente' });
 
-            // Recargar datos después de la operación
-            fetchConfigItems();
+            // El realtime del hook actualizará automáticamente
             setFormMode('');
             setCurrentItem({ id: 0, tipo: activeTab, concepto: '' });
 
@@ -473,7 +433,7 @@ export default function ConfigManagementComponent() {
                             </button>
                             <button
                                 title='Recargar'
-                                onClick={fetchConfigItems}
+                                onClick={reindex}
                                 className={`p-2 rounded-lg transition-all duration-300 transform hover:scale-105 hover:shadow-lg group ${isDarkMode
                                     ? 'bg-black border border-white/10 hover:bg-white/5'
                                     : 'bg-white border border-gray-300 hover:bg-gray-100'

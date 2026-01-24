@@ -3,8 +3,8 @@ import { saveAs } from 'file-saver';
 
 interface Firma {
     concepto: string;
-    nombre: string;
-    puesto: string;
+    nombre: string | null;
+    puesto: string | null;
 }
 
 interface PDFOptions {
@@ -268,9 +268,9 @@ export const generatePDF = async ({ data, columns, title, fileName, firmas = [] 
             const currentDate = `${dia} de ${mes} de ${año}`;
 
             const infoLines = [
-                `NOMBRE: ${directoraFirma.nombre.toUpperCase()}`,
+                `NOMBRE: ${(directoraFirma.nombre || 'SIN ASIGNAR').toUpperCase()}`,
                 'ADSCRIPCIÓN: DIRECCIÓN GENERAL',
-                `CARGO: ${directoraFirma.puesto.toUpperCase()}`,
+                `CARGO: ${(directoraFirma.puesto || 'SIN ASIGNAR').toUpperCase()}`,
                 `FECHA: ${currentDate.toUpperCase()}`
             ];
 
@@ -416,16 +416,19 @@ export const generatePDF = async ({ data, columns, title, fileName, firmas = [] 
                 color: rgb(0, 0, 0),
             });
 
-            page.drawText(normalizeText(firma.nombre.toUpperCase()), {
-                x: xPos + (signatureBoxWidth / 2) - (regularFont.widthOfTextAtSize(firma.nombre.toUpperCase(), signatureFontSize) / 2),
+            const nombreText = (firma.nombre || 'SIN ASIGNAR').toUpperCase();
+            const puestoText = (firma.puesto || 'SIN ASIGNAR').toUpperCase();
+            
+            page.drawText(normalizeText(nombreText), {
+                x: xPos + (signatureBoxWidth / 2) - (regularFont.widthOfTextAtSize(nombreText, signatureFontSize) / 2),
                 y: lineY - 15,
                 size: signatureFontSize,
                 font: regularFont,
                 color: rgb(0, 0, 0),
             });
 
-            page.drawText(normalizeText(firma.puesto.toUpperCase()), {
-                x: xPos + (signatureBoxWidth / 2) - (regularFont.widthOfTextAtSize(firma.puesto.toUpperCase(), signatureFontSize) / 2),
+            page.drawText(normalizeText(puestoText), {
+                x: xPos + (signatureBoxWidth / 2) - (regularFont.widthOfTextAtSize(puestoText, signatureFontSize) / 2),
                 y: lineY - 30,
                 size: signatureFontSize,
                 font: regularFont,

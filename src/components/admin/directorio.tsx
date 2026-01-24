@@ -5,6 +5,7 @@ import { Plus, Trash2, Edit, AlertTriangle, CheckCircle, X, Search, RefreshCw, C
 import supabase from "@/app/lib/supabase/client";
 import { useNotifications } from '@/hooks/useNotifications';
 import SectionRealtimeToggle from '@/components/SectionRealtimeToggle';
+import { useAdminIndexation } from '@/hooks/indexation/useAdminIndexation';
 
 interface Directorio {
     id_directorio: number;
@@ -20,9 +21,18 @@ interface Message {
 
 export default function DirectorioManagementComponent() {
     const { isDarkMode } = useTheme();
-    // Estados
-    const [directorio, setDirectorio] = useState<Directorio[]>([]);
-    const [loading, setLoading] = useState<boolean>(true);
+    
+    // Hook de indexación admin (reemplaza todos los fetch)
+    const { 
+        directorio: directorioFromStore, 
+        areas: areasFromStore, 
+        directorioAreas: directorioAreasFromStore,
+        realtimeConnected,
+        reindex 
+    } = useAdminIndexation();
+    
+    // Estados locales
+    const [loading, setLoading] = useState<boolean>(false);
     const [isAddingNew, setIsAddingNew] = useState<boolean>(false);
     const [editingId, setEditingId] = useState<number | null>(null);
     const [deletingId, setDeletingId] = useState<number | null>(null);
@@ -32,13 +42,17 @@ export default function DirectorioManagementComponent() {
     const [message, setMessage] = useState<Message>({ type: '', text: '' });
     const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
     const [error, setError] = useState<string>('');
-    const [realtimeConnected, setRealtimeConnected] = useState<boolean>(false);
 
-    // NUEVO: Estado para áreas y relaciones
-    const [areas, setAreas] = useState<{ id_area: number; nombre: string }[]>([]);
+    // NUEVO: Estado para áreas y relaciones (ahora vienen del hook)
     const [selectedAreas, setSelectedAreas] = useState<number[]>([]);
     const [editSelectedAreas, setEditSelectedAreas] = useState<number[]>([]);
-    const [directorAreasMap, setDirectorAreasMap] = useState<{ [id_directorio: number]: number[] }>({});
+    
+    // Mapear directorioAreas a un objeto para fácil acceso
+    const directorAreasMap = directorioAreasFromStore.reduce((acc, rel) => {
+        if (!acc[rel.id_directorio]) acc[rel.id_directorio] = [];
+        acc[rel.id_directorio].push(rel.id_area);
+        return acc;
+    }, {} as { [id_directorio: number]: number[] });
 
     // Estado para el valor del input de área (alta y edición)
     const [addAreaInput, setAddAreaInput] = useState('');
@@ -48,131 +62,15 @@ export default function DirectorioManagementComponent() {
     const editInputRef = useRef<HTMLInputElement>(null);
     const { createNotification } = useNotifications();
 
-    // Cargar datos del directorio
-    const fetchDirectorio = useCallback(async () => {
-        try {
-            setLoading(true);
-            const response = await fetch('/api/supabase-proxy?target=/rest/v1/directorio?select=*&order=id_directorio.asc', {
-                credentials: 'include',
-                headers: { 'Content-Type': 'application/json' }
-            });
-
-            if (!response.ok) throw new Error('Error al cargar directorio');
-            
-            const data = await response.json();
-            setDirectorio(data || []);
-        } catch (error) {
-            console.error('Error cargando directorio:', error);
-            setError('Error al cargar el directorio de personal');
-        } finally {
-            setLoading(false);
-        }
-    }, []);
-
-    // NUEVO: Cargar áreas y relaciones
-    const fetchAreas = useCallback(async () => {
-        const response = await fetch('/api/supabase-proxy?target=/rest/v1/area?select=*&order=nombre.asc', {
-            credentials: 'include',
-            headers: { 'Content-Type': 'application/json' }
-        });
-        if (response.ok) {
-            const data = await response.json();
-            setAreas(data || []);
-        }
-    }, []);
-
-    const fetchDirectorAreas = useCallback(async (id_directorio: number): Promise<number[]> => {
-        const url = `/api/supabase-proxy?target=/rest/v1/directorio_areas?select=id_area&id_directorio=eq.${id_directorio}`;
-        
-        const response = await fetch(url, {
-            credentials: 'include',
-            headers: { 'Content-Type': 'application/json' }
-        });
-        
-        if (response.ok) {
-            const data = await response.json();
-            const areaIds = (data || []).map((d: { id_area: number }) => d.id_area);
-            return areaIds;
-        }
-        return [];
-    }, []);
-
-    const fetchAllDirectorAreas = useCallback(async () => {
-        const response = await fetch('/api/supabase-proxy?target=/rest/v1/directorio_areas?select=*', {
-            credentials: 'include',
-            headers: { 'Content-Type': 'application/json' }
-        });
-        if (response.ok) {
-            const data = await response.json();
-            if (data) {
-                const map: { [id_directorio: number]: number[] } = {};
-                data.forEach((rel: { id_directorio: number, id_area: number }) => {
-                    if (!map[rel.id_directorio]) map[rel.id_directorio] = [];
-                    map[rel.id_directorio].push(rel.id_area);
-                });
-                setDirectorAreasMap(map);
-            }
-        }
-    }, []);
-
-    // Cargar datos al montar el componente
-    useEffect(() => {
-        fetchDirectorio();
-        fetchAreas();
-        fetchAllDirectorAreas();
-    }, [fetchDirectorio, fetchAreas, fetchAllDirectorAreas]);
-
-    // Setup realtime subscription for directorio table
-    useEffect(() => {
-        const channel = supabase
-            .channel('directorio-changes')
-            .on('postgres_changes', { event: '*', schema: 'public', table: 'directorio' }, () => {
-                fetchDirectorio();
-            })
-            .on('system', {}, (payload) => {
-                const { status } = payload;
-                setRealtimeConnected(status === 'SUBSCRIBED' || status === 'ok');
-            })
-            .subscribe();
-
-        return () => {
-            supabase.removeChannel(channel);
-        };
-    }, [fetchDirectorio]);
-
-    // NUEVO: Al editar, cargar áreas seleccionadas desde el mapa
-    useEffect(() => {
-        if (editingId) {
-            const areasFromMap = directorAreasMap[editingId] || [];
-            console.log('useEffect: Cargando áreas desde directorAreasMap:', areasFromMap);
-            setEditSelectedAreas([...areasFromMap]);
-        } else {
-            setEditSelectedAreas([]);
-        }
-    }, [editingId, directorAreasMap]);
-
-    // NUEVO: Al agregar, limpiar selección
-    useEffect(() => {
-        if (isAddingNew) setSelectedAreas([]);
-    }, [isAddingNew]);
-
-    // Limpiar el input cuando se abre alta o edición
-    useEffect(() => {
-        if (isAddingNew) setAddAreaInput('');
-    }, [isAddingNew]);
-    useEffect(() => {
-        if (editingId) setEditAreaInput('');
-    }, [editingId]);
-
     // Función para obtener el próximo ID disponible
     const getNextAvailableId = useCallback(() => {
-        if (directorio.length === 0) return 1;
-        const maxId = Math.max(...directorio.map(item => item.id_directorio));
+        if (directorioFromStore.length === 0) return 1;
+        const maxId = Math.max(...directorioFromStore.map(item => item.id_directorio));
         return maxId + 1;
-    }, [directorio]);
+    }, [directorioFromStore]);
 
     // Filtrar directorio según el término de búsqueda
-    const filteredDirectorio = directorio.filter(item =>
+    const filteredDirectorio = directorioFromStore.filter(item =>
         item.nombre?.toLowerCase().includes(searchTerm.toLowerCase()) ||
         item.area?.toLowerCase().includes(searchTerm.toLowerCase()) ||
         item.puesto?.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -197,19 +95,10 @@ export default function DirectorioManagementComponent() {
         setEditingId(employee.id_directorio);
         setEditEmployee({ ...employee });
         
-        // Obtener áreas desde el mapa (las correctas que se muestran en la vista)
+        // Obtener áreas desde el mapa
         const areasFromMap = directorAreasMap[employee.id_directorio] || [];
-        console.log('Áreas desde directorAreasMap (CORRECTAS):', areasFromMap);
+        console.log('Áreas desde directorAreasMap:', areasFromMap);
         
-        // Cargar áreas desde la BD
-        const areaIds = await fetchDirectorAreas(employee.id_directorio);
-        const uniqueAreaIds = [...new Set(areaIds)];
-        console.log('Áreas desde fetchDirectorAreas (BD):', uniqueAreaIds);
-        
-        console.log(`Editando empleado ${employee.nombre} (ID: ${employee.id_directorio})`);
-        console.log(`Diferencia: Map tiene ${areasFromMap.length} áreas, BD tiene ${uniqueAreaIds.length} áreas`);
-        
-        // USAR LAS ÁREAS DEL MAPA EN LUGAR DE LA BD
         setEditSelectedAreas([...areasFromMap]);
         setTimeout(() => editInputRef.current?.focus(), 100);
     };
@@ -247,7 +136,7 @@ export default function DirectorioManagementComponent() {
             const puestoEmployee = newEmployee.puesto || '';
 
             // Verificar si el empleado ya existe
-            const existingEmployee = directorio.find((item: Directorio) =>
+            const existingEmployee = directorioFromStore.find((item: Directorio) =>
                 item.nombre?.toUpperCase() === nombreEmployee &&
                 item.puesto?.toUpperCase() === puestoEmployee
             );
@@ -289,9 +178,8 @@ export default function DirectorioManagementComponent() {
             setIsAddingNew(false);
             setNewEmployee({ id_directorio: 0, nombre: '', area: '', puesto: '' });
             setSelectedAreas([]);
-            fetchDirectorio();
-            fetchAreas();
-            fetchAllDirectorAreas();
+            // Ya no necesitamos fetchDirectorio, fetchAreas, fetchAllDirectorAreas
+            // El realtime del hook se encarga de actualizar automáticamente
 
             // Notificación de alta
             await createNotification({
@@ -348,7 +236,7 @@ export default function DirectorioManagementComponent() {
             console.log('Datos a actualizar:', { nombreEmployee, puestoEmployee, id: editEmployee.id_directorio });
 
             // Verificar si el nuevo nombre ya existe (excluyendo el empleado actual)
-            const existingEmployee = directorio.find((item: Directorio) =>
+            const existingEmployee = directorioFromStore.find((item: Directorio) =>
                 item.nombre?.toUpperCase() === nombreEmployee &&
                 item.puesto?.toUpperCase() === puestoEmployee &&
                 item.id_directorio !== editEmployee.id_directorio
@@ -400,23 +288,7 @@ export default function DirectorioManagementComponent() {
             setEditEmployee({ id_directorio: 0, nombre: '', area: '', puesto: '' });
             setEditSelectedAreas([]);
             
-            console.log('Recargando datos...');
-            await fetchDirectorio();
-            await fetchAreas();
-            await fetchAllDirectorAreas();
-            console.log('Datos recargados');
-
-            // Notificación de edición
-            await createNotification({
-                title: 'Áreas actualizadas',
-                description: `Se actualizaron las áreas de ${nombreEmployee}.`,
-                type: 'info',
-                category: 'directorio',
-                device: 'web',
-                importance: 'medium',
-                data: { changes: [`Edición áreas: ${nombreEmployee}`], affectedTables: ['directorio_areas'] }
-            });
-
+            console.log('Datos actualizados automáticamente por realtime');
             console.log('=== ACTUALIZACIÓN COMPLETADA ===');
         } catch (error: unknown) {
             console.error('=== ERROR EN ACTUALIZACIÓN ===');
@@ -445,7 +317,7 @@ export default function DirectorioManagementComponent() {
     const handleConfirmDelete = async (id: number) => {
         setIsSubmitting(true);
         try {
-            const empleado = directorio.find(e => e.id_directorio === id);
+            const empleado = directorioFromStore.find(e => e.id_directorio === id);
             
             // Eliminar empleado usando el proxy
             const deleteResponse = await fetch(`/api/supabase-proxy?target=/rest/v1/directorio?id_directorio=eq.${id}`, {
@@ -458,8 +330,8 @@ export default function DirectorioManagementComponent() {
 
             setMessage({ type: 'success', text: 'Empleado eliminado correctamente' });
             setDeletingId(null);
-            fetchDirectorio();
-            fetchAllDirectorAreas();
+            // Ya no necesitamos fetchDirectorio, fetchAllDirectorAreas
+            // El realtime del hook se encarga de actualizar automáticamente
 
             // Notificación de baja
             await createNotification({
@@ -493,53 +365,45 @@ export default function DirectorioManagementComponent() {
 
     const handleCloseMessage = () => setMessage({ type: '', text: '' });
 
-    // NUEVO: Función para limpiar duplicados en directorio_areas
-    const cleanDuplicateAreas = async (id_directorio: number) => {
-        console.log('Limpiando duplicados para empleado:', id_directorio);
+    // Función para agregar área manualmente (usada en los inputs)
+    const addAreaManually = async (areaName: string, isEditing: boolean) => {
+        const value = areaName.trim().toUpperCase();
+        if (!value) return;
         
-        // Obtener todas las relaciones actuales
-        const response = await fetch(`/api/supabase-proxy?target=/rest/v1/directorio_areas?select=*&id_directorio=eq.${id_directorio}`, {
-            credentials: 'include',
-            headers: { 'Content-Type': 'application/json' }
-        });
-        
-        if (response.ok) {
-            const data = await response.json();
-            console.log('Relaciones actuales:', data);
-            
-            // Encontrar duplicados
-            const areaIds = data.map((d: any) => d.id_area);
-            const uniqueAreaIds = [...new Set(areaIds)];
-            
-            if (areaIds.length !== uniqueAreaIds.length) {
-                console.log('Se encontraron duplicados. Limpiando...');
-                
-                // Eliminar todas las relaciones
-                await fetch(`/api/supabase-proxy?target=/rest/v1/directorio_areas?id_directorio=eq.${id_directorio}`, {
-                    method: 'DELETE',
-                    credentials: 'include',
-                    headers: { 'Content-Type': 'application/json' }
-                });
-                
-                // Reinsertar solo las únicas
-                for (const id_area of uniqueAreaIds) {
-                    await fetch('/api/supabase-proxy?target=/rest/v1/directorio_areas', {
-                        method: 'POST',
-                        credentials: 'include',
-                        headers: { 
-                            'Content-Type': 'application/json',
-                            'Prefer': 'return=minimal'
-                        },
-                        body: JSON.stringify({ id_directorio, id_area })
-                    });
+        // Verificar si ya existe
+        if (!areasFromStore.some(a => a.nombre === value)) {
+            const response = await fetch('/api/supabase-proxy?target=/rest/v1/area', {
+                method: 'POST',
+                credentials: 'include',
+                headers: { 
+                    'Content-Type': 'application/json',
+                    'Prefer': 'return=representation'
+                },
+                body: JSON.stringify({ nombre: value })
+            });
+            if (response.ok) {
+                const data = await response.json();
+                if (data && data[0]) {
+                    // El realtime actualizará areasFromStore automáticamente
+                    if (isEditing) {
+                        setEditSelectedAreas(prev => [...new Set([...prev, data[0].id_area])]);
+                    } else {
+                        setSelectedAreas(prev => [...new Set([...prev, data[0].id_area])]);
+                    }
                 }
-                
-                console.log('Duplicados eliminados. Áreas únicas:', uniqueAreaIds.length);
-                setMessage({ type: 'success', text: `Se limpiaron ${areaIds.length - uniqueAreaIds.length} duplicados` });
-                fetchAllDirectorAreas();
-            } else {
-                console.log('No se encontraron duplicados');
-                setMessage({ type: 'success', text: 'No se encontraron duplicados para este empleado' });
+            }
+        } else {
+            const areaObj = areasFromStore.find(a => a.nombre === value);
+            if (areaObj) {
+                if (isEditing) {
+                    if (!editSelectedAreas.includes(areaObj.id_area)) {
+                        setEditSelectedAreas(prev => [...new Set([...prev, areaObj.id_area])]);
+                    }
+                } else {
+                    if (!selectedAreas.includes(areaObj.id_area)) {
+                        setSelectedAreas(prev => [...new Set([...prev, areaObj.id_area])]);
+                    }
+                }
             }
         }
     };
@@ -637,7 +501,7 @@ export default function DirectorioManagementComponent() {
                             </button>
                             <button
                                 title="Recargar datos"
-                                onClick={fetchDirectorio}
+                                onClick={reindex}
                                 className={`p-2 rounded-lg transition-all duration-300 transform hover:scale-105 group ${isDarkMode
                                         ? 'bg-black border-2 border-white/10 hover:bg-white/5'
                                         : 'bg-white border-2 border-gray-300 hover:bg-gray-100'
@@ -703,7 +567,7 @@ export default function DirectorioManagementComponent() {
                                         <td className="px-4 py-2 text-sm">
                                             <div className="flex flex-wrap gap-1 items-center">
                                                 {selectedAreas.map(id_area => {
-                                                    const areaObj = areas.find(a => a.id_area === id_area);
+                                                    const areaObj = areasFromStore.find(a => a.id_area === id_area);
                                                     return areaObj ? (
                                                         <span key={`add-area-${id_area}`} className={`flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-semibold transition-colors duration-500 ${isDarkMode
                                                                 ? 'bg-emerald-900/40 text-emerald-200 border border-emerald-700'
@@ -735,32 +599,10 @@ export default function DirectorioManagementComponent() {
                                                         if (e.key === 'Enter') {
                                                             e.preventDefault();
                                                             const value = addAreaInput.trim().toUpperCase();
-                                                            if (value && !areas.some(a => a.nombre === value)) {
-                                                                const response = await fetch('/api/supabase-proxy?target=/rest/v1/area', {
-                                                                    method: 'POST',
-                                                                    credentials: 'include',
-                                                                    headers: { 
-                                                                        'Content-Type': 'application/json',
-                                                                        'Prefer': 'return=representation'
-                                                                    },
-                                                                    body: JSON.stringify({ nombre: value })
-                                                                });
-                                                                if (response.ok) {
-                                                                    const data = await response.json();
-                                                                    if (data && data[0]) {
-                                                                        setAreas([...areas, data[0]]);
-                                                                        // Evitar duplicados usando Set
-                                                                        setSelectedAreas(prev => [...new Set([...prev, data[0].id_area])]);
-                                                                    }
-                                                                }
-                                                            } else if (value) {
-                                                                const areaObj = areas.find(a => a.nombre === value);
-                                                                if (areaObj && !selectedAreas.includes(areaObj.id_area)) {
-                                                                    // Evitar duplicados usando Set
-                                                                    setSelectedAreas(prev => [...new Set([...prev, areaObj.id_area])]);
-                                                                }
+                                                            if (value) {
+                                                                await addAreaManually(value, false);
+                                                                setAddAreaInput('');
                                                             }
-                                                            setAddAreaInput('');
                                                         }
                                                     }}
                                                 />
@@ -863,7 +705,7 @@ export default function DirectorioManagementComponent() {
                                                         <div className="flex flex-wrap gap-1 items-center">
                                                             {editSelectedAreas.length > 0 ? (
                                                                 editSelectedAreas.map(id_area => {
-                                                                    const areaObj = areas.find(a => a.id_area === id_area);
+                                                                    const areaObj = areasFromStore.find(a => a.id_area === id_area);
                                                                     return areaObj ? (
                                                                         <span key={`edit-area-${id_area}`} className={`flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-semibold transition-colors duration-500 ${isDarkMode
                                                                                 ? 'bg-emerald-900/40 text-emerald-200 border border-emerald-700'
@@ -900,32 +742,10 @@ export default function DirectorioManagementComponent() {
                                                                     if (e.key === 'Enter') {
                                                                         e.preventDefault();
                                                                         const value = editAreaInput.trim().toUpperCase();
-                                                                        if (value && !areas.some(a => a.nombre === value)) {
-                                                                            const response = await fetch('/api/supabase-proxy?target=/rest/v1/area', {
-                                                                                method: 'POST',
-                                                                                credentials: 'include',
-                                                                                headers: { 
-                                                                                    'Content-Type': 'application/json',
-                                                                                    'Prefer': 'return=representation'
-                                                                                },
-                                                                                body: JSON.stringify({ nombre: value })
-                                                                            });
-                                                                            if (response.ok) {
-                                                                                const data = await response.json();
-                                                                                if (data && data[0]) {
-                                                                                    setAreas([...areas, data[0]]);
-                                                                                    // Evitar duplicados usando Set
-                                                                                    setEditSelectedAreas(prev => [...new Set([...prev, data[0].id_area])]);
-                                                                                }
-                                                                            }
-                                                                        } else if (value) {
-                                                                            const areaObj = areas.find(a => a.nombre === value);
-                                                                            if (areaObj && !editSelectedAreas.includes(areaObj.id_area)) {
-                                                                                // Evitar duplicados usando Set
-                                                                                setEditSelectedAreas(prev => [...new Set([...prev, areaObj.id_area])]);
-                                                                            }
+                                                                        if (value) {
+                                                                            await addAreaManually(value, true);
+                                                                            setEditAreaInput('');
                                                                         }
-                                                                        setEditAreaInput('');
                                                                     }
                                                                 }}
                                                             />
@@ -1036,8 +856,8 @@ export default function DirectorioManagementComponent() {
                                                     <td className={`px-4 py-3 text-sm`}>
                                                         <div className="flex flex-wrap gap-1">
                                                             {/* Mostrar chips de áreas */}
-                                                            {areas.length > 0 && (
-                                                                <AreaChips areaIds={directorAreasMap[employee.id_directorio] || []} areas={areas} />
+                                                            {areasFromStore.length > 0 && (
+                                                                <AreaChips areaIds={directorAreasMap[employee.id_directorio] || []} areas={areasFromStore} />
                                                             )}
                                                         </div>
                                                     </td>
@@ -1106,7 +926,7 @@ export default function DirectorioManagementComponent() {
                             ? 'text-white bg-black border-2 border-white/10'
                             : 'text-gray-900 bg-white border-2 border-gray-200'
                         }`}>
-                        Mostrando {filteredDirectorio.length} de {directorio.length} empleados en el directorio
+                        Mostrando {filteredDirectorio.length} de {directorioFromStore.length} empleados en el directorio
                     </div>
                 </div>
             </div>

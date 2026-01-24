@@ -4,7 +4,7 @@
 // Configuración centralizada de todos los módulos de indexación.
 // Define etapas, pesos, colores y metadatos para cada módulo.
 
-import { Database, FileText, Package, FolderArchive } from 'lucide-react';
+import { Database, FileText, Package, FolderArchive, Settings } from 'lucide-react';
 import type { ModuleConfig } from '@/types/indexation';
 
 // ============================================================================
@@ -123,6 +123,26 @@ export const RESGUARDOS_BAJAS_CONFIG: ModuleConfig = {
   icon: FolderArchive,
 };
 
+/**
+ * Configuración de módulo Admin
+ * Tablas: directorio, area, directorio_areas, config, firmas
+ */
+export const ADMIN_CONFIG: ModuleConfig = {
+  key: 'admin',
+  name: 'Admin',
+  table: 'directorio', // tabla principal
+  stages: [
+    { key: 'fetch_directorio', label: 'Cargando directorio', weight: 20 },
+    { key: 'fetch_areas', label: 'Cargando áreas', weight: 15 },
+    { key: 'fetch_directorio_areas', label: 'Cargando relaciones', weight: 15 },
+    { key: 'fetch_config', label: 'Cargando configuración', weight: 20 },
+    { key: 'fetch_firmas', label: 'Cargando firmas', weight: 10 },
+    { key: 'setup_realtime', label: 'Configurando tiempo real', weight: 20 },
+  ],
+  glowColor: '#ec4899', // pink-500
+  icon: Settings,
+};
+
 // ============================================================================
 // MAPA DE CONFIGURACIONES
 // ============================================================================
@@ -139,6 +159,7 @@ export const MODULE_CONFIGS: Record<string, ModuleConfig> = {
   noListado: NO_LISTADO_CONFIG,
   resguardos: RESGUARDOS_CONFIG,
   resguardosBajas: RESGUARDOS_BAJAS_CONFIG,
+  admin: ADMIN_CONFIG,
 };
 
 /**

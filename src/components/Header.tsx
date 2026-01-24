@@ -12,6 +12,7 @@ import { useNotifications } from '@/hooks/useNotifications';
 import { useTheme } from "@/context/ThemeContext";
 import GlobalSearch from './GlobalSearch';
 import { useSession } from '@/hooks/useSession';
+import { clearAllIndexationData } from '@/lib/clearIndexationData';
 
 
 type MenuItem = {
@@ -33,26 +34,39 @@ export function useCerrarSesion() {
 
     const handleLogout = async () => {
         try {
-            // Cerrar sesión en Supabase
+            console.log('🚪 Iniciando proceso de logout...');
+            
+            // 1. Limpiar TODOS los datos de indexación (IndexedDB + Zustand stores)
+            console.log('🧹 Limpiando datos de indexación...');
+            await clearAllIndexationData();
+            
+            // 2. Cerrar sesión en Supabase
+            console.log('🔐 Cerrando sesión en Supabase...');
             await supabase.auth.signOut();
 
-            // Llamar al endpoint de logout del servidor
+            // 3. Llamar al endpoint de logout del servidor
             // Esto eliminará todas las cookies HttpOnly de manera segura
+            console.log('🍪 Eliminando cookies del servidor...');
             await fetch('/api/auth/logout', {
                 method: 'POST',
                 credentials: 'include',
             });
 
-            // Limpiar localStorage
+            // 4. Limpiar localStorage
+            console.log('💾 Limpiando localStorage...');
             localStorage.removeItem('authToken');
             localStorage.removeItem('refreshToken');
             localStorage.removeItem('userId');
             localStorage.removeItem('username');
 
-            // Redireccionar al login
+            console.log('✅ Logout completado exitosamente');
+            
+            // 5. Redireccionar al login
             router.push('/login');
         } catch (error) {
-            console.error('Error al cerrar sesión:', error);
+            console.error('❌ Error al cerrar sesión:', error);
+            // Aún así redirigir al login para evitar que el usuario quede atrapado
+            router.push('/login');
         }
     };
 

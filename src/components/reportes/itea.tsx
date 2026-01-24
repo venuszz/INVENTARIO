@@ -13,14 +13,8 @@ import { generatePDF } from './pdfgenerator';
 import { useUserRole } from "@/hooks/useUserRole";
 import RoleGuard from "@/components/roleGuard";
 import { useNotifications } from '@/hooks/useNotifications';
-
-// Firma interface
-interface Firma {
-    id: number;
-    concepto: string;
-    nombre: string | null;
-    puesto: string | null;
-}
+import { useAdminIndexation } from '@/hooks/indexation/useAdminIndexation';
+import type { Firma } from '@/types/admin';
 
 export default function ReportesIteaDashboard() {
     const { isDarkMode } = useTheme();
@@ -31,7 +25,6 @@ export default function ReportesIteaDashboard() {
 
     // Estados para la gestión de firmas
     const [firmasModalOpen, setFirmasModalOpen] = useState(false);
-    const [firmas, setFirmas] = useState<Firma[]>([]);
     const [editingFirma, setEditingFirma] = useState<Firma | null>(null);
 
     // Loader de exportación
@@ -39,24 +32,9 @@ export default function ReportesIteaDashboard() {
     const [exportingFormat, setExportingFormat] = useState<string | null>(null);
 
     const { createNotification } = useNotifications();
-
-    // Fetch firmas on component mount
-    useEffect(() => {
-        const fetchFirmas = async () => {
-            const { data, error } = await supabase
-                .from('firmas')
-                .select('*')
-                .order('id', { ascending: true });
-            if (error) {
-                setError('Error al cargar las firmas: ' + error.message);
-                return;
-            }
-            if (data) {
-                setFirmas(data);
-            }
-        };
-        fetchFirmas();
-    }, []);
+    
+    // Usar firmas desde el hook de indexación admin
+    const { firmas } = useAdminIndexation();
 
     // Columnas a exportar
     const exportColumns = [
@@ -166,13 +144,8 @@ export default function ReportesIteaDashboard() {
             const estatus = getEstatusFilter(selectedReport);
             if (estatus) query = query.eq('estatus', estatus);
 
-            // Obtener firmas
-            const { data: firmasData, error: firmasError } = await supabase
-                .from('firmas')
-                .select('*')
-                .order('id', { ascending: true });
-
-            if (firmasError) throw firmasError;
+            // Usar firmas desde el hook (ya están indexadas)
+            const firmasData = firmas;
 
             // Traer todos los datos paginando manualmente
             interface MuebleItea {
@@ -642,14 +615,7 @@ export default function ReportesIteaDashboard() {
                                                         .update(updates)
                                                         .eq('id', firma.id);
                                                     if (!error) {
-                                                        setFirmas(firmas.map(f => 
-                                                            f.id === firma.id 
-                                                                ? { ...f, 
-                                                                    nombre: updates.nombre as string,
-                                                                    puesto: updates.puesto as string
-                                                                }
-                                                                : f
-                                                        ));
+                                                        // El realtime del hook actualizará automáticamente
                                                         setEditingFirma(null);
                                                         // Notificación de edición de firma exitosa
                                                         await createNotification({

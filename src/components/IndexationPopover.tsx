@@ -19,6 +19,7 @@ import { useResguardosIndexation } from '@/hooks/indexation/useResguardosIndexat
 import { useIneaObsoletosIndexation } from '@/hooks/indexation/useIneaObsoletosIndexation';
 import { useIteaObsoletosIndexation } from '@/hooks/indexation/useIteaObsoletosIndexation';
 import { useResguardosBajasIndexation } from '@/hooks/indexation/useResguardosBajasIndexation';
+import { useAdminIndexation } from '@/hooks/indexation/useAdminIndexation';
 import { useTheme } from '@/context/ThemeContext';
 import { Check, AlertTriangle, RefreshCw, WifiOff, Loader2, Database } from 'lucide-react';
 import { useState, useEffect, useRef, useMemo } from 'react';
@@ -53,6 +54,7 @@ export default function IndexationPopover() {
     const ineaObsState = useIneaObsoletosIndexation();
     const iteaObsState = useIteaObsoletosIndexation();
     const resguardosBajasState = useResguardosBajasIndexation();
+    const adminState = useAdminIndexation();
     
     const [dismissed, setDismissed] = useState<Set<string>>(new Set());
     const [showSuccessFlash, setShowSuccessFlash] = useState<string | null>(null);
@@ -71,7 +73,8 @@ export default function IndexationPopover() {
         { key: 'noListado', name: 'No Listado', state: noListadoState, config: MODULE_CONFIGS.noListado, count: noListadoState.muebles.length },
         { key: 'resguardos', name: 'Resguardos', state: resguardosState, config: MODULE_CONFIGS.resguardos, count: resguardosState.resguardos.length },
         { key: 'resguardosBajas', name: 'Resguardos Bajas', state: resguardosBajasState, config: MODULE_CONFIGS.resguardosBajas, count: resguardosBajasState.resguardos.length },
-    ], [ineaState, iteaState, ineaObsState, iteaObsState, noListadoState, resguardosState, resguardosBajasState]);
+        { key: 'admin', name: 'Admin', state: adminState, config: MODULE_CONFIGS.admin, count: adminState.directorio.length + adminState.areas.length + adminState.config.length + adminState.firmas.length },
+    ], [ineaState, iteaState, ineaObsState, iteaObsState, noListadoState, resguardosState, resguardosBajasState, adminState]);
 
     const activeModules = useMemo(() => {
         return modules.filter(module => {

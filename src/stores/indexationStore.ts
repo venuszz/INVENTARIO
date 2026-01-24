@@ -37,6 +37,7 @@ interface IndexationStore {
   // Utilidades
   resetModule: (moduleKey: string) => void;
   initializeModule: (moduleKey: string) => void;
+  reset: () => void; // Resetea completamente el store
 }
 
 // ============================================================================
@@ -332,6 +333,13 @@ export const useIndexationStore = create<IndexationStore>()(
             }
           };
         });
+      },
+      
+      /**
+       * Resetea completamente el store (usado al hacer logout)
+       */
+      reset: () => {
+        set({ modules: {} });
       },
     }),
     {

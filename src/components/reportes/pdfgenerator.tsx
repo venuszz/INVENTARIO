@@ -3,8 +3,8 @@ import { saveAs } from 'file-saver';
 
 interface Firma {
     concepto: string;
-    nombre: string;
-    puesto: string;
+    nombre: string | null;
+    puesto: string | null;
 }
 
 interface PDFOptions {
@@ -303,9 +303,9 @@ export const generatePDF = async ({ data, columns, title, fileName, firmas = [] 
 
             // Agregar la información adicional en su posición original
             const infoLines = [
-                `NOMBRE: ${directoraFirma.nombre.toUpperCase()}`,
+                `NOMBRE: ${(directoraFirma.nombre || 'SIN ASIGNAR').toUpperCase()}`,
                 'ADSCRIPCIÓN: DIRECCIÓN GENERAL',
-                `CARGO: ${directoraFirma.puesto.toUpperCase()}`,
+                `CARGO: ${(directoraFirma.puesto || 'SIN ASIGNAR').toUpperCase()}`,
                 `FECHA: ${currentDate.toUpperCase()}`
             ];
 
@@ -509,16 +509,19 @@ export const generatePDF = async ({ data, columns, title, fileName, firmas = [] 
             });
 
             // El resto de los textos mantienen su espaciado relativo a la línea
-            page.drawText(normalizeText(firma.nombre.toUpperCase()), {
-                x: xPos + (signatureBoxWidth / 2) - (regularFont.widthOfTextAtSize(firma.nombre.toUpperCase(), 8) / 2),
+            const nombreText = (firma.nombre || 'SIN ASIGNAR').toUpperCase();
+            const puestoText = (firma.puesto || 'SIN ASIGNAR').toUpperCase();
+            
+            page.drawText(normalizeText(nombreText), {
+                x: xPos + (signatureBoxWidth / 2) - (regularFont.widthOfTextAtSize(nombreText, 8) / 2),
                 y: lineY - 15,
                 size: 8,
                 font: regularFont,
                 color: rgb(0, 0, 0),
             });
 
-            page.drawText(normalizeText(firma.puesto.toUpperCase()), {
-                x: xPos + (signatureBoxWidth / 2) - (regularFont.widthOfTextAtSize(firma.puesto.toUpperCase(), 8) / 2),
+            page.drawText(normalizeText(puestoText), {
+                x: xPos + (signatureBoxWidth / 2) - (regularFont.widthOfTextAtSize(puestoText, 8) / 2),
                 y: lineY - 30,
                 size: 8,
                 font: regularFont,

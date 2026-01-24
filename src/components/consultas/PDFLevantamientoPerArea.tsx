@@ -3,8 +3,8 @@ import { saveAs } from 'file-saver';
 
 interface Firma {
     concepto: string;
-    nombre: string;
-    puesto: string;
+    nombre: string | null;
+    puesto: string | null;
 }
 
 interface PDFOptions {
@@ -259,15 +259,19 @@ export const generatePDF = async ({ data, columns, title, fileName, firmas = [] 
                 thickness: 1,
                 color: rgb(0, 0, 0),
             });
-            page.drawText(normalizeText(responsable.nombre.toUpperCase()), {
-                x: xRight + (signatureBoxWidth / 2) - (regularFont.widthOfTextAtSize(responsable.nombre.toUpperCase(), signatureFontSize) / 2),
+            
+            const nombreText = (responsable.nombre || 'SIN ASIGNAR').toUpperCase();
+            const puestoText = (responsable.puesto || 'SIN ASIGNAR').toUpperCase();
+            
+            page.drawText(normalizeText(nombreText), {
+                x: xRight + (signatureBoxWidth / 2) - (regularFont.widthOfTextAtSize(nombreText, signatureFontSize) / 2),
                 y: lineY - 15,
                 size: signatureFontSize,
                 font: regularFont,
                 color: rgb(0, 0, 0),
             });
-            page.drawText(normalizeText(responsable.puesto.toUpperCase()), {
-                x: xRight + (signatureBoxWidth / 2) - (regularFont.widthOfTextAtSize(responsable.puesto.toUpperCase(), signatureFontSize) / 2),
+            page.drawText(normalizeText(puestoText), {
+                x: xRight + (signatureBoxWidth / 2) - (regularFont.widthOfTextAtSize(puestoText, signatureFontSize) / 2),
                 y: lineY - 30,
                 size: signatureFontSize,
                 font: regularFont,

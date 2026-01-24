@@ -12,6 +12,7 @@ interface HydrationStore {
   markAsHydrated: (storeName: string) => void;
   isHydrated: (storeName: string) => boolean;
   areAllHydrated: (storeNames: string[]) => boolean;
+  reset: () => void; // Resetea completamente el store
 }
 
 export const useHydrationStore = create<HydrationStore>((set, get) => ({
@@ -34,5 +35,10 @@ export const useHydrationStore = create<HydrationStore>((set, get) => ({
   areAllHydrated: (storeNames: string[]) => {
     const { hydrated } = get();
     return storeNames.every(name => hydrated[name] === true);
+  },
+  
+  reset: () => {
+    set({ hydrated: {} });
+    console.log('🔄 [Hydration] Store reseteado');
   },
 }));

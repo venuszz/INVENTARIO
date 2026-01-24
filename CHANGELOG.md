@@ -48,6 +48,51 @@ Esta versión representa una reescritura completa del sistema de indexación, mi
 
 ### 🔄 Cambios (Breaking Changes)
 
+#### Sistema de Indexación Unificado para Tablas Administrativas
+- **Hook unificado `useAdminIndexation`** para todas las tablas administrativas:
+  - `directorio` - Personal autorizado
+  - `area` - Áreas de adscripción
+  - `directorio_areas` - Relaciones entre directorio y áreas
+  - `config` - Configuración de estatus, rubros y formas de adquisición
+  - `firmas` - Firmas para reportes PDF
+- **Store unificado `adminStore`** con persistencia en IndexedDB
+- **Indexación en 6 etapas** con progreso detallado
+- **Realtime sincronizado** para todas las tablas administrativas
+- **Eliminación de fetch directo** en componentes (ahora usan el hook)
+
+#### Componentes Actualizados
+- **`src/components/admin/directorio.tsx`**: Usa `useAdminIndexation` para directorio, áreas y relaciones
+- **`src/components/admin/areas.tsx`**: Usa `useAdminIndexation` para config (estatus, rubros, formas de adquisición)
+- **`src/components/reportes/inea.tsx`**: Usa `useAdminIndexation` para firmas (elimina fetch manual)
+- **`src/components/reportes/itea.tsx`**: Usa `useAdminIndexation` para firmas (elimina fetch manual)
+
+#### Tipos Actualizados
+- **`src/types/admin.ts`**: Tipos unificados para todas las tablas administrativas
+- **PDF Generators**: Actualizados para aceptar `nombre` y `puesto` nullable en firmas
+  - `src/components/reportes/pdfgenerator.tsx`
+  - `src/components/consultas/PDFLevantamiento.tsx`
+  - `src/components/consultas/PDFLevantamientoPerArea.tsx`
+
+### 🐛 Correcciones
+
+#### Limpieza Completa de Datos al Hacer Logout
+- **Nueva función `clearAllIndexationData`** en `src/lib/clearIndexationData.ts`
+- **Limpia automáticamente** todos los datos de indexación al cerrar sesión:
+  - Elimina todas las bases de datos de IndexedDB (9 bases de datos)
+  - Resetea todos los stores de Zustand a su estado inicial
+  - Limpia IndexationStore (estado de indexación)
+  - Limpia HydrationStore (estado de hidratación)
+  - Limpia todos los stores de datos (INEA, ITEA, Resguardos, Admin, etc.)
+- **Integrado en `useCerrarSesion`** del Header
+- **Logs detallados** en consola para debugging
+- **Manejo de errores robusto** para no bloquear el logout
+
+#### Métodos Reset Agregados
+- **`IndexationStore.reset()`**: Resetea completamente el estado de indexación
+- **`HydrationStore.reset()`**: Resetea el estado de hidratación
+
+### 📝 Notas Técnicas
+
 #### Migración de Context API a Zustand
 - **ELIMINADO**: 7 contextos legacy de React Context API
   - `IneaIndexationContext`
