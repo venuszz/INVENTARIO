@@ -30,7 +30,6 @@ export function useResguardosBajasIndexation() {
   const channelRef = useRef<RealtimeChannel | null>(null);
   const reconnectionTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const isInitializedRef = useRef(false);
-  const hasHydratedRef = useRef(false);
   
   const indexData = useCallback(async () => {
     if (isIndexingRef.current) return;
@@ -187,15 +186,10 @@ export function useResguardosBajasIndexation() {
   // ============================================================================
   
   // Esperar a que el store se hidrate desde IndexedDB
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      hasHydratedRef.current = true;
-    }, 500);
-    return () => clearTimeout(timer);
-  }, []);
+  const isStoreHydrated = useHydrationStore(state => state.isHydrated('resguardos-bajas'));
   
   useEffect(() => {
-    if (isInitializedRef.current || !hasHydratedRef.current) return;
+    if (isInitializedRef.current || !isStoreHydrated) return;
     const initialize = async () => {
       initializeModule(MODULE_KEY);
       try {
@@ -210,7 +204,8 @@ export function useResguardosBajasIndexation() {
       
       // Verificar si ya hay datos en IndexedDB (después de hidratación)
       const currentState = useIndexationStore.getState().modules[MODULE_KEY];
-      const hasDataInIndexedDB = resguardos.length > 0;
+      const currentResguardos = useResguardosBajasStore.getState().resguardos;
+      const hasDataInIndexedDB = currentResguardos.length > 0;
       const isAlreadyIndexed = currentState?.isIndexed && hasDataInIndexedDB;
       
       console.log('🔍 [RESGUARDOS BAJAS] Verificando estado de indexación:', {
@@ -220,7 +215,7 @@ export function useResguardosBajasIndexation() {
         hasDataInIndexedDB,
         isAlreadyIndexed,
         lastIndexedAt: currentState?.lastIndexedAt,
-        hasHydrated: hasHydratedRef.current,
+        isStoreHydrated,
       });
       
       if (isAlreadyIndexed) {
@@ -237,7 +232,7 @@ export function useResguardosBajasIndexation() {
     return () => {
       if (reconnectionTimeoutRef.current) clearTimeout(reconnectionTimeoutRef.current);
     };
-  }, [initializeModule, indexData, setupRealtimeSubscription]);
+  }, [initializeModule, indexData, setupRealtimeSubscription, isStoreHydrated]);
   
   return {
     isIndexing: indexationState?.isIndexing ?? false,

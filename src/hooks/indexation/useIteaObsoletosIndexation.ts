@@ -30,7 +30,6 @@ export function useIteaObsoletosIndexation() {
   const channelRef = useRef<RealtimeChannel | null>(null);
   const reconnectionTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const isInitializedRef = useRef(false);
-  const hasHydratedRef = useRef(false);
   
   const indexData = useCallback(async () => {
     if (isIndexingRef.current) return;
@@ -200,15 +199,10 @@ export function useIteaObsoletosIndexation() {
   // ============================================================================
   
   // Esperar a que el store se hidrate desde IndexedDB
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      hasHydratedRef.current = true;
-    }, 500);
-    return () => clearTimeout(timer);
-  }, []);
+  const isStoreHydrated = useHydrationStore(state => state.isHydrated('itea-obsoletos'));
   
   useEffect(() => {
-    if (isInitializedRef.current || !hasHydratedRef.current) return;
+    if (isInitializedRef.current || !isStoreHydrated) return;
     const initialize = async () => {
       initializeModule(MODULE_KEY);
       try {
@@ -223,7 +217,8 @@ export function useIteaObsoletosIndexation() {
       
       // Verificar si ya hay datos en IndexedDB (después de hidratación)
       const currentState = useIndexationStore.getState().modules[MODULE_KEY];
-      const hasDataInIndexedDB = muebles.length > 0;
+      const currentMuebles = useIteaObsoletosStore.getState().muebles;
+      const hasDataInIndexedDB = currentMuebles.length > 0;
       const isAlreadyIndexed = currentState?.isIndexed && hasDataInIndexedDB;
       
       console.log('🔍 [ITEA OBSOLETOS] Verificando estado de indexación:', {
@@ -233,7 +228,7 @@ export function useIteaObsoletosIndexation() {
         hasDataInIndexedDB,
         isAlreadyIndexed,
         lastIndexedAt: currentState?.lastIndexedAt,
-        hasHydrated: hasHydratedRef.current,
+        isStoreHydrated,
         realtimeConnected: currentState?.realtimeConnected,
       });
       
@@ -251,7 +246,7 @@ export function useIteaObsoletosIndexation() {
     return () => {
       if (reconnectionTimeoutRef.current) clearTimeout(reconnectionTimeoutRef.current);
     };
-  }, [initializeModule, indexData, setupRealtimeSubscription]);
+  }, [initializeModule, indexData, setupRealtimeSubscription, isStoreHydrated]);
   
   return {
     isIndexing: indexationState?.isIndexing ?? false,

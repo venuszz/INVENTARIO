@@ -31,7 +31,6 @@ export function useIteaIndexation() {
   const channelRef = useRef<RealtimeChannel | null>(null);
   const reconnectionTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const isInitializedRef = useRef(false);
-  const hasHydratedRef = useRef(false);
   
   const indexData = useCallback(async () => {
     if (isIndexingRef.current) return;
@@ -196,15 +195,10 @@ export function useIteaIndexation() {
   // ============================================================================
   
   // Esperar a que el store se hidrate desde IndexedDB
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      hasHydratedRef.current = true;
-    }, 500);
-    return () => clearTimeout(timer);
-  }, []);
+  const isStoreHydrated = useHydrationStore(state => state.isHydrated('itea'));
   
   useEffect(() => {
-    if (isInitializedRef.current || !hasHydratedRef.current) return;
+    if (isInitializedRef.current || !isStoreHydrated) return;
     const initialize = async () => {
       initializeModule(MODULE_KEY);
       try {
@@ -219,7 +213,8 @@ export function useIteaIndexation() {
       
       // Verificar si ya hay datos en IndexedDB (después de hidratación)
       const currentState = useIndexationStore.getState().modules[MODULE_KEY];
-      const hasDataInIndexedDB = muebles.length > 0;
+      const currentMuebles = useIteaStore.getState().muebles;
+      const hasDataInIndexedDB = currentMuebles.length > 0;
       const isAlreadyIndexed = currentState?.isIndexed && hasDataInIndexedDB;
       
       console.log('🔍 [ITEA] Verificando estado de indexación:', {
@@ -229,7 +224,7 @@ export function useIteaIndexation() {
         hasDataInIndexedDB,
         isAlreadyIndexed,
         lastIndexedAt: currentState?.lastIndexedAt,
-        hasHydrated: hasHydratedRef.current,
+        isStoreHydrated,
       });
       
       if (isAlreadyIndexed) {
@@ -246,7 +241,7 @@ export function useIteaIndexation() {
     return () => {
       if (reconnectionTimeoutRef.current) clearTimeout(reconnectionTimeoutRef.current);
     };
-  }, [initializeModule, indexData, setupRealtimeSubscription]);
+  }, [initializeModule, indexData, setupRealtimeSubscription, isStoreHydrated]);
   
   return {
     isIndexing: indexationState?.isIndexing ?? false,
