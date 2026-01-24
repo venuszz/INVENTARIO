@@ -38,6 +38,13 @@ export default function IndexationPopover() {
     const pathname = usePathname();
     const { isDarkMode } = useTheme();
     
+    // No renderizar en el servidor
+    const [isMounted, setIsMounted] = useState(false);
+    
+    useEffect(() => {
+        setIsMounted(true);
+    }, []);
+    
     // Solo llamar hooks si no estamos en login
     const shouldIndex = pathname !== '/login';
     
@@ -90,22 +97,6 @@ export default function IndexationPopover() {
             return false;
         });
         
-        // Debug log
-        console.log('🔍 [IndexationPopover] Active modules:', {
-            total: modules.length,
-            active: filtered.length,
-            modules: modules.map(m => ({
-                key: m.key,
-                isIndexed: m.state.isIndexed,
-                isIndexing: m.state.isIndexing,
-                count: m.count,
-                dismissed: dismissed.has(m.key),
-                reconnectionStatus: m.state.reconnectionStatus,
-                error: m.state.error,
-                included: filtered.includes(m)
-            }))
-        });
-        
         return filtered;
     }, [modules, dismissed]);
 
@@ -133,7 +124,7 @@ export default function IndexationPopover() {
                 absorbTimerRef.current = setTimeout(() => {
                     setShowSuccessFlash(null);
                     setIsAbsorbing(false);
-                }, 1200);
+                }, 800); // Reducido de 1200ms a 800ms para más estabilidad
             }
             prevStatesRef.current[module.key] = { isIndexing: module.state.isIndexing, isIndexed: module.state.isIndexed };
         });
@@ -180,52 +171,36 @@ export default function IndexationPopover() {
         };
     }, []);
 
-    // No mostrar en la página de login o si no hay módulos activos
-    if (pathname === '/login' || activeModules.length === 0) return null;
+    // No mostrar en el servidor, en la página de login o si no hay módulos activos
+    if (!isMounted || pathname === '/login' || activeModules.length === 0) return null;
 
     return (
         <div className="fixed top-20 right-4 z-40">
-            {/* Success particles */}
+            {/* Success particles - simplificadas para estabilidad */}
             <AnimatePresence>
                 {isAbsorbing && showSuccessFlash && (
-                    <>
-                        {[...Array(8)].map((_, i) => {
+                    <motion.div
+                        className="absolute pointer-events-none z-10"
+                        initial={{ x: -70, y: 5, scale: 1.2, opacity: 1 }}
+                        animate={{ x: 15, y: 12, scale: 0, opacity: 0 }}
+                        transition={{ duration: 0.4, ease: 'easeOut' }}
+                    >
+                        {(() => {
                             const module = modules.find(m => m.key === showSuccessFlash);
                             const glowColor = module?.config.glowColor || '#3b82f6';
                             return (
-                                <motion.div
-                                    key={`p-${i}`}
-                                    className="absolute w-1.5 h-1.5 rounded-full pointer-events-none"
-                                    style={{ background: glowColor }}
-                                    initial={{ x: -60 - (i * 12), y: -25 + Math.sin(i) * 35, scale: 1.2, opacity: 1 }}
-                                    animate={{ x: 10, y: 15, scale: 0, opacity: 0 }}
-                                    transition={{ duration: 0.5, delay: i * 0.03, ease: [0.32, 0.72, 0, 1] }}
-                                />
+                                <div 
+                                    className="w-6 h-6 rounded-full flex items-center justify-center shadow-lg"
+                                    style={{ 
+                                        background: `linear-gradient(135deg, ${glowColor}, #10b981)`,
+                                        boxShadow: `0 0 16px ${glowColor}`
+                                    }}
+                                >
+                                    <Check className="w-3 h-3 text-white" />
+                                </div>
                             );
-                        })}
-                        <motion.div
-                            className="absolute pointer-events-none z-10"
-                            initial={{ x: -70, y: 5, scale: 1.3, opacity: 1 }}
-                            animate={{ x: 15, y: 12, scale: 0, opacity: 0 }}
-                            transition={{ duration: 0.45, ease: [0.32, 0.72, 0, 1] }}
-                        >
-                            {(() => {
-                                const module = modules.find(m => m.key === showSuccessFlash);
-                                const glowColor = module?.config.glowColor || '#3b82f6';
-                                return (
-                                    <div 
-                                        className="w-6 h-6 rounded-full flex items-center justify-center shadow-lg"
-                                        style={{ 
-                                            background: `linear-gradient(135deg, ${glowColor}, #10b981)`,
-                                            boxShadow: `0 0 16px ${glowColor}`
-                                        }}
-                                    >
-                                        <Check className="w-3 h-3 text-white" />
-                                    </div>
-                                );
-                            })()}
-                        </motion.div>
-                    </>
+                        })()}
+                    </motion.div>
                 )}
             </AnimatePresence>
 
@@ -241,16 +216,15 @@ export default function IndexationPopover() {
                 animate={{ 
                     opacity: 1, 
                     x: 0, 
-                    scale: isAbsorbing ? [1, 1.05, 0.97, 1.01, 1] : 1,
+                    scale: 1,
                 }}
                 transition={{
                     type: 'spring',
-                    stiffness: 500,
-                    damping: 30,
-                    scale: { duration: 0.45, ease: [0.34, 1.56, 0.64, 1] },
+                    stiffness: 300,
+                    damping: 25,
                 }}
             >
-                {/* Flash overlay */}
+                {/* Flash overlay - simplificado */}
                 <AnimatePresence>
                     {isAbsorbing && showSuccessFlash && (() => {
                         const module = modules.find(m => m.key === showSuccessFlash);
@@ -260,9 +234,9 @@ export default function IndexationPopover() {
                                 className="absolute inset-0 pointer-events-none z-20 rounded-2xl"
                                 style={{ background: glowColor }}
                                 initial={{ opacity: 0 }}
-                                animate={{ opacity: [0, 0.35, 0] }}
+                                animate={{ opacity: [0, 0.2, 0] }}
                                 exit={{ opacity: 0 }}
-                                transition={{ duration: 0.45 }}
+                                transition={{ duration: 0.4, ease: 'easeInOut' }}
                             />
                         );
                     })()}
@@ -281,9 +255,10 @@ export default function IndexationPopover() {
                         return (
                             <motion.div
                                 key={module.key}
-                                initial={{ opacity: 0, x: 20 }}
-                                animate={{ opacity: 1, x: 0 }}
-                                transition={{ delay: index * 0.08 }}
+                                initial={{ opacity: 0, y: 10 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                exit={{ opacity: 0, y: -10 }}
+                                transition={{ duration: 0.2, ease: 'easeOut' }}
                             >
                                 {isIndexing ? (
                                     // Indexing state
