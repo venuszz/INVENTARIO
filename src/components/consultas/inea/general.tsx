@@ -12,6 +12,7 @@ import { useNotifications } from '@/hooks/useNotifications';
 import { useTheme } from '@/context/ThemeContext';
 import { useIneaIndexation } from '@/hooks/indexation/useIneaIndexation';
 import { useRouter, useSearchParams } from 'next/navigation';
+import SectionRealtimeToggle from '@/components/SectionRealtimeToggle';
 
 interface Mueble {
     id: number;
@@ -184,7 +185,12 @@ function getStatusBadgeColors(status: string | null | undefined) {
 
 export default function ConsultasIneaGeneral() {
     // Usar el nuevo hook de indexación
-    const { muebles, isIndexing, reindex } = useIneaIndexation();
+    const { muebles, isIndexing, reindex, realtimeConnected } = useIneaIndexation();
+    
+    // Debug log
+    useEffect(() => {
+        console.log('🔍 [INEA Component] Realtime status:', realtimeConnected);
+    }, [realtimeConnected]);
     const { user } = useSession(); // Hook para obtener datos del usuario de manera segura
     const router = useRouter();
     const searchParams = useSearchParams();
@@ -1287,71 +1293,43 @@ export default function ConsultasIneaGeneral() {
             : 'bg-gradient-to-br from-gray-50 via-white to-gray-100 text-gray-900'
             }`}>
             {/* Header con título */}
-            <div className={`w-full mx-auto rounded-lg sm:rounded-xl shadow-2xl overflow-hidden transition-all duration-500 transform border ${isDarkMode
-                ? 'bg-black border-gray-800'
-                : 'bg-white border-gray-200'
-                }`}>
-                <div className={`p-4 sm:p-6 flex flex-col sm:flex-row justify-between items-start sm:items-center border-b gap-2 sm:gap-0 ${isDarkMode
-                    ? 'bg-gray-900/30 border-gray-800'
-                    : 'bg-gray-50/50 border-gray-200'
-                    }`}>
-                    <h1 className="text-xl sm:text-2xl md:text-3xl font-bold flex items-center">
-                        <span className={`mr-2 sm:mr-3 p-1 sm:p-2 rounded-lg border text-sm sm:text-base shadow-lg ${isDarkMode
-                            ? 'bg-white text-black border-white'
-                            : 'bg-gray-900 text-white border-gray-900'
-                            }`}>INV</span>
-                        <span className={isDarkMode ? 'text-white' : 'text-gray-900'}>
+            <div className={`w-full mx-auto rounded-lg sm:rounded-xl shadow-2xl overflow-hidden transition-all duration-500 transform ${isDarkMode ? 'bg-black border-gray-800' : 'bg-white border-gray-200'}`}>
+                {/* Header con título */}
+                <div className={`p-4 sm:p-6 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 sm:gap-0 ${isDarkMode ? 'bg-black border-b border-gray-800' : 'bg-white border-b border-gray-200'}`}>
+                    <div>
+                        <h1 className="text-xl sm:text-2xl md:text-3xl font-bold flex items-center">
+                            <span className={`mr-2 sm:mr-3 p-1 sm:p-2 rounded-lg text-sm sm:text-base ${isDarkMode ? 'bg-gray-900 text-white border border-gray-700' : 'bg-gray-100 text-gray-900 border border-gray-300'}`}>INV</span>
                             Consulta de Inventario INEA
-                        </span>
-                    </h1>
-                    <p className={`text-sm sm:text-base ${isDarkMode ? 'text-gray-400' : 'text-gray-600'
-                        }`}>Vista general de todos los bienes registrados en el sistema.</p>
+                        </h1>
+                        <p className={`text-sm sm:text-base ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>Vista general de todos los bienes registrados en el sistema.</p>
+                    </div>
+                    <SectionRealtimeToggle 
+                        sectionName="INEA" 
+                        isConnected={realtimeConnected} 
+                    />
                 </div>
 
-                {/* Nuevo componente de valor total */}
-                <div className={`p-8 border-b ${isDarkMode
-                    ? 'bg-black border-gray-800'
-                    : 'bg-gray-50/30 border-gray-200'
-                    }`}>
+                {/* Panel de valor total mejorado */}
+                <div className={`p-8 ${isDarkMode ? 'bg-black border-b border-gray-800' : 'bg-white border-b border-gray-200'}`}>
                     <div className="flex flex-col lg:flex-row justify-between items-stretch gap-6">
                         {/* Panel de valor total */}
                         <div className="flex-grow">
-                            <div className={`group relative overflow-hidden p-6 rounded-2xl border-2 transition-all duration-500 ${isDarkMode
-                                ? 'bg-black border-white/10 hover:border-white/20'
-                                : 'bg-white border-gray-200 hover:border-gray-300'
-                                }`}>
-                                <div className={`absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500 ${isDarkMode
-                                    ? 'bg-white/5'
-                                    : 'bg-gray-50'
-                                    }`}></div>
+                            <div className={`group relative overflow-hidden p-6 rounded-2xl transition-all duration-500 hover:shadow-lg ${isDarkMode ? 'bg-black border border-gray-800 hover:border-gray-700' : 'bg-gray-50 border border-gray-200 hover:border-gray-300'}`}>
                                 <div className="flex items-start gap-6">
                                     <div className="relative">
-                                        <div className={`absolute inset-0 blur-xl ${isDarkMode ? 'bg-white/10' : 'bg-gray-300/50'
-                                            }`}></div>
-                                        <div className={`relative p-4 rounded-xl border transform group-hover:scale-110 transition-all duration-500 ${isDarkMode
-                                            ? 'bg-black border-white/10'
-                                            : 'bg-gray-50 border-gray-200'
-                                            }`}>
-                                            <DollarSign className={`h-8 w-8 ${isDarkMode ? 'text-white/90' : 'text-gray-700'
-                                                }`} />
+                                        <div className={`relative p-4 rounded-xl transform group-hover:scale-110 transition-all duration-500 ${isDarkMode ? 'bg-black border border-white/10' : 'bg-white border border-gray-200'}`}>
+                                            <DollarSign className={`h-8 w-8 ${isDarkMode ? 'text-white' : 'text-gray-900'}`} />
                                         </div>
                                     </div>
                                     <div className="flex flex-col">
-                                        <h3 className={`text-sm font-medium mb-1 transition-colors ${isDarkMode
-                                            ? 'text-gray-400 group-hover:text-white'
-                                            : 'text-gray-600 group-hover:text-gray-900'
-                                            }`}>Valor Total del Inventario</h3>
+                                        <h3 className={`text-sm font-medium mb-1 transition-colors ${isDarkMode ? 'text-gray-400 group-hover:text-white' : 'text-gray-600 group-hover:text-gray-900'}`}>Valor Total del Inventario</h3>
                                         <div className="relative">
                                             <div className={`text-4xl font-bold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
                                                 ${(activeFilters.length > 0 || searchTerm ? filteredValue : allValue).toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                                             </div>
-                                            <div className={`absolute -bottom-2 left-0 w-full h-px ${isDarkMode ? 'bg-white/30' : 'bg-gray-300'
-                                                }`}></div>
+                                            <div className={`absolute -bottom-2 left-0 w-full h-px ${isDarkMode ? 'bg-white/50' : 'bg-gray-400/50'}`}></div>
                                         </div>
-                                        <p className={`text-sm mt-2 transition-colors ${isDarkMode
-                                            ? 'text-gray-500 group-hover:text-gray-400'
-                                            : 'text-gray-600 group-hover:text-gray-700'
-                                            }`}>
+                                        <p className={`text-sm mt-2 transition-colors ${isDarkMode ? 'text-gray-500 group-hover:text-gray-400' : 'text-gray-600 group-hover:text-gray-700'}`}>
                                             {activeFilters.length > 0 || searchTerm ? 'Valor de artículos filtrados' : 'Valor total de todos los artículos'}
                                         </p>
                                     </div>
@@ -1361,10 +1339,7 @@ export default function ConsultasIneaGeneral() {
 
                         {/* Panel de conteo */}
                         <div className="flex-shrink-0">
-                            <div className={`group p-6 rounded-2xl border transition-all duration-500 ${isDarkMode
-                                ? 'bg-black/30 border-white/20 hover:border-white/40'
-                                : 'bg-gray-50 border-gray-200 hover:border-gray-300'
-                                }`}>
+                            <div className={`group p-6 rounded-2xl transition-all duration-500 ${isDarkMode ? 'bg-black border border-gray-800 hover:border-gray-700' : 'bg-gray-50 border border-gray-200 hover:border-gray-300'}`}>
                                 <div className="text-center">
                                     <p className={`text-sm mb-2 transition-colors ${isDarkMode
                                         ? 'text-gray-400 group-hover:text-white'

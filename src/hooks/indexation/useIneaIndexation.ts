@@ -52,6 +52,7 @@ export function useIneaIndexation() {
   // ============================================================================
   
   const indexationState = useIndexationStore(state => state.modules[MODULE_KEY]);
+  
   const {
     startIndexation,
     updateProgress,
@@ -287,11 +288,17 @@ export function useIneaIndexation() {
       .on('system', {}, (payload) => {
         const { status } = payload;
         const wasConnected = indexationState?.realtimeConnected ?? false;
-        const isConnected = status === 'SUBSCRIBED';
+        const isConnected = status === 'SUBSCRIBED' || status === 'ok';
         
-        console.log(`📡 Realtime status changed: ${status}`);
+        console.log(`📡 Realtime status changed: ${status}`, {
+          wasConnected,
+          isConnected,
+          willUpdate: wasConnected !== isConnected
+        });
         
         updateRealtimeConnection(MODULE_KEY, isConnected);
+        
+        console.log(`📡 After update, checking store:`, useIndexationStore.getState().modules[MODULE_KEY]?.realtimeConnected);
         
         // Detectar desconexión
         if (wasConnected && !isConnected) {
@@ -421,13 +428,14 @@ export function useIneaIndexation() {
       
       // Verificar si ya hay datos en IndexedDB (después de hidratación)
       const currentState = useIndexationStore.getState().modules[MODULE_KEY];
-      const hasDataInIndexedDB = muebles.length > 0;
+      const currentMuebles = useIneaStore.getState().muebles;
+      const hasDataInIndexedDB = currentMuebles.length > 0;
       const isAlreadyIndexed = currentState?.isIndexed && hasDataInIndexedDB;
       
       console.log('🔍 [INEA] Verificando estado de indexación:', {
         moduleKey: MODULE_KEY,
         isIndexed: currentState?.isIndexed,
-        mueblesCount: muebles.length,
+        mueblesCount: currentMuebles.length,
         hasDataInIndexedDB,
         isAlreadyIndexed,
         lastIndexedAt: currentState?.lastIndexedAt,

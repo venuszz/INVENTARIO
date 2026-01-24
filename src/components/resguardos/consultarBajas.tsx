@@ -14,6 +14,7 @@ import { useNotifications } from '@/hooks/useNotifications';
 import { useTheme } from '@/context/ThemeContext';
 import { useResguardosBajasIndexation } from '@/hooks/indexation/useResguardosBajasIndexation';
 import { useSearchParams } from 'next/navigation';
+import SectionRealtimeToggle from '@/components/SectionRealtimeToggle';
 
 interface ResguardoBaja {
     id: number;
@@ -75,7 +76,7 @@ interface PdfDataBaja {
 }
 
 const ConsultarBajasResguardos = () => {
-    useResguardosBajasIndexation();
+    const { realtimeConnected } = useResguardosBajasIndexation();
     const [bajas, setBajas] = useState<ResguardoBaja[]>([]);
     const [selectedBaja, setSelectedBaja] = useState<ResguardoBajaDetalle | null>(null);
     const [loading, setLoading] = useState(false);
@@ -606,23 +607,29 @@ const ConsultarBajasResguardos = () => {
                     ? 'bg-gray-900/30 border-gray-800'
                     : 'bg-gray-50/50 border-gray-200'
                     }`}>
-                    <h1 className="text-xl sm:text-2xl md:text-3xl font-bold flex items-center">
-                        <span className={`mr-2 sm:mr-3 p-1 sm:p-2 rounded-lg border text-sm sm:text-base shadow-lg ${isDarkMode
-                            ? 'bg-red-800 text-white border-red-700/50'
-                            : 'bg-red-600 text-white border-red-600'
-                            }`}>BAJ</span>
-                        <span className={isDarkMode ? 'text-red-500' : 'text-gray-900'}>
-                            Consulta de Resguardos Dados de Baja
-                        </span>
-                    </h1>
-                    <div className={`flex items-center gap-2 text-sm px-3 py-1.5 rounded-full border ${isDarkMode
-                        ? 'text-gray-400 bg-gray-900/50 border-gray-800/50'
-                        : 'text-gray-600 bg-gray-100 border-gray-300'
-                        }`}>
-                        <ListChecks className={`h-4 w-4 ${isDarkMode ? 'text-red-400' : 'text-red-600'
-                            }`} />
-                        <span>{totalCount} resguardos dados de baja</span>
+                    <div>
+                        <h1 className="text-xl sm:text-2xl md:text-3xl font-bold flex items-center">
+                            <span className={`mr-2 sm:mr-3 p-1 sm:p-2 rounded-lg border text-sm sm:text-base shadow-lg ${isDarkMode
+                                ? 'bg-red-800 text-white border-red-700/50'
+                                : 'bg-red-600 text-white border-red-600'
+                                }`}>BAJ</span>
+                            <span className={isDarkMode ? 'text-red-500' : 'text-gray-900'}>
+                                Consulta de Resguardos Dados de Baja
+                            </span>
+                        </h1>
+                        <div className={`flex items-center gap-2 text-sm px-3 py-1.5 rounded-full border ${isDarkMode
+                            ? 'text-gray-400 bg-gray-900/50 border-gray-800/50'
+                            : 'text-gray-600 bg-gray-100 border-gray-300'
+                            }`}>
+                            <ListChecks className={`h-4 w-4 ${isDarkMode ? 'text-red-400' : 'text-red-600'
+                                }`} />
+                            <span>{totalCount} resguardos dados de baja</span>
+                        </div>
                     </div>
+                    <SectionRealtimeToggle 
+                        sectionName="Resguardos Bajas" 
+                        isConnected={realtimeConnected} 
+                    />
                 </div>
 
                 {/* Main container */}

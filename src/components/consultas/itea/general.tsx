@@ -14,6 +14,7 @@ import { useTheme } from '@/context/ThemeContext';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useIteaIndexation } from '@/hooks/indexation/useIteaIndexation';
 import type { MuebleITEA } from '@/types/indexation';
+import SectionRealtimeToggle from '@/components/SectionRealtimeToggle';
 
 // Utility function to format date strings as 'DD/MM/YYYY'
 function formatDate(dateString: string | null | undefined): string {
@@ -154,7 +155,7 @@ interface ActiveFilter {
 
 export default function ConsultasIteaGeneral() {
     // Usar el contexto de indexación de ITEA
-    const { muebles, isIndexing: loading, error, reindex } = useIteaIndexation();
+    const { muebles, isIndexing: loading, error, reindex, realtimeConnected } = useIteaIndexation();
     const { user } = useSession(); // Hook para obtener datos del usuario de manera segura
     const searchParams = useSearchParams();
 
@@ -1210,11 +1211,17 @@ export default function ConsultasIteaGeneral() {
             <div className={`w-full mx-auto rounded-lg sm:rounded-xl shadow-2xl overflow-hidden transition-all duration-500 transform ${isDarkMode ? 'bg-black border-gray-800' : 'bg-white border-gray-200'}`}>
                 {/* Header con título */}
                 <div className={`p-4 sm:p-6 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 sm:gap-0 ${isDarkMode ? 'bg-black border-b border-gray-800' : 'bg-white border-b border-gray-200'}`}>
-                    <h1 className="text-xl sm:text-2xl md:text-3xl font-bold flex items-center">
-                        <span className={`mr-2 sm:mr-3 p-1 sm:p-2 rounded-lg text-sm sm:text-base ${isDarkMode ? 'bg-gray-900 text-white border border-gray-700' : 'bg-gray-100 text-gray-900 border border-gray-300'}`}>INV</span>
-                        Consulta de Inventario ITEA
-                    </h1>
-                    <p className={`text-sm sm:text-base ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>Vista general de todos los bienes registrados en el sistema.</p>
+                    <div>
+                        <h1 className="text-xl sm:text-2xl md:text-3xl font-bold flex items-center">
+                            <span className={`mr-2 sm:mr-3 p-1 sm:p-2 rounded-lg text-sm sm:text-base ${isDarkMode ? 'bg-gray-900 text-white border border-gray-700' : 'bg-gray-100 text-gray-900 border border-gray-300'}`}>INV</span>
+                            Consulta de Inventario ITEA
+                        </h1>
+                        <p className={`text-sm sm:text-base ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>Vista general de todos los bienes registrados en el sistema.</p>
+                    </div>
+                    <SectionRealtimeToggle 
+                        sectionName="ITEA" 
+                        isConnected={realtimeConnected} 
+                    />
                 </div>
 
                 {/* Panel de valor total mejorado */}

@@ -14,6 +14,7 @@ import { useNotifications } from '@/hooks/useNotifications';
 import { useTheme } from '@/context/ThemeContext';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useIteaObsoletosIndexation } from '@/hooks/indexation/useIteaObsoletosIndexation';
+import SectionRealtimeToggle from '@/components/SectionRealtimeToggle';
 
 interface MuebleITEA {
     id: number;
@@ -228,7 +229,7 @@ const ImagePreview = ({ imagePath }: { imagePath: string | null }) => {
 export default function ConsultasIteaBajas() {
     const router = useRouter();
     const searchParams = useSearchParams();
-    const { reindex: reindexObsoletos } = useIteaObsoletosIndexation();
+    const { reindex: reindexObsoletos, realtimeConnected } = useIteaObsoletosIndexation();
     const [muebles, setMuebles] = useState<MuebleITEA[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
@@ -1157,11 +1158,17 @@ export default function ConsultasIteaBajas() {
             <div className={`w-full mx-auto rounded-lg sm:rounded-xl shadow-2xl overflow-hidden transition-all duration-500 transform ${isDarkMode ? 'bg-black border-gray-800' : 'bg-white border-gray-200'} border`}>
                 {/* Header con título */}
                 <div className={`p-4 sm:p-6 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 sm:gap-0 ${isDarkMode ? 'bg-black border-b border-gray-800' : 'bg-white border-b border-gray-200'}`}>
-                    <h1 className="text-xl sm:text-2xl md:text-3xl font-bold flex items-center">
-                        <span className={`mr-2 sm:mr-3 text-red-500 p-1 sm:p-2 rounded-lg border border-red-700 text-sm sm:text-base ${isDarkMode ? 'bg-black' : 'bg-red-50'}`}>INV</span>
-                        <span className={isDarkMode ? 'text-white' : 'text-gray-900'}>Artículos dados de <span className="text-red-500 font-bold">Baja</span> (ITEA)</span>
-                    </h1>
-                    <p className={`text-sm sm:text-base ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>Vista de todos los bienes dados de baja en el sistema ITEA.</p>
+                    <div>
+                        <h1 className="text-xl sm:text-2xl md:text-3xl font-bold flex items-center">
+                            <span className={`mr-2 sm:mr-3 text-red-500 p-1 sm:p-2 rounded-lg border border-red-700 text-sm sm:text-base ${isDarkMode ? 'bg-black' : 'bg-red-50'}`}>INV</span>
+                            <span className={isDarkMode ? 'text-white' : 'text-gray-900'}>Artículos dados de <span className="text-red-500 font-bold">Baja</span> (ITEA)</span>
+                        </h1>
+                        <p className={`text-sm sm:text-base ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>Vista de todos los bienes dados de baja en el sistema ITEA.</p>
+                    </div>
+                    <SectionRealtimeToggle 
+                        sectionName="ITEA Obsoletos" 
+                        isConnected={realtimeConnected} 
+                    />
                 </div>
 
                 {/* Nuevo componente de valor total */}

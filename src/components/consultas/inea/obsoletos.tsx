@@ -14,6 +14,7 @@ import { useNotifications } from '@/hooks/useNotifications';
 import { useTheme } from '@/context/ThemeContext';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useIneaObsoletosIndexation } from '@/hooks/indexation/useIneaObsoletosIndexation';
+import SectionRealtimeToggle from '@/components/SectionRealtimeToggle';
 
 interface Mueble {
     id: number;
@@ -228,7 +229,7 @@ const ImagePreview = ({ imagePath }: { imagePath: string | null }) => {
 export default function ConsultasIneaBajas() {
     const router = useRouter();
     const searchParams = useSearchParams();
-    const { reindex: reindexObsoletos } = useIneaObsoletosIndexation();
+    const { reindex: reindexObsoletos, realtimeConnected } = useIneaObsoletosIndexation();
     const [muebles, setMuebles] = useState<Mueble[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
@@ -1176,15 +1177,21 @@ export default function ConsultasIneaBajas() {
                         ? 'bg-black border-gray-800' 
                         : 'bg-gray-50 border-gray-200'
                 }`}>
-                    <h1 className="text-xl sm:text-2xl md:text-3xl font-bold flex items-center">
-                        <span className={`mr-2 sm:mr-3 text-red-500 p-1 sm:p-2 rounded-lg text-sm sm:text-base ${
-                            isDarkMode 
-                                ? 'bg-black border border-red-900/50' 
-                                : 'bg-red-50 border border-red-200'
-                        }`}>INV</span>
-                        <span className={isDarkMode ? 'text-white' : 'text-gray-900'}>Artículos dados de Baja<span className="text-red-700"> (INEA)</span></span>
-                    </h1>
-                    <p className={`text-sm sm:text-base ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>Vista de todos los bienes dados de baja en el sistema.</p>
+                    <div>
+                        <h1 className="text-xl sm:text-2xl md:text-3xl font-bold flex items-center">
+                            <span className={`mr-2 sm:mr-3 text-red-500 p-1 sm:p-2 rounded-lg text-sm sm:text-base ${
+                                isDarkMode 
+                                    ? 'bg-black border border-red-900/50' 
+                                    : 'bg-red-50 border border-red-200'
+                            }`}>INV</span>
+                            <span className={isDarkMode ? 'text-white' : 'text-gray-900'}>Artículos dados de Baja<span className="text-red-700"> (INEA)</span></span>
+                        </h1>
+                        <p className={`text-sm sm:text-base ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>Vista de todos los bienes dados de baja en el sistema.</p>
+                    </div>
+                    <SectionRealtimeToggle 
+                        sectionName="INEA Obsoletos" 
+                        isConnected={realtimeConnected} 
+                    />
                 </div>
 
                 {/* Nuevo componente de valor total */}

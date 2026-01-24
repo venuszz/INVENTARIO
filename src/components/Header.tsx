@@ -12,14 +12,6 @@ import { useNotifications } from '@/hooks/useNotifications';
 import { useTheme } from "@/context/ThemeContext";
 import GlobalSearch from './GlobalSearch';
 import { useSession } from '@/hooks/useSession';
-import RealtimeIndicator from './RealtimeIndicator';
-import { useIneaIndexation } from '@/hooks/indexation/useIneaIndexation';
-import { useIteaIndexation } from '@/hooks/indexation/useIteaIndexation';
-import { useNoListadoIndexation } from '@/hooks/indexation/useNoListadoIndexation';
-import { useResguardosIndexation } from '@/hooks/indexation/useResguardosIndexation';
-import { useIneaObsoletosIndexation } from '@/hooks/indexation/useIneaObsoletosIndexation';
-import { useIteaObsoletosIndexation } from '@/hooks/indexation/useIteaObsoletosIndexation';
-import { useResguardosBajasIndexation } from '@/hooks/indexation/useResguardosBajasIndexation';
 
 
 type MenuItem = {
@@ -88,25 +80,6 @@ export default function NavigationBar() {
     const handleLogout = useCerrarSesion();
     const { notifications, doNotDisturb } = useNotifications();
     const unreadCount = notifications.filter(n => !n.is_read && !n.data?.is_deleted).length;
-
-    // Hooks de indexación para calcular estado de conexión global
-    const ineaState = useIneaIndexation();
-    const iteaState = useIteaIndexation();
-    const noListadoState = useNoListadoIndexation();
-    const resguardosState = useResguardosIndexation();
-    const ineaObsState = useIneaObsoletosIndexation();
-    const iteaObsState = useIteaObsoletosIndexation();
-    const resguardosBajasState = useResguardosBajasIndexation();
-
-    // Calcular estado de conexión global (todos los módulos)
-    const isGloballyConnected = 
-        ineaState.realtimeConnected &&
-        iteaState.realtimeConnected &&
-        noListadoState.realtimeConnected &&
-        resguardosState.realtimeConnected &&
-        ineaObsState.realtimeConnected &&
-        iteaObsState.realtimeConnected &&
-        resguardosBajasState.realtimeConnected;
 
     // Refs para detectar colisiones
     const logoRef = useRef<HTMLDivElement>(null);
@@ -791,11 +764,6 @@ export default function NavigationBar() {
                         {/* Always visible buttons */}
                         < div className={`flex items-center space-x-3 transition-all duration-500 ${isHeaderExpanded ? 'ml-1' : 'ml-3'
                             }`}>
-                            {/* Realtime Indicator - Always visible */}
-                            <RealtimeIndicator 
-                                variant="minimal" 
-                                isConnected={isGloballyConnected}
-                            />
                             
                             <RoleGuard roles={["superadmin", "admin"]} userRole={userData.rol}>
                                 <div className="relative" ref={notificationWrapperRef}>

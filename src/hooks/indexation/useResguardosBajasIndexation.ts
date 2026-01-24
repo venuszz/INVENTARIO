@@ -135,7 +135,7 @@ export function useResguardosBajasIndexation() {
       .on('system', {}, (payload) => {
         const { status } = payload;
         const wasConnected = indexationState?.realtimeConnected ?? false;
-        const isConnected = status === 'SUBSCRIBED';
+        const isConnected = status === 'SUBSCRIBED' || status === 'ok';
         updateRealtimeConnection(MODULE_KEY, isConnected);
         if (wasConnected && !isConnected) {
           setDisconnectedAt(MODULE_KEY, new Date().toISOString());

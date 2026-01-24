@@ -144,7 +144,7 @@ export function useNoListadoIndexation() {
       .on('system', {}, (payload) => {
         const { status } = payload;
         const wasConnected = indexationState?.realtimeConnected ?? false;
-        const isConnected = status === 'SUBSCRIBED';
+        const isConnected = status === 'SUBSCRIBED' || status === 'ok';
         updateRealtimeConnection(MODULE_KEY, isConnected);
         if (wasConnected && !isConnected) {
           setDisconnectedAt(MODULE_KEY, new Date().toISOString());
@@ -214,7 +214,8 @@ export function useNoListadoIndexation() {
       
       // Verificar si ya hay datos en IndexedDB (después de hidratación)
       const currentState = useIndexationStore.getState().modules[MODULE_KEY];
-      const hasDataInIndexedDB = muebles.length > 0;
+      const currentMuebles = useNoListadoStore.getState().muebles;
+      const hasDataInIndexedDB = currentMuebles.length > 0;
       const isAlreadyIndexed = currentState?.isIndexed && hasDataInIndexedDB;
       
       console.log('🔍 [NO_LISTADO] Verificando estado de indexación:', {

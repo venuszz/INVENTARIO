@@ -213,7 +213,7 @@ export function useIneaObsoletosIndexation() {
       .on('system', {}, (payload) => {
         const { status } = payload;
         const wasConnected = indexationState?.realtimeConnected ?? false;
-        const isConnected = status === 'SUBSCRIBED';
+        const isConnected = status === 'SUBSCRIBED' || status === 'ok';
         
         console.log(`📡 Realtime status changed: ${status} (INEA Obsoletos)`);
         

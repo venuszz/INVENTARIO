@@ -140,8 +140,16 @@ export function useIteaObsoletosIndexation() {
       .on('system', {}, (payload) => {
         const { status } = payload;
         const wasConnected = indexationState?.realtimeConnected ?? false;
-        const isConnected = status === 'SUBSCRIBED';
+        const isConnected = status === 'SUBSCRIBED' || status === 'ok';
+        
+        console.log(`📡 [ITEA OBSOLETOS] Realtime status changed: ${status}`, {
+          wasConnected,
+          isConnected,
+          willUpdate: wasConnected !== isConnected
+        });
+        
         updateRealtimeConnection(MODULE_KEY, isConnected);
+        
         if (wasConnected && !isConnected) {
           setDisconnectedAt(MODULE_KEY, new Date().toISOString());
           handleReconnection();
@@ -226,6 +234,7 @@ export function useIteaObsoletosIndexation() {
         isAlreadyIndexed,
         lastIndexedAt: currentState?.lastIndexedAt,
         hasHydrated: hasHydratedRef.current,
+        realtimeConnected: currentState?.realtimeConnected,
       });
       
       if (isAlreadyIndexed) {

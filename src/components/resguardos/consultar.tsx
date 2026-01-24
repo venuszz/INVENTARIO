@@ -15,6 +15,7 @@ import { useNotifications } from '@/hooks/useNotifications';
 import { useTheme } from '@/context/ThemeContext';
 import { useResguardosIndexation } from '@/hooks/indexation/useResguardosIndexation';
 import { useSearchParams } from 'next/navigation';
+import SectionRealtimeToggle from '@/components/SectionRealtimeToggle';
 
 interface Resguardo {
     id: number;
@@ -136,7 +137,7 @@ const limpiarDatosArticulo = async (
 };
 
 export default function ConsultarResguardos({ folioParam }: { folioParam?: string | null }) {
-    useResguardosIndexation();
+    const { realtimeConnected } = useResguardosIndexation();
     const [resguardos, setResguardos] = useState<Resguardo[]>([]);
     const [selectedResguardo, setSelectedResguardo] = useState<ResguardoDetalle | null>(null);
     const [loading, setLoading] = useState(false);
@@ -835,21 +836,27 @@ export default function ConsultarResguardos({ folioParam }: { folioParam?: strin
                     ? 'bg-gray-900/30 border-gray-800'
                     : 'bg-gray-50/50 border-gray-200'
                     }`}>
-                    <h1 className="text-xl sm:text-2xl md:text-3xl font-bold flex items-center">
-                        <span className={`mr-2 sm:mr-3 p-1 sm:p-2 rounded-lg border text-sm sm:text-base shadow-lg ${isDarkMode
-                            ? 'bg-white text-black border-white'
-                            : 'bg-gray-900 text-white border-gray-900'
-                            }`}>RES</span>
-                        <span className={isDarkMode ? 'text-white' : 'text-gray-900'}>
-                            Consulta de Resguardos
-                        </span>
-                    </h1>
-                    <div className={`flex items-center gap-2 text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-600'
-                        }`}>
-                        <ListChecks className={`h-4 w-4 animate-pulse ${isDarkMode ? 'text-white' : 'text-gray-900'
-                            }`} />
-                        <span>{totalCount} resguardos registrados</span>
+                    <div>
+                        <h1 className="text-xl sm:text-2xl md:text-3xl font-bold flex items-center">
+                            <span className={`mr-2 sm:mr-3 p-1 sm:p-2 rounded-lg border text-sm sm:text-base shadow-lg ${isDarkMode
+                                ? 'bg-white text-black border-white'
+                                : 'bg-gray-900 text-white border-gray-900'
+                                }`}>RES</span>
+                            <span className={isDarkMode ? 'text-white' : 'text-gray-900'}>
+                                Consulta de Resguardos
+                            </span>
+                        </h1>
+                        <div className={`flex items-center gap-2 text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-600'
+                            }`}>
+                            <ListChecks className={`h-4 w-4 animate-pulse ${isDarkMode ? 'text-white' : 'text-gray-900'
+                                }`} />
+                            <span>{totalCount} resguardos registrados</span>
+                        </div>
                     </div>
+                    <SectionRealtimeToggle 
+                        sectionName="Resguardos" 
+                        isConnected={realtimeConnected} 
+                    />
                 </div>
 
                 {/* Main container */}

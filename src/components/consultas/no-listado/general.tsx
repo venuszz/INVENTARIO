@@ -12,6 +12,7 @@ import { useNotifications } from '@/hooks/useNotifications';
 import { useTheme } from '@/context/ThemeContext';
 import { useNoListadoIndexation } from '@/hooks/indexation/useNoListadoIndexation';
 import { useRouter, useSearchParams } from 'next/navigation';
+import SectionRealtimeToggle from '@/components/SectionRealtimeToggle';
 
 interface Mueble {
     id: number;
@@ -184,7 +185,7 @@ function getStatusBadgeColors(status: string | null | undefined) {
 
 export default function ConsultasNoListadoGeneral() {
     // Usar el contexto de indexación en lugar de estado local
-    const { muebles, isIndexing, reindex } = useNoListadoIndexation();
+    const { muebles, isIndexing, reindex, realtimeConnected } = useNoListadoIndexation();
     const { user } = useSession();
     const router = useRouter();
     const searchParams = useSearchParams();
@@ -1295,21 +1296,29 @@ export default function ConsultasNoListadoGeneral() {
                     ? 'bg-gradient-to-r from-black via-black to-amber-900/10 border-amber-800'
                     : 'bg-gradient-to-r from-amber-50 to-orange-50/50 border-gray-200'
                     }`}>
-                    <h1 className="text-xl sm:text-2xl md:text-3xl font-bold flex items-center">
-                        <span className={`mr-2 sm:mr-3 p-1 sm:p-2 rounded-lg border text-sm sm:text-base shadow-lg hover:scale-105 transition-transform ${isDarkMode
-                            ? 'bg-amber-900/30 text-amber-200 border-amber-800/50'
-                            : 'bg-amber-100 text-amber-800 border-amber-200'
-                            }`}>N/L</span>
-                        <span className={`flex items-center gap-3 ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
-                            Inventario No Listado
-                            <Archive className={`h-6 w-6 sm:h-8 sm:w-8 ${isDarkMode ? 'text-amber-500' : 'text-amber-600'}`} />
-                        </span>
-                    </h1>
-                    <p className={`text-sm sm:text-base flex items-center gap-2 ${isDarkMode ? 'text-gray-400' : 'text-gray-600'
-                        }`}>
-                        <FileWarning className="h-4 w-4" />
-                        Artículos no listados oficialmente en el inventario.
-                    </p>
+                    <div className="flex items-center justify-between flex-wrap gap-4">
+                        <div>
+                            <h1 className="text-xl sm:text-2xl md:text-3xl font-bold flex items-center">
+                                <span className={`mr-2 sm:mr-3 p-1 sm:p-2 rounded-lg border text-sm sm:text-base shadow-lg hover:scale-105 transition-transform ${isDarkMode
+                                    ? 'bg-amber-900/30 text-amber-200 border-amber-800/50'
+                                    : 'bg-amber-100 text-amber-800 border-amber-200'
+                                    }`}>N/L</span>
+                                <span className={`flex items-center gap-3 ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
+                                    Inventario No Listado
+                                    <Archive className={`h-6 w-6 sm:h-8 sm:w-8 ${isDarkMode ? 'text-amber-500' : 'text-amber-600'}`} />
+                                </span>
+                            </h1>
+                            <p className={`text-sm sm:text-base flex items-center gap-2 ${isDarkMode ? 'text-gray-400' : 'text-gray-600'
+                                }`}>
+                                <FileWarning className="h-4 w-4" />
+                                Artículos no listados oficialmente en el inventario.
+                            </p>
+                        </div>
+                        <SectionRealtimeToggle 
+                            sectionName="No Listado" 
+                            isConnected={realtimeConnected} 
+                        />
+                    </div>
                 </div>
 
                 {/* Nuevo componente de valor total */}

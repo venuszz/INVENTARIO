@@ -96,6 +96,22 @@ export default function IndexationPopover() {
             if (module.state.isIndexed && !module.state.isIndexing) indexed++;
             if (module.state.error) errors++;
         });
+        
+        // Debug para producción
+        if (process.env.NODE_ENV === 'production') {
+            console.log('📊 [IndexationPopover] Stats:', {
+                activeModules: activeModules.map(m => ({
+                    key: m.key,
+                    name: m.name,
+                    isIndexing: m.state.isIndexing,
+                    isIndexed: m.state.isIndexed,
+                    error: m.state.error,
+                    count: m.count,
+                })),
+                stats: { indexing, indexed, errors }
+            });
+        }
+        
         return { indexing, indexed, errors };
     }, [activeModules]);
 
