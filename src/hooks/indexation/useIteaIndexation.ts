@@ -199,6 +199,10 @@ export function useIteaIndexation() {
   
   useEffect(() => {
     if (isInitializedRef.current || !isStoreHydrated) return;
+    
+    // Solo ejecutar en el cliente (navegador)
+    if (typeof window === 'undefined') return;
+    
     const initialize = async () => {
       initializeModule(MODULE_KEY);
       try {

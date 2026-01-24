@@ -289,6 +289,9 @@ export function useIneaObsoletosIndexation() {
   useEffect(() => {
     if (isInitializedRef.current) return;
     
+    // Solo ejecutar en el cliente (navegador)
+    if (typeof window === 'undefined') return;
+    
     const initialize = async () => {
       initializeModule(MODULE_KEY);
       
