@@ -25,6 +25,7 @@ export async function GET(request: NextRequest) {
     }
 
     const savedState = request.cookies.get('oauth_state')?.value;
+    
     if (!savedState || savedState !== state) {
         return NextResponse.redirect(
             new URL('/login?error=Invalid state parameter', request.url)
@@ -41,6 +42,7 @@ export async function GET(request: NextRequest) {
     }
 
     const codeVerifier = request.cookies.get('oauth_code_verifier')?.value;
+    
     if (!codeVerifier) {
         return NextResponse.redirect(
             new URL('/login?error=Code verifier not found', request.url)
@@ -85,6 +87,7 @@ export async function GET(request: NextRequest) {
         });
 
         if (!tokenResponse.ok) {
+            const errorText = await tokenResponse.text();
             return NextResponse.redirect(
                 new URL('/login?error=Token exchange failed', request.url)
             );
@@ -123,9 +126,8 @@ export async function GET(request: NextRequest) {
         // =================================================================================
         // MODO VINCULACIÓN DE CUENTAS (ACCOUNT LINKING)
         // =================================================================================
+        
         if (stateMetadata.mode === 'linking') {
-            // Confiamos en el stateMetadata porque el state fue validado contra la cookie oauth_state original
-            // Esto evita problemas si la cookie de sesión userData no llega correctamente en el callback
             const originalUserId = stateMetadata.original_user_id;
 
             if (!originalUserId) {
@@ -223,7 +225,6 @@ export async function GET(request: NextRequest) {
         // =================================================================================
 
         // 1. INTENTO PRIMARIO: Buscar por ID de usuario OAuth (Independiente del email)
-        // Esto es crucial para cuentas ya vinculadas donde el email puede haber cambiado o ser diferente
         const { data: linkedUser, error: linkedError } = await supabaseAdmin
             .from('users')
             .select('*')
@@ -234,7 +235,6 @@ export async function GET(request: NextRequest) {
         let localUser = linkedUser;
 
         // 2. INTENTO SECUNDARIO: Si no hay cuenta vinculada, buscar por EMAIL
-        // Esto permite vincular automáticamente cuentas antiguas por coincidencia de correo
         if (!localUser) {
             const { data: emailUser, error: emailError } = await supabaseAdmin
                 .from('users')
@@ -324,8 +324,8 @@ export async function GET(request: NextRequest) {
                 localUser = newUser;
             }
         } else {
-            // Si el usuario ya existe (lo encontramos en paso 1 o 2), actualizamos metadata
-            await supabaseAdmin.auth.admin.updateUserById(
+            // Si el usuario ya existe, actualizamos metadata
+            const { error: metadataError } = await supabaseAdmin.auth.admin.updateUserById(
                 axpertProfile.id,
                 {
                     user_metadata: {
@@ -360,7 +360,6 @@ export async function GET(request: NextRequest) {
             // COOKIE ADICIONAL SOLICITADA PARA EL USO DE ESTA SESION
             response.cookies.set('axpert_avatar_url', axpertProfile.avatar_url || '', cookieOptions);
 
-
             response.cookies.delete('oauth_state');
             response.cookies.delete('oauth_code_verifier');
 
@@ -377,32 +376,46 @@ export async function GET(request: NextRequest) {
             maxAge: 60 * 60 * 4,
             path: '/',
         };
-
-        // authToken ahora con HttpOnly para máxima seguridad
-        response.cookies.set('authToken', access_token, cookieOptions);
+        
+        // Token de acceso (NO HttpOnly para permitir Realtime)
+        response.cookies.set('sb-access-token', access_token, {
+            httpOnly: false, // NO HttpOnly para Realtime
+            secure: process.env.NODE_ENV === 'production',
+            sameSite: 'lax' as const, // LAX para permitir cookies en redirects desde OAuth
+            maxAge: 60 * 60 * 4,
+            path: '/',
+        });
 
         if (refresh_token) {
-            response.cookies.set('refreshToken', refresh_token, {
-                ...cookieOptions,
+            response.cookies.set('sb-refresh-token', refresh_token, {
+                httpOnly: false, // NO HttpOnly para Realtime
+                secure: process.env.NODE_ENV === 'production',
+                sameSite: 'lax' as const, // LAX para permitir cookies en redirects desde OAuth
                 maxAge: 60 * 60 * 24 * 30,
+                path: '/',
             });
         }
 
         if (id_token) {
-            response.cookies.set('idToken', id_token, cookieOptions);
+            response.cookies.set('idToken', id_token, {
+                httpOnly: true,
+                secure: process.env.NODE_ENV === 'production',
+                sameSite: 'strict' as const,
+                maxAge: 60 * 60 * 4,
+                path: '/',
+            });
         }
 
-        // Guardar información del usuario local + perfil de AXpert
-        // Ahora con HttpOnly para proteger información personal
+        // Guardar información del usuario local + perfil de AXpert (HttpOnly)
         response.cookies.set('userData', JSON.stringify({
             id: localUser.id,
             username: localUser.username,
             firstName: axpertProfile.first_name,
             lastName: axpertProfile.last_name,
             rol: localUser.rol,
-            email: axpertProfile.email, // USAR EMAIL DE AXPERT
+            email: axpertProfile.email,
             oauthProvider: 'axpert',
-            loginMethod: 'axpert', // Indica que se usó el método de login a través de AXpert
+            loginMethod: 'axpert',
         }), cookieOptions);
 
         // Guardar el perfil de AXpert para acceso al avatar
@@ -419,11 +432,11 @@ export async function GET(request: NextRequest) {
 
         response.cookies.delete('oauth_state');
         response.cookies.delete('oauth_code_verifier');
-
+        
         return response;
 
-
     } catch (error) {
+        console.error('Error in AXpert callback:', error);
         return NextResponse.redirect(
             new URL('/login?error=Authentication failed', request.url)
         );

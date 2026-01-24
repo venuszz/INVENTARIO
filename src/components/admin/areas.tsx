@@ -1,5 +1,5 @@
 "use client"
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useTheme } from '@/context/ThemeContext';
 import { Plus, Save, Trash2, Edit, AlertTriangle, CheckCircle, X, Search, RefreshCw, Layers } from 'lucide-react';
 import supabase from "@/app/lib/supabase/client";
@@ -29,10 +29,9 @@ export default function ConfigManagementComponent() {
     const { isDarkMode } = useTheme();
     
     // Usar config desde el hook de indexación admin
-    const { config: configItems, realtimeConnected, reindex } = useAdminIndexation();
+    const { config: configItems, realtimeConnected, reindex, isIndexing } = useAdminIndexation();
     
     // Estados
-    const [loading, setLoading] = useState<boolean>(false);
     const [formMode, setFormMode] = useState<'add' | ''>('');
     const [editingRow, setEditingRow] = useState<number | null>(null);
     const [deletingRow, setDeletingRow] = useState<number | null>(null);
@@ -116,16 +115,25 @@ export default function ConfigManagementComponent() {
         setIsSubmitting(true);
         try {
             const item = configItems.find(i => i.id === itemId);
-            const { error } = await supabase
-                .from('config')
-                .delete()
-                .eq('id', itemId);
+            
+            // Usar el proxy para DELETE
+            const response = await fetch('/api/supabase-proxy?target=' + encodeURIComponent(`/rest/v1/config?id=eq.${itemId}`), {
+                method: 'DELETE',
+                credentials: 'include',
+                headers: {
+                    'Content-Type': 'application/json'
+                }
+            });
 
-            if (error) throw error;
+            if (!response.ok) {
+                const error = await response.json();
+                throw new Error(error.message || 'Error al eliminar');
+            }
 
             setMessage({ type: 'success', text: 'Registro eliminado correctamente' });
             setDeletingRow(null);
-            // El realtime del hook actualizará automáticamente
+            
+            // El realtime del hook actualizará automáticamente el store y mostrará la notificación
 
             // Notificación de eliminación
             await createNotification({
@@ -167,7 +175,6 @@ export default function ConfigManagementComponent() {
                 throw new Error('El concepto es obligatorio');
             }
 
-            // Ya no necesitamos convertir aquí porque se convierte en tiempo real
             const conceptoValue = editValue;
 
             // Verificar si el nuevo concepto ya existe (excluyendo el item actual)
@@ -184,16 +191,28 @@ export default function ConfigManagementComponent() {
             const oldItem = configItems.find(item => item.id === itemId);
 
             // Editar configuración existente
-            const { error } = await supabase
-                .from('config')
-                .update({ concepto: conceptoValue })
-                .eq('id', itemId);
+            // Usar el proxy para UPDATE
+            const response = await fetch('/api/supabase-proxy?target=' + encodeURIComponent(`/rest/v1/config?id=eq.${itemId}&select=*`), {
+                method: 'PATCH',
+                credentials: 'include',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Prefer': 'return=representation'
+                },
+                body: JSON.stringify({ concepto: conceptoValue })
+            });
 
-            if (error) throw error;
+            if (!response.ok) {
+                const error = await response.json();
+                throw new Error(error.message || 'Error al actualizar');
+            }
+            
+            const data = await response.json();
 
             setMessage({ type: 'success', text: 'Registro actualizado correctamente' });
             setEditingRow(null);
-            // El realtime del hook actualizará automáticamente
+            
+            // El realtime del hook actualizará automáticamente el store y mostrará la notificación
 
             // Notificación de edición
             await createNotification({
@@ -237,7 +256,6 @@ export default function ConfigManagementComponent() {
                 throw new Error('El concepto es obligatorio');
             }
 
-            // Ya no necesitamos convertir aquí porque se convierte en tiempo real
             const conceptoValue = currentItem.concepto;
 
             // Verificar si el concepto ya existe
@@ -251,16 +269,27 @@ export default function ConfigManagementComponent() {
             }
 
             // Agregar nuevo item de configuración
-            const { error } = await supabase
-                .from('config')
-                .insert([{ tipo: activeTab, concepto: conceptoValue }])
-                .select();
+            // Usar el proxy para INSERT
+            const response = await fetch('/api/supabase-proxy?target=' + encodeURIComponent('/rest/v1/config?select=*'), {
+                method: 'POST',
+                credentials: 'include',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Prefer': 'return=representation'
+                },
+                body: JSON.stringify({ tipo: activeTab, concepto: conceptoValue })
+            });
 
-            if (error) throw error;
+            if (!response.ok) {
+                const error = await response.json();
+                throw new Error(error.message || 'Error al insertar');
+            }
+            
+            const data = await response.json();
 
             setMessage({ type: 'success', text: 'Registro agregado correctamente' });
-
-            // El realtime del hook actualizará automáticamente
+            
+            // El realtime del hook actualizará automáticamente el store y mostrará la notificación
             setFormMode('');
             setCurrentItem({ id: 0, tipo: activeTab, concepto: '' });
 
@@ -557,7 +586,7 @@ export default function ConfigManagementComponent() {
                                 ? 'bg-black divide-y divide-white/10'
                                 : 'bg-white divide-y divide-gray-200'
                                 }`}>
-                                {loading ? (
+                                {isIndexing ? (
                                     <tr>
                                         <td colSpan={3} className={`px-4 py-4 text-center text-sm transition-colors duration-500 ${isDarkMode ? 'text-white' : 'text-gray-900'
                                             }`}>

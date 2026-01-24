@@ -1,11 +1,13 @@
 /**
  * IndexationPopover Component
  * 
- * Componente flotante que muestra el estado de indexación de todos los módulos.
+ * Componente flotante que muestra el estado de indexación de todos los módulos
+ * y las notificaciones de cambios en tiempo real.
  * Se posiciona en la esquina superior derecha debajo del header y muestra:
  * - Progreso de indexación con barra animada
  * - Estado de cada módulo (indexando, completado, error)
  * - Errores de conexión y reconexión
+ * - Notificaciones de cambios en tiempo real (INSERT, UPDATE, DELETE)
  * - Auto-hide después de completar todos los módulos
  * - Animaciones de partículas al completar
  * 
@@ -20,8 +22,9 @@ import { useIneaObsoletosIndexation } from '@/hooks/indexation/useIneaObsoletosI
 import { useIteaObsoletosIndexation } from '@/hooks/indexation/useIteaObsoletosIndexation';
 import { useResguardosBajasIndexation } from '@/hooks/indexation/useResguardosBajasIndexation';
 import { useAdminIndexation } from '@/hooks/indexation/useAdminIndexation';
+import { useIndexationStore } from '@/stores/indexationStore';
 import { useTheme } from '@/context/ThemeContext';
-import { Check, AlertTriangle, RefreshCw, WifiOff, Loader2, Database } from 'lucide-react';
+import { Check, AlertTriangle, RefreshCw, WifiOff, Loader2, Database, Plus, Edit2, Trash2, Bell } from 'lucide-react';
 import { useState, useEffect, useRef, useMemo } from 'react';
 import { usePathname } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -55,6 +58,10 @@ export default function IndexationPopover() {
     const iteaObsState = useIteaObsoletosIndexation();
     const resguardosBajasState = useResguardosBajasIndexation();
     const adminState = useAdminIndexation();
+    
+    // Obtener eventos de cambios en tiempo real
+    const realtimeChanges = useIndexationStore(state => state.realtimeChanges);
+    const dismissRealtimeChange = useIndexationStore(state => state.dismissRealtimeChange);
     
     const [dismissed, setDismissed] = useState<Set<string>>(new Set());
     const [showSuccessFlash, setShowSuccessFlash] = useState<string | null>(null);
@@ -172,59 +179,157 @@ export default function IndexationPopover() {
         };
     }, []);
 
-    // No mostrar en el servidor, en la página de login o si no hay módulos activos
-    if (!isMounted || pathname === '/login' || activeModules.length === 0) return null;
+    // No mostrar en el servidor, en la página de login o si no hay módulos activos ni cambios
+    if (!isMounted || pathname === '/login' || (activeModules.length === 0 && realtimeChanges.filter(c => !c.dismissed).length === 0)) return null;
+
+    // Obtener el ícono según el tipo de evento
+    const getEventIcon = (eventType: string) => {
+        switch (eventType) {
+            case 'INSERT': return Plus;
+            case 'UPDATE': return Edit2;
+            case 'DELETE': return Trash2;
+            default: return Bell;
+        }
+    };
+
+    // Obtener el color según el tipo de evento
+    const getEventColor = (eventType: string) => {
+        switch (eventType) {
+            case 'INSERT': return '#10b981'; // green
+            case 'UPDATE': return '#3b82f6'; // blue
+            case 'DELETE': return '#ef4444'; // red
+            default: return '#6b7280'; // gray
+        }
+    };
+
+    // Obtener el texto según el tipo de evento
+    const getEventText = (eventType: string) => {
+        switch (eventType) {
+            case 'INSERT': return 'Agregado';
+            case 'UPDATE': return 'Actualizado';
+            case 'DELETE': return 'Eliminado';
+            default: return 'Cambio';
+        }
+    };
 
     return (
-        <div className="fixed top-20 right-4 z-40">
-            {/* Success particles - simplificadas para estabilidad */}
+        <div className="fixed top-20 right-4 z-40 flex flex-col gap-2 max-w-sm">
+            {/* Notificaciones de cambios en tiempo real */}
             <AnimatePresence>
-                {isAbsorbing && showSuccessFlash && (
-                    <motion.div
-                        className="absolute pointer-events-none z-10"
-                        initial={{ x: -70, y: 5, scale: 1.2, opacity: 1 }}
-                        animate={{ x: 15, y: 12, scale: 0, opacity: 0 }}
-                        transition={{ duration: 0.4, ease: 'easeOut' }}
-                    >
-                        {(() => {
-                            const module = modules.find(m => m.key === showSuccessFlash);
-                            const glowColor = module?.config.glowColor || '#3b82f6';
-                            return (
-                                <div 
-                                    className="w-6 h-6 rounded-full flex items-center justify-center shadow-lg"
-                                    style={{ 
-                                        background: `linear-gradient(135deg, ${glowColor}, #10b981)`,
-                                        boxShadow: `0 0 16px ${glowColor}`
-                                    }}
-                                >
-                                    <Check className="w-3 h-3 text-white" />
+                {realtimeChanges
+                    .filter(change => !change.dismissed)
+                    .slice(0, 3) // Mostrar solo las últimas 3
+                    .map((change) => {
+                        const EventIcon = getEventIcon(change.eventType);
+                        const eventColor = getEventColor(change.eventType);
+                        const eventText = getEventText(change.eventType);
+                        
+                        return (
+                            <motion.div
+                                key={change.id}
+                                className={`${
+                                    isDarkMode ? 'bg-black text-white border-white/10' : 'bg-white text-black border-black/10'
+                                } shadow-2xl overflow-hidden select-none rounded-xl border backdrop-blur-sm`}
+                                initial={{ opacity: 0, x: 40, scale: 0.95 }}
+                                animate={{ opacity: 1, x: 0, scale: 1 }}
+                                exit={{ opacity: 0, x: 40, scale: 0.95 }}
+                                transition={{
+                                    type: 'spring',
+                                    stiffness: 300,
+                                    damping: 25,
+                                }}
+                            >
+                                <div className="p-3 flex items-start gap-3">
+                                    <motion.div
+                                        className="p-2 rounded-xl flex-shrink-0"
+                                        style={{ backgroundColor: `${eventColor}33` }}
+                                        initial={{ scale: 0.8 }}
+                                        animate={{ scale: 1 }}
+                                        transition={{ type: 'spring', stiffness: 400, damping: 15 }}
+                                    >
+                                        <EventIcon className="w-4 h-4" style={{ color: eventColor }} />
+                                    </motion.div>
+                                    
+                                    <div className="flex-1 min-w-0">
+                                        <div className="flex items-center justify-between gap-2 mb-1">
+                                            <span className="text-xs font-semibold truncate" style={{ color: eventColor }}>
+                                                {eventText}
+                                            </span>
+                                            <button
+                                                onClick={() => dismissRealtimeChange(change.id)}
+                                                className={`p-0.5 rounded hover:bg-opacity-20 transition-colors flex-shrink-0 ${
+                                                    isDarkMode ? 'hover:bg-white' : 'hover:bg-black'
+                                                }`}
+                                            >
+                                                <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                                </svg>
+                                            </button>
+                                        </div>
+                                        
+                                        <div className={`text-xs ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+                                            <div className="font-medium truncate">
+                                                {change.table === 'config' ? 'CONFIGURACIÓN' : change.moduleName}
+                                            </div>
+                                        </div>
+                                    </div>
                                 </div>
-                            );
-                        })()}
-                    </motion.div>
-                )}
+                            </motion.div>
+                        );
+                    })}
             </AnimatePresence>
 
-            <motion.div
-                className={`${
-                    isDarkMode ? 'bg-black text-white' : 'bg-white text-black'
-                } shadow-2xl ${
-                    isDarkMode ? 'shadow-black/25' : 'shadow-black/10'
-                } overflow-hidden select-none relative rounded-2xl border ${
-                    isDarkMode ? 'border-white/10' : 'border-black/10'
-                }`}
-                initial={{ opacity: 0, x: 40, scale: 0.95 }}
-                animate={{ 
-                    opacity: 1, 
-                    x: 0, 
-                    scale: 1,
-                }}
-                transition={{
-                    type: 'spring',
-                    stiffness: 300,
-                    damping: 25,
-                }}
-            >
+            {/* Popover de indexación (solo si hay módulos activos) */}
+            {activeModules.length > 0 && (
+                <>
+                    {/* Success particles - simplificadas para estabilidad */}
+                    <AnimatePresence>
+                        {isAbsorbing && showSuccessFlash && (
+                            <motion.div
+                                className="absolute pointer-events-none z-10"
+                                initial={{ x: -70, y: 5, scale: 1.2, opacity: 1 }}
+                                animate={{ x: 15, y: 12, scale: 0, opacity: 0 }}
+                                transition={{ duration: 0.4, ease: 'easeOut' }}
+                            >
+                                {(() => {
+                                    const module = modules.find(m => m.key === showSuccessFlash);
+                                    const glowColor = module?.config.glowColor || '#3b82f6';
+                                    return (
+                                        <div 
+                                            className="w-6 h-6 rounded-full flex items-center justify-center shadow-lg"
+                                            style={{ 
+                                                background: `linear-gradient(135deg, ${glowColor}, #10b981)`,
+                                                boxShadow: `0 0 16px ${glowColor}`
+                                            }}
+                                        >
+                                            <Check className="w-3 h-3 text-white" />
+                                        </div>
+                                    );
+                                })()}
+                            </motion.div>
+                        )}
+                    </AnimatePresence>
+
+                    <motion.div
+                        className={`${
+                            isDarkMode ? 'bg-black text-white' : 'bg-white text-black'
+                        } shadow-2xl ${
+                            isDarkMode ? 'shadow-black/25' : 'shadow-black/10'
+                        } overflow-hidden select-none relative rounded-2xl border ${
+                            isDarkMode ? 'border-white/10' : 'border-black/10'
+                        }`}
+                        initial={{ opacity: 0, x: 40, scale: 0.95 }}
+                        animate={{ 
+                            opacity: 1, 
+                            x: 0, 
+                            scale: 1,
+                        }}
+                        transition={{
+                            type: 'spring',
+                            stiffness: 300,
+                            damping: 25,
+                        }}
+                    >
                 {/* Flash overlay - simplificado */}
                 <AnimatePresence>
                     {isAbsorbing && showSuccessFlash && (() => {
@@ -441,7 +546,9 @@ export default function IndexationPopover() {
                         </motion.div>
                     </div>
                 )}
-            </motion.div>
+                    </motion.div>
+                </>
+            )}
         </div>
     );
 }

@@ -18,6 +18,7 @@ export async function POST(request: NextRequest) {
     
     // Validar que se proporcionaron credenciales
     if (!username || !password) {
+      console.log('❌ [Login] Credenciales faltantes');
       return NextResponse.json({ 
         success: false, 
         error: 'Usuario y contraseña son requeridos' 
@@ -87,28 +88,27 @@ export async function POST(request: NextRequest) {
       redirectTo: '/'
     });
     
-    // Configuración de cookies con HttpOnly
-    const cookieOptions = {
-      httpOnly: true,
+    // Configuración de cookies
+    const secureCookieOptions = {
+      httpOnly: false, // NO HttpOnly para permitir acceso desde JavaScript (Realtime)
       secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax' as const,
+      sameSite: 'lax' as const, // LAX para compatibilidad con redirects
       maxAge: 60 * 60 * 4, // 4 horas
       path: '/',
     };
     
-    // Establecer authToken con HttpOnly
-    response.cookies.set('authToken', authData.session.access_token, cookieOptions);
+    // Establecer token de acceso (NO HttpOnly para Realtime)
+    response.cookies.set('sb-access-token', authData.session.access_token, secureCookieOptions);
     
-    // Establecer refreshToken si existe
+    // Establecer refreshToken
     if (authData.session.refresh_token) {
-      response.cookies.set('refreshToken', authData.session.refresh_token, {
-        ...cookieOptions,
+      response.cookies.set('sb-refresh-token', authData.session.refresh_token, {
+        ...secureCookieOptions,
         maxAge: 60 * 60 * 24 * 30, // 30 días
       });
     }
     
-    // Establecer userData con HttpOnly
-    // IMPORTANTE: Incluir oauthProvider si el usuario está vinculado
+    // Establecer userData (puede ser HttpOnly ya que no se necesita para Realtime)
     response.cookies.set('userData', JSON.stringify({
       id: user.id,
       username: user.username,
@@ -117,8 +117,14 @@ export async function POST(request: NextRequest) {
       rol: user.rol,
       email: user.email,
       oauthProvider: user.oauth_provider || null,
-      loginMethod: 'local', // Indica que se usó el método de login tradicional
-    }), cookieOptions);
+      loginMethod: 'local',
+    }), {
+      httpOnly: true, // Este sí puede ser HttpOnly
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'strict' as const,
+      maxAge: 60 * 60 * 4,
+      path: '/',
+    });
     
     // Si el usuario está vinculado con AXpert, cargar su perfil
     if (user.oauth_provider === 'axpert' && user.oauth_user_id) {
@@ -135,11 +141,23 @@ export async function POST(request: NextRequest) {
             email: authUser.user.email,
             firstName: metadata.first_name,
             lastName: metadata.last_name,
-          }), cookieOptions);
+          }), {
+            httpOnly: true,
+            secure: process.env.NODE_ENV === 'production',
+            sameSite: 'strict' as const,
+            maxAge: 60 * 60 * 4,
+            path: '/',
+          });
           
           // Establecer avatar URL
           if (metadata.avatar_url) {
-            response.cookies.set('axpert_avatar_url', metadata.avatar_url, cookieOptions);
+            response.cookies.set('axpert_avatar_url', metadata.avatar_url, {
+              httpOnly: true,
+              secure: process.env.NODE_ENV === 'production',
+              sameSite: 'strict' as const,
+              maxAge: 60 * 60 * 4,
+              path: '/',
+            });
           }
         }
       } catch (profileError) {
@@ -147,6 +165,9 @@ export async function POST(request: NextRequest) {
         console.error('Error loading AXpert profile:', profileError);
       }
     }
+    
+    console.log('✅ [Login] Todas las cookies establecidas');
+    console.log('🎉 [Login] Login completado exitosamente');
     
     return response;
     

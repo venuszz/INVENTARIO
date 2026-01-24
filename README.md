@@ -421,4 +421,4 @@ Para reportar bugs o solicitar features, contactar al equipo de desarrollo.
 ---
 
 **Última actualización**: Enero 2026  
-**Versión**: 2.0.0 (Sistema de Indexación Completo)
+**Versión**: 2.0.1 (Sistema de Indexación + Autenticación AXpert)

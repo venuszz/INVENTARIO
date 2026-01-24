@@ -14,9 +14,27 @@ import type { ModuleIndexationState, ReconnectionStatus } from '@/types/indexati
 // TIPOS
 // ============================================================================
 
+export interface RealtimeChangeEvent {
+  id: string;
+  moduleKey: string;
+  moduleName: string;
+  table: string;
+  eventType: 'INSERT' | 'UPDATE' | 'DELETE';
+  timestamp: string;
+  recordId?: number | string;
+  recordName?: string;
+  dismissed?: boolean;
+}
+
 interface IndexationStore {
   // Estado por módulo
   modules: Record<string, ModuleIndexationState>;
+  
+  // Eventos de cambios en tiempo real
+  realtimeChanges: RealtimeChangeEvent[];
+  addRealtimeChange: (change: Omit<RealtimeChangeEvent, 'id' | 'timestamp' | 'dismissed'>) => void;
+  dismissRealtimeChange: (id: string) => void;
+  clearRealtimeChanges: () => void;
   
   // Acciones de indexación
   startIndexation: (moduleKey: string) => void;
@@ -87,6 +105,57 @@ export const useIndexationStore = create<IndexationStore>()(
   persist(
     (set, get) => ({
       modules: {},
+      realtimeChanges: [],
+      
+      // ========================================================================
+      // ACCIONES DE EVENTOS EN TIEMPO REAL
+      // ========================================================================
+      
+      /**
+       * Agrega un nuevo evento de cambio en tiempo real
+       */
+      addRealtimeChange: (change) => {
+        const newChange: RealtimeChangeEvent = {
+          ...change,
+          id: `${change.moduleKey}-${change.table}-${Date.now()}-${Math.random()}`,
+          timestamp: new Date().toISOString(),
+          dismissed: false,
+        };
+        
+        set((state) => ({
+          realtimeChanges: [newChange, ...state.realtimeChanges].slice(0, 50), // Mantener solo los últimos 50
+        }));
+        
+        // Auto-dismiss después de 5 segundos
+        setTimeout(() => {
+          get().dismissRealtimeChange(newChange.id);
+        }, 5000);
+      },
+      
+      /**
+       * Marca un evento como dismissed
+       */
+      dismissRealtimeChange: (id) => {
+        set((state) => ({
+          realtimeChanges: state.realtimeChanges.map(change =>
+            change.id === id ? { ...change, dismissed: true } : change
+          ),
+        }));
+        
+        // Eliminar completamente después de 1 segundo
+        setTimeout(() => {
+          set((state) => ({
+            realtimeChanges: state.realtimeChanges.filter(change => change.id !== id),
+          }));
+        }, 1000);
+      },
+      
+      /**
+       * Limpia todos los eventos de cambios
+       */
+      clearRealtimeChanges: () => {
+        set({ realtimeChanges: [] });
+      },
       
       // ========================================================================
       // ACCIONES DE INDEXACIÓN
@@ -374,6 +443,8 @@ export const useIndexationStore = create<IndexationStore>()(
             },
           ])
         ),
+        // NO persistir eventos de cambios en tiempo real
+        realtimeChanges: [],
       }),
     }
   )

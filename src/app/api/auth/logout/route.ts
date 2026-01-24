@@ -18,13 +18,16 @@ export async function POST(request: NextRequest) {
     
     // Lista de todas las cookies de sesión a eliminar
     const cookiesToDelete = [
-      'authToken',
-      'refreshToken',
+      'sb-access-token',
+      'sb-refresh-token',
       'idToken',
       'userData',
       'axpert_profile',
       'axpert_avatar_url',
       'pending_user_info',
+      // Cookies antiguas por si acaso
+      'authToken',
+      'refreshToken',
     ];
     
     // Eliminar cada cookie

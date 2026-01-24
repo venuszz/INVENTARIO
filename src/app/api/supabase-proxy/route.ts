@@ -36,7 +36,7 @@ async function handleProxy(request: NextRequest) {
     const isWriteMethod = method === 'POST' || method === 'PATCH' || method === 'PUT' || method === 'DELETE';
 
     // Leer cookies HttpOnly del servidor
-    const authToken = request.cookies.get('authToken')?.value;
+    const authToken = request.cookies.get('sb-access-token')?.value;
     const userDataCookie = request.cookies.get('userData')?.value;
     
     if (!authToken || !userDataCookie) {

@@ -13,7 +13,8 @@ import { useIndexationStore } from '@/stores/indexationStore';
 import { useAdminStore } from '@/stores/adminStore';
 import { useHydrationStore } from '@/stores/hydrationStore';
 import { withExponentialBackoff, FETCH_RETRY_CONFIG, RECONNECTION_CONFIG } from '@/lib/indexation/exponentialBackoff';
-import supabase from '@/app/lib/supabase/client';
+import supabase, { updateSupabaseAuth } from '@/app/lib/supabase/client';
+import { fetchFromSupabase } from '@/lib/supabaseDataFetch';
 import type { RealtimeChannel } from '@supabase/supabase-js';
 import type { Directorio, Area, DirectorioArea, ConfigItem, Firma } from '@/types/admin';
 
@@ -43,6 +44,7 @@ export function useAdminIndexation() {
         setDisconnectedAt,
         updateLastEventReceived,
         initializeModule,
+        addRealtimeChange,
     } = useIndexationStore();
     
     const {
@@ -77,12 +79,10 @@ export function useAdminIndexation() {
     const channelsRef = useRef<RealtimeChannel[]>([]);
     const reconnectionTimeoutRef = useRef<NodeJS.Timeout | null>(null);
     const isInitializedRef = useRef(false);
+    const isSettingUpChannelsRef = useRef(false);
     
     const indexData = useCallback(async () => {
-        if (isIndexingRef.current) {
-            console.warn('⚠️ Indexation already in progress for Admin');
-            return;
-        }
+        if (isIndexingRef.current) return;
         
         isIndexingRef.current = true;
         
@@ -93,16 +93,14 @@ export function useAdminIndexation() {
             // Stage 1: Cargar directorio
             const stage1 = STAGES[0];
             updateProgress(MODULE_KEY, accumulatedProgress, stage1.label);
-            console.log(`📦 Starting stage: ${stage1.label}`);
             
             const fetchedDirectorio = await withExponentialBackoff(
                 async () => {
-                    const { data, error } = await supabase
-                        .from('directorio')
-                        .select('*')
-                        .order('id_directorio', { ascending: true });
-                    if (error) throw error;
-                    return data as Directorio[];
+                    return await fetchFromSupabase<Directorio>({
+                        table: 'directorio',
+                        select: '*',
+                        order: { column: 'id_directorio', ascending: true }
+                    });
                 },
                 FETCH_RETRY_CONFIG
             );
@@ -110,21 +108,18 @@ export function useAdminIndexation() {
             setDirectorio(fetchedDirectorio);
             accumulatedProgress += stage1.weight;
             updateProgress(MODULE_KEY, accumulatedProgress, stage1.label);
-            console.log(`✅ Stage completed: ${stage1.label} (${fetchedDirectorio.length} registros)`);
             
             // Stage 2: Cargar áreas
             const stage2 = STAGES[1];
             updateProgress(MODULE_KEY, accumulatedProgress, stage2.label);
-            console.log(`📦 Starting stage: ${stage2.label}`);
             
             const fetchedAreas = await withExponentialBackoff(
                 async () => {
-                    const { data, error } = await supabase
-                        .from('area')
-                        .select('*')
-                        .order('nombre', { ascending: true });
-                    if (error) throw error;
-                    return data as Area[];
+                    return await fetchFromSupabase<Area>({
+                        table: 'area',
+                        select: '*',
+                        order: { column: 'nombre', ascending: true }
+                    });
                 },
                 FETCH_RETRY_CONFIG
             );
@@ -132,20 +127,17 @@ export function useAdminIndexation() {
             setAreas(fetchedAreas);
             accumulatedProgress += stage2.weight;
             updateProgress(MODULE_KEY, accumulatedProgress, stage2.label);
-            console.log(`✅ Stage completed: ${stage2.label} (${fetchedAreas.length} registros)`);
             
             // Stage 3: Cargar relaciones directorio_areas
             const stage3 = STAGES[2];
             updateProgress(MODULE_KEY, accumulatedProgress, stage3.label);
-            console.log(`📦 Starting stage: ${stage3.label}`);
             
             const fetchedDirectorioAreas = await withExponentialBackoff(
                 async () => {
-                    const { data, error } = await supabase
-                        .from('directorio_areas')
-                        .select('*');
-                    if (error) throw error;
-                    return data as DirectorioArea[];
+                    return await fetchFromSupabase<DirectorioArea>({
+                        table: 'directorio_areas',
+                        select: '*'
+                    });
                 },
                 FETCH_RETRY_CONFIG
             );
@@ -153,21 +145,18 @@ export function useAdminIndexation() {
             setDirectorioAreas(fetchedDirectorioAreas);
             accumulatedProgress += stage3.weight;
             updateProgress(MODULE_KEY, accumulatedProgress, stage3.label);
-            console.log(`✅ Stage completed: ${stage3.label} (${fetchedDirectorioAreas.length} registros)`);
             
             // Stage 4: Cargar config
             const stage4 = STAGES[3];
             updateProgress(MODULE_KEY, accumulatedProgress, stage4.label);
-            console.log(`📦 Starting stage: ${stage4.label}`);
             
             const fetchedConfig = await withExponentialBackoff(
                 async () => {
-                    const { data, error } = await supabase
-                        .from('config')
-                        .select('*')
-                        .order('id', { ascending: true });
-                    if (error) throw error;
-                    return data as ConfigItem[];
+                    return await fetchFromSupabase<ConfigItem>({
+                        table: 'config',
+                        select: '*',
+                        order: { column: 'id', ascending: true }
+                    });
                 },
                 FETCH_RETRY_CONFIG
             );
@@ -175,21 +164,18 @@ export function useAdminIndexation() {
             setConfig(fetchedConfig);
             accumulatedProgress += stage4.weight;
             updateProgress(MODULE_KEY, accumulatedProgress, stage4.label);
-            console.log(`✅ Stage completed: ${stage4.label} (${fetchedConfig.length} registros)`);
             
             // Stage 5: Cargar firmas
             const stage5 = STAGES[4];
             updateProgress(MODULE_KEY, accumulatedProgress, stage5.label);
-            console.log(`📦 Starting stage: ${stage5.label}`);
             
             const fetchedFirmas = await withExponentialBackoff(
                 async () => {
-                    const { data, error } = await supabase
-                        .from('firmas')
-                        .select('*')
-                        .order('id', { ascending: true });
-                    if (error) throw error;
-                    return data as Firma[];
+                    return await fetchFromSupabase<Firma>({
+                        table: 'firmas',
+                        select: '*',
+                        order: { column: 'id', ascending: true }
+                    });
                 },
                 FETCH_RETRY_CONFIG
             );
@@ -197,58 +183,105 @@ export function useAdminIndexation() {
             setFirmas(fetchedFirmas);
             accumulatedProgress += stage5.weight;
             updateProgress(MODULE_KEY, accumulatedProgress, stage5.label);
-            console.log(`✅ Stage completed: ${stage5.label} (${fetchedFirmas.length} registros)`);
             
             // Stage 6: Configurar realtime
             const stage6 = STAGES[5];
             updateProgress(MODULE_KEY, accumulatedProgress, stage6.label);
-            console.log(`📡 Starting stage: ${stage6.label}`);
             
-            await setupRealtimeSubscriptions();
+            if (channelsRef.current.length === 0) {
+                await setupRealtimeSubscriptions();
+            }
             
             accumulatedProgress += stage6.weight;
             updateProgress(MODULE_KEY, accumulatedProgress, stage6.label);
-            console.log(`✅ Stage completed: ${stage6.label}`);
             
             completeIndexation(MODULE_KEY);
-            console.log(`🎉 Indexation completed for Admin`);
             
         } catch (error) {
-            console.error('❌ Error indexing Admin:', error);
+            console.error('Error indexing Admin:', error);
             setError(MODULE_KEY, error instanceof Error ? error.message : 'Error al indexar datos administrativos');
         } finally {
             isIndexingRef.current = false;
         }
     }, [startIndexation, updateProgress, completeIndexation, setError, setDirectorio, setAreas, setDirectorioAreas, setConfig, setFirmas]);
     
-    const setupRealtimeSubscriptions = useCallback(async () => {
-        // Limpiar canales existentes
-        for (const channel of channelsRef.current) {
-            await supabase.removeChannel(channel);
-        }
-        channelsRef.current = [];
+    const handleSystemEvent = useCallback((payload: any) => {
+        const { status } = payload;
+        const wasConnected = indexationState?.realtimeConnected ?? false;
+        const isConnected = status === 'SUBSCRIBED' || status === 'ok';
         
-        console.log('📡 Setting up realtime subscriptions for Admin tables');
+        updateRealtimeConnection(MODULE_KEY, isConnected);
+        
+        if (wasConnected && !isConnected) {
+            setDisconnectedAt(MODULE_KEY, new Date().toISOString());
+        }
+    }, [indexationState?.realtimeConnected, updateRealtimeConnection, setDisconnectedAt]);
+    
+    const setupRealtimeSubscriptions = useCallback(async () => {
+        if (isSettingUpChannelsRef.current) {
+            return;
+        }
+        
+        isSettingUpChannelsRef.current = true;
+        
+        try {
+            // Actualizar el token de autenticación para Realtime
+            updateSupabaseAuth();
+            
+            // Limpiar canales existentes
+            for (const channel of channelsRef.current) {
+                await supabase.removeChannel(channel);
+            }
+            channelsRef.current = [];
         
         // Canal para directorio
         const directorioChannel = supabase
-            .channel('directorio-changes')
+            .channel('admin-directorio-changes')
             .on('postgres_changes', { event: '*', schema: 'public', table: 'directorio' },
                 async (payload) => {
                     const { eventType, new: newRecord, old: oldRecord } = payload;
-                    console.log(`🔔 Realtime event: ${eventType} on directorio`, payload);
                     updateLastEventReceived(MODULE_KEY);
                     
                     try {
                         switch (eventType) {
                             case 'INSERT':
-                                if (newRecord) addDirectorio(newRecord as Directorio);
+                                if (newRecord) {
+                                    addDirectorio(newRecord as Directorio);
+                                    addRealtimeChange({
+                                        moduleKey: MODULE_KEY,
+                                        moduleName: 'Admin',
+                                        table: 'directorio',
+                                        eventType: 'INSERT',
+                                        recordId: (newRecord as Directorio).id_directorio,
+                                        recordName: (newRecord as Directorio).nombre ?? undefined,
+                                    });
+                                }
                                 break;
                             case 'UPDATE':
-                                if (newRecord) updateDirectorio((newRecord as Directorio).id_directorio, newRecord as Directorio);
+                                if (newRecord) {
+                                    updateDirectorio((newRecord as Directorio).id_directorio, newRecord as Directorio);
+                                    addRealtimeChange({
+                                        moduleKey: MODULE_KEY,
+                                        moduleName: 'Admin',
+                                        table: 'directorio',
+                                        eventType: 'UPDATE',
+                                        recordId: (newRecord as Directorio).id_directorio,
+                                        recordName: (newRecord as Directorio).nombre ?? undefined,
+                                    });
+                                }
                                 break;
                             case 'DELETE':
-                                if (oldRecord) removeDirectorio((oldRecord as Directorio).id_directorio);
+                                if (oldRecord) {
+                                    removeDirectorio((oldRecord as Directorio).id_directorio);
+                                    addRealtimeChange({
+                                        moduleKey: MODULE_KEY,
+                                        moduleName: 'Admin',
+                                        table: 'directorio',
+                                        eventType: 'DELETE',
+                                        recordId: (oldRecord as Directorio).id_directorio,
+                                        recordName: (oldRecord as Directorio).nombre ?? undefined,
+                                    });
+                                }
                                 break;
                         }
                     } catch (error) {
@@ -263,23 +296,52 @@ export function useAdminIndexation() {
         
         // Canal para area
         const areaChannel = supabase
-            .channel('area-changes')
+            .channel('admin-area-changes')
             .on('postgres_changes', { event: '*', schema: 'public', table: 'area' },
                 async (payload) => {
                     const { eventType, new: newRecord, old: oldRecord } = payload;
-                    console.log(`🔔 Realtime event: ${eventType} on area`, payload);
                     updateLastEventReceived(MODULE_KEY);
                     
                     try {
                         switch (eventType) {
                             case 'INSERT':
-                                if (newRecord) addArea(newRecord as Area);
+                                if (newRecord) {
+                                    addArea(newRecord as Area);
+                                    addRealtimeChange({
+                                        moduleKey: MODULE_KEY,
+                                        moduleName: 'Admin',
+                                        table: 'area',
+                                        eventType: 'INSERT',
+                                        recordId: (newRecord as Area).id_area,
+                                        recordName: (newRecord as Area).nombre ?? undefined,
+                                    });
+                                }
                                 break;
                             case 'UPDATE':
-                                if (newRecord) updateArea((newRecord as Area).id_area, newRecord as Area);
+                                if (newRecord) {
+                                    updateArea((newRecord as Area).id_area, newRecord as Area);
+                                    addRealtimeChange({
+                                        moduleKey: MODULE_KEY,
+                                        moduleName: 'Admin',
+                                        table: 'area',
+                                        eventType: 'UPDATE',
+                                        recordId: (newRecord as Area).id_area,
+                                        recordName: (newRecord as Area).nombre ?? undefined,
+                                    });
+                                }
                                 break;
                             case 'DELETE':
-                                if (oldRecord) removeArea((oldRecord as Area).id_area);
+                                if (oldRecord) {
+                                    removeArea((oldRecord as Area).id_area);
+                                    addRealtimeChange({
+                                        moduleKey: MODULE_KEY,
+                                        moduleName: 'Admin',
+                                        table: 'area',
+                                        eventType: 'DELETE',
+                                        recordId: (oldRecord as Area).id_area,
+                                        recordName: (oldRecord as Area).nombre ?? undefined,
+                                    });
+                                }
                                 break;
                         }
                     } catch (error) {
@@ -294,20 +356,23 @@ export function useAdminIndexation() {
         
         // Canal para directorio_areas
         const directorioAreasChannel = supabase
-            .channel('directorio-areas-changes')
+            .channel('admin-directorio-areas-changes')
             .on('postgres_changes', { event: '*', schema: 'public', table: 'directorio_areas' },
                 async (payload) => {
                     const { eventType, new: newRecord, old: oldRecord } = payload;
-                    console.log(`🔔 Realtime event: ${eventType} on directorio_areas`, payload);
                     updateLastEventReceived(MODULE_KEY);
                     
                     try {
                         switch (eventType) {
                             case 'INSERT':
-                                if (newRecord) addDirectorioArea(newRecord as DirectorioArea);
+                                if (newRecord) {
+                                    addDirectorioArea(newRecord as DirectorioArea);
+                                }
                                 break;
                             case 'DELETE':
-                                if (oldRecord) removeDirectorioArea((oldRecord as DirectorioArea).id);
+                                if (oldRecord) {
+                                    removeDirectorioArea((oldRecord as DirectorioArea).id);
+                                }
                                 break;
                         }
                     } catch (error) {
@@ -322,23 +387,85 @@ export function useAdminIndexation() {
         
         // Canal para config
         const configChannel = supabase
-            .channel('config-changes')
-            .on('postgres_changes', { event: '*', schema: 'public', table: 'config' },
+            .channel('admin-config-changes')
+            .on('postgres_changes', 
+                { 
+                    event: '*',  // Escuchar TODOS los eventos
+                    schema: 'public', 
+                    table: 'config' 
+                },
                 async (payload) => {
                     const { eventType, new: newRecord, old: oldRecord } = payload;
-                    console.log(`🔔 Realtime event: ${eventType} on config`, payload);
                     updateLastEventReceived(MODULE_KEY);
                     
                     try {
                         switch (eventType) {
                             case 'INSERT':
-                                if (newRecord) addConfig(newRecord as ConfigItem);
+                                if (newRecord) {
+                                    // Refetch completo del registro desde Supabase
+                                    const { data, error } = await supabase
+                                        .from('config')
+                                        .select('*')
+                                        .eq('id', (newRecord as ConfigItem).id)
+                                        .single();
+                                    
+                                    if (error) {
+                                        throw error;
+                                    }
+                                    
+                                    if (data) {
+                                        addConfig(data as ConfigItem);
+                                        addRealtimeChange({
+                                            moduleKey: MODULE_KEY,
+                                            moduleName: 'Configuración',
+                                            table: 'config',
+                                            eventType: 'INSERT',
+                                            recordId: data.id,
+                                            recordName: data.concepto,
+                                        });
+                                    }
+                                }
                                 break;
+                                
                             case 'UPDATE':
-                                if (newRecord) updateConfig((newRecord as ConfigItem).id, newRecord as ConfigItem);
+                                if (newRecord) {
+                                    // Refetch completo del registro desde Supabase
+                                    const { data, error } = await supabase
+                                        .from('config')
+                                        .select('*')
+                                        .eq('id', (newRecord as ConfigItem).id)
+                                        .single();
+                                    
+                                    if (error) {
+                                        throw error;
+                                    }
+                                    
+                                    if (data) {
+                                        updateConfig(data.id, data as ConfigItem);
+                                        addRealtimeChange({
+                                            moduleKey: MODULE_KEY,
+                                            moduleName: 'Configuración',
+                                            table: 'config',
+                                            eventType: 'UPDATE',
+                                            recordId: data.id,
+                                            recordName: data.concepto,
+                                        });
+                                    }
+                                }
                                 break;
+                                
                             case 'DELETE':
-                                if (oldRecord) removeConfig((oldRecord as ConfigItem).id);
+                                if (oldRecord) {
+                                    removeConfig((oldRecord as ConfigItem).id);
+                                    addRealtimeChange({
+                                        moduleKey: MODULE_KEY,
+                                        moduleName: 'Configuración',
+                                        table: 'config',
+                                        eventType: 'DELETE',
+                                        recordId: (oldRecord as ConfigItem).id,
+                                        recordName: (oldRecord as ConfigItem).concepto,
+                                    });
+                                }
                                 break;
                         }
                     } catch (error) {
@@ -353,23 +480,52 @@ export function useAdminIndexation() {
         
         // Canal para firmas
         const firmasChannel = supabase
-            .channel('firmas-changes')
+            .channel('admin-firmas-changes')
             .on('postgres_changes', { event: '*', schema: 'public', table: 'firmas' },
                 async (payload) => {
                     const { eventType, new: newRecord, old: oldRecord } = payload;
-                    console.log(`🔔 Realtime event: ${eventType} on firmas`, payload);
                     updateLastEventReceived(MODULE_KEY);
                     
                     try {
                         switch (eventType) {
                             case 'INSERT':
-                                if (newRecord) addFirma(newRecord as Firma);
+                                if (newRecord) {
+                                    addFirma(newRecord as Firma);
+                                    addRealtimeChange({
+                                        moduleKey: MODULE_KEY,
+                                        moduleName: 'Admin',
+                                        table: 'firmas',
+                                        eventType: 'INSERT',
+                                        recordId: (newRecord as Firma).id,
+                                        recordName: (newRecord as Firma).nombre ?? undefined,
+                                    });
+                                }
                                 break;
                             case 'UPDATE':
-                                if (newRecord) updateFirma((newRecord as Firma).id, newRecord as Firma);
+                                if (newRecord) {
+                                    updateFirma((newRecord as Firma).id, newRecord as Firma);
+                                    addRealtimeChange({
+                                        moduleKey: MODULE_KEY,
+                                        moduleName: 'Admin',
+                                        table: 'firmas',
+                                        eventType: 'UPDATE',
+                                        recordId: (newRecord as Firma).id,
+                                        recordName: (newRecord as Firma).nombre ?? undefined,
+                                    });
+                                }
                                 break;
                             case 'DELETE':
-                                if (oldRecord) removeFirma((oldRecord as Firma).id);
+                                if (oldRecord) {
+                                    removeFirma((oldRecord as Firma).id);
+                                    addRealtimeChange({
+                                        moduleKey: MODULE_KEY,
+                                        moduleName: 'Admin',
+                                        table: 'firmas',
+                                        eventType: 'DELETE',
+                                        recordId: (oldRecord as Firma).id,
+                                        recordName: (oldRecord as Firma).nombre ?? undefined,
+                                    });
+                                }
                                 break;
                         }
                     } catch (error) {
@@ -382,35 +538,17 @@ export function useAdminIndexation() {
         
         channelsRef.current.push(firmasChannel);
         
-    }, [updateLastEventReceived, addDirectorio, updateDirectorio, removeDirectorio, addArea, updateArea, removeArea, addDirectorioArea, removeDirectorioArea, addConfig, updateConfig, removeConfig, addFirma, updateFirma, removeFirma]);
-    
-    const handleSystemEvent = useCallback((payload: any) => {
-        const { status } = payload;
-        const wasConnected = indexationState?.realtimeConnected ?? false;
-        const isConnected = status === 'SUBSCRIBED' || status === 'ok';
-        
-        console.log(`📡 Realtime status changed: ${status} (Admin)`);
-        
-        updateRealtimeConnection(MODULE_KEY, isConnected);
-        
-        if (wasConnected && !isConnected) {
-            console.warn('⚠️ Realtime disconnected (Admin)');
-            setDisconnectedAt(MODULE_KEY, new Date().toISOString());
-            handleReconnection();
+        } finally {
+            isSettingUpChannelsRef.current = false;
         }
         
-        if (!wasConnected && isConnected) {
-            console.log('✅ Realtime reconnected (Admin)');
-            handleReconciliation();
-        }
-    }, [indexationState?.realtimeConnected, updateRealtimeConnection, setDisconnectedAt]);
+    }, [updateLastEventReceived, addDirectorio, updateDirectorio, removeDirectorio, addArea, updateArea, removeArea, addDirectorioArea, removeDirectorioArea, addConfig, updateConfig, removeConfig, addFirma, updateFirma, removeFirma, addRealtimeChange, handleSystemEvent]);
     
     const handleReconnection = useCallback(async () => {
         const state = indexationState;
         if (!state) return;
         
         if (state.reconnectionAttempts >= state.maxReconnectionAttempts) {
-            console.error('❌ Max reconnection attempts reached (Admin)');
             updateReconnectionStatus(MODULE_KEY, 'failed');
             return;
         }
@@ -420,11 +558,6 @@ export function useAdminIndexation() {
         const delay = Math.min(
             RECONNECTION_CONFIG.baseDelay * Math.pow(RECONNECTION_CONFIG.multiplier, state.reconnectionAttempts),
             RECONNECTION_CONFIG.maxDelay
-        );
-        
-        console.log(
-            `🔄 Reconnecting Admin in ${delay}ms ` +
-            `(attempt ${state.reconnectionAttempts + 1}/${state.maxReconnectionAttempts})`
         );
         
         reconnectionTimeoutRef.current = setTimeout(async () => {
@@ -438,18 +571,13 @@ export function useAdminIndexation() {
         if (!state || !state.disconnectedAt) return;
         
         const disconnectionDuration = Date.now() - new Date(state.disconnectedAt).getTime();
-        const disconnectionSeconds = Math.floor(disconnectionDuration / 1000);
-        
-        console.log(`🔄 Reconciling data after ${disconnectionSeconds}s disconnection (Admin)`);
         
         if (disconnectionDuration > 5000) {
             updateReconnectionStatus(MODULE_KEY, 'reconciling');
             await new Promise(resolve => setTimeout(resolve, 1000));
             updateReconnectionStatus(MODULE_KEY, 'idle');
-            console.log('✅ Reconciliation completed (Admin)');
         } else {
             updateReconnectionStatus(MODULE_KEY, 'idle');
-            console.log('✅ Reconnected (no reconciliation needed) (Admin)');
         }
         
         resetReconnectionAttempts(MODULE_KEY);
@@ -465,7 +593,6 @@ export function useAdminIndexation() {
     useEffect(() => {
         if (isInitializedRef.current || !isStoreHydrated) return;
         
-        // Solo ejecutar en el cliente (navegador)
         if (typeof window === 'undefined') return;
         
         const initialize = async () => {
@@ -476,22 +603,15 @@ export function useAdminIndexation() {
                     credentials: 'include',
                 });
                 
-                if (!response.ok) {
-                    console.warn('⚠️ Not authenticated, skipping indexation (Admin)');
-                    return;
-                }
+                if (!response.ok) return;
                 
                 const sessionData = await response.json();
-                if (!sessionData.isAuthenticated) {
-                    console.warn('⚠️ Not authenticated, skipping indexation (Admin)');
-                    return;
-                }
+                if (!sessionData.isAuthenticated) return;
             } catch (error) {
                 console.error('Error checking authentication:', error);
                 return;
             }
             
-            // Verificar si ya hay datos en IndexedDB
             const currentState = useIndexationStore.getState().modules[MODULE_KEY];
             const currentDirectorio = useAdminStore.getState().directorio;
             const currentAreas = useAdminStore.getState().areas;
@@ -506,25 +626,12 @@ export function useAdminIndexation() {
             
             const isAlreadyIndexed = currentState?.isIndexed && currentState?.lastIndexedAt;
             
-            console.log('🔍 [ADMIN] Verificando estado de indexación:', {
-                moduleKey: MODULE_KEY,
-                isIndexed: currentState?.isIndexed,
-                directorioCount: currentDirectorio.length,
-                areasCount: currentAreas.length,
-                configCount: currentConfig.length,
-                firmasCount: currentFirmas.length,
-                hasDataInIndexedDB,
-                isAlreadyIndexed,
-                lastIndexedAt: currentState?.lastIndexedAt,
-                isStoreHydrated,
-            });
-            
             if (isAlreadyIndexed) {
-                console.log('✅ [ADMIN] Already indexed, skipping indexation');
                 completeIndexation(MODULE_KEY);
-                await setupRealtimeSubscriptions();
+                if (channelsRef.current.length === 0) {
+                    await setupRealtimeSubscriptions();
+                }
             } else {
-                console.log('⚠️ [ADMIN] Not indexed yet, starting full indexation');
                 await indexData();
             }
             
@@ -537,12 +644,13 @@ export function useAdminIndexation() {
             if (reconnectionTimeoutRef.current) {
                 clearTimeout(reconnectionTimeoutRef.current);
             }
-            // Limpiar canales al desmontar
             for (const channel of channelsRef.current) {
                 supabase.removeChannel(channel);
             }
+            channelsRef.current = [];
+            isSettingUpChannelsRef.current = false;
         };
-    }, [initializeModule, indexData, setupRealtimeSubscriptions, isStoreHydrated, completeIndexation]);
+    }, [initializeModule, indexData, isStoreHydrated, completeIndexation]);
     
     return {
         isIndexing: indexationState?.isIndexing ?? false,
