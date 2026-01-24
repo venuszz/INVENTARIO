@@ -45,10 +45,7 @@ export default function IndexationPopover() {
         setIsMounted(true);
     }, []);
     
-    // Solo llamar hooks si no estamos en login
-    const shouldIndex = pathname !== '/login';
-    
-    // Hooks de indexación - solo se ejecutan si shouldIndex es true
+    // Hooks de indexación
     const ineaState = useIneaIndexation();
     const iteaState = useIteaIndexation();
     const noListadoState = useNoListadoIndexation();
@@ -77,7 +74,7 @@ export default function IndexationPopover() {
     ], [ineaState, iteaState, ineaObsState, iteaObsState, noListadoState, resguardosState, resguardosBajasState]);
 
     const activeModules = useMemo(() => {
-        const filtered = modules.filter(module => {
+        return modules.filter(module => {
             // Don't show if dismissed
             if (dismissed.has(module.key)) return false;
             
@@ -99,8 +96,6 @@ export default function IndexationPopover() {
             
             return false;
         });
-        
-        return filtered;
     }, [modules, dismissed]);
 
     const stats = useMemo(() => {
