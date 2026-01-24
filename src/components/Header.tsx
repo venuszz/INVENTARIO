@@ -402,6 +402,10 @@ export default function NavigationBar() {
                 {
                     title: 'Reportes ITEA',
                     path: '/reportes/itea',
+                },
+                {
+                    title: 'Reportes TLAXCALA',
+                    path: '/reportes/tlaxcala',
                 }
             ]
         },

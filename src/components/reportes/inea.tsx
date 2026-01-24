@@ -1,11 +1,11 @@
 "use client";
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useTheme } from '@/context/ThemeContext';
 import {
     FileText, Download, FileSpreadsheet, File, 
     FileDigit, X, AlertCircle,
     CheckCircle, Database, ListChecks, Settings2,
-    Pencil
+    Pencil, Loader2
 } from 'lucide-react';
 import supabase from '@/app/lib/supabase/client';
 import { generateExcel } from './excelgenerator';
@@ -40,6 +40,14 @@ interface Mueble {
     image_path: string | null;
 }
 
+interface Reporte {
+    id: number;
+    title: string;
+    path: string;
+    icon: React.ReactElement;
+    estatus: string | null;
+}
+
 export default function ReportesIneaDashboard() {
     const { isDarkMode } = useTheme();
     const [exportModalOpen, setExportModalOpen] = useState(false);
@@ -49,9 +57,86 @@ export default function ReportesIneaDashboard() {
     const [editingFirma, setEditingFirma] = useState<Firma | null>(null);
     const [isExporting, setIsExporting] = useState(false);
     const [exportingFormat, setExportingFormat] = useState<string | null>(null);
+    const [reportes, setReportes] = useState<Reporte[]>([]);
+    const [loadingReportes, setLoadingReportes] = useState(true);
 
     const { createNotification } = useNotifications();
     const { firmas } = useAdminIndexation();
+
+    // Obtener valores únicos de estatus al cargar el componente
+    useEffect(() => {
+        const fetchEstatus = async () => {
+            try {
+                setLoadingReportes(true);
+                
+                // Obtener todos los registros con paginación para asegurar que obtenemos todos los estatus únicos
+                let allEstatus: string[] = [];
+                let from = 0;
+                const pageSize = 1000;
+                let hasMore = true;
+
+                while (hasMore) {
+                    const { data, error } = await supabase
+                        .from('muebles')
+                        .select('estatus')
+                        .not('estatus', 'is', null)
+                        .range(from, from + pageSize - 1);
+
+                    if (error) throw error;
+
+                    if (data && data.length > 0) {
+                        allEstatus = allEstatus.concat(data.map(d => d.estatus).filter(Boolean) as string[]);
+                        if (data.length < pageSize) {
+                            hasMore = false;
+                        } else {
+                            from += pageSize;
+                        }
+                    } else {
+                        hasMore = false;
+                    }
+                }
+
+                // Obtener valores únicos de estatus
+                const uniqueEstatus = [...new Set(allEstatus)];
+
+                // Generar iconos dinámicamente basados en el nombre del estatus
+                const getIconForEstatus = (estatus: string): React.ReactElement => {
+                    const estatusLower = estatus.toLowerCase();
+                    if (estatusLower.includes('uso')) return <CheckCircle className="h-5 w-5" />;
+                    if (estatusLower.includes('integrado')) return <ListChecks className="h-5 w-5" />;
+                    if (estatusLower.includes('baja')) return <AlertCircle className="h-5 w-5" />;
+                    return <Database className="h-5 w-5" />;
+                };
+
+                // Crear array de reportes: General + reportes dinámicos
+                const dynamicReportes: Reporte[] = [
+                    {
+                        id: 1,
+                        title: 'General',
+                        path: '/reportes/inea/general',
+                        icon: <Database className="h-5 w-5" />,
+                        estatus: null
+                    },
+                    ...uniqueEstatus.map((estatus, index) => ({
+                        id: index + 2,
+                        title: estatus,
+                        path: `/reportes/inea/${estatus.toLowerCase().replace(/\s+/g, '-')}`,
+                        icon: getIconForEstatus(estatus),
+                        estatus: estatus
+                    }))
+                ];
+
+                setReportes(dynamicReportes);
+            } catch (error) {
+                console.error('Error al obtener estatus:', error);
+                setError('Error al cargar las categorías de reportes');
+            } finally {
+                setLoadingReportes(false);
+            }
+        };
+
+        fetchEstatus();
+    }, []);
 
     const exportColumns = [
         { header: 'ID Inventario', key: 'id_inv', width: 18 },
@@ -74,54 +159,6 @@ export default function ReportesIneaDashboard() {
         { header: 'Resguardante', key: 'resguardante', width: 18 },
     ];
 
-    function getEstatusFilter(report: string) {
-        switch (report) {
-            case 'En Uso*':
-                return 'EN USO*';
-            case 'En Uso':
-                return 'EN USO';
-            case 'Sin Uso e Integrado PADFBM':
-                return 'SIN USO E INTEGRADO AL PADFBM INEA';
-            case 'Sin Uso y No Integrado PADFBM':
-                return 'SIN USO Y NO INTEGRADO AL PADFBM INEA (REALIZAR BAJA)';
-            default:
-                return null;
-        }
-    }
-
-    const reportes = [
-        {
-            id: 1,
-            title: 'General',
-            path: '/reportes/inea/general',
-            icon: <Database className="h-5 w-5" />
-        },
-        {
-            id: 2,
-            title: 'En Uso*',
-            path: '/reportes/inea/en-uso-asterisk',
-            icon: <CheckCircle className="h-5 w-5" />
-        },
-        {
-            id: 3,
-            title: 'Sin Uso e Integrado PADFBM',
-            path: '/reportes/inea/integrado',
-            icon: <ListChecks className="h-5 w-5" />
-        },
-        {
-            id: 4,
-            title: 'Sin Uso y No Integrado PADFBM',
-            path: '/reportes/inea/no-integrado',
-            icon: <AlertCircle className="h-5 w-5" />
-        },
-        {
-            id: 5,
-            title: 'En Uso',
-            path: '/reportes/inea/en-uso',
-            icon: <CheckCircle className="h-5 w-5" />
-        }
-    ];
-
     const openExportModal = (reportTitle: string) => {
         setSelectedReport(reportTitle);
         setExportModalOpen(true);
@@ -132,9 +169,15 @@ export default function ReportesIneaDashboard() {
         setIsExporting(true);
         setExportingFormat(format);
         try {
+            // Encontrar el reporte seleccionado para obtener su estatus
+            const selectedReporte = reportes.find(r => r.title === selectedReport);
+            
             let query = supabase.from('muebles').select('*', { count: 'exact', head: false });
-            const estatus = getEstatusFilter(selectedReport);
-            if (estatus) query = query.eq('estatus', estatus);
+            
+            // Aplicar filtro solo si no es "General"
+            if (selectedReporte?.estatus) {
+                query = query.eq('estatus', selectedReporte.estatus);
+            }
 
             const firmasData = firmas;
 
@@ -175,21 +218,10 @@ export default function ReportesIneaDashboard() {
                 await generateExcel({ data: exportData, fileName, worksheetName });
             } else if (format === 'PDF') {
                 let reportTitle;
-                switch(selectedReport) {
-                    case 'Activos':
-                        reportTitle = 'INVENTARIO DE BIENES MUEBLES ACTIVOS';
-                        break;
-                    case 'Inactivos':
-                        reportTitle = 'INVENTARIO DE BIENES MUEBLES INACTIVOS';
-                        break;
-                    case 'No localizados':
-                        reportTitle = 'INVENTARIO DE BIENES MUEBLES NO LOCALIZADOS';
-                        break;
-                    case 'Obsoletos':
-                        reportTitle = 'INVENTARIO DE BIENES MUEBLES OBSOLETOS';
-                        break;
-                    default:
-                        reportTitle = 'INVENTARIO GENERAL DE BIENES MUEBLES';
+                if (selectedReport === 'General') {
+                    reportTitle = 'INVENTARIO GENERAL DE BIENES MUEBLES';
+                } else {
+                    reportTitle = `INVENTARIO DE BIENES MUEBLES - ${selectedReport.toUpperCase()}`;
                 }
 
                 const pdfColumns = [
@@ -260,7 +292,7 @@ export default function ReportesIneaDashboard() {
     const userRole = useUserRole();
 
     return (
-        <div className={`h-screen overflow-hidden transition-colors duration-300 ${
+        <div className={`h-[calc(100vh-4rem)] overflow-hidden transition-colors duration-300 ${
             isDarkMode 
                 ? 'bg-black text-white' 
                 : 'bg-white text-black'
@@ -275,7 +307,7 @@ export default function ReportesIneaDashboard() {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.4 }}
             >
-                <div className="w-full max-w-5xl mx-auto">
+                <div className="w-full max-w-5xl mx-auto pb-8">
                 {/* Header */}
                 <div className={`flex justify-between items-center mb-8 pb-6 border-b ${isDarkMode ? 'border-white/10' : 'border-black/10'}`}>
                     <div>
@@ -310,61 +342,70 @@ export default function ReportesIneaDashboard() {
                     animate={{ opacity: 1 }}
                     transition={{ delay: 0.2 }}
                 >
-                    <AnimatePresence mode="popLayout">
-                        {reportes.map((reporte, index) => (
+                    {loadingReportes ? (
+                        <div className="flex items-center justify-center py-12">
                             <motion.div
-                                key={reporte.id}
-                                layout
-                                initial={{ opacity: 0, x: -20 }}
-                                animate={{ opacity: 1, x: 0 }}
-                                exit={{ opacity: 0, scale: 0.95 }}
-                                transition={{ 
-                                    delay: index * 0.05,
-                                    layout: { type: 'spring', stiffness: 350, damping: 30 }
-                                }}
-                                className={`group flex items-center justify-between px-4 py-3.5 rounded-lg border transition-all ${
-                                    isDarkMode
-                                        ? 'bg-black border-white/5 hover:border-white/10 hover:bg-white/[0.02]'
-                                        : 'bg-white border-black/5 hover:border-black/10 hover:bg-black/[0.02]'
-                                }`}
+                                animate={{ rotate: 360 }}
+                                transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
                             >
-                                <div className="flex items-center gap-3">
-                                    <motion.div 
-                                        className={`p-2 rounded-lg transition-colors ${
-                                            isDarkMode ? 'bg-white/5' : 'bg-black/5'
-                                        }`}
-                                        whileHover={{ scale: 1.1, rotate: 5 }}
-                                        transition={{ type: 'spring', stiffness: 400 }}
-                                    >
-                                        {reporte.icon}
-                                    </motion.div>
-                                    <div>
-                                        <h3 className="text-sm font-medium">{reporte.title}</h3>
-                                        <p className={`text-xs ${isDarkMode ? 'text-white/40' : 'text-black/40'}`}>
-                                            {reporte.title === 'General' ? 'Información completa de todos los registros' :
-                                                reporte.title === 'En Uso*' ? 'Registros marcados como principales en uso' :
-                                                    reporte.title === 'Sin Uso e Integrado PADFBM' ? 'Bienes sin uso e integrados al PADFBM' :
-                                                        reporte.title === 'Sin Uso y No Integrado PADFBM' ? 'Bienes sin uso pendientes de integrar' :
-                                                            'Registros en uso normal del sistema'}
-                                        </p>
-                                    </div>
-                                </div>
-                                <motion.button
-                                    onClick={() => openExportModal(reporte.title)}
-                                    className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all flex items-center gap-2 ${
-                                        isDarkMode
-                                            ? 'bg-white text-black hover:bg-white/90'
-                                            : 'bg-black text-white hover:bg-black/90'
-                                    }`}
-                                    whileHover={{ scale: 1.05 }}
-                                    whileTap={{ scale: 0.95 }}
-                                >
-                                    <Download size={14} />
-                                    Exportar
-                                </motion.button>
+                                <Loader2 size={32} className={isDarkMode ? 'text-white/40' : 'text-black/40'} />
                             </motion.div>
-                        ))}
-                    </AnimatePresence>
+                        </div>
+                    ) : (
+                        <AnimatePresence mode="popLayout">
+                            {reportes.map((reporte, index) => (
+                                <motion.div
+                                    key={reporte.id}
+                                    layout
+                                    initial={{ opacity: 0, x: -20 }}
+                                    animate={{ opacity: 1, x: 0 }}
+                                    exit={{ opacity: 0, scale: 0.95 }}
+                                    transition={{ 
+                                        delay: index * 0.05,
+                                        layout: { type: 'spring', stiffness: 350, damping: 30 }
+                                    }}
+                                    className={`group flex items-center justify-between px-4 py-3.5 rounded-lg border transition-all ${
+                                        isDarkMode
+                                            ? 'bg-black border-white/5 hover:border-white/10 hover:bg-white/[0.02]'
+                                            : 'bg-white border-black/5 hover:border-black/10 hover:bg-black/[0.02]'
+                                    }`}
+                                >
+                                    <div className="flex items-center gap-3">
+                                        <motion.div 
+                                            className={`p-2 rounded-lg transition-colors ${
+                                                isDarkMode ? 'bg-white/5' : 'bg-black/5'
+                                            }`}
+                                            whileHover={{ scale: 1.1, rotate: 5 }}
+                                            transition={{ type: 'spring', stiffness: 400 }}
+                                        >
+                                            {reporte.icon}
+                                        </motion.div>
+                                        <div>
+                                            <h3 className="text-sm font-medium">{reporte.title}</h3>
+                                            <p className={`text-xs ${isDarkMode ? 'text-white/40' : 'text-black/40'}`}>
+                                                {reporte.title === 'General' 
+                                                    ? 'Información completa de todos los registros' 
+                                                    : `Registros con estatus: ${reporte.title}`}
+                                            </p>
+                                        </div>
+                                    </div>
+                                    <motion.button
+                                        onClick={() => openExportModal(reporte.title)}
+                                        className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all flex items-center gap-2 ${
+                                            isDarkMode
+                                                ? 'bg-white text-black hover:bg-white/90'
+                                                : 'bg-black text-white hover:bg-black/90'
+                                        }`}
+                                        whileHover={{ scale: 1.05 }}
+                                        whileTap={{ scale: 0.95 }}
+                                    >
+                                        <Download size={14} />
+                                        Exportar
+                                    </motion.button>
+                                </motion.div>
+                            ))}
+                        </AnimatePresence>
+                    )}
                 </motion.div>
 
                 {/* Footer */}
@@ -376,7 +417,7 @@ export default function ReportesIneaDashboard() {
                 >
                     {reportes.length} categorías de reportes disponibles
                 </motion.div>
-                </div>
+            </div>
             </motion.div>
 
             {/* Modal de exportación */}

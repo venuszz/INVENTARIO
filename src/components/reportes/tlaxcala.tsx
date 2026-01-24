@@ -48,7 +48,7 @@ interface Reporte {
     estatus: string | null;
 }
 
-export default function ReportesIneaDashboard() {
+export default function ReportesTlaxcalaDashboard() {
     const { isDarkMode } = useTheme();
     const [exportModalOpen, setExportModalOpen] = useState(false);
     const [selectedReport, setSelectedReport] = useState('');
@@ -77,7 +77,7 @@ export default function ReportesIneaDashboard() {
 
                 while (hasMore) {
                     const { data, error } = await supabase
-                        .from('mueblesitea')
+                        .from('mueblestlaxcala')
                         .select('estatus')
                         .not('estatus', 'is', null)
                         .range(from, from + pageSize - 1);
@@ -105,7 +105,7 @@ export default function ReportesIneaDashboard() {
                     if (estatusLower.includes('activo') && !estatusLower.includes('inactivo')) return <CheckCircle className="h-5 w-5" />;
                     if (estatusLower.includes('inactivo')) return <UserX className="h-5 w-5" />;
                     if (estatusLower.includes('localizado')) return <MapPin className="h-5 w-5" />;
-                    if (estatusLower.includes('obsoleto')) return <Trash2 className="h-5 w-5" />;
+                    if (estatusLower.includes('obsoleto') || estatusLower.includes('baja')) return <Trash2 className="h-5 w-5" />;
                     return <Database className="h-5 w-5" />;
                 };
 
@@ -114,14 +114,14 @@ export default function ReportesIneaDashboard() {
                     {
                         id: 1,
                         title: 'General',
-                        path: '/reportes/itea/general',
+                        path: '/reportes/tlaxcala/general',
                         icon: <Database className="h-5 w-5" />,
                         estatus: null
                     },
                     ...uniqueEstatus.map((estatus, index) => ({
                         id: index + 2,
                         title: estatus,
-                        path: `/reportes/itea/${estatus.toLowerCase().replace(/\s+/g, '-')}`,
+                        path: `/reportes/tlaxcala/${estatus.toLowerCase().replace(/\s+/g, '-')}`,
                         icon: getIconForEstatus(estatus),
                         estatus: estatus
                     }))
@@ -173,7 +173,7 @@ export default function ReportesIneaDashboard() {
             // Encontrar el reporte seleccionado para obtener su estatus
             const selectedReporte = reportes.find(r => r.title === selectedReport);
             
-            let query = supabase.from('mueblesitea').select('*', { count: 'exact', head: false });
+            let query = supabase.from('mueblestlaxcala').select('*', { count: 'exact', head: false });
             
             // Aplicar filtro solo si no es "General"
             if (selectedReporte?.estatus) {
@@ -206,7 +206,7 @@ export default function ReportesIneaDashboard() {
             }
             let worksheetName = selectedReport.replace(/[^a-zA-Z0-9 ]/g, '').slice(0, 28);
             if (!worksheetName) worksheetName = 'Reporte';
-            const fileName = `reporte_itea_${selectedReport.toLowerCase().replace(/ /g, '_')}_${new Date().toISOString().slice(0,10)}`;
+            const fileName = `reporte_tlaxcala_${selectedReport.toLowerCase().replace(/ /g, '_')}_${new Date().toISOString().slice(0,10)}`;
 
             const exportData: Record<string, unknown>[] = allData.map(item => ({
                 ...item,
@@ -220,9 +220,9 @@ export default function ReportesIneaDashboard() {
             } else if (format === 'PDF') {
                 let reportTitle;
                 if (selectedReport === 'General') {
-                    reportTitle = 'INVENTARIO GENERAL DE BIENES MUEBLES';
+                    reportTitle = 'INVENTARIO GENERAL DE BIENES MUEBLES - TLAXCALA';
                 } else {
-                    reportTitle = `INVENTARIO DE BIENES MUEBLES - ${selectedReport.toUpperCase()}`;
+                    reportTitle = `INVENTARIO DE BIENES MUEBLES TLAXCALA - ${selectedReport.toUpperCase()}`;
                 }
 
                 const pdfColumns = [
@@ -264,25 +264,25 @@ export default function ReportesIneaDashboard() {
             }
             setExportModalOpen(false);
             await createNotification({
-                title: `reporte ITEA exportado (${format})`,
-                description: `El usuario exportó el reporte ITEA en formato ${format} para la categoría "${selectedReport}".`,
+                title: `Reporte TLAXCALA exportado (${format})`,
+                description: `El usuario exportó el reporte TLAXCALA en formato ${format} para la categoría "${selectedReport}".`,
                 type: 'success',
                 category: 'reportes',
                 device: 'web',
                 importance: 'medium',
-                data: { changes: [`Exportación de reporte: ${selectedReport}`], affectedTables: ['mueblesitea'] }
+                data: { changes: [`Exportación de reporte: ${selectedReport}`], affectedTables: ['mueblestlaxcala'] }
             });
         } catch (error: Error | unknown) {
             setError('Error al exportar el reporte: ' + (error instanceof Error ? error.message : 'Error desconocido'));
             console.error(error);
             await createNotification({
-                title: 'Error al exportar reporte ITEA',
-                description: `Error al exportar el reporte ITEA: ${(error instanceof Error ? error.message : 'Error desconocido')}`,
+                title: 'Error al exportar reporte TLAXCALA',
+                description: `Error al exportar el reporte TLAXCALA: ${(error instanceof Error ? error.message : 'Error desconocido')}`,
                 type: 'danger',
                 category: 'reportes',
                 device: 'web',
                 importance: 'high',
-                data: { affectedTables: ['mueblesitea'] }
+                data: { affectedTables: ['mueblestlaxcala'] }
             });
         } finally {
             setIsExporting(false);
@@ -293,7 +293,7 @@ export default function ReportesIneaDashboard() {
     const userRole = useUserRole();
 
     return (
-        <div className={`h-[calc(100vh-4rem)] overflow-hidden transition-colors duration-300 ${
+        <div className={`h-screen overflow-hidden transition-colors duration-300 ${
             isDarkMode 
                 ? 'bg-black text-white' 
                 : 'bg-white text-black'
@@ -308,12 +308,12 @@ export default function ReportesIneaDashboard() {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.4 }}
             >
-                <div className="w-full max-w-5xl mx-auto pb-8">
+                <div className="w-full max-w-5xl mx-auto">
                 {/* Header */}
                 <div className={`flex justify-between items-center mb-8 pb-6 border-b ${isDarkMode ? 'border-white/10' : 'border-black/10'}`}>
                     <div>
                         <h1 className="text-3xl font-light tracking-tight mb-1">
-                            Reportes ITEA
+                            Reportes TLAXCALA
                         </h1>
                         <p className={`text-sm ${isDarkMode ? 'text-white/40' : 'text-black/40'}`}>
                             Exporta reportes en diferentes formatos
