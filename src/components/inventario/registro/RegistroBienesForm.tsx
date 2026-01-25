@@ -36,6 +36,7 @@ export default function RegistroBienesForm() {
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [showAreaWarning, setShowAreaWarning] = useState<boolean>(false);
   const imageFileRef = useRef<File | null>(null);
+  const previousImagePathRef = useRef<string | null>(null); // Track previous uploaded image
   const previousDirectorRef = useRef<{ usufinal: string; area: string }>({ usufinal: '', area: '' });
 
   // Custom hooks
@@ -120,29 +121,71 @@ export default function RegistroBienesForm() {
     }
   };
 
-  const handleImageRemove = () => {
+  const handleImageRemove = async () => {
     setImagePreview(null);
     imageFileRef.current = null;
     setFormData(prev => ({ ...prev, image_path: '' }));
+    
+    // If there was a previously uploaded image, delete it from storage
+    if (previousImagePathRef.current) {
+      try {
+        const bucketName = institucion === 'INEA' 
+          ? 'muebles.inea' 
+          : institucion === 'ITEA' 
+            ? 'muebles.itea' 
+            : 'muebles.tlaxcala';
+        
+        await supabase.storage
+          .from(bucketName)
+          .remove([previousImagePathRef.current]);
+        
+        previousImagePathRef.current = null;
+      } catch (error) {
+        console.error('Error removing previous image:', error);
+      }
+    }
   };
 
-  // Upload image to Supabase storage
-  const uploadImage = async (muebleId: number): Promise<string | null> => {
+  // Upload image to Supabase storage with unique identifier
+  const uploadImage = async (idInv: string): Promise<string | null> => {
     if (!imageFileRef.current) return null;
 
     try {
-      const bucketName = institucion === 'INEA' ? 'muebles.inea' : 'muebles.itea';
+      const bucketName = institucion === 'INEA' 
+        ? 'muebles.inea' 
+        : institucion === 'ITEA' 
+          ? 'muebles.itea' 
+          : 'muebles.tlaxcala';
+      
+      // Delete previous image if it exists (user changed the image)
+      if (previousImagePathRef.current) {
+        try {
+          await supabase.storage
+            .from(bucketName)
+            .remove([previousImagePathRef.current]);
+        } catch (error) {
+          console.error('Error removing previous image:', error);
+        }
+      }
+      
+      // Generate unique filename with timestamp and random string
       const fileExt = imageFileRef.current.name.split('.').pop();
-      const fileName = `${muebleId}/image.${fileExt}`;
+      const timestamp = Date.now();
+      const randomStr = Math.random().toString(36).substring(2, 8);
+      const fileName = `${idInv}_${timestamp}_${randomStr}.${fileExt}`;
 
       const { error } = await supabase.storage
         .from(bucketName)
         .upload(fileName, imageFileRef.current, {
           cacheControl: '3600',
-          upsert: true
+          upsert: false // Don't overwrite, each upload is unique
         });
 
       if (error) throw error;
+      
+      // Store the path for potential cleanup
+      previousImagePathRef.current = fileName;
+      
       return fileName;
     } catch (error) {
       console.error('Error uploading image:', error);
@@ -155,8 +198,19 @@ export default function RegistroBienesForm() {
     e.preventDefault();
     setIsSubmitting(true);
 
+    let imagePath: string | null = null; // Declare outside try for cleanup access
+
     try {
-      const tableName = institucion === 'INEA' ? 'muebles' : 'mueblesitea';
+      const tableName = institucion === 'INEA' 
+        ? 'muebles' 
+        : institucion === 'ITEA' 
+          ? 'mueblesitea' 
+          : 'mueblestlaxcala';
+
+      // Upload image first if exists (using id_inv)
+      if (imageFileRef.current) {
+        imagePath = await uploadImage(formData.id_inv);
+      }
 
       // Prepare data for saving (convert to uppercase and clean valor)
       const dataToSave = {
@@ -178,26 +232,24 @@ export default function RegistroBienesForm() {
         causadebaja: formData.causadebaja.toUpperCase(),
         resguardante: formData.resguardante.toUpperCase(),
         f_adq: formData.f_adq || null,
-        fechabaja: formData.fechabaja || null
+        fechabaja: formData.fechabaja || null,
+        image_path: imagePath
       };
 
-      // Insert main data
-      const { data, error } = await supabase
-        .from(tableName)
-        .insert([dataToSave])
-        .select();
+      // Insert via API proxy (consistent with admin components)
+      const response = await fetch('/api/supabase-proxy?target=' + encodeURIComponent(`/rest/v1/${tableName}`), {
+        method: 'POST',
+        credentials: 'include',
+        headers: {
+          'Content-Type': 'application/json',
+          'Prefer': 'return=minimal'
+        },
+        body: JSON.stringify(dataToSave)
+      });
 
-      if (error) throw error;
-
-      // Upload image if exists
-      if (imageFileRef.current && data?.[0]?.id) {
-        const imagePath = await uploadImage(data[0].id);
-        if (imagePath) {
-          await supabase
-            .from(tableName)
-            .update({ image_path: imagePath })
-            .eq('id', data[0].id);
-        }
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || 'Error al guardar');
       }
 
       setMessage({
@@ -216,16 +268,37 @@ export default function RegistroBienesForm() {
         data: { changes: [`Registro de bien: ${formData.id_inv}`], affectedTables: [tableName] }
       });
 
-      // Reset form
+      // Reset form immediately (realtime will update the store automatically)
       resetForm(
         filterOptions.estados.includes('BUENO') ? 'BUENO' : filterOptions.estados[0] || '',
         filterOptions.estatus.includes('ACTIVO') ? 'ACTIVO' : filterOptions.estatus[0] || ''
       );
       setImagePreview(null);
       imageFileRef.current = null;
+      previousImagePathRef.current = null; // Clear previous image reference
       setCurrentStep(0);
     } catch (error) {
       console.error('Error saving:', error);
+      
+      // If there was an error and we uploaded an image, clean it up
+      if (imagePath && previousImagePathRef.current) {
+        try {
+          const bucketName = institucion === 'INEA' 
+            ? 'muebles.inea' 
+            : institucion === 'ITEA' 
+              ? 'muebles.itea' 
+              : 'muebles.tlaxcala';
+          
+          await supabase.storage
+            .from(bucketName)
+            .remove([previousImagePathRef.current]);
+          
+          previousImagePathRef.current = null;
+        } catch (cleanupError) {
+          console.error('Error cleaning up image after failed insert:', cleanupError);
+        }
+      }
+      
       setMessage({
         type: 'error',
         text: "Error al guardar el registro. Intente nuevamente."
@@ -239,7 +312,7 @@ export default function RegistroBienesForm() {
         category: 'inventario',
         device: 'web',
         importance: 'high',
-        data: { affectedTables: [institucion === 'INEA' ? 'muebles' : 'mueblesitea'] }
+        data: { affectedTables: [institucion === 'INEA' ? 'muebles' : institucion === 'ITEA' ? 'mueblesitea' : 'mueblestlaxcala'] }
       });
     } finally {
       setIsSubmitting(false);
@@ -378,7 +451,7 @@ export default function RegistroBienesForm() {
                       </p>
                     </div>
                     
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 max-w-2xl mx-auto">
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 max-w-4xl mx-auto">
                       <motion.button
                         type="button"
                         onClick={() => setInstitucion('INEA')}
@@ -421,6 +494,29 @@ export default function RegistroBienesForm() {
                           <div className="text-3xl font-light mb-2">ITEA</div>
                           <div className={`text-sm ${isDarkMode ? 'text-white/60' : 'text-black/60'}`}>
                             Instituto Tlaxcalteca para la Educación de los Adultos
+                          </div>
+                        </div>
+                      </motion.button>
+
+                      <motion.button
+                        type="button"
+                        onClick={() => setInstitucion('TLAXCALA')}
+                        className={`p-8 rounded-xl border-2 transition-all ${
+                          institucion === 'TLAXCALA'
+                            ? isDarkMode
+                              ? 'border-white bg-white/10'
+                              : 'border-black bg-black/5'
+                            : isDarkMode
+                              ? 'border-white/20 hover:border-white/40'
+                              : 'border-black/20 hover:border-black/40'
+                        }`}
+                        whileHover={{ scale: 1.02 }}
+                        whileTap={{ scale: 0.98 }}
+                      >
+                        <div className="text-center">
+                          <div className="text-3xl font-light mb-2">TLAXCALA</div>
+                          <div className={`text-sm ${isDarkMode ? 'text-white/60' : 'text-black/60'}`}>
+                            No Listado
                           </div>
                         </div>
                       </motion.button>

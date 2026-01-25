@@ -151,7 +151,7 @@ export interface ExponentialBackoffConfig {
  * Mueble de INEA (tabla: muebles)
  */
 export interface MuebleINEA {
-  id: number;
+  id: string; // UUID
   id_inv: string;
   rubro: string | null;
   descripcion: string | null;
@@ -174,10 +174,10 @@ export interface MuebleINEA {
 }
 
 /**
- * Mueble de ITEA (tabla: mueblestlax)
+ * Mueble de ITEA (tabla: mueblesitea)
  */
 export interface MuebleITEA {
-  id: number;
+  id: string; // UUID
   id_inv: string;
   rubro: string | null;
   descripcion: string | null;
@@ -203,7 +203,7 @@ export interface MuebleITEA {
  * Mueble de No Listado (tabla: mueblestlaxcala)
  */
 export interface MuebleNoListado {
-  id: number;
+  id: string; // UUID
   id_inv: string;
   rubro: string | null;
   descripcion: string | null;
@@ -229,7 +229,7 @@ export interface MuebleNoListado {
  * Resguardo (tabla: resguardos)
  */
 export interface Resguardo {
-  id: number;
+  id: string; // UUID
   folio: string;
   f_resguardo: string;
   dir_area: string | null;
@@ -246,7 +246,7 @@ export interface Resguardo {
  * Resguardo Baja (tabla: resguardos_bajas)
  */
 export interface ResguardoBaja {
-  id: number;
+  id: string; // UUID
   folio: string;
   f_baja: string;
   motivo: string | null;

@@ -21,7 +21,7 @@ import { useNoListadoIndexation } from '@/hooks/indexation/useNoListadoIndexatio
 import SectionRealtimeToggle from '@/components/SectionRealtimeToggle';
 
 interface Mueble {
-    id: number;
+    id: string; // UUID
     id_inv: string | null;
     descripcion: string | null;
     estado: string | null;

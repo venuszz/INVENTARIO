@@ -1,5 +1,5 @@
 export interface SearchResult {
-    id: number;
+    id: string; // UUID
     id_inv: string | null;
     descripcion: string | null;
     rubro: string | null;

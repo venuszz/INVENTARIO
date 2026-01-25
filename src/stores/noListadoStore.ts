@@ -15,11 +15,11 @@ interface NoListadoStore {
   lastFetchedAt: string | null;
   setMuebles: (muebles: MuebleNoListado[]) => void;
   addMueble: (mueble: MuebleNoListado) => void;
-  updateMueble: (id: number, updates: Partial<MuebleNoListado>) => void;
-  removeMueble: (id: number) => void;
+  updateMueble: (id: string, updates: Partial<MuebleNoListado>) => void; // UUID
+  removeMueble: (id: string) => void; // UUID
   isCacheValid: (maxAgeMinutes?: number) => boolean;
   clearCache: () => void;
-  getMuebleById: (id: number) => MuebleNoListado | undefined;
+  getMuebleById: (id: string) => MuebleNoListado | undefined; // UUID
 }
 
 const DEFAULT_CACHE_DURATION_MINUTES = 30;

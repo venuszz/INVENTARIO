@@ -3,7 +3,7 @@ import { ChangeEvent, FocusEvent, FormEvent } from 'react';
 // Core data types
 export type Estado = string;
 export type Estatus = string;
-export type Institucion = 'INEA' | 'ITEA';
+export type Institucion = 'INEA' | 'ITEA' | 'TLAXCALA';
 
 // Form data interface
 export interface FormData {

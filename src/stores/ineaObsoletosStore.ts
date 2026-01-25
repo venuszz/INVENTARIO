@@ -22,13 +22,13 @@ interface IneaObsoletosStore {
   // Acciones CRUD
   setMuebles: (muebles: MuebleINEA[]) => void;
   addMueble: (mueble: MuebleINEA) => void;
-  updateMueble: (id: number, updates: Partial<MuebleINEA>) => void;
-  removeMueble: (id: number) => void;
+  updateMueble: (id: string, updates: Partial<MuebleINEA>) => void; // UUID
+  removeMueble: (id: string) => void; // UUID
   
   // Utilidades
   isCacheValid: (maxAgeMinutes?: number) => boolean;
   clearCache: () => void;
-  getMuebleById: (id: number) => MuebleINEA | undefined;
+  getMuebleById: (id: string) => MuebleINEA | undefined; // UUID
   getMueblesByArea: (area: string) => MuebleINEA[];
 }
 

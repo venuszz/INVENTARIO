@@ -65,6 +65,7 @@ export function useIneaIndexation() {
     setDisconnectedAt,
     updateLastEventReceived,
     initializeModule,
+    addRealtimeChange,
   } = useIndexationStore();
   
   const {
@@ -238,6 +239,14 @@ export function useIneaIndexation() {
                 if (insertedData && insertedData.estatus !== 'BAJA') {
                   addMueble(insertedData);
                   ineaEmitter.emit({ type: 'INSERT', data: insertedData, timestamp: new Date().toISOString() });
+                  addRealtimeChange({
+                    moduleKey: MODULE_KEY,
+                    moduleName: 'INEA',
+                    table: TABLE,
+                    eventType: 'INSERT',
+                    recordId: insertedData.id,
+                    recordName: insertedData.id_inv,
+                  });
                   console.log('✅ Mueble added:', insertedData.id_inv);
                 }
                 break;
@@ -264,6 +273,14 @@ export function useIneaIndexation() {
                   } else {
                     // Actualizar registro
                     updateMueble(updatedData);
+                    addRealtimeChange({
+                      moduleKey: MODULE_KEY,
+                      moduleName: 'INEA',
+                      table: TABLE,
+                      eventType: 'UPDATE',
+                      recordId: updatedData.id,
+                      recordName: updatedData.id_inv,
+                    });
                     console.log('✏️ Mueble updated:', updatedData.id_inv);
                   }
                   ineaEmitter.emit({ type: 'UPDATE', data: updatedData, timestamp: new Date().toISOString() });
@@ -275,6 +292,14 @@ export function useIneaIndexation() {
                 if (oldRecord?.id) {
                   removeMueble(oldRecord.id);
                   ineaEmitter.emit({ type: 'DELETE', data: oldRecord, timestamp: new Date().toISOString() });
+                  addRealtimeChange({
+                    moduleKey: MODULE_KEY,
+                    moduleName: 'INEA',
+                    table: TABLE,
+                    eventType: 'DELETE',
+                    recordId: oldRecord.id,
+                    recordName: oldRecord.id_inv,
+                  });
                   console.log('🗑️ Mueble deleted:', oldRecord.id);
                 }
                 break;

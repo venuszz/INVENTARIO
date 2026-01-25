@@ -9,7 +9,7 @@
  * Unified inventory item type combining data from INEA, ITEA, and TLAXCALA sources
  */
 export interface LevMueble {
-  id: number;
+  id: string; // UUID
   id_inv: string;
   rubro: string | null;
   descripcion: string | null;

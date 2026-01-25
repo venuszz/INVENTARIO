@@ -15,11 +15,11 @@ interface IteaObsoletosStore {
   lastFetchedAt: string | null;
   setMuebles: (muebles: MuebleITEA[]) => void;
   addMueble: (mueble: MuebleITEA) => void;
-  updateMueble: (id: number, updates: Partial<MuebleITEA>) => void;
-  removeMueble: (id: number) => void;
+  updateMueble: (id: string, updates: Partial<MuebleITEA>) => void; // UUID
+  removeMueble: (id: string) => void; // UUID
   isCacheValid: (maxAgeMinutes?: number) => boolean;
   clearCache: () => void;
-  getMuebleById: (id: number) => MuebleITEA | undefined;
+  getMuebleById: (id: string) => MuebleITEA | undefined; // UUID
 }
 
 const DEFAULT_CACHE_DURATION_MINUTES = 30;

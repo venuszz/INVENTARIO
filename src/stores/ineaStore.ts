@@ -23,12 +23,12 @@ interface IneaStore {
   setMuebles: (muebles: MuebleINEA[]) => void;
   addMueble: (mueble: MuebleINEA) => void;
   updateMueble: (mueble: MuebleINEA) => void;
-  removeMueble: (id: number) => void;
+  removeMueble: (id: string) => void; // UUID
   
   // Utilidades
   isCacheValid: (maxAgeMinutes?: number) => boolean;
   clearCache: () => void;
-  getMuebleById: (id: number) => MuebleINEA | undefined;
+  getMuebleById: (id: string) => MuebleINEA | undefined; // UUID
   getMueblesByArea: (area: string) => MuebleINEA[];
 }
 

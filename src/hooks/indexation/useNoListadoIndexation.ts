@@ -23,6 +23,7 @@ export function useNoListadoIndexation() {
     updateRealtimeConnection, updateReconnectionStatus,
     incrementReconnectionAttempts, resetReconnectionAttempts,
     setDisconnectedAt, updateLastEventReceived, initializeModule,
+    addRealtimeChange,
   } = useIndexationStore();
   
   const { muebles, setMuebles, addMueble, updateMueble, removeMueble, isCacheValid } = useNoListadoStore();
@@ -113,6 +114,14 @@ export function useNoListadoIndexation() {
                 if (!error && data && data.estatus !== 'BAJA') {
                   addMueble(data);
                   noListadoEmitter.emit({ type: 'INSERT', data, timestamp: new Date().toISOString() });
+                  addRealtimeChange({
+                    moduleKey: MODULE_KEY,
+                    moduleName: 'TLAXCALA',
+                    table: TABLE,
+                    eventType: 'INSERT',
+                    recordId: data.id,
+                    recordName: data.id_inv,
+                  });
                 }
                 break;
               }
@@ -123,6 +132,14 @@ export function useNoListadoIndexation() {
                     removeMueble(data.id);
                   } else {
                     updateMueble(data.id, data);
+                    addRealtimeChange({
+                      moduleKey: MODULE_KEY,
+                      moduleName: 'TLAXCALA',
+                      table: TABLE,
+                      eventType: 'UPDATE',
+                      recordId: data.id,
+                      recordName: data.id_inv,
+                    });
                   }
                   noListadoEmitter.emit({ type: 'UPDATE', data, timestamp: new Date().toISOString() });
                 }
@@ -132,6 +149,14 @@ export function useNoListadoIndexation() {
                 if (oldRecord.id) {
                   removeMueble(oldRecord.id);
                   noListadoEmitter.emit({ type: 'DELETE', data: oldRecord, timestamp: new Date().toISOString() });
+                  addRealtimeChange({
+                    moduleKey: MODULE_KEY,
+                    moduleName: 'TLAXCALA',
+                    table: TABLE,
+                    eventType: 'DELETE',
+                    recordId: oldRecord.id,
+                    recordName: oldRecord.id_inv,
+                  });
                 }
                 break;
               }

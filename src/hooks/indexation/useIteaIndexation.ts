@@ -23,6 +23,7 @@ export function useIteaIndexation() {
     updateRealtimeConnection, updateReconnectionStatus,
     incrementReconnectionAttempts, resetReconnectionAttempts,
     setDisconnectedAt, updateLastEventReceived, initializeModule,
+    addRealtimeChange,
   } = useIndexationStore();
   
   const { muebles, setMuebles, addMueble, updateMueble, removeMueble, isCacheValid } = useIteaStore();
@@ -112,6 +113,14 @@ export function useIteaIndexation() {
                 if (!error && data && data.estatus !== 'BAJA') {
                   addMueble(data);
                   iteaEmitter.emit({ type: 'INSERT', data, timestamp: new Date().toISOString() });
+                  addRealtimeChange({
+                    moduleKey: MODULE_KEY,
+                    moduleName: 'ITEA',
+                    table: TABLE,
+                    eventType: 'INSERT',
+                    recordId: data.id,
+                    recordName: data.id_inv,
+                  });
                 }
                 break;
               }
@@ -122,6 +131,14 @@ export function useIteaIndexation() {
                     removeMueble(data.id);
                   } else {
                     updateMueble(data.id, data);
+                    addRealtimeChange({
+                      moduleKey: MODULE_KEY,
+                      moduleName: 'ITEA',
+                      table: TABLE,
+                      eventType: 'UPDATE',
+                      recordId: data.id,
+                      recordName: data.id_inv,
+                    });
                   }
                   iteaEmitter.emit({ type: 'UPDATE', data, timestamp: new Date().toISOString() });
                 }
@@ -131,6 +148,14 @@ export function useIteaIndexation() {
                 if (oldRecord?.id) {
                   removeMueble(oldRecord.id);
                   iteaEmitter.emit({ type: 'DELETE', data: oldRecord, timestamp: new Date().toISOString() });
+                  addRealtimeChange({
+                    moduleKey: MODULE_KEY,
+                    moduleName: 'ITEA',
+                    table: TABLE,
+                    eventType: 'DELETE',
+                    recordId: oldRecord.id,
+                    recordName: oldRecord.id_inv,
+                  });
                 }
                 break;
               }

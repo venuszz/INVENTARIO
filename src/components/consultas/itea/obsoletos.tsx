@@ -17,7 +17,7 @@ import { useIteaObsoletosIndexation } from '@/hooks/indexation/useIteaObsoletosI
 import SectionRealtimeToggle from '@/components/SectionRealtimeToggle';
 
 interface MuebleITEA {
-    id: number;
+    id: string; // UUID
     id_inv: string | null;
     rubro: string | null;
     descripcion: string | null;
@@ -729,7 +729,7 @@ export default function ConsultasIteaBajas() {
         }
     }, []);
 
-    const uploadImage = async (muebleId: number) => {
+    const uploadImage = async (muebleId: string) => { // UUID
         if (!imageFile) return null;
 
         try {
@@ -795,11 +795,8 @@ export default function ConsultasIteaBajas() {
         const idParam = searchParams.get('id');
         if (!idParam) return;
         
-        const itemId = parseInt(idParam, 10);
-        if (isNaN(itemId)) return;
-        
         // Si ya está seleccionado el item correcto, no hacer nada
-        if (selectedItem?.id === itemId) return;
+        if (selectedItem?.id === idParam) return; // UUID comparison
         
         // Función para calcular la página del item
         const calculateItemPage = async () => {
@@ -835,7 +832,7 @@ export default function ConsultasIteaBajas() {
                 if (error) throw error;
 
                 // Encontrar el índice del item
-                const itemIndex = allIds?.findIndex((item: { id: number }) => item.id === itemId) ?? -1;
+                const itemIndex = allIds?.findIndex((item: { id: string }) => item.id === idParam) ?? -1; // UUID comparison
 
                 if (itemIndex !== -1) {
                     // Calcular la página basándose en el índice
@@ -855,14 +852,11 @@ export default function ConsultasIteaBajas() {
         const idParam = searchParams.get('id');
         if (!idParam || muebles.length === 0) return;
         
-        const itemId = parseInt(idParam, 10);
-        if (isNaN(itemId)) return;
-        
         // Si ya está seleccionado el item correcto, no hacer nada
-        if (selectedItem?.id === itemId) return;
+        if (selectedItem?.id === idParam) return; // UUID comparison
         
         // Buscar el item en los muebles cargados
-        const item = muebles.find(m => m.id === itemId);
+        const item = muebles.find(m => m.id === idParam); // UUID comparison
         if (item) {
             setSelectedItem(item);
             setIsEditing(false);
@@ -985,7 +979,7 @@ export default function ConsultasIteaBajas() {
 
         switch (field) {
             case 'id':
-                newData.id = parseInt(value) || newData.id;
+                newData.id = value; // UUID - no need to parse
                 break;
             case 'id_inv':
             case 'rubro':

@@ -434,7 +434,7 @@ export default function ConsultasIteaGeneral() {
         }
     };
 
-    const uploadImage = async (muebleId: number) => {
+    const uploadImage = async (muebleId: string) => { // UUID
         if (!imageFile) return null;
 
         try {
@@ -719,7 +719,7 @@ export default function ConsultasIteaGeneral() {
 
         switch (field) {
             case 'id':
-                newData.id = parseInt(value) || newData.id;
+                newData.id = value; // UUID - no need to parse
                 break;
             case 'id_inv':
                 newData.id_inv = value;
@@ -895,8 +895,7 @@ export default function ConsultasIteaGeneral() {
     useEffect(() => {
         const idParam = searchParams.get('id');
         if (idParam && muebles.length > 0) {
-            const itemId = parseInt(idParam, 10);
-            const item = muebles.find(m => m.id === itemId);
+            const item = muebles.find(m => m.id === idParam); // UUID comparison
             if (item) {
                 setSelectedItem(item);
                 setIsEditing(false);
@@ -915,7 +914,7 @@ export default function ConsultasIteaGeneral() {
                     });
 
                 // Encontrar el índice del item en la lista ordenada
-                const itemIndex = sortedFiltered.findIndex(m => m.id === itemId);
+                const itemIndex = sortedFiltered.findIndex(m => m.id === idParam); // UUID comparison
 
                 if (itemIndex !== -1) {
                     // Calcular la página basándose en el índice

@@ -15,11 +15,11 @@ interface ResguardosBajasStore {
   lastFetchedAt: string | null;
   setResguardos: (resguardos: ResguardoBaja[]) => void;
   addResguardo: (resguardo: ResguardoBaja) => void;
-  updateResguardo: (id: number, updates: Partial<ResguardoBaja>) => void;
-  removeResguardo: (id: number) => void;
+  updateResguardo: (id: string, updates: Partial<ResguardoBaja>) => void; // UUID
+  removeResguardo: (id: string) => void; // UUID
   isCacheValid: (maxAgeMinutes?: number) => boolean;
   clearCache: () => void;
-  getResguardoById: (id: number) => ResguardoBaja | undefined;
+  getResguardoById: (id: string) => ResguardoBaja | undefined; // UUID
 }
 
 const DEFAULT_CACHE_DURATION_MINUTES = 30;
