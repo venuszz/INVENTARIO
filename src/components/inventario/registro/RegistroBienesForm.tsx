@@ -29,7 +29,7 @@ export default function RegistroBienesForm() {
   const { createNotification } = useNotifications();
 
   // State management
-  const [currentStep, setCurrentStep] = useState<number>(1);
+  const [currentStep, setCurrentStep] = useState<number>(0);
   const [institucion, setInstitucion] = useState<Institucion>('INEA');
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
   const [message, setMessage] = useState<Message>({ type: '', text: '' });
@@ -223,7 +223,7 @@ export default function RegistroBienesForm() {
       );
       setImagePreview(null);
       imageFileRef.current = null;
-      setCurrentStep(1);
+      setCurrentStep(0);
     } catch (error) {
       console.error('Error saving:', error);
       setMessage({
@@ -248,6 +248,12 @@ export default function RegistroBienesForm() {
 
   // Navigation handlers
   const nextStep = () => {
+    // Step 0 (institution selection) has no validation
+    if (currentStep === 0) {
+      setCurrentStep(1);
+      return;
+    }
+
     // Mark all required fields for current step as touched
     const requiredFields = {
       1: ['id_inv', 'rubro', 'valor', 'formadq', 'f_adq'],
@@ -268,7 +274,7 @@ export default function RegistroBienesForm() {
     }
   };
   
-  const prevStep = () => setCurrentStep(prev => Math.max(prev - 1, 1));
+  const prevStep = () => setCurrentStep(prev => Math.max(prev - 1, 0));
   const handleCloseMessage = () => setMessage({ type: '', text: '' });
   const handleStepClick = (step: number) => setCurrentStep(step);
 
@@ -362,6 +368,66 @@ export default function RegistroBienesForm() {
                 exit={{ opacity: 0, x: -20 }}
                 transition={{ duration: 0.3 }}
               >
+                {/* Step 0 - Institution Selection */}
+                {currentStep === 0 && (
+                  <div className="space-y-6">
+                    <div className="text-center mb-8">
+                      <h2 className="text-2xl font-light mb-2">Selecciona la Institución</h2>
+                      <p className={`text-sm ${isDarkMode ? 'text-white/60' : 'text-black/60'}`}>
+                        Elige la institución para la cual registrarás el bien
+                      </p>
+                    </div>
+                    
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 max-w-2xl mx-auto">
+                      <motion.button
+                        type="button"
+                        onClick={() => setInstitucion('INEA')}
+                        className={`p-8 rounded-xl border-2 transition-all ${
+                          institucion === 'INEA'
+                            ? isDarkMode
+                              ? 'border-white bg-white/10'
+                              : 'border-black bg-black/5'
+                            : isDarkMode
+                              ? 'border-white/20 hover:border-white/40'
+                              : 'border-black/20 hover:border-black/40'
+                        }`}
+                        whileHover={{ scale: 1.02 }}
+                        whileTap={{ scale: 0.98 }}
+                      >
+                        <div className="text-center">
+                          <div className="text-3xl font-light mb-2">INEA</div>
+                          <div className={`text-sm ${isDarkMode ? 'text-white/60' : 'text-black/60'}`}>
+                            Instituto Nacional para la Educación de los Adultos
+                          </div>
+                        </div>
+                      </motion.button>
+
+                      <motion.button
+                        type="button"
+                        onClick={() => setInstitucion('ITEA')}
+                        className={`p-8 rounded-xl border-2 transition-all ${
+                          institucion === 'ITEA'
+                            ? isDarkMode
+                              ? 'border-white bg-white/10'
+                              : 'border-black bg-black/5'
+                            : isDarkMode
+                              ? 'border-white/20 hover:border-white/40'
+                              : 'border-black/20 hover:border-black/40'
+                        }`}
+                        whileHover={{ scale: 1.02 }}
+                        whileTap={{ scale: 0.98 }}
+                      >
+                        <div className="text-center">
+                          <div className="text-3xl font-light mb-2">ITEA</div>
+                          <div className={`text-sm ${isDarkMode ? 'text-white/60' : 'text-black/60'}`}>
+                            Instituto Tlaxcalteca para la Educación de los Adultos
+                          </div>
+                        </div>
+                      </motion.button>
+                    </div>
+                  </div>
+                )}
+
                 {/* Step 1 */}
                 {currentStep === 1 && (
                   <Step1BasicInfo
@@ -398,18 +464,16 @@ export default function RegistroBienesForm() {
                   />
                 )}
 
-                {/* Step 3 */}
+                {/* Step 3 - Additional Details */}
                 {currentStep === 3 && (
                   <Step3AdditionalDetails
                     formData={formData}
-                    institucion={institucion}
                     imagePreview={imagePreview}
                     touched={touched}
                     onChange={handleChange}
                     onBlur={handleBlur}
                     onImageChange={handleImageChange}
                     onImageRemove={handleImageRemove}
-                    onInstitucionChange={setInstitucion}
                     isFieldValid={isFieldValid}
                     isDarkMode={isDarkMode}
                   />

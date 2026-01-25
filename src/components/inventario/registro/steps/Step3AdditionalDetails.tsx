@@ -5,14 +5,12 @@ import { Step3Props } from '../types';
 
 export default function Step3AdditionalDetails({
   formData,
-  institucion,
   imagePreview,
   touched,
   onChange,
   onBlur,
   onImageChange,
   onImageRemove,
-  onInstitucionChange,
   isFieldValid,
   isDarkMode
 }: Step3Props) {
@@ -118,40 +116,11 @@ export default function Step3AdditionalDetails({
           )}
         </motion.div>
 
-        {/* Institución */}
-        <motion.div
-          initial={{ opacity: 0, x: -10 }}
-          animate={{ opacity: 1, x: 0 }}
-          transition={{ delay: 0.2 }}
-        >
-          <label className={getLabelClasses()}>Institución</label>
-          <div className="flex gap-4">
-            {['INEA', 'ITEA'].map((inst) => (
-              <button
-                key={inst}
-                type="button"
-                onClick={() => onInstitucionChange(inst as 'INEA' | 'ITEA')}
-                className={`flex-1 py-3 px-4 rounded-lg border-2 text-sm font-medium transition-all ${
-                  institucion === inst
-                    ? isDarkMode
-                      ? 'border-white bg-white/5 text-white'
-                      : 'border-black bg-black/5 text-black'
-                    : isDarkMode
-                      ? 'border-white/10 text-white/40 hover:border-white/20 hover:text-white/60'
-                      : 'border-black/10 text-black/40 hover:border-black/20 hover:text-black/60'
-                }`}
-              >
-                {inst}
-              </button>
-            ))}
-          </div>
-        </motion.div>
-
         {/* Imagen del Bien */}
         <motion.div
           initial={{ opacity: 0, x: -10 }}
           animate={{ opacity: 1, x: 0 }}
-          transition={{ delay: 0.3 }}
+          transition={{ delay: 0.2 }}
         >
           <label className={getLabelClasses()}>Imagen del Bien</label>
           

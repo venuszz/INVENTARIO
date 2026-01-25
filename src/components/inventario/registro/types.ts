@@ -109,14 +109,12 @@ export interface Step2Props {
 
 export interface Step3Props {
   formData: FormData;
-  institucion: Institucion;
   imagePreview: string | null;
   touched: Record<string, boolean>;
   onChange: (e: ChangeEvent<HTMLTextAreaElement | HTMLSelectElement>) => void;
   onBlur: (e: FocusEvent<HTMLTextAreaElement>) => void;
   onImageChange: (e: ChangeEvent<HTMLInputElement>) => void;
   onImageRemove: () => void;
-  onInstitucionChange: (value: Institucion) => void;
   isFieldValid: (fieldName: string) => boolean;
   isDarkMode: boolean;
 }

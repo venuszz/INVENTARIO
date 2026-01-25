@@ -1,4 +1,4 @@
-import Levantamiento from "@/components/consultas/levantamiento"
+import Levantamiento from "@/components/consultas/levantamiento/index"
 import { Metadata } from "next";
 
 export const metadata: Metadata = {

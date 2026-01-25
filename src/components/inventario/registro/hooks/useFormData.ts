@@ -38,6 +38,7 @@ const initialFormData: FormData = {
 };
 
 const requiredFields = {
+  0: [], // Step 0 (institution selection) has no required fields
   1: ['id_inv', 'rubro', 'valor', 'formadq', 'f_adq'],
   2: ['estatus', 'area', 'usufinal'],
   3: ['descripcion']
@@ -102,8 +103,9 @@ export function useFormData(defaultEstado: string = '', defaultEstatus: string =
   }, [formData, touched]);
 
   const isStepComplete = useCallback((step: number): boolean => {
-    return requiredFields[step as keyof typeof requiredFields]
-      .every(field => formData[field as keyof FormData]?.trim() !== '');
+    const fields = requiredFields[step as keyof typeof requiredFields];
+    if (!fields) return true; // If step doesn't exist, consider it complete
+    return fields.every(field => formData[field as keyof FormData]?.trim() !== '');
   }, [formData]);
 
   const resetForm = useCallback((defaultEstado: string, defaultEstatus: string) => {

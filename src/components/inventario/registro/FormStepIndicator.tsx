@@ -9,23 +9,24 @@ export default function FormStepIndicator({
   isDarkMode 
 }: FormStepIndicatorProps) {
   const steps = [
+    { number: 0, label: 'Institución' },
     { number: 1, label: 'Información Básica' },
     { number: 2, label: 'Ubicación y Estado' },
     { number: 3, label: 'Detalles Adicionales' }
   ];
 
   const handleStepClick = (stepNumber: number) => {
-    // Only allow navigation to step 1, or to completed steps
-    if (stepNumber === 1 || (stepNumber === 2 && isStepComplete(1)) || (stepNumber === 3 && isStepComplete(1) && isStepComplete(2))) {
+    // Allow navigation to step 0 and 1 always, or to completed steps
+    if (stepNumber === 0 || stepNumber === 1 || (stepNumber === 2 && isStepComplete(1)) || (stepNumber === 3 && isStepComplete(1) && isStepComplete(2))) {
       onStepClick(stepNumber);
     }
   };
 
   return (
-    <div className="flex gap-8">
+    <div className="flex gap-6">
       {steps.map((step, index) => {
         const isActive = currentStep === step.number;
-        const isClickable = step.number === 1 || 
+        const isClickable = step.number === 0 || step.number === 1 || 
           (step.number === 2 && isStepComplete(1)) || 
           (step.number === 3 && isStepComplete(1) && isStepComplete(2));
         const isCompleted = isStepComplete(step.number);
@@ -61,9 +62,9 @@ export default function FormStepIndicator({
                       ? 'bg-white/10 text-white/40'
                       : 'bg-black/10 text-black/40'
               }`}>
-                {step.number}
+                {step.number === 0 ? '•' : step.number}
               </span>
-              {step.label}
+              <span className="hidden sm:inline">{step.label}</span>
             </span>
             
             {/* Active indicator line */}

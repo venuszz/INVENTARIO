@@ -35,7 +35,7 @@ export function useCerrarSesion() {
 
     const handleLogout = async () => {
         try {
-            console.log('🚪 Iniciando proceso de logout...');
+            console.log('🚪 Iniciando proceso de logout completo...');
             
             // 1. Limpiar TODOS los datos de indexación (IndexedDB + Zustand stores)
             console.log('🧹 Limpiando datos de indexación...');
@@ -53,21 +53,52 @@ export function useCerrarSesion() {
                 credentials: 'include',
             });
 
-            // 4. Limpiar localStorage
-            console.log('💾 Limpiando localStorage...');
-            localStorage.removeItem('authToken');
-            localStorage.removeItem('refreshToken');
-            localStorage.removeItem('userId');
-            localStorage.removeItem('username');
-
-            console.log('✅ Logout completado exitosamente');
+            // 4. Limpiar COMPLETAMENTE localStorage
+            console.log('💾 Limpiando localStorage completamente...');
+            localStorage.clear(); // Elimina TODO el localStorage
             
-            // 5. Redireccionar al login
-            router.push('/login');
+            // 5. Limpiar COMPLETAMENTE sessionStorage
+            console.log('📦 Limpiando sessionStorage...');
+            sessionStorage.clear();
+            
+            // 6. Limpiar todas las cookies del lado del cliente
+            console.log('🍪 Eliminando cookies del cliente...');
+            document.cookie.split(";").forEach((c) => {
+                document.cookie = c
+                    .replace(/^ +/, "")
+                    .replace(/=.*/, "=;expires=" + new Date().toUTCString() + ";path=/");
+            });
+            
+            // 7. Limpiar caché del navegador (Service Workers si existen)
+            console.log('🗑️ Limpiando caché...');
+            if ('caches' in window) {
+                const cacheNames = await caches.keys();
+                await Promise.all(
+                    cacheNames.map(cacheName => caches.delete(cacheName))
+                );
+            }
+            
+            // 8. Limpiar IndexedDB completamente (por si acaso)
+            console.log('🗄️ Limpiando IndexedDB...');
+            if (window.indexedDB) {
+                const databases = await window.indexedDB.databases();
+                databases.forEach(db => {
+                    if (db.name) {
+                        window.indexedDB.deleteDatabase(db.name);
+                    }
+                });
+            }
+
+            console.log('✅ Logout completado exitosamente - Todo limpio');
+            
+            // 9. Redireccionar al login con recarga forzada
+            window.location.href = '/login';
         } catch (error) {
             console.error('❌ Error al cerrar sesión:', error);
-            // Aún así redirigir al login para evitar que el usuario quede atrapado
-            router.push('/login');
+            // Aún así hacer limpieza básica y redirigir
+            localStorage.clear();
+            sessionStorage.clear();
+            window.location.href = '/login';
         }
     };
 
@@ -360,6 +391,10 @@ export default function NavigationBar() {
             path: '/consultas',
             submenu: [
                 {
+                    title: 'Levantamiento',
+                    path: '/consultas/levantamiento',
+                },
+                {
                     title: 'Inventario INEA',
                     path: '/consultas/inea',
                     children: [
@@ -374,10 +409,6 @@ export default function NavigationBar() {
                         { title: 'Vista general', path: '/consultas/itea/general' },
                         { title: 'Bienes obsoletos', path: '/consultas/itea/obsoletos' }
                     ]
-                },
-                {
-                    title: 'Levantamiento',
-                    path: '/consultas/levantamiento',
                 }
             ]
         },

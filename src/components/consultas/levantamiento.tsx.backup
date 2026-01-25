@@ -1496,9 +1496,9 @@ export default function LevantamientoUnificado() {
                                                     </td>
                                                 </tr>
                                             ) : (
-                                                paginatedMuebles.map((item) => (
+                                                paginatedMuebles.map((item, index) => (
                                                     <tr
-                                                        key={`${item.origen}-${item.id}`}
+                                                        key={`${item.origen}-${item.id || ''}-${item.id_inv || ''}-${index}`}
                                                         className={`transition-colors ${isDarkMode ? 'hover:bg-gray-800/50' : 'hover:bg-gray-50'}`}
                                                     >
                                                         <td className="px-4 py-3 text-xs">
