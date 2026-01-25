@@ -1,21 +1,14 @@
 /**
- * SearchBar Component
+ * SearchBar component for Levantamiento Unificado
  * 
- * Omnibox search input with autocomplete dropdown.
- * Provides keyboard navigation and suggestion selection.
+ * Provides search input with autocomplete suggestions and filter type indicators.
  */
 
-'use client';
+import React from 'react';
+import { Search, Hash, MapPin, User, FileText } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { Suggestion } from '../types';
 
-import React, { useRef, useEffect, useState } from 'react';
-import ReactDOM from 'react-dom';
-import { Search } from 'lucide-react';
-import { Suggestion, SearchMatchType } from '../types';
-import { getTypeLabel, getTypeIcon } from '../utils';
-
-/**
- * Component props interface
- */
 interface SearchBarProps {
   searchTerm: string;
   onSearchChange: (term: string) => void;
@@ -25,33 +18,10 @@ interface SearchBarProps {
   onSuggestionSelect: (suggestion: Suggestion) => void;
   onKeyDown: (e: React.KeyboardEvent<HTMLInputElement>) => void;
   onBlur: () => void;
-  searchMatchType: SearchMatchType | null;
+  searchMatchType: string | null;
   isDarkMode: boolean;
 }
 
-/**
- * SearchBar component
- * 
- * Renders an omnibox-style search input with floating autocomplete dropdown.
- * Supports keyboard navigation (Arrow keys, Enter, Escape) and mouse interaction.
- * 
- * @param props - Component props
- * @returns JSX element with search input and suggestion dropdown
- * 
- * @example
- * <SearchBar
- *   searchTerm={searchTerm}
- *   onSearchChange={setSearchTerm}
- *   suggestions={suggestions}
- *   showSuggestions={showSuggestions}
- *   highlightedIndex={highlightedIndex}
- *   onSuggestionSelect={handleSuggestionSelect}
- *   onKeyDown={handleKeyDown}
- *   onBlur={handleBlur}
- *   searchMatchType={searchMatchType}
- *   isDarkMode={isDarkMode}
- * />
- */
 export function SearchBar({
   searchTerm,
   onSearchChange,
@@ -63,154 +33,145 @@ export function SearchBar({
   onBlur,
   searchMatchType,
   isDarkMode
-}: SearchBarProps): React.ReactElement {
-  
-  const inputRef = useRef<HTMLInputElement>(null);
-  const [dropdownClass, setDropdownClass] = useState<string>('');
-
-  /**
-   * Calculate dropdown position and create dynamic CSS class
-   * Updates when suggestions visibility or count changes
-   */
-  useEffect(() => {
-    if (showSuggestions && inputRef.current) {
-      const rect = inputRef.current.getBoundingClientRect();
-      const className = 'omnibox-dropdown-float';
-      
-      // Remove previous style if exists
-      const prev = document.getElementById('omnibox-dropdown-style');
-      if (prev) prev.remove();
-      
-      // Create new style element
-      const style = document.createElement('style');
-      style.id = 'omnibox-dropdown-style';
-      style.innerHTML = `
-        .${className} {
-          position: fixed !important;
-          left: ${rect.left}px !important;
-          top: ${rect.bottom + window.scrollY}px !important;
-          width: ${rect.width}px !important;
-          z-index: 10000 !important;
-        }
-      `;
-      document.head.appendChild(style);
-      setDropdownClass(className);
-    } else {
-      setDropdownClass('');
-      const prev = document.getElementById('omnibox-dropdown-style');
-      if (prev) prev.remove();
-    }
-  }, [showSuggestions, suggestions.length]);
-
-  /**
-   * Suggestion dropdown sub-component
-   * Rendered as a portal to document.body for proper positioning
-   */
-  function SuggestionDropdown(): React.ReactElement | null {
-    if (!showSuggestions || !dropdownClass || suggestions.length === 0) {
-      return null;
-    }
-
-    return ReactDOM.createPortal(
-      <ul
-        id="omnibox-suggestions"
-        role="listbox"
-        title="Sugerencias de búsqueda"
-        className={`animate-fadeInUp max-h-60 overflow-y-auto rounded-lg shadow-sm border transition-all duration-200 ${
-          isDarkMode 
-            ? 'border-white/10 bg-black/95' 
-            : 'border-gray-200 bg-white/95'
-        } backdrop-blur-xl ${dropdownClass}`}
-      >
-        {suggestions.map((s, i) => {
-          const isSelected = highlightedIndex === i;
-          return (
-            <li
-              key={`${s.type}-${s.value}`}
-              id={`omnibox-suggestion-${i}`}
-              role="option"
-              {...(isSelected && { 'aria-selected': 'true' })}
-              tabIndex={-1}
-              className={`flex items-center gap-1.5 px-2 py-1.5 cursor-pointer select-none text-xs
-                transition-colors duration-150 ease-in-out
-                ${isSelected
-                  ? isDarkMode 
-                    ? 'bg-white/5 text-white' 
-                    : 'bg-blue-50 text-blue-900'
-                  : isDarkMode 
-                    ? 'hover:bg-white/5 text-white/70' 
-                    : 'hover:bg-gray-50 text-gray-700'
-                }`}
-              onMouseDown={e => {
-                e.preventDefault();
-                onSuggestionSelect(s);
-                inputRef.current?.focus();
-              }}
-              onMouseEnter={() => {
-                // Update highlighted index on hover
-                // This would need to be passed as a prop if we want to support it
-              }}
-            >
-              <span className={`shrink-0 ${
-                isDarkMode ? 'text-white/70' : 'text-gray-600'
-              }`}>
-                {getTypeIcon(s.type)}
-              </span>
-              <span className="flex-1 font-normal truncate tracking-wide">
-                {s.value}
-              </span>
-              <span className={`ml-auto text-[10px] font-mono ${
-                isDarkMode ? 'text-white/60' : 'text-gray-500'
-              }`}>
-                {getTypeLabel(s.type)}
-              </span>
-            </li>
-          );
-        })}
-      </ul>,
-      document.body
-    );
-  }
-
+}: SearchBarProps) {
   return (
-    <div className="relative flex items-center w-full group">
-      {/* Search icon */}
-      <div className="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none transition-transform duration-300 group-focus-within:scale-110">
-        <Search className={`h-5 w-5 transition-colors duration-300 ${
-          isDarkMode 
-            ? 'text-white/70 group-focus-within:text-white' 
-            : 'text-gray-400 group-focus-within:text-gray-600'
-        }`} />
+    <div className="relative">
+      <div className="relative">
+        <Search 
+          size={16} 
+          className={`absolute left-3 top-1/2 -translate-y-1/2 ${
+            isDarkMode ? 'text-white/40' : 'text-black/40'
+          }`}
+        />
+        <input
+          type="text"
+          placeholder="Buscar por ID, descripción, área, usuario..."
+          value={searchTerm}
+          onChange={(e) => onSearchChange(e.target.value)}
+          onKeyDown={onKeyDown}
+          onBlur={onBlur}
+          className={`w-full pl-9 pr-4 py-2 rounded-lg border text-sm transition-all ${
+            isDarkMode
+              ? 'bg-black border-white/10 text-white placeholder:text-white/40 focus:border-white/20'
+              : 'bg-white border-black/10 text-black placeholder:text-black/40 focus:border-black/20'
+          } focus:outline-none`}
+        />
+        {searchMatchType && (
+          <motion.span 
+            initial={{ opacity: 0, scale: 0.8 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className={`absolute right-3 top-1/2 -translate-y-1/2 text-xs px-2 py-0.5 rounded-full font-medium ${
+              isDarkMode 
+                ? 'bg-white/10 text-white/80 border border-white/20' 
+                : 'bg-black/10 text-black/80 border border-black/20'
+            }`}
+          >
+            {searchMatchType}
+          </motion.span>
+        )}
       </div>
 
-      {/* Search input */}
-      <input
-        ref={inputRef}
-        spellCheck="false"
-        type="text"
-        value={searchTerm}
-        onChange={e => onSearchChange(e.target.value)}
-        onKeyDown={onKeyDown}
-        onBlur={onBlur}
-        placeholder="Buscar por ID, área, director, descripción, etc..."
-        className={`
-          pl-14 pr-32 py-3 w-full transition-all duration-300
-          text-lg font-semibold tracking-wide backdrop-blur-xl
-          focus:outline-none focus:ring-2 rounded-2xl shadow-2xl
-          ${isDarkMode
-            ? 'bg-black/80 text-white placeholder-neutral-500 focus:ring-white/50 focus:border-white/50 border-neutral-800 hover:shadow-white/10 focus:scale-[1.03] focus:bg-black/90' + (searchMatchType ? ' border-white/80 shadow-white/20' : '')
-            : 'bg-white border-gray-300 text-gray-900 placeholder-gray-400 focus:ring-blue-500 focus:border-blue-500 hover:border-gray-400 focus:scale-[1.02]' + (searchMatchType ? ' border-blue-400 shadow-blue-100' : '')
-          }
-        `}
-        title="Buscar"
-        aria-autocomplete="list"
-        aria-controls="omnibox-suggestions"
-        aria-activedescendant={highlightedIndex >= 0 ? `omnibox-suggestion-${highlightedIndex}` : undefined}
-        autoComplete="off"
-      />
+      {/* Suggestions dropdown */}
+      <AnimatePresence>
+        {showSuggestions && suggestions.length > 0 && (
+          <motion.div
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
+            transition={{ duration: 0.2 }}
+            className={`absolute z-50 w-full mt-2 rounded-lg border shadow-lg overflow-hidden ${
+              isDarkMode
+                ? 'bg-black border-white/10'
+                : 'bg-white border-black/10'
+            }`}
+          >
+            <div className={`max-h-60 overflow-y-auto p-1 ${
+              isDarkMode 
+                ? 'scrollbar-thin scrollbar-track-white/5 scrollbar-thumb-white/20 hover:scrollbar-thumb-white/30'
+                : 'scrollbar-thin scrollbar-track-black/5 scrollbar-thumb-black/20 hover:scrollbar-thumb-black/30'
+            }`}>
+              {suggestions.map((suggestion, index) => {
+                const isSelected = index === highlightedIndex;
+                return (
+                  <button
+                    key={`${suggestion.type}-${suggestion.value}-${index}`}
+                    type="button"
+                    onClick={() => onSuggestionSelect(suggestion)}
+                    className={`w-full flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-left transition-all duration-150 ${
+                      isSelected
+                        ? isDarkMode 
+                          ? 'bg-white/10 text-white' 
+                          : 'bg-black/10 text-black'
+                        : isDarkMode
+                          ? 'hover:bg-white/[0.04] text-white/90'
+                          : 'hover:bg-black/[0.03] text-black/90'
+                    }`}
+                  >
+                    {/* Icon based on type */}
+                    <span className={isSelected 
+                      ? (isDarkMode ? 'text-white' : 'text-black')
+                      : (isDarkMode ? 'text-white/40' : 'text-black/40')
+                    }>
+                      {suggestion.type === 'id' ? <Hash className="w-3.5 h-3.5" /> : 
+                       suggestion.type === 'area' ? <MapPin className="w-3.5 h-3.5" /> :
+                       suggestion.type === 'usufinal' ? <User className="w-3.5 h-3.5" /> :
+                       suggestion.type === 'descripcion' ? <FileText className="w-3.5 h-3.5" /> : 
+                       <Search className="w-3.5 h-3.5" />}
+                    </span>
 
-      {/* Dropdown de sugerencias omnibox flotante */}
-      <SuggestionDropdown />
+                    {/* Content */}
+                    <div className="flex-1 min-w-0">
+                      <div className="text-sm truncate font-medium">
+                        {suggestion.value}
+                      </div>
+                      <div className={`text-xs truncate ${
+                        isSelected
+                          ? (isDarkMode ? 'text-white/60' : 'text-black/60')
+                          : (isDarkMode ? 'text-white/40' : 'text-black/40')
+                      }`}>
+                        {suggestion.type === 'id' ? 'ID de Inventario' :
+                         suggestion.type === 'area' ? 'Área' :
+                         suggestion.type === 'usufinal' ? 'Usuario Final' :
+                         suggestion.type === 'descripcion' ? 'Descripción' :
+                         suggestion.type === 'resguardante' ? 'Resguardante' :
+                         suggestion.type === 'rubro' ? 'Rubro' :
+                         suggestion.type === 'estado' ? 'Estado' :
+                         suggestion.type === 'estatus' ? 'Estatus' : 
+                         suggestion.type || 'Búsqueda'}
+                      </div>
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Scrollbar styles */}
+      <style jsx>{`
+        .scrollbar-thin {
+          scrollbar-width: thin;
+        }
+        
+        .scrollbar-thin::-webkit-scrollbar {
+          width: 6px;
+        }
+        
+        .scrollbar-thin::-webkit-scrollbar-track {
+          background: ${isDarkMode ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.05)'};
+          border-radius: 3px;
+        }
+        
+        .scrollbar-thin::-webkit-scrollbar-thumb {
+          background: ${isDarkMode ? 'rgba(255, 255, 255, 0.2)' : 'rgba(0, 0, 0, 0.2)'};
+          border-radius: 3px;
+        }
+        
+        .scrollbar-thin::-webkit-scrollbar-thumb:hover {
+          background: ${isDarkMode ? 'rgba(255, 255, 255, 0.3)' : 'rgba(0, 0, 0, 0.3)'};
+        }
+      `}</style>
     </div>
   );
 }

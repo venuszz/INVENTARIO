@@ -4,8 +4,9 @@
  * Modal for completing missing director information (admin only).
  */
 
-import React, { useState, useEffect } from 'react';
-import { FileUp, AlertCircle, BadgeCheck, RefreshCw } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { X, AlertTriangle } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { DirectorioOption } from '../types';
 
 /**
@@ -83,89 +84,155 @@ export function DirectorDataModal({
   const isSaveDisabled = 
     loading ||
     !formData ||
-    !formData.nombre.trim() ||
-    !formData.puesto.trim();
+    !formData.nombre?.trim() ||
+    !formData.puesto?.trim();
 
   return (
-    <div className={`fixed inset-0 z-[110] flex items-center justify-center backdrop-blur-sm px-4 animate-fadeIn ${isDarkMode ? 'bg-black/90' : 'bg-black/50'}`}>
-      <div className={`border-2 rounded-2xl shadow-2xl w-full max-w-md overflow-hidden transition-all duration-300 transform ${isDarkMode ? 'bg-black border-white/30' : 'bg-white border-yellow-200'}`}>
-        <div className="relative p-7 sm:p-8">
-          {/* Top accent bar */}
-          <div className={`absolute top-0 left-0 w-full h-1 ${isDarkMode ? 'bg-white/30' : 'bg-yellow-200'}`} />
+    <AnimatePresence>
+      {show && (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          className={`fixed inset-0 z-[110] flex items-center justify-center px-4 backdrop-blur-sm ${
+            isDarkMode ? 'bg-black/80' : 'bg-black/50'
+          }`}
+          onClick={onCancel}
+        >
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95, y: 20 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.95, y: 20 }}
+            transition={{ duration: 0.2 }}
+            className={`rounded-lg border w-full max-w-md overflow-hidden backdrop-blur-xl ${
+              isDarkMode ? 'bg-black/95 border-white/10' : 'bg-white/95 border-black/10'
+            }`}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="p-6">
+              {/* Header */}
+              <div className="flex items-start justify-between mb-4">
+                <div className="flex items-center gap-3">
+                  <div className={`p-2 rounded-lg ${
+                    isDarkMode ? 'bg-yellow-500/10' : 'bg-yellow-50'
+                  }`}>
+                    <AlertTriangle size={20} className={isDarkMode ? 'text-yellow-400' : 'text-yellow-600'} />
+                  </div>
+                  <div>
+                    <h3 className={`text-lg font-medium ${isDarkMode ? 'text-white' : 'text-black'}`}>
+                      Completar datos del director
+                    </h3>
+                    <p className={`text-sm ${
+                      isDarkMode ? 'text-white/60' : 'text-black/60'
+                    }`}>
+                      Información faltante
+                    </p>
+                  </div>
+                </div>
+                <motion.button
+                  onClick={onCancel}
+                  className={`p-2 rounded-lg transition-colors ${
+                    isDarkMode
+                      ? 'hover:bg-white/10 text-white'
+                      : 'hover:bg-black/10 text-black'
+                  }`}
+                  whileHover={{ scale: 1.1 }}
+                  whileTap={{ scale: 0.9 }}
+                >
+                  <X size={16} />
+                </motion.button>
+              </div>
 
-          {/* Header */}
-          <h2 className={`text-2xl font-extrabold mb-2 flex items-center gap-2 tracking-tight ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
-            <FileUp className={`h-6 w-6 ${isDarkMode ? 'text-white' : 'text-yellow-600'}`} />
-            Completar datos del director
-          </h2>
+              {/* Form fields */}
+              <div className="space-y-4 mb-6">
+                {/* Nombre input */}
+                <div>
+                  <label className={`block text-xs font-medium mb-1.5 ${
+                    isDarkMode ? 'text-white/60' : 'text-black/60'
+                  }`}>
+                    Nombre completo
+                  </label>
+                  <input
+                    type="text"
+                    className={`w-full px-3 py-2 rounded-lg border text-sm transition-all ${
+                      isDarkMode
+                        ? 'bg-black border-white/10 text-white placeholder:text-white/40 focus:border-white/20'
+                        : 'bg-white border-black/10 text-black placeholder:text-black/40 focus:border-black/20'
+                    } focus:outline-none`}
+                    value={formData.nombre ?? ''}
+                    onChange={e => handleNombreChange(e.target.value)}
+                    placeholder="Ej: JUAN PÉREZ GÓMEZ"
+                    autoFocus
+                    maxLength={80}
+                  />
+                </div>
 
-          {/* Description */}
-          <p className={`text-base mb-6 font-medium flex items-center gap-2 ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>
-            <AlertCircle className={`h-5 w-5 ${isDarkMode ? 'text-gray-400' : 'text-yellow-500'}`} />
-            El director seleccionado no tiene todos sus datos completos. Por favor, completa la información faltante.
-          </p>
+                {/* Puesto input */}
+                <div>
+                  <label className={`block text-xs font-medium mb-1.5 ${
+                    isDarkMode ? 'text-white/60' : 'text-black/60'
+                  }`}>
+                    Cargo o puesto
+                  </label>
+                  <input
+                    type="text"
+                    className={`w-full px-3 py-2 rounded-lg border text-sm transition-all ${
+                      isDarkMode
+                        ? 'bg-black border-white/10 text-white placeholder:text-white/40 focus:border-white/20'
+                        : 'bg-white border-black/10 text-black placeholder:text-black/40 focus:border-black/20'
+                    } focus:outline-none`}
+                    value={formData.puesto ?? ''}
+                    onChange={e => handlePuestoChange(e.target.value)}
+                    placeholder="Ej: DIRECTOR, JEFE DE ÁREA..."
+                    maxLength={60}
+                  />
+                </div>
+              </div>
 
-          {/* Form fields */}
-          <div className="flex flex-col gap-6">
-            {/* Nombre input */}
-            <div>
-              <label className={`block text-xs uppercase tracking-wider mb-1 font-bold ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>
-                Nombre
-              </label>
-              <input
-                type="text"
-                className={`w-full border-2 rounded-xl px-4 py-3 text-lg font-semibold shadow-inner focus:outline-none transition-all duration-200 ${isDarkMode ? 'bg-gray-900 border-white/30 focus:border-white/60 text-white placeholder:text-gray-400/60' : 'bg-white border-yellow-300 focus:border-yellow-500 text-gray-900 placeholder:text-gray-500'}`}
-                value={formData.nombre ?? ''}
-                onChange={e => handleNombreChange(e.target.value)}
-                placeholder="Ej: JUAN PÉREZ GÓMEZ"
-                autoFocus
-                maxLength={80}
-              />
+              {/* Action buttons */}
+              <div className="flex gap-2">
+                <motion.button
+                  onClick={onCancel}
+                  disabled={loading}
+                  className={`flex-1 px-4 py-2 rounded-lg border text-sm font-medium transition-all ${
+                    isDarkMode
+                      ? 'bg-black border-white/10 text-white hover:border-white/20 hover:bg-white/[0.02]'
+                      : 'bg-white border-black/10 text-black hover:border-black/20 hover:bg-black/[0.02]'
+                  }`}
+                  whileHover={{ scale: 1.01 }}
+                  whileTap={{ scale: 0.99 }}
+                >
+                  Cancelar
+                </motion.button>
+                <motion.button
+                  onClick={handleSave}
+                  disabled={isSaveDisabled}
+                  className={`flex-1 px-4 py-2 rounded-lg border text-sm font-medium flex items-center justify-center gap-2 transition-all ${
+                    isSaveDisabled
+                      ? isDarkMode
+                        ? 'bg-black border-white/5 text-white/40 cursor-not-allowed'
+                        : 'bg-white border-black/5 text-black/40 cursor-not-allowed'
+                      : isDarkMode
+                        ? 'bg-white text-black border-white hover:bg-white/90'
+                        : 'bg-black text-white border-black hover:bg-black/90'
+                  }`}
+                  whileHover={!isSaveDisabled ? { scale: 1.01 } : {}}
+                  whileTap={!isSaveDisabled ? { scale: 0.99 } : {}}
+                >
+                  {loading ? (
+                    <>
+                      <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
+                      Guardando...
+                    </>
+                  ) : (
+                    'Guardar'
+                  )}
+                </motion.button>
+              </div>
             </div>
-
-            {/* Puesto input */}
-            <div>
-              <label className={`block text-xs uppercase tracking-wider mb-1 font-bold ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>
-                Cargo
-              </label>
-              <input
-                type="text"
-                className={`w-full border-2 rounded-xl px-4 py-3 text-lg font-semibold shadow-inner focus:outline-none transition-all duration-200 ${isDarkMode ? 'bg-gray-900 border-white/30 focus:border-white/60 text-white placeholder:text-gray-400/60' : 'bg-white border-yellow-300 focus:border-yellow-500 text-gray-900 placeholder:text-gray-500'}`}
-                value={formData.puesto ?? ''}
-                onChange={e => handlePuestoChange(e.target.value)}
-                placeholder="Ej: DIRECTOR, JEFE DE ÁREA..."
-                maxLength={60}
-              />
-            </div>
-          </div>
-
-          {/* Action buttons */}
-          <div className="flex justify-end gap-2 mt-8">
-            <button
-              className={`px-4 py-2 rounded-lg text-sm font-semibold border transition-all duration-200 shadow ${isDarkMode ? 'border-gray-700 bg-gray-900 text-gray-300 hover:bg-gray-800' : 'border-gray-300 bg-gray-100 text-gray-700 hover:bg-gray-200'}`}
-              onClick={onCancel}
-              disabled={loading}
-            >
-              Cancelar
-            </button>
-            <button
-              className={`px-4 py-2 rounded-lg text-sm font-bold flex items-center gap-2 transition-all duration-200 shadow border
-                ${isDarkMode ? 'bg-white/10 text-white border-white/30' : 'bg-yellow-600 text-white border-yellow-600'}
-                ${isSaveDisabled ? 'opacity-60 cursor-not-allowed' : isDarkMode ? 'hover:bg-white/20' : 'hover:bg-yellow-700'}
-              `}
-              onClick={handleSave}
-              disabled={isSaveDisabled}
-            >
-              {loading ? (
-                <RefreshCw className="h-4 w-4 animate-spin" />
-              ) : (
-                <BadgeCheck className="h-4 w-4" />
-              )}
-              Guardar
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>
+          </motion.div>
+        </motion.div>
+      )}
+    </AnimatePresence>
   );
 }

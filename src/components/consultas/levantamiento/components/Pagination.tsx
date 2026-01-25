@@ -1,11 +1,12 @@
 /**
- * Pagination component for the Levantamiento table
+ * Pagination Component
  * 
- * Provides page navigation controls, rows-per-page selector, and record count display.
+ * Provides pagination controls with page navigation and rows per page selector.
  */
 
-import React from 'react';
-import { ChevronLeft, ChevronRight, AlertCircle } from 'lucide-react';
+import React, { useState, useRef, useEffect } from 'react';
+import { ChevronLeft, ChevronRight, ChevronDown, Check } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
 
 /**
  * Component props interface
@@ -24,14 +25,13 @@ interface PaginationProps {
  * Pagination component
  * 
  * Renders pagination controls with:
- * - Record count display
- * - Rows-per-page selector
- * - First/Previous/Next/Last navigation buttons
- * - Numbered page buttons with ellipsis
+ * - Previous/Next page buttons
  * - Current page indicator
+ * - Custom dropdown for rows per page selector
+ * - Total count display
  * 
  * @param props - Component props
- * @returns Pagination UI
+ * @returns JSX element with pagination controls
  */
 export function Pagination({
   currentPage,
@@ -43,199 +43,152 @@ export function Pagination({
   isDarkMode
 }: PaginationProps) {
   
-  /**
-   * Generate numbered page buttons with ellipsis
-   */
-  const renderPageButtons = () => {
-    const pageButtons = [];
-    const maxButtons = 5; // Maximum number of visible page buttons
-    
-    let start = Math.max(1, currentPage - 2);
-    let end = Math.min(totalPages, currentPage + 2);
-    
-    // Adjust range for pages near the start
-    if (currentPage <= 3) {
-      end = Math.min(totalPages, maxButtons);
+  const rowsOptions = [10, 25, 50, 100];
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setIsDropdownOpen(false);
+      }
     }
-    // Adjust range for pages near the end
-    else if (currentPage >= totalPages - 2) {
-      start = Math.max(1, totalPages - maxButtons + 1);
+
+    if (isDropdownOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+      return () => document.removeEventListener('mousedown', handleClickOutside);
     }
-    
-    // Add start ellipsis if needed
-    if (start > 1) {
-      pageButtons.push(
-        <span 
-          key="start-ellipsis" 
-          className={`px-2 ${isDarkMode ? 'text-neutral-500' : 'text-gray-500'}`}
-        >
-          ...
-        </span>
-      );
-    }
-    
-    // Add numbered page buttons
-    for (let i = start; i <= end; i++) {
-      const isCurrentPage = i === currentPage;
-      pageButtons.push(
-        <button
-          key={i}
-          onClick={() => onPageChange(i)}
-          className={`mx-0.5 px-3 py-1.5 rounded-lg border text-sm font-semibold transition
-            ${isCurrentPage
-              ? isDarkMode 
-                ? 'bg-white/10 text-white border-white/30 shadow' 
-                : 'bg-blue-600 text-white border-blue-600 shadow'
-              : isDarkMode 
-                ? 'bg-neutral-900 text-neutral-300 border-neutral-700 hover:bg-white/5 hover:text-white hover:border-white/20' 
-                : 'bg-gray-100 text-gray-700 border-gray-300 hover:bg-gray-200 hover:text-gray-900 hover:border-gray-400'
-            }
-          `}
-          aria-current={isCurrentPage ? 'page' : undefined}
-        >
-          {i}
-        </button>
-      );
-    }
-    
-    // Add end ellipsis if needed
-    if (end < totalPages) {
-      pageButtons.push(
-        <span 
-          key="end-ellipsis" 
-          className={`px-2 ${isDarkMode ? 'text-neutral-500' : 'text-gray-500'}`}
-        >
-          ...
-        </span>
-      );
-    }
-    
-    return pageButtons;
+  }, [isDropdownOpen]);
+
+  const handleRowsChange = (rows: number) => {
+    onRowsPerPageChange(rows);
+    setIsDropdownOpen(false);
   };
 
+  // Calculate range display
+  const startRange = (currentPage - 1) * rowsPerPage + 1;
+  const endRange = Math.min(currentPage * rowsPerPage, totalCount);
+
   return (
-    <>
-      {/* Record count and rows-per-page selector */}
-      <div className="flex flex-col sm:flex-row gap-3 items-center justify-between mt-4 mb-3 px-2">
-        {/* Record counter */}
-        <div className={`flex items-center gap-2 px-4 py-2 rounded-xl border shadow-inner ${isDarkMode ? 'bg-neutral-900/50 border-neutral-800' : 'bg-gray-100 border-gray-200'}`}>
-          {totalCount === 0 ? (
-            <span className={`flex items-center gap-2 ${isDarkMode ? 'text-neutral-400' : 'text-gray-600'}`}>
-              <AlertCircle className={`h-4 w-4 ${isDarkMode ? 'text-neutral-500' : 'text-gray-500'}`} />
-              No hay registros para mostrar
-            </span>
-          ) : (
-            <div className="flex items-center gap-2">
-              <span className={isDarkMode ? 'text-neutral-300' : 'text-gray-700'}>
-                Mostrando
-              </span>
-              <span className={`px-2 py-0.5 rounded-lg font-mono border ${isDarkMode ? 'bg-white/10 text-white border-white/30' : 'bg-white text-gray-900 border-gray-300'}`}>
-                {((currentPage - 1) * rowsPerPage) + 1}–{Math.min(currentPage * rowsPerPage, totalCount)}
-              </span>
-              <span className={isDarkMode ? 'text-neutral-300' : 'text-gray-700'}>
-                de
-              </span>
-              <span className={`px-2 py-0.5 rounded-lg font-mono border ${isDarkMode ? 'bg-neutral-900 text-neutral-300 border-neutral-800' : 'bg-gray-200 text-gray-700 border-gray-300'}`}>
-                {totalCount}
-              </span>
-              <span className={isDarkMode ? 'text-neutral-400' : 'text-gray-600'}>
-                registros
-              </span>
-              
-              {/* Rows per page selector */}
-              <span className={`ml-4 ${isDarkMode ? 'text-neutral-400' : 'text-gray-500'}`}>
-                |
-              </span>
-              <label 
-                htmlFor="rows-per-page" 
-                className={`ml-2 text-xs ${isDarkMode ? 'text-neutral-400' : 'text-gray-600'}`}
+    <div className={`mt-6 flex flex-col sm:flex-row items-center justify-between gap-4 px-4 py-3 ${
+      isDarkMode ? 'text-white' : 'text-black'
+    }`}>
+      {/* Left side: Rows per page selector */}
+      <div className="flex items-center gap-3">
+        <span className={`text-sm ${isDarkMode ? 'text-white/60' : 'text-black/60'}`}>
+          Mostrar
+        </span>
+        
+        {/* Custom dropdown */}
+        <div className="relative" ref={dropdownRef}>
+          <button
+            onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+            className={`flex items-center gap-2 px-3 py-1.5 rounded-lg border text-sm font-medium transition-all ${
+              isDarkMode
+                ? 'bg-white/5 border-white/10 text-white hover:bg-white/10'
+                : 'bg-black/5 border-black/10 text-black hover:bg-black/10'
+            }`}
+          >
+            {rowsPerPage}
+            <ChevronDown 
+              size={14} 
+              className={`transition-transform ${isDropdownOpen ? 'rotate-180' : ''}`}
+            />
+          </button>
+
+          <AnimatePresence>
+            {isDropdownOpen && (
+              <motion.div
+                initial={{ opacity: 0, y: -10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -10 }}
+                transition={{ duration: 0.15 }}
+                className={`absolute top-full mt-1 left-0 min-w-[80px] rounded-lg border backdrop-blur-xl shadow-lg z-50 overflow-hidden ${
+                  isDarkMode 
+                    ? 'bg-black/95 border-white/10' 
+                    : 'bg-white/95 border-black/10'
+                }`}
               >
-                Filas por página:
-              </label>
-              <select
-                id="rows-per-page"
-                value={rowsPerPage}
-                onChange={e => onRowsPerPageChange(Number(e.target.value))}
-                className={`ml-1 px-2 py-1 rounded-lg border font-mono text-xs focus:outline-none focus:ring-2 transition ${isDarkMode ? 'bg-neutral-900 border-neutral-700 text-white focus:ring-white/50 focus:border-white/50' : 'bg-white border-gray-300 text-gray-900 focus:ring-blue-500 focus:border-blue-500'}`}
-              >
-                {[10, 20, 30, 50, 100].map(opt => (
-                  <option key={opt} value={opt}>{opt}</option>
+                {rowsOptions.map((option) => (
+                  <button
+                    key={option}
+                    onClick={() => handleRowsChange(option)}
+                    className={`w-full flex items-center justify-between px-3 py-2 text-sm transition-colors ${
+                      option === rowsPerPage
+                        ? isDarkMode
+                          ? 'bg-white/10 text-white'
+                          : 'bg-black/10 text-black'
+                        : isDarkMode
+                          ? 'text-white/80 hover:bg-white/5'
+                          : 'text-black/80 hover:bg-black/5'
+                    }`}
+                  >
+                    <span>{option}</span>
+                    {option === rowsPerPage && (
+                      <Check size={14} className={isDarkMode ? 'text-white' : 'text-black'} />
+                    )}
+                  </button>
                 ))}
-              </select>
-            </div>
-          )}
+              </motion.div>
+            )}
+          </AnimatePresence>
         </div>
 
-        {/* Current page indicator */}
-        {totalPages > 1 && (
-          <div className={`flex items-center gap-2 px-4 py-2 rounded-xl border shadow-inner ${isDarkMode ? 'bg-neutral-900/50 border-neutral-800' : 'bg-gray-100 border-gray-200'}`}>
-            <span className={isDarkMode ? 'text-neutral-400' : 'text-gray-600'}>
-              Página
-            </span>
-            <div className="flex items-center gap-1.5">
-              <span className={`px-2.5 py-0.5 rounded-lg font-mono font-bold border min-w-[2rem] text-center transition-all duration-300 hover:scale-105 ${isDarkMode ? 'bg-white/20 text-white border-white/40 hover:bg-white/30' : 'bg-blue-100 text-blue-900 border-blue-300 hover:bg-blue-200'}`}>
-                {currentPage}
-              </span>
-              <span className={isDarkMode ? 'text-neutral-500' : 'text-gray-500'}>
-                /
-              </span>
-              <span className={`px-2.5 py-0.5 rounded-lg font-mono min-w-[2rem] text-center border ${isDarkMode ? 'bg-neutral-900 text-neutral-400 border-neutral-800' : 'bg-gray-200 text-gray-700 border-gray-300'}`}>
-                {totalPages}
-              </span>
-            </div>
-          </div>
-        )}
+        <span className={`text-sm ${isDarkMode ? 'text-white/60' : 'text-black/60'}`}>
+          registros
+        </span>
       </div>
 
-      {/* Pagination navigation bar */}
-      {totalPages > 1 && (
-        <div className="flex items-center justify-center gap-2 mt-6 select-none">
-          {/* First page button */}
-          <button
-            onClick={() => onPageChange(1)}
-            disabled={currentPage === 1}
-            className={`px-2 py-1 rounded-lg border transition disabled:opacity-40 disabled:cursor-not-allowed ${isDarkMode ? 'border-neutral-800 bg-neutral-900 text-neutral-400 hover:text-white hover:bg-neutral-800' : 'border-gray-300 bg-gray-100 text-gray-600 hover:text-gray-900 hover:bg-gray-200'}`}
-            title="Primera página"
-          >
-            <ChevronLeft className="inline h-4 w-4 -mr-1" />
-            <ChevronLeft className="inline h-4 w-4 -ml-2" />
-          </button>
+      {/* Center: Range display */}
+      <div className={`text-sm ${isDarkMode ? 'text-white/60' : 'text-black/60'}`}>
+        {startRange}-{endRange} de {totalCount}
+      </div>
 
-          {/* Previous page button */}
-          <button
-            onClick={() => onPageChange(currentPage - 1)}
-            disabled={currentPage === 1}
-            className={`px-2 py-1 rounded-lg border transition disabled:opacity-40 disabled:cursor-not-allowed ${isDarkMode ? 'border-neutral-800 bg-neutral-900 text-neutral-400 hover:text-white hover:bg-neutral-800' : 'border-gray-300 bg-gray-100 text-gray-600 hover:text-gray-900 hover:bg-gray-200'}`}
-            title="Página anterior"
-          >
-            <ChevronLeft className="h-4 w-4" />
-          </button>
+      {/* Right side: Page navigation */}
+      <div className="flex items-center gap-2">
+        <button
+          onClick={() => onPageChange(currentPage - 1)}
+          disabled={currentPage === 1}
+          className={`p-2 rounded-lg border transition-all ${
+            currentPage === 1
+              ? isDarkMode
+                ? 'border-white/5 text-white/20 cursor-not-allowed'
+                : 'border-black/5 text-black/20 cursor-not-allowed'
+              : isDarkMode
+                ? 'border-white/10 text-white hover:bg-white/5'
+                : 'border-black/10 text-black hover:bg-black/5'
+          }`}
+          title="Página anterior"
+        >
+          <ChevronLeft size={16} />
+        </button>
 
-          {/* Numbered page buttons */}
-          {renderPageButtons()}
-
-          {/* Next page button */}
-          <button
-            onClick={() => onPageChange(currentPage + 1)}
-            disabled={currentPage === totalPages}
-            className={`px-2 py-1 rounded-lg border transition disabled:opacity-40 disabled:cursor-not-allowed ${isDarkMode ? 'border-neutral-800 bg-neutral-900 text-neutral-400 hover:text-white hover:bg-neutral-800' : 'border-gray-300 bg-gray-100 text-gray-600 hover:text-gray-900 hover:bg-gray-200'}`}
-            title="Página siguiente"
-          >
-            <ChevronRight className="h-4 w-4" />
-          </button>
-
-          {/* Last page button */}
-          <button
-            onClick={() => onPageChange(totalPages)}
-            disabled={currentPage === totalPages}
-            className={`px-2 py-1 rounded-lg border transition disabled:opacity-40 disabled:cursor-not-allowed ${isDarkMode ? 'border-neutral-800 bg-neutral-900 text-neutral-400 hover:text-white hover:bg-neutral-800' : 'border-gray-300 bg-gray-100 text-gray-600 hover:text-gray-900 hover:bg-gray-200'}`}
-            title="Última página"
-          >
-            <ChevronRight className="inline h-4 w-4 -mr-2" />
-            <ChevronRight className="inline h-4 w-4 -ml-1" />
-          </button>
+        <div className={`flex items-center gap-2 px-3 py-1.5 text-sm ${
+          isDarkMode ? 'text-white/80' : 'text-black/80'
+        }`}>
+          <span className="font-medium">{currentPage}</span>
+          <span className={isDarkMode ? 'text-white/40' : 'text-black/40'}>de</span>
+          <span className="font-medium">{totalPages}</span>
         </div>
-      )}
-    </>
+
+        <button
+          onClick={() => onPageChange(currentPage + 1)}
+          disabled={currentPage === totalPages}
+          className={`p-2 rounded-lg border transition-all ${
+            currentPage === totalPages
+              ? isDarkMode
+                ? 'border-white/5 text-white/20 cursor-not-allowed'
+                : 'border-black/5 text-black/20 cursor-not-allowed'
+              : isDarkMode
+                ? 'border-white/10 text-white hover:bg-white/5'
+                : 'border-black/10 text-black hover:bg-black/5'
+          }`}
+          title="Página siguiente"
+        >
+          <ChevronRight size={16} />
+        </button>
+      </div>
+    </div>
   );
 }

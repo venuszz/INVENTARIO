@@ -4,8 +4,8 @@
  * Displays a modal for confirming Excel or PDF export operations.
  */
 
-import React from 'react';
-import { X, FileUp, File, RefreshCw } from 'lucide-react';
+import { X, FileSpreadsheet, FileText } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { ExportType } from '../types';
 
 /**
@@ -46,88 +46,138 @@ export function ExportModal({
   const fileName = `Reporte_inventario_${new Date().toISOString().slice(0, 10)}.${exportType === 'excel' ? 'xlsx' : 'pdf'}`;
 
   return (
-    <div className={`fixed inset-0 flex items-center justify-center z-50 px-4 animate-fadeIn ${isDarkMode ? 'bg-black/90' : 'bg-black/50'}`}>
-      <div className={`rounded-2xl shadow-2xl border w-full max-w-md overflow-hidden transition-all duration-300 transform ${isDarkMode ? 'bg-black border-white/30' : 'bg-white border-gray-200'}`}>
-        <div className={`relative p-6 ${isDarkMode ? 'bg-black' : 'bg-white'}`}>
-          {/* Top accent bar */}
-          <div className={`absolute top-0 left-0 w-full h-1 ${isDarkMode ? 'bg-white/30' : 'bg-blue-200'}`}></div>
-
-          {/* Close button */}
-          <button
-            onClick={onCancel}
-            className={`absolute top-3 right-3 p-2 rounded-full border transition-colors ${isDarkMode ? 'bg-black/60 hover:bg-white/10 text-white border-white/30' : 'bg-gray-100 hover:bg-gray-200 text-gray-600 border-gray-300'}`}
-            title="Cerrar"
+    <AnimatePresence>
+      {show && (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          className={`fixed inset-0 flex items-center justify-center z-50 px-4 backdrop-blur-sm ${
+            isDarkMode ? 'bg-black/80' : 'bg-black/50'
+          }`}
+          onClick={onCancel}
+        >
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95, y: 20 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.95, y: 20 }}
+            transition={{ duration: 0.2 }}
+            className={`rounded-lg border w-full max-w-md overflow-hidden backdrop-blur-xl ${
+              isDarkMode ? 'bg-black/95 border-white/10' : 'bg-white/95 border-black/10'
+            }`}
+            onClick={(e) => e.stopPropagation()}
           >
-            <X className="h-4 w-4" />
-          </button>
-
-          {/* Header */}
-          <div className="flex flex-col items-center text-center mb-4">
-            <div className={`p-3 rounded-full border mb-3 ${isDarkMode ? 'border-white/30 bg-white/10' : 'bg-blue-200 bg-blue-50'}`}>
-              {exportType === 'excel' ? (
-                <FileUp className={`h-8 w-8 ${isDarkMode ? 'text-white' : 'text-blue-600'}`} />
-              ) : (
-                <File className={`h-8 w-8 ${isDarkMode ? 'text-white' : 'text-blue-600'}`} />
-              )}
-            </div>
-            <h3 className={`text-2xl font-bold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
-              Exportar a {exportType === 'excel' ? 'Excel' : 'PDF'}
-            </h3>
-            <p className={`mt-2 ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>
-              Exportar los datos a un archivo {exportType === 'excel' ? 'Excel para su análisis' : 'PDF para su visualización'}
-            </p>
-          </div>
-
-          {/* Content */}
-          <div className="space-y-5 mt-6">
-            {/* File preview */}
-            <div className={`rounded-lg border p-4 ${isDarkMode ? 'border-gray-800 bg-gray-900/50' : 'border-gray-200 bg-gray-50'}`}>
-              <label className={`block text-xs uppercase tracking-wider mb-1 font-bold ${isDarkMode ? 'text-gray-500' : 'text-gray-600'}`}>
-                Documento a generar
-              </label>
-              <div className="flex items-center gap-3">
-                <div className={`p-2 rounded-lg ${isDarkMode ? 'bg-white/10' : 'bg-blue-100'}`}>
-                  {exportType === 'excel' ? (
-                    <FileUp className={`h-4 w-4 ${isDarkMode ? 'text-white' : 'text-blue-600'}`} />
-                  ) : (
-                    <File className={`h-4 w-4 ${isDarkMode ? 'text-white' : 'text-blue-600'}`} />
-                  )}
+            <div className="p-6">
+              {/* Header */}
+              <div className="flex items-start justify-between mb-6">
+                <div className="flex items-center gap-3">
+                  <div className={`p-2 rounded-lg ${
+                    isDarkMode ? 'bg-white/10' : 'bg-black/10'
+                  }`}>
+                    {exportType === 'excel' ? (
+                      <FileSpreadsheet size={20} className={isDarkMode ? 'text-white' : 'text-black'} />
+                    ) : (
+                      <FileText size={20} className={isDarkMode ? 'text-white' : 'text-black'} />
+                    )}
+                  </div>
+                  <div>
+                    <h3 className={`text-lg font-medium ${isDarkMode ? 'text-white' : 'text-black'}`}>
+                      Exportar a {exportType === 'excel' ? 'Excel' : 'PDF'}
+                    </h3>
+                    <p className={`text-sm ${
+                      isDarkMode ? 'text-white/60' : 'text-black/60'
+                    }`}>
+                      {exportType === 'excel' ? 'Archivo para análisis' : 'Documento para visualización'}
+                    </p>
+                  </div>
                 </div>
-                <span className={`font-medium ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
-                  {fileName}
-                </span>
+                <motion.button
+                  onClick={onCancel}
+                  className={`p-2 rounded-lg transition-colors ${
+                    isDarkMode
+                      ? 'hover:bg-white/10 text-white'
+                      : 'hover:bg-black/10 text-black'
+                  }`}
+                  whileHover={{ scale: 1.1 }}
+                  whileTap={{ scale: 0.9 }}
+                >
+                  <X size={16} />
+                </motion.button>
               </div>
-            </div>
 
-            {/* Action buttons */}
-            <div className="w-full flex flex-col items-center gap-4">
-              <div className="w-full">
-                <button
+              {/* File preview */}
+              <div className={`p-3 rounded-lg border mb-6 ${
+                isDarkMode
+                  ? 'bg-white/[0.02] border-white/10'
+                  : 'bg-black/[0.02] border-black/10'
+              }`}>
+                <label className={`block text-xs font-medium mb-1 ${
+                  isDarkMode ? 'text-white/60' : 'text-black/60'
+                }`}>
+                  Archivo a generar
+                </label>
+                <div className="flex items-center gap-2">
+                  {exportType === 'excel' ? (
+                    <FileSpreadsheet size={16} className={isDarkMode ? 'text-white/60' : 'text-black/60'} />
+                  ) : (
+                    <FileText size={16} className={isDarkMode ? 'text-white/60' : 'text-black/60'} />
+                  )}
+                  <span className={`text-sm font-medium truncate ${isDarkMode ? 'text-white' : 'text-black'}`}>
+                    {fileName}
+                  </span>
+                </div>
+              </div>
+
+              {/* Action buttons */}
+              <div className="flex gap-2">
+                <motion.button
+                  onClick={onCancel}
+                  className={`flex-1 px-4 py-2 rounded-lg border text-sm font-medium transition-all ${
+                    isDarkMode
+                      ? 'bg-black border-white/10 text-white hover:border-white/20 hover:bg-white/[0.02]'
+                      : 'bg-white border-black/10 text-black hover:border-black/20 hover:bg-black/[0.02]'
+                  }`}
+                  whileHover={{ scale: 1.01 }}
+                  whileTap={{ scale: 0.99 }}
+                >
+                  Cancelar
+                </motion.button>
+                <motion.button
                   onClick={onConfirm}
                   disabled={loading}
-                  className={`w-full py-3 px-4 font-medium rounded-lg flex items-center justify-center gap-2 transition-all transform hover:scale-[1.02] shadow-lg border disabled:opacity-60 disabled:cursor-not-allowed ${isDarkMode ? 'bg-white/20 hover:bg-white/30 text-white border-white/30' : 'bg-blue-600 hover:bg-blue-700 text-white border-blue-600'}`}
+                  className={`flex-1 px-4 py-2 rounded-lg border text-sm font-medium flex items-center justify-center gap-2 transition-all ${
+                    loading
+                      ? isDarkMode
+                        ? 'bg-black border-white/5 text-white/40 cursor-not-allowed'
+                        : 'bg-white border-black/5 text-black/40 cursor-not-allowed'
+                      : isDarkMode
+                        ? 'bg-white text-black border-white hover:bg-white/90'
+                        : 'bg-black text-white border-black hover:bg-black/90'
+                  }`}
+                  whileHover={!loading ? { scale: 1.01 } : {}}
+                  whileTap={!loading ? { scale: 0.99 } : {}}
                 >
                   {loading ? (
                     <>
-                      <RefreshCw className="h-5 w-5 animate-spin" />
-                      {`Generando ${exportType === 'excel' ? 'Excel' : 'PDF'}...`}
+                      <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
+                      Generando...
                     </>
                   ) : (
                     <>
                       {exportType === 'excel' ? (
-                        <FileUp className="h-5 w-5" />
+                        <FileSpreadsheet size={16} />
                       ) : (
-                        <File className="h-5 w-5" />
+                        <FileText size={16} />
                       )}
-                      {`Descargar ${exportType === 'excel' ? 'Excel' : 'PDF'}`}
+                      Descargar
                     </>
                   )}
-                </button>
+                </motion.button>
               </div>
             </div>
-          </div>
-        </div>
-      </div>
-    </div>
+          </motion.div>
+        </motion.div>
+      )}
+    </AnimatePresence>
   );
 }

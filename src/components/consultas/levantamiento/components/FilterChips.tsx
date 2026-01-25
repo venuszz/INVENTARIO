@@ -5,8 +5,8 @@
  * Provides visual feedback and easy filter removal.
  */
 
-import React from 'react';
 import { X } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { ActiveFilter } from '../types';
 
 /**
@@ -22,17 +22,17 @@ interface FilterChipsProps {
  * Get abbreviated label for filter type
  * Used in chip display for compact representation
  */
-function getFilterTypeAbbreviation(type: ActiveFilter['type']): string {
+function getFilterTypeLabel(type: ActiveFilter['type']): string {
   switch (type) {
     case 'id': return 'ID';
-    case 'descripcion': return 'Desc';
+    case 'descripcion': return 'Descripción';
     case 'rubro': return 'Rubro';
-    case 'estado': return 'Edo';
-    case 'estatus': return 'Est';
+    case 'estado': return 'Estado';
+    case 'estatus': return 'Estatus';
     case 'area': return 'Área';
-    case 'usufinal': return 'Usu';
-    case 'resguardante': return 'Resg';
-    default: return type || '';
+    case 'usufinal': return 'Usuario';
+    case 'resguardante': return 'Resguardante';
+    default: return type || 'Filtro';
   }
 }
 
@@ -56,7 +56,7 @@ export function FilterChips({
   activeFilters,
   onRemoveFilter,
   isDarkMode
-}: FilterChipsProps): React.ReactElement | null {
+}: FilterChipsProps) {
   
   // Don't render if no filters
   if (activeFilters.length === 0) {
@@ -64,44 +64,54 @@ export function FilterChips({
   }
 
   return (
-    <div className="flex flex-wrap gap-2 mt-1 px-1">
-      {activeFilters.map((filter, index) => {
-        const colorClass = isDarkMode
-          ? 'bg-white/10 border-white/30 text-white/90'
-          : 'bg-blue-50 border-blue-200 text-blue-800';
-
-        return (
-          <div
-            key={index}
-            className={`inline-flex items-center px-2 py-0.5 rounded-full ${colorClass} text-xs font-medium shadow-sm hover:shadow-md transition-all duration-200 border`}
+    <div className="flex flex-wrap gap-1.5">
+      <AnimatePresence mode="popLayout">
+        {activeFilters.map((filter, index) => (
+          <motion.div
+            key={`${filter.type}-${filter.term}-${index}`}
+            layout
+            initial={{ opacity: 0, scale: 0.8 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.8 }}
+            transition={{ 
+              layout: { type: 'spring', stiffness: 350, damping: 30 },
+              opacity: { duration: 0.2 }
+            }}
+            className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium border transition-all ${
+              isDarkMode
+                ? 'bg-white/10 text-white border-white/20'
+                : 'bg-black/10 text-black border-black/20'
+            }`}
           >
             {/* Filter type label */}
-            <span className="uppercase font-semibold opacity-70 mr-1 text-[10px]">
-              {getFilterTypeAbbreviation(filter.type)}
+            <span className={`text-[10px] font-semibold ${
+              isDarkMode ? 'text-white/60' : 'text-black/60'
+            }`}>
+              {getFilterTypeLabel(filter.type)}
             </span>
 
-            {/* Filter value */}
-            <span className="truncate max-w-[120px]">
+            {/* Filter value - sin truncar */}
+            <span className="whitespace-nowrap">
               {filter.term}
             </span>
 
             {/* Remove button */}
-            <button
+            <motion.button
               onClick={() => onRemoveFilter(index)}
-              className={`ml-1 p-0.5 rounded-full text-xs focus:outline-none focus:ring-1 focus:ring-red-500 transition-colors ${
+              className={`p-0.5 rounded-full transition-colors ${
                 isDarkMode
-                  ? 'text-white/60 hover:text-white'
-                  : 'text-blue-600/60 hover:text-blue-800'
+                  ? 'hover:bg-white/10 text-white/60 hover:text-white'
+                  : 'hover:bg-black/10 text-black/60 hover:text-black'
               }`}
               title="Eliminar filtro"
-              tabIndex={0}
-              aria-label={`Eliminar filtro ${getFilterTypeAbbreviation(filter.type)}: ${filter.term}`}
+              whileHover={{ scale: 1.2 }}
+              whileTap={{ scale: 0.9 }}
             >
-              <X className="h-3 w-3" />
-            </button>
-          </div>
-        );
-      })}
+              <X size={12} />
+            </motion.button>
+          </motion.div>
+        ))}
+      </AnimatePresence>
     </div>
   );
 }

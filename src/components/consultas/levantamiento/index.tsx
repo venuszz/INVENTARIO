@@ -446,28 +446,36 @@ export default function LevantamientoUnificado() {
 
   return (
     <>
-      <div className={`min-h-screen p-2 sm:p-4 md:p-6 lg:p-8 ${isDarkMode ? 'bg-black text-white' : 'bg-gray-50 text-gray-900'}`}>
-        <div className={`w-full mx-auto rounded-lg sm:rounded-xl shadow-2xl overflow-hidden border ${isDarkMode ? 'bg-black border-gray-800' : 'bg-white border-gray-200'}`}>
-          {/* Header */}
-          <div className={`p-4 sm:p-6 flex flex-col sm:flex-row justify-between items-start sm:items-center border-b gap-2 sm:gap-0 ${isDarkMode ? 'bg-black border-gray-800' : 'bg-white border-gray-200'}`}>
-            <div className="flex flex-col gap-1">
-              <h1 className={`text-2xl sm:text-3xl font-bold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
-                Levantamiento Unificado
-              </h1>
-              <p className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>
-                Consulta integrada de inventario INEA, ITEA y TLAXCALA
-              </p>
+      <div className={`h-[calc(100vh-4rem)] overflow-hidden transition-colors duration-300 ${
+        isDarkMode ? 'bg-black text-white' : 'bg-white text-black'
+      }`}>
+        <div className={`h-full overflow-y-auto p-4 md:p-8 ${
+          isDarkMode 
+            ? 'scrollbar-thin scrollbar-track-white/5 scrollbar-thumb-white/20 hover:scrollbar-thumb-white/30'
+            : 'scrollbar-thin scrollbar-track-black/5 scrollbar-thumb-black/20 hover:scrollbar-thumb-black/30'
+        }`}>
+          <div className="w-full max-w-7xl mx-auto pb-8">
+            {/* Header */}
+            <div className={`flex justify-between items-center mb-8 pb-6 border-b ${
+              isDarkMode ? 'border-white/10' : 'border-black/10'
+            }`}>
+              <div>
+                <h1 className="text-3xl font-light tracking-tight mb-1">
+                  Levantamiento Unificado
+                </h1>
+                <p className={`text-sm ${isDarkMode ? 'text-white/40' : 'text-black/40'}`}>
+                  Consulta integrada de inventario INEA, ITEA y TLAXCALA
+                </p>
+              </div>
+              <SectionRealtimeToggle
+                sectionName="levantamiento"
+                isConnected={realtimeConnected}
+              />
             </div>
-            <SectionRealtimeToggle
-              sectionName="levantamiento"
-              isConnected={realtimeConnected}
-            />
-          </div>
 
-          {/* Search and filters */}
-          <div className={`p-4 sm:p-6 border-b ${isDarkMode ? 'border-gray-800' : 'border-gray-200'}`}>
-            <div className="flex flex-col gap-4">
-              <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
+            {/* Search and filters */}
+            <div className="mb-6 space-y-3">
+              <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center">
                 <div className="flex-1 w-full">
                   <SearchBar
                     searchTerm={searchTerm}
@@ -504,60 +512,85 @@ export default function LevantamientoUnificado() {
                 />
               )}
             </div>
-          </div>
 
-          {/* Message banner */}
-          {message && (
-            <div className={`p-3 mx-4 sm:mx-6 mt-4 rounded-md border ${
-              isDarkMode
-                ? message.type === 'success' ? 'bg-green-900/50 text-green-300 border-green-800' :
-                  message.type === 'error' ? 'bg-red-900/50 text-red-300 border-red-800' :
-                  message.type === 'warning' ? 'bg-yellow-900/50 text-yellow-300 border-yellow-800' :
-                  message.type === 'info' ? 'bg-blue-900/50 text-blue-300 border-blue-800' : ''
-                : message.type === 'success' ? 'bg-green-50 text-green-800 border-green-200' :
-                  message.type === 'error' ? 'bg-red-50 text-red-800 border-red-200' :
-                  message.type === 'warning' ? 'bg-yellow-50 text-yellow-800 border-yellow-200' :
-                  message.type === 'info' ? 'bg-blue-50 text-blue-800 border-blue-200' : ''
-            }`}>
-              {message.text}
-            </div>
-          )}
-
-          {/* Content */}
-          <div className="p-4 sm:p-6">
-            <LoadingStates
-              loading={loading}
-              error={inventoryError}
-              isEmpty={filteredMuebles.length === 0}
-              onRetry={reindex}
-              isDarkMode={isDarkMode}
-            />
-
-            {!loading && !inventoryError && filteredMuebles.length > 0 && (
-              <>
-                <InventoryTable
-                  muebles={paginatedMuebles}
-                  sortField={sortField}
-                  sortDirection={sortDirection}
-                  onSort={handleSort}
-                  foliosResguardo={foliosResguardo}
-                  onFolioClick={handleFolioClick}
-                  isDarkMode={isDarkMode}
-                />
-
-                <Pagination
-                  currentPage={currentPage}
-                  totalPages={totalPages}
-                  rowsPerPage={rowsPerPage}
-                  totalCount={totalFilteredCount}
-                  onPageChange={handlePageChange}
-                  onRowsPerPageChange={handleRowsPerPageChange}
-                  isDarkMode={isDarkMode}
-                />
-              </>
+            {/* Message banner */}
+            {message && (
+              <div className={`p-3 mb-4 rounded-lg border ${
+                isDarkMode
+                  ? message.type === 'success' ? 'bg-green-500/10 text-green-400 border-green-500/20' :
+                    message.type === 'error' ? 'bg-red-500/10 text-red-400 border-red-500/20' :
+                    message.type === 'warning' ? 'bg-yellow-500/10 text-yellow-400 border-yellow-500/20' :
+                    message.type === 'info' ? 'bg-blue-500/10 text-blue-400 border-blue-500/20' : ''
+                  : message.type === 'success' ? 'bg-green-50 text-green-800 border-green-200' :
+                    message.type === 'error' ? 'bg-red-50 text-red-800 border-red-200' :
+                    message.type === 'warning' ? 'bg-yellow-50 text-yellow-800 border-yellow-200' :
+                    message.type === 'info' ? 'bg-blue-50 text-blue-800 border-blue-200' : ''
+              }`}>
+                {message.text}
+              </div>
             )}
+
+            {/* Content */}
+            <div>
+              <LoadingStates
+                loading={loading}
+                error={inventoryError}
+                isEmpty={filteredMuebles.length === 0}
+                onRetry={reindex}
+                isDarkMode={isDarkMode}
+              />
+
+              {!loading && !inventoryError && filteredMuebles.length > 0 && (
+                <>
+                  <InventoryTable
+                    muebles={paginatedMuebles}
+                    sortField={sortField}
+                    sortDirection={sortDirection}
+                    onSort={handleSort}
+                    foliosResguardo={foliosResguardo}
+                    onFolioClick={handleFolioClick}
+                    isDarkMode={isDarkMode}
+                  />
+
+                  <Pagination
+                    currentPage={currentPage}
+                    totalPages={totalPages}
+                    rowsPerPage={rowsPerPage}
+                    totalCount={totalFilteredCount}
+                    onPageChange={handlePageChange}
+                    onRowsPerPageChange={handleRowsPerPageChange}
+                    isDarkMode={isDarkMode}
+                  />
+                </>
+              )}
+            </div>
           </div>
         </div>
+
+        {/* Scrollbar styles */}
+        <style jsx>{`
+          .scrollbar-thin {
+            scrollbar-width: thin;
+          }
+          
+          .scrollbar-thin::-webkit-scrollbar {
+            width: 6px;
+          }
+          
+          .scrollbar-thin::-webkit-scrollbar-track {
+            background: ${isDarkMode ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.05)'};
+            border-radius: 3px;
+          }
+          
+          .scrollbar-thin::-webkit-scrollbar-thumb {
+            background: ${isDarkMode ? 'rgba(255, 255, 255, 0.2)' : 'rgba(0, 0, 0, 0.2)'};
+            border-radius: 3px;
+          }
+          
+          .scrollbar-thin::-webkit-scrollbar-thumb:hover {
+            background: ${isDarkMode ? 'rgba(255, 255, 255, 0.3)' : 'rgba(0, 0, 0, 0.3)'};
+          }
+        `}</style>
       </div>
 
       {/* Modals */}

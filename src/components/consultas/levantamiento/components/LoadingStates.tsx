@@ -5,8 +5,8 @@
  * Provides consistent styling and animations across all states.
  */
 
-import React from 'react';
 import { RefreshCw, AlertCircle, Search } from 'lucide-react';
+import { motion } from 'framer-motion';
 
 /**
  * Component props interface
@@ -29,15 +29,6 @@ interface LoadingStatesProps {
  * 
  * @param props - Component props
  * @returns JSX element with appropriate state UI
- * 
- * @example
- * <LoadingStates
- *   loading={isLoading}
- *   error={errorMessage}
- *   isEmpty={filteredData.length === 0}
- *   onRetry={handleReindex}
- *   isDarkMode={isDarkMode}
- * />
  */
 export function LoadingStates({
   loading,
@@ -45,104 +36,139 @@ export function LoadingStates({
   isEmpty,
   onRetry,
   isDarkMode
-}: LoadingStatesProps): React.ReactElement | null {
+}: LoadingStatesProps) {
   
   // Loading state
   if (loading) {
     return (
-      <div className={`flex flex-col items-center justify-center min-h-[300px] w-full rounded-lg animate-fadeIn ${
-        isDarkMode ? 'bg-black/80' : 'bg-gray-100'
-      }`}>
-        <div className="flex flex-col items-center gap-4 py-12">
-          <RefreshCw className={`h-14 w-14 animate-spin ${
-            isDarkMode ? 'text-gray-400' : 'text-gray-500'
-          }`} />
-          <span className={`text-2xl font-bold ${
-            isDarkMode ? 'text-white drop-shadow-white/30' : 'text-gray-900'
-          }`}>
-            Cargando datos...
-          </span>
-          <span className={`text-base ${
-            isDarkMode ? 'text-gray-300' : 'text-gray-600'
-          }`}>
-            Por favor espera un momento
-          </span>
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        className={`flex flex-col items-center justify-center min-h-[400px] w-full rounded-lg ${
+          isDarkMode ? 'bg-black/50' : 'bg-white/50'
+        }`}
+      >
+        <div className="flex flex-col items-center gap-4">
+          <div className="relative">
+            <RefreshCw 
+              size={48} 
+              className={`animate-spin ${
+                isDarkMode ? 'text-white/60' : 'text-black/60'
+              }`}
+            />
+          </div>
+          <div className="text-center">
+            <h3 className={`text-lg font-medium mb-1 ${
+              isDarkMode ? 'text-white' : 'text-black'
+            }`}>
+              Cargando datos...
+            </h3>
+            <p className={`text-sm ${
+              isDarkMode ? 'text-white/60' : 'text-black/60'
+            }`}>
+              Por favor espera un momento
+            </p>
+          </div>
         </div>
-      </div>
+      </motion.div>
     );
   }
 
   // Error state
   if (error) {
     return (
-      <div className={`flex flex-col items-center justify-center min-h-[300px] w-full rounded-lg animate-fadeIn ${
-        isDarkMode ? 'bg-black/80' : 'bg-gray-100'
-      }`}>
-        <div className="flex flex-col items-center gap-4 py-12">
-          <AlertCircle className={`h-14 w-14 animate-bounce ${
-            isDarkMode ? 'text-gray-400' : 'text-gray-500'
-          }`} />
-          <span className={`text-2xl font-bold ${
-            isDarkMode ? 'text-white drop-shadow-white/30' : 'text-gray-900'
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        className={`flex flex-col items-center justify-center min-h-[400px] w-full rounded-lg ${
+          isDarkMode ? 'bg-black/50' : 'bg-white/50'
+        }`}
+      >
+        <div className="flex flex-col items-center gap-4 max-w-md text-center">
+          <div className={`p-4 rounded-full ${
+            isDarkMode ? 'bg-red-500/10' : 'bg-red-50'
           }`}>
-            Error al cargar los datos
-          </span>
-          <span className={`text-base mb-2 ${
-            isDarkMode ? 'text-gray-300' : 'text-gray-600'
-          }`}>
-            {error}
-          </span>
-          <button
+            <AlertCircle 
+              size={48} 
+              className={isDarkMode ? 'text-red-400' : 'text-red-600'}
+            />
+          </div>
+          <div>
+            <h3 className={`text-lg font-medium mb-2 ${
+              isDarkMode ? 'text-white' : 'text-black'
+            }`}>
+              Error al cargar los datos
+            </h3>
+            <p className={`text-sm mb-4 ${
+              isDarkMode ? 'text-white/60' : 'text-black/60'
+            }`}>
+              {error}
+            </p>
+          </div>
+          <motion.button
             onClick={onRetry}
-            className={`px-6 py-3 rounded-xl font-bold text-lg shadow-lg border transition-all duration-200 flex items-center gap-2 mt-2 ${
-              isDarkMode 
-                ? 'bg-white/10 text-white border-white/30 hover:bg-white/20' 
-                : 'bg-blue-600 text-white border-blue-600 hover:bg-blue-700'
+            className={`px-4 py-2 rounded-lg border text-sm font-medium flex items-center gap-2 transition-all ${
+              isDarkMode
+                ? 'bg-black border-white/10 text-white hover:border-white/20 hover:bg-white/[0.02]'
+                : 'bg-white border-black/10 text-black hover:border-black/20 hover:bg-black/[0.02]'
             }`}
-            title="Reintentar carga de datos"
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
           >
-            <RefreshCw className="h-5 w-5" />
+            <RefreshCw size={16} />
             Reintentar
-          </button>
+          </motion.button>
         </div>
-      </div>
+      </motion.div>
     );
   }
 
   // Empty state
   if (isEmpty) {
     return (
-      <div className={`flex flex-col items-center justify-center min-h-[300px] w-full rounded-lg animate-fadeIn ${
-        isDarkMode ? 'bg-black/80' : 'bg-gray-100'
-      }`}>
-        <div className="flex flex-col items-center gap-4 py-12">
-          <Search className={`h-14 w-14 animate-pulse ${
-            isDarkMode ? 'text-gray-400' : 'text-gray-500'
-          }`} />
-          <span className={`text-2xl font-bold ${
-            isDarkMode ? 'text-white drop-shadow-white/30' : 'text-gray-900'
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        className={`flex flex-col items-center justify-center min-h-[400px] w-full rounded-lg ${
+          isDarkMode ? 'bg-black/50' : 'bg-white/50'
+        }`}
+      >
+        <div className="flex flex-col items-center gap-4 max-w-md text-center">
+          <div className={`p-4 rounded-full ${
+            isDarkMode ? 'bg-white/10' : 'bg-black/10'
           }`}>
-            No se encontraron resultados
-          </span>
-          <span className={`text-base mb-2 ${
-            isDarkMode ? 'text-gray-300' : 'text-gray-600'
-          }`}>
-            Intenta ajustar los filtros o la búsqueda.
-          </span>
-          <button
+            <Search 
+              size={48} 
+              className={isDarkMode ? 'text-white/60' : 'text-black/60'}
+            />
+          </div>
+          <div>
+            <h3 className={`text-lg font-medium mb-2 ${
+              isDarkMode ? 'text-white' : 'text-black'
+            }`}>
+              No se encontraron resultados
+            </h3>
+            <p className={`text-sm mb-4 ${
+              isDarkMode ? 'text-white/60' : 'text-black/60'
+            }`}>
+              Intenta ajustar los filtros o la búsqueda
+            </p>
+          </div>
+          <motion.button
             onClick={onRetry}
-            className={`px-6 py-3 rounded-xl font-bold text-lg shadow-lg border transition-all duration-200 flex items-center gap-2 mt-2 ${
-              isDarkMode 
-                ? 'bg-white/10 text-white border-white/30 hover:bg-white/20' 
-                : 'bg-blue-600 text-white border-blue-600 hover:bg-blue-700'
+            className={`px-4 py-2 rounded-lg border text-sm font-medium flex items-center gap-2 transition-all ${
+              isDarkMode
+                ? 'bg-black border-white/10 text-white hover:border-white/20 hover:bg-white/[0.02]'
+                : 'bg-white border-black/10 text-black hover:border-black/20 hover:bg-black/[0.02]'
             }`}
-            title="Recargar inventario"
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
           >
-            <RefreshCw className="h-5 w-5" />
+            <RefreshCw size={16} />
             Recargar inventario
-          </button>
+          </motion.button>
         </div>
-      </div>
+      </motion.div>
     );
   }
 
