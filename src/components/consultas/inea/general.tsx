@@ -1288,9 +1288,14 @@ export default function ConsultasIneaGeneral() {
     );
 
     return (
-        <div className={`min-h-screen p-2 sm:p-4 md:p-6 lg:p-8 transition-colors duration-500 ${isDarkMode
+        <div className={`h-[calc(100vh-4rem)] overflow-hidden transition-colors duration-500 ${isDarkMode
             ? 'bg-black text-white'
             : 'bg-gradient-to-br from-gray-50 via-white to-gray-100 text-gray-900'
+            }`}>
+            <div className={`h-full overflow-y-auto p-2 sm:p-4 md:p-6 lg:p-8 ${
+                isDarkMode 
+                    ? 'scrollbar-thin scrollbar-track-white/5 scrollbar-thumb-white/20 hover:scrollbar-thumb-white/30'
+                    : 'scrollbar-thin scrollbar-track-black/5 scrollbar-thumb-black/20 hover:scrollbar-thumb-black/30'
             }`}>
             {/* Header con título */}
             <div className={`w-full mx-auto rounded-lg sm:rounded-xl shadow-2xl overflow-hidden transition-all duration-500 transform ${isDarkMode ? 'bg-black border-gray-800' : 'bg-white border-gray-200'}`}>
@@ -2905,6 +2910,7 @@ export default function ConsultasIneaGeneral() {
                     )}
                 </div>
             </div>
-        </div >
+        </div>
+        </div>
     );
 }

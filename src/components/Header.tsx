@@ -10,7 +10,7 @@ import RoleGuard from "@/components/roleGuard";
 import NotificationsPanel from './NotificationCenter';
 import { useNotifications } from '@/hooks/useNotifications';
 import { useTheme } from "@/context/ThemeContext";
-import GlobalSearch from './GlobalSearch';
+import { UniversalSearchBar } from './search';
 import { useSession } from '@/hooks/useSession';
 import { clearAllIndexationData } from '@/lib/clearIndexationData';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -552,7 +552,7 @@ export default function NavigationBar() {
                                                     {openMenu === item.title && (
                                                         <motion.div 
                                                             data-dropdown="true" 
-                                                            className={`absolute left-0 mt-2 w-56 rounded-lg border overflow-hidden z-20 ${
+                                                            className={`absolute left-0 mt-2 w-56 rounded-lg border overflow-visible z-20 ${
                                                                 pathname === '/' 
                                                                     ? (isDarkMode ? 'bg-black/95 border-white/10 backdrop-blur-md' : 'bg-white/95 border-black/10 backdrop-blur-md') 
                                                                     : (isDarkMode ? 'bg-black border-white/10' : 'bg-white border-black/10')
@@ -562,12 +562,11 @@ export default function NavigationBar() {
                                                             exit={{ opacity: 0, y: -10 }}
                                                             transition={{ duration: 0.2 }}
                                                         >
-                                                        <div className="py-1">
+                                                        <div className="py-1 rounded-lg overflow-hidden">
                                                             {item.submenu.map((subItem) => (
                                                                 <div key={subItem.title}>
                                                                     {subItem.children ? (
                                                                         <div
-                                                                            className="relative"
                                                                             onMouseEnter={() => handleSubmenuHover(`${item.title}-${subItem.title}`)}
                                                                             onMouseLeave={() => handleSubmenuHover(null)}
                                                                         >
@@ -580,37 +579,50 @@ export default function NavigationBar() {
                                                                                     }`}
                                                                             >
                                                                                 {subItem.title}
-                                                                                <ChevronRight className="w-3 h-3" />
+                                                                                <motion.div
+                                                                                    animate={{ rotate: openSubmenu === `${item.title}-${subItem.title}` ? 90 : 0 }}
+                                                                                    transition={{ duration: 0.3, ease: "easeInOut" }}
+                                                                                >
+                                                                                    <ChevronRight className="w-3 h-3" />
+                                                                                </motion.div>
                                                                             </button>
                                                                             <AnimatePresence>
                                                                                 {openSubmenu === `${item.title}-${subItem.title}` && (
-                                                                                    <motion.div 
-                                                                                        data-dropdown="true" 
-                                                                                        className={`absolute left-full top-0 ml-1 w-56 rounded-lg border overflow-hidden z-30 ${
-                                                                                            pathname === '/' 
-                                                                                                ? (isDarkMode ? 'bg-black/95 border-white/10 backdrop-blur-md' : 'bg-white/95 border-black/10 backdrop-blur-md') 
-                                                                                                : (isDarkMode ? 'bg-black border-white/10' : 'bg-white border-black/10')
-                                                                                        }`}
-                                                                                        initial={{ opacity: 0, x: -10 }}
-                                                                                        animate={{ opacity: 1, x: 0 }}
-                                                                                        exit={{ opacity: 0, x: -10 }}
-                                                                                        transition={{ duration: 0.2 }}
+                                                                                    <motion.div
+                                                                                        initial={{ height: 0, opacity: 0 }}
+                                                                                        animate={{ height: "auto", opacity: 1 }}
+                                                                                        exit={{ height: 0, opacity: 0 }}
+                                                                                        transition={{ 
+                                                                                            duration: 0.3,
+                                                                                            ease: [0.4, 0, 0.2, 1]
+                                                                                        }}
+                                                                                        className="overflow-hidden"
                                                                                     >
-                                                                                        <div className="py-1">
-                                                                                            {subItem.children.map((child) => (
-                                                                                                <Link
+                                                                                        <div className={`pl-4 py-1 border-l-2 ml-4 ${isDarkMode ? 'border-white/10' : 'border-black/10'}`}>
+                                                                                            {subItem.children.map((child, childIndex) => (
+                                                                                                <motion.div
                                                                                                     key={child.title}
-                                                                                                    href={child.path}
-                                                                                                    onClick={closeAll}
-                                                                                                    className={`block px-4 py-2.5 text-sm transition-all duration-200 ${pathname === child.path
-                                                                                                        ? isDarkMode ? 'text-white bg-white/10 border-l-2 border-white' : 'text-black bg-black/10 border-l-2 border-black'
-                                                                                                        : isDarkMode
-                                                                                                            ? `text-white/60 hover:text-white hover:bg-white/5`
-                                                                                                            : `text-black/60 hover:text-black hover:bg-black/5`
-                                                                                                        }`}
+                                                                                                    initial={{ x: -10, opacity: 0 }}
+                                                                                                    animate={{ x: 0, opacity: 1 }}
+                                                                                                    transition={{ 
+                                                                                                        duration: 0.2,
+                                                                                                        delay: childIndex * 0.05,
+                                                                                                        ease: "easeOut"
+                                                                                                    }}
                                                                                                 >
-                                                                                                    {child.title}
-                                                                                                </Link>
+                                                                                                    <Link
+                                                                                                        href={child.path}
+                                                                                                        onClick={closeAll}
+                                                                                                        className={`block px-4 py-2 text-sm rounded-md transition-all duration-200 ${pathname === child.path
+                                                                                                            ? isDarkMode ? 'text-white bg-white/10 font-medium' : 'text-black bg-black/10 font-medium'
+                                                                                                            : isDarkMode
+                                                                                                                ? `text-white/50 hover:text-white hover:bg-white/5`
+                                                                                                                : `text-black/50 hover:text-black hover:bg-black/5`
+                                                                                                            }`}
+                                                                                                    >
+                                                                                                        {child.title}
+                                                                                                    </Link>
+                                                                                                </motion.div>
                                                                                             ))}
                                                                                         </div>
                                                                                     </motion.div>
@@ -754,14 +766,18 @@ export default function NavigationBar() {
                     </div >
 
                     {/* Search Bar - After Menus */}
-                    < div
+                    <div
                         ref={searchBarRef}
-                        className={`hidden md:flex items-center ml-4 transition-all duration-300 ease-in-out ${searchBarShouldHide ? 'opacity-0 scale-90 pointer-events-none' : 'opacity-100 scale-100'
+                        className={`hidden md:flex items-center transition-all duration-300 ease-in-out ${searchBarShouldHide ? 'opacity-0 scale-90 pointer-events-none' : 'opacity-100 scale-100'
                             }`
                         }
                     >
-                        <GlobalSearch onExpandChange={handleSearchExpand} />
-                    </div >
+                        <UniversalSearchBar 
+                            isDarkMode={isDarkMode}
+                            userRoles={userData.rol ? [userData.rol] : []}
+                            onExpandChange={handleSearchExpand}
+                        />
+                    </div>
 
                     {/* Right side - Action buttons */}
                     < div ref={actionButtonsContainerRef} className="hidden md:flex items-center h-full ml-auto" >

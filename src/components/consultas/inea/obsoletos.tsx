@@ -1275,7 +1275,7 @@ export default function ConsultasIneaBajas() {
                                             isDarkMode ? 'bg-white/5' : 'bg-gray-50'
                                         }`}></div>
                                         <AnimatedCounter 
-                                            value={Object.values(filters).some(value => value !== '') || searchTerm ? filteredCount : muebles.length} 
+                                            value={filteredCount} 
                                             className={`relative text-3xl font-bold transition-all duration-500 px-6 py-3 ${
                                                 isDarkMode 
                                                     ? 'text-white/90 group-hover:text-white' 

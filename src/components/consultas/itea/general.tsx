@@ -1187,7 +1187,12 @@ export default function ConsultasIteaGeneral() {
     );
 
     return (
-        <div className={`min-h-screen p-2 sm:p-4 md:p-6 lg:p-8 transition-colors ${isDarkMode ? 'bg-black text-white' : 'bg-gray-50 text-gray-900'}`}>
+        <div className={`h-[calc(100vh-4rem)] overflow-hidden transition-colors ${isDarkMode ? 'bg-black text-white' : 'bg-gray-50 text-gray-900'}`}>
+            <div className={`h-full overflow-y-auto p-2 sm:p-4 md:p-6 lg:p-8 ${
+                isDarkMode 
+                    ? 'scrollbar-thin scrollbar-track-white/5 scrollbar-thumb-white/20 hover:scrollbar-thumb-white/30'
+                    : 'scrollbar-thin scrollbar-track-black/5 scrollbar-thumb-black/20 hover:scrollbar-thumb-black/30'
+            }`}>
             {/* Notificación de mensaje */}
             {message && (
                 <div className={`fixed top-6 right-6 z-50 p-4 rounded-lg shadow-lg flex items-center gap-3 animate-fadeIn ${message.type === 'success' ? 'bg-green-900/90 border border-green-700' :
@@ -2589,6 +2594,7 @@ export default function ConsultasIteaGeneral() {
                     </div>
                 </div>
             )}
+        </div>
         </div>
     );
 }
