@@ -1,6 +1,6 @@
 "use client";
 
-import Crear from "@/components/resguardos/crear"
+import Crear from "@/components/resguardos/crear/index"
 import ProtectedPage from "@/components/ProtectedPage";
 
 export default function Page() {
