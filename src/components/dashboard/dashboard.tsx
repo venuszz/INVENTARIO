@@ -22,6 +22,8 @@ import {
 import { generateDashboardPDF } from './dashboardPDF';
 import { useIneaIndexation } from '@/hooks/indexation/useIneaIndexation';
 import { useIteaIndexation } from '@/hooks/indexation/useIteaIndexation';
+import { useIneaObsoletosIndexation } from '@/hooks/indexation/useIneaObsoletosIndexation';
+import { useIteaObsoletosIndexation } from '@/hooks/indexation/useIteaObsoletosIndexation';
 
 const fadeIn = {
     hidden: { opacity: 0 },
@@ -98,8 +100,10 @@ export default function InventoryDashboard() {
     // Usar hooks de indexación
     const { muebles: ineaData, isIndexing: ineaLoading } = useIneaIndexation();
     const { muebles: iteaData, isIndexing: iteaLoading } = useIteaIndexation();
+    const { muebles: ineaObsoletosData, isIndexing: ineaObsoletosLoading } = useIneaObsoletosIndexation();
+    const { muebles: iteaObsoletosData, isIndexing: iteaObsoletosLoading } = useIteaObsoletosIndexation();
 
-    const loading = ineaLoading || iteaLoading;
+    const loading = ineaLoading || iteaLoading || ineaObsoletosLoading || iteaObsoletosLoading;
 
     // Procesar datos de INEA para obtener estatus y rubros únicos
     const ineaCategories = useMemo(() => {
@@ -156,15 +160,54 @@ export default function InventoryDashboard() {
         const totalCard = currentData.cards.find(card => card.id === `${activeWarehouse.toLowerCase()}-total`);
         if (!totalCard) return;
 
-        const initialRubros = totalCard.categories.map((cat, index) => ({
-            numeroPartida: '',
-            rubro: cat.name,
-            count: cat.count,
-            sum: cat.valueNum || 0,
-            isPreFilled: true,
-            id: `rubro-${index}`,
-            colorIndex: index % 6
-        }));
+        // Obtener todas las tarjetas relevantes (incluyendo BAJA y obsoletos)
+        const bajaCard = currentData.cards.find(card => card.id === `${activeWarehouse.toLowerCase()}-baja`);
+        const obsoletosCard = currentData.cards.find(card => card.id === `${activeWarehouse.toLowerCase()}-obsoletos`);
+
+        let index = 0;
+        const initialRubros: EditableRubro[] = [];
+
+        // Agregar rubros del total
+        totalCard.categories.forEach((cat) => {
+            initialRubros.push({
+                numeroPartida: '',
+                rubro: cat.name,
+                count: cat.count,
+                sum: cat.valueNum || 0,
+                isPreFilled: true,
+                id: `rubro-${index}`,
+                colorIndex: index % 6
+            });
+            index++;
+        });
+
+        // Agregar BAJA si existe
+        if (bajaCard) {
+            initialRubros.push({
+                numeroPartida: '',
+                rubro: 'BAJA',
+                count: bajaCard.count,
+                sum: bajaCard.categories.reduce((acc, cat) => acc + (cat.valueNum || 0), 0),
+                isPreFilled: true,
+                id: `rubro-${index}`,
+                colorIndex: index % 6
+            });
+            index++;
+        }
+
+        // Agregar obsoletos si existe
+        if (obsoletosCard) {
+            initialRubros.push({
+                numeroPartida: '',
+                rubro: 'BAJA (Obsoletos)',
+                count: obsoletosCard.count,
+                sum: obsoletosCard.categories.reduce((acc, cat) => acc + (cat.valueNum || 0), 0),
+                isPreFilled: true,
+                id: `rubro-${index}`,
+                colorIndex: index % 6
+            });
+            index++;
+        }
 
         setEditableRubros(initialRubros);
         setShowExportModal(true);
@@ -217,11 +260,18 @@ export default function InventoryDashboard() {
             });
         };
 
+        // Marcar rubros de BAJA y obsoletos
+        const rubrosWithFlags = editableRubros.map(rubro => ({
+            ...rubro,
+            isBaja: rubro.rubro === 'BAJA',
+            isObsoleto: rubro.rubro.includes('Obsoletos') || rubro.rubro.includes('BAJA (Obsoletos)')
+        }));
+
         generateDashboardPDF({
             title: currentData.title,
             totalBienes: editableRubros.reduce((acc, rubro) => acc + rubro.count, 0),
             sumaValores: editableRubros.reduce((acc, rubro) => acc + rubro.sum, 0),
-            rubros: editableRubros,
+            rubros: rubrosWithFlags,
             fileName: `dashboard_${activeWarehouse.toLowerCase()}`,
             warehouse: activeWarehouse as 'INEA' | 'ITEA',
             date: formatDate(exportDate)
@@ -288,14 +338,18 @@ export default function InventoryDashboard() {
     const processInventoryData = (
         origin: 'INEA' | 'ITEA', 
         data: Array<{ estatus?: string | null; rubro?: string | null; valor?: string | number | null }>, 
-        estatusList: string[]
+        estatusList: string[],
+        obsoletosData: Array<{ estatus?: string | null; rubro?: string | null; valor?: string | number | null }>
     ) => {
         const cards: InventoryCard[] = [];
         let totalCount = 0;
         let totalValue = 0;
+        let bajaCard: InventoryCard | null = null;
 
-        // Procesar cada estatus
+        // Procesar cada estatus (excepto BAJA)
         for (const status of estatusList) {
+            if (status === 'BAJA') continue; // Saltar BAJA, se procesará al final
+            
             const statusData = data.filter(item => item.estatus === status);
             const count = statusData.length;
             const total = statusData.reduce((sum, item) => sum + (parseFloat(String(item.valor || 0))), 0);
@@ -389,11 +443,103 @@ export default function InventoryDashboard() {
             });
         }
 
+        // Procesar BAJA del inventario principal (se resta del total)
+        const bajaData = data.filter(item => item.estatus === 'BAJA');
+        if (bajaData.length > 0) {
+            const count = bajaData.length;
+            const total = bajaData.reduce((sum, item) => sum + (parseFloat(String(item.valor || 0))), 0);
+            
+            const categories: Category[] = [];
+            const rubroMap = new Map<string, { count: number; value: number }>();
+            
+            bajaData.forEach(item => {
+                if (item.rubro) {
+                    const existing = rubroMap.get(item.rubro);
+                    const itemValue = parseFloat(String(item.valor || 0));
+                    if (existing) {
+                        existing.count++;
+                        existing.value += itemValue;
+                    } else {
+                        rubroMap.set(item.rubro, { count: 1, value: itemValue });
+                    }
+                }
+            });
+            
+            rubroMap.forEach((data, rubro) => {
+                categories.push({
+                    name: rubro,
+                    count: data.count,
+                    valueNum: data.value,
+                    value: formatCurrency(data.value),
+                    icon: getIconForRubro(rubro)
+                });
+            });
+
+            // BAJA se resta del total
+            totalCount -= count;
+            totalValue -= total;
+            
+            bajaCard = {
+                id: `${origin.toLowerCase()}-baja`,
+                title: 'BAJA',
+                count,
+                value: formatCurrency(total),
+                icon: X,
+                color: "text-red-400",
+                bgColor: isDarkMode ? "bg-red-500/10" : "bg-red-50",
+                categories
+            };
+        }
+
+        // Procesar obsoletos (BAJA de tabla obsoletos - NO se resta)
+        if (obsoletosData.length > 0) {
+            const count = obsoletosData.length;
+            const total = obsoletosData.reduce((sum, item) => sum + (parseFloat(String(item.valor || 0))), 0);
+            
+            const categories: Category[] = [];
+            const rubroMap = new Map<string, { count: number; value: number }>();
+            
+            obsoletosData.forEach(item => {
+                if (item.rubro) {
+                    const existing = rubroMap.get(item.rubro);
+                    const itemValue = parseFloat(String(item.valor || 0));
+                    if (existing) {
+                        existing.count++;
+                        existing.value += itemValue;
+                    } else {
+                        rubroMap.set(item.rubro, { count: 1, value: itemValue });
+                    }
+                }
+            });
+            
+            rubroMap.forEach((data, rubro) => {
+                categories.push({
+                    name: rubro,
+                    count: data.count,
+                    valueNum: data.value,
+                    value: formatCurrency(data.value),
+                    icon: getIconForRubro(rubro)
+                });
+            });
+
+            // Agregar tarjeta de obsoletos (NO se resta del total)
+            cards.push({
+                id: `${origin.toLowerCase()}-obsoletos`,
+                title: 'BAJA (Obsoletos)',
+                count,
+                value: formatCurrency(total),
+                icon: X,
+                color: "text-red-400",
+                bgColor: isDarkMode ? "bg-red-500/10" : "bg-red-50",
+                categories
+            });
+        }
+
         // Tarjeta de total con rubros consolidados
         const rubrosTotalesMap = new Map<string, { count: number; value: number }>();
         
         data.forEach(item => {
-            if (item.rubro) {
+            if (item.rubro && item.estatus !== 'BAJA') {
                 const existing = rubrosTotalesMap.get(item.rubro);
                 const itemValue = parseFloat(String(item.valor || 0));
                 if (existing) {
@@ -416,6 +562,11 @@ export default function InventoryDashboard() {
             });
         });
 
+        // Agregar BAJA antes del total si existe
+        if (bajaCard) {
+            cards.push(bajaCard);
+        }
+
         cards.push({
             id: `${origin.toLowerCase()}-total`,
             title: `Total ${origin}`,
@@ -433,8 +584,8 @@ export default function InventoryDashboard() {
     // Actualizar inventoryData cuando cambien los datos indexados
     useEffect(() => {
         if (!loading && ineaData.length > 0 && iteaData.length > 0) {
-            const ineaCards = processInventoryData('INEA', ineaData, ineaCategories.estatus);
-            const iteaCards = processInventoryData('ITEA', iteaData, iteaCategories.estatus);
+            const ineaCards = processInventoryData('INEA', ineaData, ineaCategories.estatus, ineaObsoletosData);
+            const iteaCards = processInventoryData('ITEA', iteaData, iteaCategories.estatus, iteaObsoletosData);
             
             setInventoryData({
                 INEA: {
@@ -449,7 +600,7 @@ export default function InventoryDashboard() {
                 }
             });
         }
-    }, [ineaData, iteaData, ineaCategories, iteaCategories, loading]);
+    }, [ineaData, iteaData, ineaObsoletosData, iteaObsoletosData, ineaCategories, iteaCategories, loading]);
 
     const toggleWarehouse = () => {
         setActiveWarehouse(prev => prev === 'INEA' ? 'ITEA' : 'INEA');
@@ -623,24 +774,46 @@ export default function InventoryDashboard() {
                                                     transition: { duration: 0.2 }
                                                 }}
                                                 onClick={() => openModal(card)}
-                                                className={`group flex items-center justify-between p-4 rounded-lg cursor-pointer transition-all duration-200 ${isDarkMode
-                                                    ? 'bg-black border border-white/5 hover:border-white/10 hover:bg-white/[0.02]'
-                                                    : 'bg-white border border-black/5 hover:border-black/10 hover:bg-black/[0.02]'
-                                                    }`}
+                                                className={`group flex items-center justify-between p-4 rounded-lg cursor-pointer transition-all duration-200 ${
+                                                    card.title === 'BAJA' || card.title === 'BAJA (Obsoletos)'
+                                                        ? (isDarkMode
+                                                            ? 'bg-red-500/5 border border-red-500/20 hover:border-red-500/30 hover:bg-red-500/10'
+                                                            : 'bg-red-50 border border-red-200 hover:border-red-300 hover:bg-red-100'
+                                                        )
+                                                        : (isDarkMode
+                                                            ? 'bg-black border border-white/5 hover:border-white/10 hover:bg-white/[0.02]'
+                                                            : 'bg-white border border-black/5 hover:border-black/10 hover:bg-black/[0.02]'
+                                                        )
+                                                }`}
                                             >
                                                 <div className="flex items-center gap-4 flex-1">
                                                     <motion.div 
-                                                        className={`p-2.5 rounded-lg transition-all duration-200 ${isDarkMode
-                                                            ? 'bg-white/5 group-hover:bg-white/10'
-                                                            : 'bg-black/5 group-hover:bg-black/10'
-                                                            }`}
+                                                        className={`p-2.5 rounded-lg transition-all duration-200 ${
+                                                            card.title === 'BAJA' || card.title === 'BAJA (Obsoletos)'
+                                                                ? (isDarkMode
+                                                                    ? 'bg-red-500/10 group-hover:bg-red-500/20'
+                                                                    : 'bg-red-100 group-hover:bg-red-200'
+                                                                )
+                                                                : (isDarkMode
+                                                                    ? 'bg-white/5 group-hover:bg-white/10'
+                                                                    : 'bg-black/5 group-hover:bg-black/10'
+                                                                )
+                                                        }`}
                                                         whileHover={{ scale: 1.1, rotate: 5 }}
                                                         transition={{ duration: 0.2 }}
                                                     >
-                                                        <card.icon size={20} className={isDarkMode ? 'text-white/80' : 'text-black/80'} />
+                                                        <card.icon size={20} className={
+                                                            card.title === 'BAJA' || card.title === 'BAJA (Obsoletos)'
+                                                                ? 'text-red-400'
+                                                                : (isDarkMode ? 'text-white/80' : 'text-black/80')
+                                                        } />
                                                     </motion.div>
                                                     <div className="flex-1">
-                                                        <h3 className={`text-sm font-medium mb-0.5 transition-colors ${isDarkMode ? 'text-white' : 'text-black'}`}>
+                                                        <h3 className={`text-sm font-medium mb-0.5 transition-colors ${
+                                                            card.title === 'BAJA' || card.title === 'BAJA (Obsoletos)'
+                                                                ? 'text-red-400'
+                                                                : (isDarkMode ? 'text-white' : 'text-black')
+                                                        }`}>
                                                             {card.title}
                                                         </h3>
                                                         <p className={`text-xs transition-colors ${isDarkMode ? 'text-white/50 group-hover:text-white/60' : 'text-black/50 group-hover:text-black/60'}`}>
@@ -649,8 +822,12 @@ export default function InventoryDashboard() {
                                                     </div>
                                                 </div>
                                                 <div className="flex items-center gap-3">
-                                                    <span className={`text-lg font-semibold transition-colors ${isDarkMode ? 'text-white' : 'text-black'}`}>
-                                                        {card.value}
+                                                    <span className={`text-lg font-semibold transition-colors ${
+                                                        card.title === 'BAJA' || card.title === 'BAJA (Obsoletos)'
+                                                            ? 'text-red-400'
+                                                            : (isDarkMode ? 'text-white' : 'text-black')
+                                                    }`}>
+                                                        {card.title === 'BAJA' ? '- ' : ''}{card.value}
                                                     </span>
                                                     <motion.div
                                                         animate={{ x: 0 }}
@@ -917,11 +1094,20 @@ export default function InventoryDashboard() {
                                     {editableRubros.map((rubro, index) => {
                                         // Usar el colorIndex del rubro, no el índice de posición
                                         const colorIndex = rubro.colorIndex ?? (index % 6);
+                                        const isBajaRow = rubro.rubro === 'BAJA' || rubro.rubro.includes('Obsoletos');
+                                        
                                         const getPastelClass = () => {
                                             if (dragOverIndex === index && draggedIndex !== index) {
                                                 return isDarkMode 
                                                     ? 'bg-blue-500/20 border-2 border-blue-400/40 shadow-lg shadow-blue-500/10' 
                                                     : 'bg-blue-100 border-2 border-blue-300 shadow-lg shadow-blue-200/50';
+                                            }
+                                            
+                                            // Si es BAJA, usar estilo rojo
+                                            if (isBajaRow) {
+                                                return isDarkMode
+                                                    ? 'bg-red-500/10 border border-red-400/20 hover:border-red-400/30 hover:bg-red-500/20'
+                                                    : 'bg-red-50 border border-red-200 hover:border-red-300 hover:bg-red-100';
                                             }
                                             
                                             if (isDarkMode) {
@@ -1031,10 +1217,11 @@ export default function InventoryDashboard() {
 
                                             {/* Rubro */}
                                             {rubro.isPreFilled ? (
-                                                <div className={`flex-1 px-3 py-2 rounded-lg text-sm font-medium ${isDarkMode
-                                                    ? 'bg-white/5 text-white/70 border border-white/10'
-                                                    : 'bg-gray-100 text-gray-700 border border-gray-200'
-                                                    }`}>
+                                                <div className={`flex-1 px-3 py-2 rounded-lg text-sm font-medium ${
+                                                    isBajaRow
+                                                        ? (isDarkMode ? 'bg-red-500/10 text-red-400 border border-red-400/20' : 'bg-red-100 text-red-700 border border-red-300')
+                                                        : (isDarkMode ? 'bg-white/5 text-white/70 border border-white/10' : 'bg-gray-100 text-gray-700 border border-gray-200')
+                                                }`}>
                                                     {rubro.rubro}
                                                 </div>
                                             ) : (
@@ -1052,11 +1239,12 @@ export default function InventoryDashboard() {
 
                                             {/* Cantidad */}
                                             {rubro.isPreFilled ? (
-                                                <div className={`w-24 px-3 py-2 rounded-lg text-sm text-center font-medium ${isDarkMode
-                                                    ? 'bg-white/5 text-white/70 border border-white/10'
-                                                    : 'bg-gray-100 text-gray-700 border border-gray-200'
-                                                    }`}>
-                                                    {rubro.count}
+                                                <div className={`w-24 px-3 py-2 rounded-lg text-sm text-center font-medium ${
+                                                    isBajaRow
+                                                        ? (isDarkMode ? 'bg-red-500/10 text-red-400 border border-red-400/20' : 'bg-red-100 text-red-700 border border-red-300')
+                                                        : (isDarkMode ? 'bg-white/5 text-white/70 border border-white/10' : 'bg-gray-100 text-gray-700 border border-gray-200')
+                                                }`}>
+                                                    {rubro.rubro === 'BAJA' ? '- ' : ''}{rubro.count}
                                                 </div>
                                             ) : (
                                                 <input
@@ -1073,11 +1261,12 @@ export default function InventoryDashboard() {
 
                                             {/* Valor */}
                                             {rubro.isPreFilled ? (
-                                                <div className={`w-40 px-3 py-2 rounded-lg text-sm text-right font-medium ${isDarkMode
-                                                    ? 'bg-white/5 text-white/70 border border-white/10'
-                                                    : 'bg-gray-100 text-gray-700 border border-gray-200'
-                                                    }`}>
-                                                    ${rubro.sum.toLocaleString('es-MX', { minimumFractionDigits: 2 })}
+                                                <div className={`w-40 px-3 py-2 rounded-lg text-sm text-right font-medium ${
+                                                    isBajaRow
+                                                        ? (isDarkMode ? 'bg-red-500/10 text-red-400 border border-red-400/20' : 'bg-red-100 text-red-700 border border-red-300')
+                                                        : (isDarkMode ? 'bg-white/5 text-white/70 border border-white/10' : 'bg-gray-100 text-gray-700 border border-gray-200')
+                                                }`}>
+                                                    {rubro.rubro === 'BAJA' ? '- ' : ''}${rubro.sum.toLocaleString('es-MX', { minimumFractionDigits: 2 })}
                                                 </div>
                                             ) : (
                                                 <input
@@ -1133,10 +1322,18 @@ export default function InventoryDashboard() {
                                     </motion.button>
                                     <div className="text-right">
                                         <p className={`text-sm ${isDarkMode ? 'text-white/50' : 'text-black/50'}`}>
-                                            Total: {editableRubros.reduce((acc, r) => acc + r.count, 0)} artículos
+                                            Total: {editableRubros.reduce((acc, r) => {
+                                                if (r.rubro === 'BAJA') return acc - r.count;
+                                                if (r.rubro.includes('Obsoletos')) return acc;
+                                                return acc + r.count;
+                                            }, 0)} artículos
                                         </p>
                                         <p className={`text-lg font-bold ${isDarkMode ? 'text-white' : 'text-black'}`}>
-                                            ${editableRubros.reduce((acc, r) => acc + r.sum, 0).toLocaleString('es-MX', { minimumFractionDigits: 2 })}
+                                            ${editableRubros.reduce((acc, r) => {
+                                                if (r.rubro === 'BAJA') return acc - r.sum;
+                                                if (r.rubro.includes('Obsoletos')) return acc;
+                                                return acc + r.sum;
+                                            }, 0).toLocaleString('es-MX', { minimumFractionDigits: 2 })}
                                         </p>
                                     </div>
                                 </div>

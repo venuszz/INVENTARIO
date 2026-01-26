@@ -7,6 +7,8 @@ export interface DashboardRubrosRow {
     rubro: string;
     count: number;
     sum: number;
+    isBaja?: boolean; // Nuevo campo para identificar bajas
+    isObsoleto?: boolean; // Nuevo campo para identificar obsoletos
 }
 
 export interface Firma {
@@ -246,6 +248,7 @@ export async function generateDashboardPDF({
 
     rubros.forEach((row) => {
         const x = tableStartX;
+        const isBajaRow = row.isBaja || row.isObsoleto;
 
         // Calcular líneas y altura dinámica para cada celda
         const partidaValue = row.numeroPartida || '';
@@ -258,13 +261,17 @@ export async function generateDashboardPDF({
         const linesCount = Math.max(partidaLines.length, rubroLines.length, 1);
         const rowHeight = linesCount * (rowFontSize + 2) + 4; // 4 de padding vertical
 
+        // Color de fondo y texto para bajas
+        const bgColor = isBajaRow ? rgb(1, 0.95, 0.95) : rgb(1, 1, 1);
+        const textColor = isBajaRow ? rgb(0.8, 0, 0) : rgb(0, 0, 0);
+
         // Columna No. Partida (centrado)
         page.drawRectangle({
             x,
             y: y - rowHeight,
             width: totalTableWidth * colProps[0],
             height: rowHeight,
-            color: rgb(1, 1, 1),
+            color: bgColor,
             opacity: 1,
         });
 
@@ -279,7 +286,7 @@ export async function generateDashboardPDF({
                 y: y - yOffset - (idx * (rowFontSize + 2)) - rowFontSize,
                 size: rowFontSize,
                 font: regularFont,
-                color: rgb(0, 0, 0),
+                color: textColor,
             });
         });
 
@@ -289,7 +296,7 @@ export async function generateDashboardPDF({
             y: y - rowHeight,
             width: totalTableWidth * colProps[1],
             height: rowHeight,
-            color: rgb(1, 1, 1),
+            color: bgColor,
             opacity: 1,
         });
 
@@ -301,53 +308,61 @@ export async function generateDashboardPDF({
                 y: y - yOffset - (idx * (rowFontSize + 2)) - rowFontSize,
                 size: rowFontSize,
                 font: regularFont,
-                color: rgb(0, 0, 0),
+                color: textColor,
             });
         });
 
-        // Columna Total (igual que antes)
+        // Columna Total
         page.drawRectangle({
             x: x + totalTableWidth * (colProps[0] + colProps[1]),
             y: y - rowHeight,
             width: totalTableWidth * colProps[2],
             height: rowHeight,
-            color: rgb(1, 1, 1),
+            color: bgColor,
             opacity: 1,
         });
 
-        const countValue = row.count.toString();
+        const countValue = (row.isBaja && !row.isObsoleto ? '- ' : '') + row.count.toString();
         const countWidth = regularFont.widthOfTextAtSize(countValue, rowFontSize);
         page.drawText(countValue, {
             x: x + totalTableWidth * (colProps[0] + colProps[1]) + totalTableWidth * colProps[2] - countWidth - minCellPadding,
             y: y - 4 - rowFontSize,
             size: rowFontSize,
             font: regularFont,
-            color: rgb(0, 0, 0),
+            color: textColor,
         });
 
-        // Columna Valor (igual que antes)
+        // Columna Valor
         page.drawRectangle({
             x: x + totalTableWidth * (colProps[0] + colProps[1] + colProps[2]),
             y: y - rowHeight,
             width: totalTableWidth * colProps[3],
             height: rowHeight,
-            color: rgb(1, 1, 1),
+            color: bgColor,
             opacity: 1,
         });
 
-        const sumValue = `$${row.sum.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+        const sumValue = (row.isBaja && !row.isObsoleto ? '- $' : '$') + `${row.sum.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
         const sumWidth = regularFont.widthOfTextAtSize(sumValue, rowFontSize);
         page.drawText(sumValue, {
             x: x + totalTableWidth * (colProps[0] + colProps[1] + colProps[2]) + totalTableWidth * colProps[3] - sumWidth - minCellPadding,
             y: y - 4 - rowFontSize,
             size: rowFontSize,
             font: regularFont,
-            color: rgb(0, 0, 0),
+            color: textColor,
         });
 
         y -= rowHeight;
-        totalBienes += Number(row.count);
-        totalValores += Number(row.sum);
+        
+        // Sumar o restar del total según sea baja o no
+        if (row.isBaja && !row.isObsoleto) {
+            totalBienes -= Number(row.count);
+            totalValores -= Number(row.sum);
+        } else if (!row.isObsoleto) {
+            totalBienes += Number(row.count);
+            totalValores += Number(row.sum);
+        }
+        // Los obsoletos no se suman ni restan del total
     });
 
     // Fila de totales (alineado a la derecha)
