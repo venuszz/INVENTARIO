@@ -69,7 +69,7 @@ export function useSearchAndFilters(
       if (isMatch(item.usufinal) || isMatch(item.resguardante)) {
         const exact = isExact(item.usufinal) || isExact(item.resguardante);
         const score = exact ? 6 : 5;
-        if (score > bestMatch.score) bestMatch = { type: 'usufinal', value: item.usufinal || item.resguardante || '', score };
+        if (score > bestMatch.score) bestMatch = { type: 'director', value: item.usufinal || item.resguardante || '', score };
       }
       else if (isMatch(item.area)) {
         const exact = isExact(item.area);

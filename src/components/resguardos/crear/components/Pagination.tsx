@@ -3,7 +3,9 @@
  * Provides page navigation and rows per page selector
  */
 
-import { ChevronLeft, ChevronRight } from 'lucide-react';
+import React, { useState, useRef, useEffect } from 'react';
+import { ChevronLeft, ChevronRight, ChevronDown, Check } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { useTheme } from '@/context/ThemeContext';
 
 interface PaginationProps {
@@ -25,78 +27,142 @@ export function Pagination({
   onRowsPerPageChange
 }: PaginationProps) {
   const { isDarkMode } = useTheme();
+  const rowsOptions = [10, 25, 50, 100];
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setIsDropdownOpen(false);
+      }
+    }
+
+    if (isDropdownOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+      return () => document.removeEventListener('mousedown', handleClickOutside);
+    }
+  }, [isDropdownOpen]);
+
+  const handleRowsChange = (rows: number) => {
+    onRowsPerPageChange(rows);
+    onPageChange(1);
+    setIsDropdownOpen(false);
+  };
 
   return (
-    <div className={`flex items-center justify-between p-4 rounded-xl border shadow-inner mb-4 hover:shadow-lg transition-shadow ${
-      isDarkMode
-        ? 'bg-gray-900/30 border-gray-800'
-        : 'bg-gray-50/50 border-gray-200'
+    <div className={`mt-6 flex flex-col sm:flex-row items-center justify-between gap-4 px-4 py-3 ${
+      isDarkMode ? 'text-white' : 'text-black'
     }`}>
-      <div className="flex items-center space-x-4">
-        <span className={`text-sm ${
-          isDarkMode ? 'text-gray-400' : 'text-gray-600'
-        }`}>
-          Página <span className={isDarkMode ? 'text-white' : 'text-gray-900'}>
-            {currentPage}
-          </span> de <span className={isDarkMode ? 'text-white' : 'text-gray-900'}>
-            {totalPages}
-          </span>
+      {/* Left side: Rows per page selector */}
+      <div className="flex items-center gap-3">
+        <span className={`text-sm ${isDarkMode ? 'text-white/60' : 'text-black/60'}`}>
+          Mostrar
         </span>
-        <select
-          title='Artículos por página'
-          value={rowsPerPage}
-          onChange={(e) => {
-            onRowsPerPageChange(Number(e.target.value));
-            onPageChange(1);
-          }}
-          className={`border rounded-lg text-sm py-1.5 px-3 focus:outline-none focus:ring-2 transition-colors ${
-            isDarkMode
-              ? 'bg-black border-gray-800 text-white focus:ring-white hover:border-white'
-              : 'bg-white border-gray-300 text-gray-900 focus:ring-blue-500 hover:border-blue-400'
-          }`}
-        >
-          <option value={10}>10 por página</option>
-          <option value={25}>25 por página</option>
-          <option value={50}>50 por página</option>
-          <option value={100}>100 por página</option>
-        </select>
+        
+        {/* Custom dropdown */}
+        <div className="relative" ref={dropdownRef}>
+          <button
+            onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+            className={`flex items-center gap-2 px-3 py-1.5 rounded-lg border text-sm font-medium transition-all ${
+              isDarkMode
+                ? 'bg-white/5 border-white/10 text-white hover:bg-white/10'
+                : 'bg-black/5 border-black/10 text-black hover:bg-black/10'
+            }`}
+          >
+            {rowsPerPage}
+            <ChevronDown 
+              size={14} 
+              className={`transition-transform ${isDropdownOpen ? 'rotate-180' : ''}`}
+            />
+          </button>
+
+          <AnimatePresence>
+            {isDropdownOpen && (
+              <motion.div
+                initial={{ opacity: 0, y: -10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -10 }}
+                transition={{ duration: 0.15 }}
+                className={`absolute top-full mt-1 left-0 min-w-[80px] rounded-lg border backdrop-blur-xl shadow-lg z-50 overflow-hidden ${
+                  isDarkMode 
+                    ? 'bg-black/95 border-white/10' 
+                    : 'bg-white/95 border-black/10'
+                }`}
+              >
+                {rowsOptions.map((option) => (
+                  <button
+                    key={option}
+                    onClick={() => handleRowsChange(option)}
+                    className={`w-full flex items-center justify-between px-3 py-2 text-sm transition-colors ${
+                      option === rowsPerPage
+                        ? isDarkMode
+                          ? 'bg-white/10 text-white'
+                          : 'bg-black/10 text-black'
+                        : isDarkMode
+                          ? 'text-white/80 hover:bg-white/5'
+                          : 'text-black/80 hover:bg-black/5'
+                    }`}
+                  >
+                    <span>{option}</span>
+                    {option === rowsPerPage && (
+                      <Check size={14} className={isDarkMode ? 'text-white' : 'text-black'} />
+                    )}
+                  </button>
+                ))}
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
+
+        <span className={`text-sm ${isDarkMode ? 'text-white/60' : 'text-black/60'}`}>
+          registros
+        </span>
       </div>
-      <div className="flex items-center space-x-2">
+
+      {/* Right side: Page navigation */}
+      <div className="flex items-center gap-2">
         <button
-          title='Anterior'
-          onClick={() => onPageChange(Math.max(currentPage - 1, 1))}
+          onClick={() => onPageChange(currentPage - 1)}
           disabled={currentPage === 1}
-          className={`p-2 rounded-lg transition-colors ${
+          className={`p-2 rounded-lg border transition-all ${
             currentPage === 1
-              ? (isDarkMode
-                ? 'text-gray-600 bg-black cursor-not-allowed'
-                : 'text-gray-400 bg-gray-100 cursor-not-allowed'
-              )
-              : (isDarkMode
-                ? 'text-white bg-black hover:bg-gray-900 border border-gray-800 hover:border-white'
-                : 'text-gray-900 bg-white hover:bg-gray-50 border border-gray-300 hover:border-blue-400'
-              )
+              ? isDarkMode
+                ? 'border-white/5 text-white/20 cursor-not-allowed'
+                : 'border-black/5 text-black/20 cursor-not-allowed'
+              : isDarkMode
+                ? 'border-white/10 text-white hover:bg-white/5'
+                : 'border-black/10 text-black hover:bg-black/5'
           }`}
+          title="Página anterior"
         >
-          <ChevronLeft className="h-5 w-5" />
+          <ChevronLeft size={16} />
         </button>
+
+        <div className={`flex items-center gap-2 px-3 py-1.5 text-sm ${
+          isDarkMode ? 'text-white/80' : 'text-black/80'
+        }`}>
+          <span className="font-medium">{currentPage}</span>
+          <span className={isDarkMode ? 'text-white/40' : 'text-black/40'}>de</span>
+          <span className="font-medium">{totalPages}</span>
+        </div>
+
         <button
-          title='Siguiente'
-          onClick={() => onPageChange(Math.min(currentPage + 1, totalPages))}
-          disabled={currentPage >= totalPages}
-          className={`p-2 rounded-lg transition-colors ${
-            currentPage >= totalPages
-              ? (isDarkMode
-                ? 'text-gray-600 bg-black cursor-not-allowed'
-                : 'text-gray-400 bg-gray-100 cursor-not-allowed'
-              )
-              : (isDarkMode
-                ? 'text-white bg-black hover:bg-gray-900 border border-gray-800 hover:border-white'
-                : 'text-gray-900 bg-white hover:bg-gray-50 border border-gray-300 hover:border-blue-400'
-              )
+          onClick={() => onPageChange(currentPage + 1)}
+          disabled={currentPage === totalPages}
+          className={`p-2 rounded-lg border transition-all ${
+            currentPage === totalPages
+              ? isDarkMode
+                ? 'border-white/5 text-white/20 cursor-not-allowed'
+                : 'border-black/5 text-black/20 cursor-not-allowed'
+              : isDarkMode
+                ? 'border-white/10 text-white hover:bg-white/5'
+                : 'border-black/10 text-black hover:bg-black/5'
           }`}
+          title="Página siguiente"
         >
-          <ChevronRight className="h-5 w-5" />
+          <ChevronRight size={16} />
         </button>
       </div>
     </div>

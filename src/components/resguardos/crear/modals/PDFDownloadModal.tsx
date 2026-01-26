@@ -1,6 +1,7 @@
 import React from 'react';
 import { useTheme } from '@/context/ThemeContext';
-import { FileDigit, FileText, Download, X } from 'lucide-react';
+import { FileText, Download, X, Loader2 } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { PdfData } from '../types';
 
 /**
@@ -8,12 +9,6 @@ import { PdfData } from '../types';
  * 
  * Modal dialog displayed after successfully saving a resguardo.
  * Prompts the user to download the PDF document.
- * 
- * @param show - Whether to display the modal
- * @param pdfData - The PDF data for the resguardo
- * @param onDownload - Handler for downloading the PDF
- * @param onClose - Handler for closing the modal (with warning check)
- * @param isGenerating - Whether the PDF is currently being generated
  */
 interface PDFDownloadModalProps {
   show: boolean;
@@ -32,88 +27,119 @@ export default function PDFDownloadModal({
 }: PDFDownloadModalProps) {
   const { isDarkMode } = useTheme();
 
-  if (!show || !pdfData) return null;
-
   return (
-    <div
-      className={`fixed inset-0 flex items-center justify-center z-50 px-4 animate-fadeIn ${
-        isDarkMode ? 'bg-black/90' : 'bg-gray-900/50'
-      }`}
-      tabIndex={-1}
-      onKeyDown={(e) => {
-        if (e.key === 'Escape') {
-          e.stopPropagation();
-          e.preventDefault();
-        }
-      }}
-      onClick={(e) => e.stopPropagation()}
-    >
-      <div
-        className={`rounded-2xl shadow-2xl border w-full max-w-md overflow-hidden transition-all duration-300 transform ${
-          isDarkMode
-            ? 'bg-black border-green-600/30 hover:border-green-500/50'
-            : 'bg-white border-green-300'
-        }`}
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div className={`relative p-6 ${isDarkMode ? 'bg-black' : 'bg-white'}`}>
-          <div className="absolute top-0 left-0 w-full h-1 bg-green-500/40 animate-pulse"></div>
-
-          <button
-            onClick={onClose}
-            className={`absolute top-3 right-3 p-2 rounded-full border transition-colors ${
-              isDarkMode
-                ? 'bg-black/60 hover:bg-gray-900 text-green-400 hover:text-green-500 border-green-500/30'
-                : 'bg-gray-100 hover:bg-gray-200 text-green-600 hover:text-green-700 border-green-300'
+    <AnimatePresence>
+      {show && pdfData && (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          className={`fixed inset-0 z-[110] flex items-center justify-center px-4 backdrop-blur-sm ${
+            isDarkMode ? 'bg-black/80' : 'bg-black/50'
+          }`}
+          onClick={onClose}
+          onKeyDown={(e) => {
+            if (e.key === 'Escape') {
+              e.stopPropagation();
+              e.preventDefault();
+            }
+          }}
+        >
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95, y: 20 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.95, y: 20 }}
+            transition={{ duration: 0.2 }}
+            className={`rounded-lg border w-full max-w-md overflow-hidden backdrop-blur-xl ${
+              isDarkMode ? 'bg-black/95 border-white/10' : 'bg-white/95 border-black/10'
             }`}
-            title="Cerrar"
+            onClick={(e) => e.stopPropagation()}
           >
-            <X className="h-4 w-4" />
-          </button>
-
-          <div className="flex flex-col items-center text-center mb-4">
-            <div className="p-3 bg-green-500/10 rounded-full border border-green-500/30 mb-3 animate-pulse">
-              <FileDigit className="h-8 w-8 text-green-500" />
-            </div>
-            <h3 className={`text-2xl font-bold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
-              Resguardo generado
-            </h3>
-            <p className={`mt-2 ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>
-              Descarga el PDF del resguardo para imprimir o compartir
-            </p>
-          </div>
-
-          <div className="space-y-5 mt-6">
-            <div className={`rounded-lg border p-4 transition-colors ${
-              isDarkMode
-                ? 'border-gray-800 bg-gray-900/50 hover:border-green-500'
-                : 'border-gray-200 bg-gray-50 hover:border-green-400'
-            }`}>
-              <label className={`block text-xs uppercase tracking-wider mb-1 ${
-                isDarkMode ? 'text-gray-500' : 'text-gray-600'
-              }`}>
-                Documento generado
-              </label>
-              <div className="flex items-center gap-3">
-                <div className={`p-2 rounded-lg ${isDarkMode ? 'bg-gray-800' : 'bg-gray-200'}`}>
-                  <FileText className="h-4 w-4 text-green-400 animate-pulse" />
+            <div className="p-6">
+              {/* Header */}
+              <div className="flex items-start justify-between mb-4">
+                <div className="flex items-center gap-3">
+                  <div className={`p-2 rounded-lg ${
+                    isDarkMode ? 'bg-green-500/10' : 'bg-green-50'
+                  }`}>
+                    <FileText size={20} className={isDarkMode ? 'text-green-400' : 'text-green-600'} />
+                  </div>
+                  <div>
+                    <h3 className={`text-lg font-medium ${isDarkMode ? 'text-white' : 'text-black'}`}>
+                      Resguardo generado
+                    </h3>
+                    <p className={`text-sm ${
+                      isDarkMode ? 'text-white/60' : 'text-black/60'
+                    }`}>
+                      Listo para descargar
+                    </p>
+                  </div>
                 </div>
-                <span className={`font-medium ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
-                  Resguardo {pdfData.folio}
-                </span>
+                <motion.button
+                  onClick={onClose}
+                  className={`p-2 rounded-lg transition-colors ${
+                    isDarkMode
+                      ? 'hover:bg-white/10 text-white'
+                      : 'hover:bg-black/10 text-black'
+                  }`}
+                  whileHover={{ scale: 1.1 }}
+                  whileTap={{ scale: 0.9 }}
+                >
+                  <X size={16} />
+                </motion.button>
               </div>
+
+              {/* Folio info */}
+              <div className={`rounded-lg border p-3 mb-6 ${
+                isDarkMode
+                  ? 'bg-white/[0.02] border-white/10'
+                  : 'bg-black/[0.02] border-black/10'
+              }`}>
+                <label className={`block text-xs font-medium mb-1.5 ${
+                  isDarkMode ? 'text-white/60' : 'text-black/60'
+                }`}>
+                  Folio del resguardo
+                </label>
+                <div className="flex items-center gap-2">
+                  <FileText size={16} className={isDarkMode ? 'text-white/60' : 'text-black/60'} />
+                  <span className={`text-sm font-medium ${isDarkMode ? 'text-white' : 'text-black'}`}>
+                    {pdfData.folio}
+                  </span>
+                </div>
+              </div>
+
+              {/* Download button */}
+              <motion.button
+                onClick={onDownload}
+                disabled={isGenerating}
+                className={`w-full px-4 py-2 rounded-lg border text-sm font-medium flex items-center justify-center gap-2 transition-all ${
+                  isGenerating
+                    ? isDarkMode
+                      ? 'bg-black border-white/5 text-white/40 cursor-not-allowed'
+                      : 'bg-white border-black/5 text-black/40 cursor-not-allowed'
+                    : isDarkMode
+                      ? 'bg-white text-black border-white hover:bg-white/90'
+                      : 'bg-black text-white border-black hover:bg-black/90'
+                }`}
+                whileHover={!isGenerating ? { scale: 1.01 } : {}}
+                whileTap={!isGenerating ? { scale: 0.99 } : {}}
+              >
+                {isGenerating ? (
+                  <>
+                    <Loader2 size={14} className="animate-spin" />
+                    Generando PDF...
+                  </>
+                ) : (
+                  <>
+                    <Download size={14} />
+                    Descargar PDF
+                  </>
+                )}
+              </motion.button>
             </div>
-            <button
-              onClick={onDownload}
-              disabled={isGenerating}
-              className="w-full py-3 px-4 bg-green-600 hover:bg-green-500 text-black font-medium rounded-lg flex items-center justify-center gap-2 transition-all transform hover:scale-[1.02] shadow-lg hover:shadow-green-500/30"
-            >
-              <Download className="h-4 w-4" />
-              {isGenerating ? 'Generando PDF...' : 'Descargar PDF'}
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>
+          </motion.div>
+        </motion.div>
+      )}
+    </AnimatePresence>
   );
 }

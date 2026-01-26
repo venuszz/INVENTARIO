@@ -63,8 +63,8 @@ export function DirectorSelection({
 
   return (
     <div className="mb-4">
-      <label className={`text-sm font-medium mb-1 ${
-        isDarkMode ? 'text-gray-400' : 'text-gray-600'
+      <label className={`block text-xs font-medium mb-1.5 ${
+        isDarkMode ? 'text-white/60' : 'text-black/60'
       }`}>
         Director de Área
       </label>
@@ -78,11 +78,11 @@ export function DirectorSelection({
           onKeyDown={onKeyDown}
           onBlur={onBlur}
           placeholder={placeholder || (initialSuggestion ? 'Buscar director...' : 'Buscar director por nombre...')}
-          className={`w-full border rounded-lg py-2.5 px-4 focus:outline-none focus:ring-2 transition-colors ${
+          className={`w-full border rounded py-2 px-3 text-sm transition-colors focus:outline-none ${
             isDarkMode
-              ? 'bg-black border-gray-800 text-white placeholder-gray-500 focus:ring-blue-500 hover:border-blue-500'
-              : 'bg-white border-gray-300 text-gray-900 placeholder-gray-400 focus:ring-blue-500 hover:border-blue-400'
-          }`}
+              ? 'bg-white/5 border-white/10 text-white placeholder-white/40 focus:border-white/30'
+              : 'bg-black/5 border-black/10 text-black placeholder-black/40 focus:border-black/30'
+          } ${disabled ? 'opacity-50 cursor-not-allowed' : ''}`}
           disabled={disabled}
           autoComplete="off"
         />
@@ -92,24 +92,32 @@ export function DirectorSelection({
             const isSuggested = !forceShowAll && suggestedDirector && director.id_directorio === suggestedDirector.id_directorio;
             return (
               <div
-                className={`flex flex-col px-3 py-2 text-xs whitespace-normal break-words w-full border-b last:border-b-0 transition-colors ${
+                className={`flex flex-col px-3 py-2 text-xs border-b last:border-b-0 transition-colors ${
                   isDarkMode
-                    ? `border-gray-800 ${isHighlighted ? 'bg-gray-800/80 text-white' : 'text-gray-300'} hover:bg-gray-800/80`
-                    : `border-gray-200 ${isHighlighted ? 'bg-gray-100 text-gray-900' : 'text-gray-700'} hover:bg-gray-100`
-                } ${isSuggested ? (isDarkMode ? 'font-bold text-white' : 'font-bold text-gray-900') : ''}`}
+                    ? `border-white/5 ${isHighlighted ? 'bg-white/10' : 'bg-white/5'} hover:bg-white/10`
+                    : `border-black/5 ${isHighlighted ? 'bg-black/10' : 'bg-black/5'} hover:bg-black/10`
+                }`}
               >
                 <span className="flex items-center gap-2">
-                  <span className="font-semibold">{director.nombre}</span>
+                  <span className={`font-medium ${
+                    isDarkMode ? 'text-white' : 'text-black'
+                  } ${isSuggested ? 'font-semibold' : ''}`}>
+                    {director.nombre}
+                  </span>
                   {isSuggested && (
-                    <span className="ml-2 px-2 py-0.5 rounded-full bg-gray-700/60 text-xs text-white">
+                    <span className={`px-1.5 py-0.5 rounded-full text-[10px] border ${
+                      isDarkMode 
+                        ? 'bg-blue-500/10 text-blue-300 border-blue-500/30' 
+                        : 'bg-blue-100 text-blue-700 border-blue-300'
+                    }`}>
                       Sugerido
                     </span>
                   )}
                 </span>
-                <span className={`text-[10px] ${
-                  isDarkMode ? 'text-gray-400' : 'text-gray-500'
+                <span className={`text-[10px] mt-0.5 ${
+                  isDarkMode ? 'text-white/40' : 'text-black/40'
                 }`}>
-                  {director.puesto || <span className="italic text-yellow-400">Sin puesto</span>}
+                  {director.puesto || <span className="italic">Sin puesto</span>}
                 </span>
               </div>
             );
@@ -131,14 +139,14 @@ export function DirectorSelection({
               e.preventDefault();
               onSuggestionClick(suggestedDirector);
             }}
-            className={`inline-flex items-center gap-2 px-3 py-1 rounded-full border font-semibold text-xs shadow transition-all ${
+            className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full border text-xs transition-colors ${
               isDarkMode
-                ? 'bg-blue-900/30 text-blue-200 border-blue-700 hover:bg-blue-900/50 hover:text-white'
-                : 'bg-blue-50 text-blue-700 border-blue-300 hover:bg-blue-100 hover:text-blue-800'
+                ? 'bg-blue-500/10 text-blue-300 border-blue-500/30 hover:bg-blue-500/20'
+                : 'bg-blue-100 text-blue-700 border-blue-300 hover:bg-blue-200'
             }`}
             title={`Usar sugerencia: ${suggestedDirector.nombre}`}
           >
-            <span className="font-bold">Sugerido:</span> {suggestedDirector.nombre}
+            <span className="font-medium">Sugerido:</span> {suggestedDirector.nombre}
           </button>
         </div>
       )}
@@ -148,10 +156,10 @@ export function DirectorSelection({
         <div className="mt-2">
           <button
             type="button"
-            className={`px-4 py-1.5 rounded-lg border text-xs font-semibold shadow transition-all ${
+            className={`px-3 py-1 rounded text-xs border transition-colors ${
               isDarkMode
-                ? 'bg-gray-900 text-gray-200 border-gray-700 hover:bg-gray-900/30 hover:text-white'
-                : 'bg-gray-100 text-gray-700 border-gray-300 hover:bg-gray-200 hover:text-gray-900'
+                ? 'bg-white/5 text-white/80 border-white/10 hover:bg-white/10'
+                : 'bg-black/5 text-black/80 border-black/10 hover:bg-black/10'
             }`}
             onMouseDown={(e) => {
               e.preventDefault();

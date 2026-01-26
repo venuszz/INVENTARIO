@@ -3,7 +3,8 @@
  * Displays title, realtime toggle, and selected items counter
  */
 
-import { ListChecks, Info } from 'lucide-react';
+import { ListChecks } from 'lucide-react';
+import { motion } from 'framer-motion';
 import { useTheme } from '@/context/ThemeContext';
 import SectionRealtimeToggle from '@/components/SectionRealtimeToggle';
 
@@ -21,49 +22,46 @@ export function Header({ selectedCount, ineaConnected, iteaConnected, noListadoC
   const { isDarkMode } = useTheme();
 
   return (
-    <div className={`p-4 sm:p-6 flex flex-col sm:flex-row justify-between items-start sm:items-center border-b gap-2 sm:gap-0 ${
-      isDarkMode
-        ? 'bg-black border-gray-800'
-        : 'bg-gray-50/50 border-gray-200'
+    <div className={`flex justify-between items-center mb-8 pb-6 border-b ${
+      isDarkMode ? 'border-white/10' : 'border-black/10'
     }`}>
-      <h1 className="text-xl sm:text-2xl md:text-3xl font-bold flex items-center">
-        <span className={`mr-2 sm:mr-3 p-1 sm:p-2 rounded-lg border text-sm sm:text-base shadow-lg ${
-          isDarkMode
-            ? 'bg-gray-800 text-white border-white'
-            : 'bg-gray-900 text-white border-gray-900'
-        }`}>
-          RES
-        </span>
-        <span className={isDarkMode ? 'text-white' : 'text-gray-900'}>
-          Creación de Resguardos
-        </span>
-      </h1>
-      <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-4">
-        <SectionRealtimeToggle 
-          sectionName="Inventarios" 
-          isConnected={ineaConnected || iteaConnected || noListadoConnected} 
-        />
-        <p className={`text-sm sm:text-base flex items-center gap-2 ${
-          isDarkMode ? 'text-gray-400' : 'text-gray-600'
-        }`}>
-          <ListChecks className={`h-4 w-4 animate-pulse ${
-            isDarkMode ? 'text-white' : 'text-gray-900'
-          }`} />
-          <span className={`font-medium ${
-            isDarkMode ? 'text-white' : 'text-gray-900'
-          }`}>
-            {selectedCount}
-          </span> artículos seleccionados
-        </p>
-        <p className={`text-sm sm:text-base flex items-center gap-2 ${
-          isDarkMode ? 'text-gray-400' : 'text-gray-600'
-        }`}>
-          <Info className={`h-4 w-4 animate-pulse ${
-            isDarkMode ? 'text-white' : 'text-gray-900'
-          }`} />
-          Seleccione artículos para el resguardo
-        </p>
+      <div>
+        <h1 className="text-3xl font-light tracking-tight mb-1">
+          Crear Resguardo
+        </h1>
+        <div className="flex items-center gap-3">
+          <p className={`text-sm ${isDarkMode ? 'text-white/40' : 'text-black/60'}`}>
+            Asigna artículos a un responsable
+          </p>
+          {selectedCount > 0 && (
+            <>
+              <span className={`text-sm ${isDarkMode ? 'text-white/20' : 'text-black/30'}`}>
+                •
+              </span>
+              <motion.div 
+                className="flex items-center gap-1.5"
+                initial={{ opacity: 0, scale: 0.8 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ duration: 0.2 }}
+              >
+                <ListChecks 
+                  size={14} 
+                  className={isDarkMode ? 'text-green-400' : 'text-green-600'} 
+                />
+                <span className={`text-sm font-medium ${
+                  isDarkMode ? 'text-white' : 'text-black'
+                }`}>
+                  {selectedCount} {selectedCount === 1 ? 'artículo' : 'artículos'}
+                </span>
+              </motion.div>
+            </>
+          )}
+        </div>
       </div>
+      <SectionRealtimeToggle 
+        sectionName="Inventarios" 
+        isConnected={ineaConnected || iteaConnected || noListadoConnected} 
+      />
     </div>
   );
 }

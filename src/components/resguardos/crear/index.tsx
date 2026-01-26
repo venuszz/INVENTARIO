@@ -1,6 +1,6 @@
 "use client";
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { AlertTriangle, X, RefreshCw } from 'lucide-react';
+import { AlertTriangle, X } from 'lucide-react';
 import supabase from '@/app/lib/supabase/client';
 import { generateResguardoPDF } from '../ResguardoPDFReport';
 import { useUserRole } from "@/hooks/useUserRole";
@@ -29,7 +29,6 @@ import { Header } from './components/Header';
 import { FolioInfoPanel } from './components/FolioInfoPanel';
 import { DataStatsPanel } from './components/DataStatsPanel';
 import { SearchAndFilters } from './components/SearchAndFilters';
-import { FilterChips } from './components/FilterChips';
 import { InventoryTable } from './components/InventoryTable';
 import { Pagination } from './components/Pagination';
 import { DirectorSelection } from './components/DirectorSelection';
@@ -616,56 +615,56 @@ export default function CrearResguardos() {
   }, [setShowPDFButton]);
 
   return (
-    <div className={`min-h-screen p-4 ${isDarkMode ? 'bg-black' : 'bg-gray-50'}`}>
-      <div className={`w-full mx-auto rounded-lg sm:rounded-xl shadow-2xl overflow-hidden transition-all duration-500 transform border ${
-        isDarkMode ? 'bg-black border-gray-800 hover:border-gray-700' : 'bg-white border-gray-200'
+    <div className={`h-[calc(100vh-4rem)] overflow-hidden transition-colors duration-300 ${
+      isDarkMode ? 'bg-black text-white' : 'bg-white text-black'
+    }`}>
+      <div className={`h-full overflow-y-auto p-4 md:p-8 ${
+        isDarkMode 
+          ? 'scrollbar-thin scrollbar-track-white/5 scrollbar-thumb-white/20 hover:scrollbar-thumb-white/30'
+          : 'scrollbar-thin scrollbar-track-black/5 scrollbar-thumb-black/20 hover:scrollbar-thumb-black/30'
       }`}>
-        {/* Header */}
-        <Header
-          selectedCount={selectedMuebles.length}
-          ineaConnected={ineaConnected}
-          iteaConnected={iteaConnected}
-          noListadoConnected={noListadoConnected}
-        />
+        <div className="w-full max-w-7xl mx-auto pb-8">
+          {/* Header */}
+          <Header
+            selectedCount={selectedMuebles.length}
+            ineaConnected={ineaConnected}
+            iteaConnected={iteaConnected}
+            noListadoConnected={noListadoConnected}
+          />
 
-        {/* Main container */}
-        <div className="grid grid-cols-1 lg:grid-cols-5 h-full flex-1">
-          {/* Left panel - Muebles table */}
-          <div className="flex-1 min-w-0 flex flex-col p-4 lg:col-span-3">
-            <FolioInfoPanel
-              folio={folio}
-              directorName={
-                formData.directorId
-                  ? directorio.find(d => d.id_directorio.toString() === formData.directorId)?.nombre || ''
-                  : ''
-              }
-              onResetFolio={resetFolio}
-            />
+          {/* Main container */}
+          <div className="grid grid-cols-1 lg:grid-cols-5 gap-6 mt-8">
+            {/* Left panel - Muebles table */}
+            <div className="lg:col-span-3 space-y-6">
+              <FolioInfoPanel
+                folio={folio}
+                directorName={
+                  formData.directorId
+                    ? directorio.find(d => d.id_directorio.toString() === formData.directorId)?.nombre || ''
+                    : ''
+                }
+                onResetFolio={resetFolio}
+              />
 
-            {/* Data statistics panel */}
-            <DataStatsPanel
-              ineaTotal={stats.ineaTotal}
-              ineaTotalWithBaja={stats.ineaTotalWithBaja}
-              ineaActive={stats.ineaActive}
-              ineaBaja={stats.ineaBaja}
-              iteaTotal={stats.iteaTotal}
-              iteaActive={stats.iteaActive}
-              iteaInactive={stats.iteaInactive}
-              tlaxcalaTotal={stats.tlaxcalaTotal}
-              totalRaw={stats.totalRaw}
-              excludedByStatus={stats.excludedByStatus}
-              excludedByResguardo={stats.excludedByResguardo}
-              availableCount={stats.availableCount}
-              filteredCount={filteredMuebles.length}
-              hasActiveFilters={activeFilters.length > 0 || searchTerm.length > 0}
-            />
+              {/* Data statistics panel */}
+              <DataStatsPanel
+                ineaTotal={stats.ineaTotal}
+                ineaTotalWithBaja={stats.ineaTotalWithBaja}
+                ineaActive={stats.ineaActive}
+                ineaBaja={stats.ineaBaja}
+                iteaTotal={stats.iteaTotal}
+                iteaActive={stats.iteaActive}
+                iteaInactive={stats.iteaInactive}
+                tlaxcalaTotal={stats.tlaxcalaTotal}
+                totalRaw={stats.totalRaw}
+                excludedByStatus={stats.excludedByStatus}
+                excludedByResguardo={stats.excludedByResguardo}
+                availableCount={stats.availableCount}
+                filteredCount={filteredMuebles.length}
+                hasActiveFilters={activeFilters.length > 0 || searchTerm.length > 0}
+              />
 
-            {/* Search and filters container */}
-            <div className={`mb-6 p-4 rounded-xl border shadow-inner hover:shadow-lg transition-shadow ${
-              isDarkMode
-                ? 'bg-gray-900/30 border-gray-800'
-                : 'bg-gray-50/50 border-gray-200'
-            }`}>
+              {/* Search and filters */}
               <SearchAndFilters
                 searchTerm={searchTerm}
                 onSearchChange={setSearchTerm}
@@ -675,7 +674,8 @@ export default function CrearResguardos() {
                 onSuggestionClick={(index: number) => {
                   const suggestion = suggestions[index];
                   if (suggestion) {
-                    setSearchTerm(suggestion.value);
+                    addFilter({ term: suggestion.value, type: suggestion.type });
+                    setSearchTerm('');
                     setShowSuggestions(false);
                   }
                 }}
@@ -686,89 +686,63 @@ export default function CrearResguardos() {
                 inputRef={searchInputRef}
                 onShowSuggestionsChange={setShowSuggestions}
                 onHighlightChange={setHighlightedIndex}
-              />
-
-              <FilterChips
-                filters={activeFilters}
+                totalRecords={filteredMuebles.length}
+                activeFilters={activeFilters}
                 onRemoveFilter={removeFilter}
-                onClearAll={() => {
-                  activeFilters.forEach((_, index) => removeFilter(index));
-                }}
               />
 
-              <div className={`flex items-center gap-2 text-sm ${
-                isDarkMode ? 'text-gray-400' : 'text-gray-600'
-              }`}>
-                <RefreshCw
-                  className={`h-4 w-4 cursor-pointer transition-colors ${loading ? 'animate-spin' : ''} ${
-                    isDarkMode
-                      ? 'text-white hover:text-gray-300'
-                      : 'text-gray-900 hover:text-gray-700'
-                  }`}
-                  onClick={() => refetch()}
-                />
-                <span>Total: <span className={isDarkMode ? 'text-white' : 'text-gray-900'}>
-                  {filteredMuebles.length}
-                </span> registros</span>
-              </div>
+              <InventoryTable
+                items={paginatedMuebles}
+                selectedItems={selectedMuebles}
+                onToggleSelection={handleToggleSelection}
+                onSelectAllPage={handleSelectAllPage}
+                areAllPageSelected={areAllPageSelected(paginatedMuebles)}
+                isSomePageSelected={isSomePageSelected(paginatedMuebles)}
+                canSelectAllPage={canSelectAllPage(paginatedMuebles)}
+                sortField={sortField}
+                sortDirection={sortDirection}
+                onSort={handleSort}
+                loading={loading}
+                error={dataError}
+                onRetry={refetch}
+                searchTerm={searchTerm}
+                onClearSearch={() => setSearchTerm('')}
+              />
+
+              <Pagination
+                currentPage={currentPage}
+                totalPages={totalPages}
+                rowsPerPage={rowsPerPage}
+                onPageChange={setCurrentPage}
+                onRowsPerPageChange={setRowsPerPage}
+              />
             </div>
 
-            <InventoryTable
-              items={paginatedMuebles}
-              selectedItems={selectedMuebles}
-              onToggleSelection={handleToggleSelection}
-              onSelectAllPage={handleSelectAllPage}
-              areAllPageSelected={areAllPageSelected(paginatedMuebles)}
-              isSomePageSelected={isSomePageSelected(paginatedMuebles)}
-              canSelectAllPage={canSelectAllPage(paginatedMuebles)}
-              sortField={sortField}
-              sortDirection={sortDirection}
-              onSort={handleSort}
-              loading={loading}
-              error={dataError}
-              onRetry={refetch}
-              searchTerm={searchTerm}
-              onClearSearch={() => setSearchTerm('')}
-            />
-
-            <Pagination
-              currentPage={currentPage}
-              totalPages={totalPages}
-              rowsPerPage={rowsPerPage}
-              onPageChange={setCurrentPage}
-              onRowsPerPageChange={setRowsPerPage}
-            />
-          </div>
-
-          {/* Right panel - Details */}
-          <div ref={detailRef} className={`flex-1 p-4 border-t lg:border-t-0 lg:border-l flex flex-col lg:col-span-2 ${
-            isDarkMode ? 'bg-black border-gray-800' : 'bg-gray-50/30 border-gray-200'
-          }`}>
-            <div className={`rounded-xl border p-4 mb-4 shadow-inner hover:shadow-lg transition-shadow ${
-              isDarkMode ? 'bg-gray-900/30 border-gray-800' : 'bg-white border-gray-200'
-            }`}>
-              <h2 className={`text-lg font-medium mb-4 flex items-center gap-2 ${
-                isDarkMode ? 'text-gray-100' : 'text-gray-900'
+            {/* Right panel - Details */}
+            <div ref={detailRef} className="lg:col-span-2 space-y-6">
+              <div className={`rounded-lg border p-4 ${
+                isDarkMode ? 'bg-white/[0.02] border-white/10' : 'bg-black/[0.02] border-black/10'
               }`}>
-                <span className={isDarkMode ? 'text-white' : 'text-gray-900'}>
+                <h2 className={`text-sm font-medium mb-4 ${
+                  isDarkMode ? 'text-white/60' : 'text-black/60'
+                }`}>
                   Información del Resguardo
-                </span>
-              </h2>
+                </h2>
 
-              <DirectorSelection
-                value={directorSearchTerm}
-                onChange={(value: string) => handleDirectorInputChange({ target: { value } } as React.ChangeEvent<HTMLInputElement>)}
-                onFocus={() => { setShowDirectorSuggestions(true); setForceShowAllDirectors(false); }}
-                onKeyDown={handleDirectorKeyDown}
-                onBlur={handleDirectorBlur}
-                disabled={inputsDisabled || directorInputDisabled}
-                suggestions={filteredDirectors}
-                showSuggestions={showDirectorSuggestions}
-                highlightedIndex={highlightedDirectorIndex}
-                onSuggestionClick={handleDirectorSuggestionClick}
-                suggestedDirector={directorSugerido}
-                showAllDirectors={forceShowAllDirectors}
-                onShowAllDirectors={() => {
+                <DirectorSelection
+                  value={directorSearchTerm}
+                  onChange={(value: string) => handleDirectorInputChange({ target: { value } } as React.ChangeEvent<HTMLInputElement>)}
+                  onFocus={() => { setShowDirectorSuggestions(true); setForceShowAllDirectors(false); }}
+                  onKeyDown={handleDirectorKeyDown}
+                  onBlur={handleDirectorBlur}
+                  disabled={inputsDisabled || directorInputDisabled}
+                  suggestions={filteredDirectors}
+                  showSuggestions={showDirectorSuggestions}
+                  highlightedIndex={highlightedDirectorIndex}
+                  onSuggestionClick={handleDirectorSuggestionClick}
+                  suggestedDirector={directorSugerido}
+                  showAllDirectors={forceShowAllDirectors}
+                  onShowAllDirectors={() => {
                   setShowDirectorSuggestions(true);
                   setForceShowAllDirectors(true);
                   setHighlightedDirectorIndex(-1);
@@ -821,6 +795,32 @@ export default function CrearResguardos() {
           </div>
         </div>
       </div>
+
+      {/* Scrollbar styles */}
+      <style jsx>{`
+        .scrollbar-thin {
+          scrollbar-width: thin;
+        }
+        
+        .scrollbar-thin::-webkit-scrollbar {
+          width: 6px;
+        }
+        
+        .scrollbar-thin::-webkit-scrollbar-track {
+          background: ${isDarkMode ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.05)'};
+          border-radius: 3px;
+        }
+        
+        .scrollbar-thin::-webkit-scrollbar-thumb {
+          background: ${isDarkMode ? 'rgba(255, 255, 255, 0.2)' : 'rgba(0, 0, 0, 0.2)'};
+          border-radius: 3px;
+        }
+        
+        .scrollbar-thin::-webkit-scrollbar-thumb:hover {
+          background: ${isDarkMode ? 'rgba(255, 255, 255, 0.3)' : 'rgba(0, 0, 0, 0.3)'};
+        }
+      `}</style>
+    </div>
 
       {/* Error Alert */}
       {error && (

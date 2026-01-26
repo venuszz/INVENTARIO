@@ -3,10 +3,9 @@
  * Main table for displaying and selecting inventory items
  */
 
-import { useRef, useEffect } from 'react';
-import { ArrowUpDown, CheckCircle, AlertCircle, Search, X, User, RefreshCw } from 'lucide-react';
+import { ArrowUpDown, CheckCircle, AlertCircle, Search, X, User } from 'lucide-react';
+import { motion } from 'framer-motion';
 import { useTheme } from '@/context/ThemeContext';
-import { getColorClass } from '../utils';
 import { TableSkeleton } from './TableSkeleton';
 import type { Mueble } from '../types';
 
@@ -49,14 +48,6 @@ export function InventoryTable({
   onClearSearch
 }: InventoryTableProps) {
   const { isDarkMode } = useTheme();
-  const selectAllRef = useRef<HTMLInputElement>(null);
-
-  // Set indeterminate state for select-all checkbox
-  useEffect(() => {
-    if (selectAllRef.current) {
-      selectAllRef.current.indeterminate = !areAllPageSelected && isSomePageSelected;
-    }
-  }, [areAllPageSelected, isSomePageSelected]);
 
   const columns = [
     { field: 'id_inv' as keyof Mueble, label: 'ID Inventario' },
@@ -67,57 +58,58 @@ export function InventoryTable({
   ];
 
   return (
-    <div className={`rounded-xl border overflow-hidden mb-6 flex flex-col flex-grow max-h-[60vh] shadow-lg hover:shadow-xl transition-all duration-300 transform ${
+    <div className={`rounded-lg border overflow-hidden mb-4 flex flex-col flex-grow max-h-[60vh] ${
       isDarkMode
-        ? 'bg-gray-900/30 border-gray-800 hover:border-gray-700'
-        : 'bg-white border-gray-200'
+        ? 'bg-white/[0.02] border-white/10'
+        : 'bg-black/[0.02] border-black/10'
     }`}>
-      <div className={`flex-grow min-w-[800px] overflow-x-auto overflow-y-auto scrollbar-thin ${
-        isDarkMode
-          ? 'scrollbar-track-gray-900 scrollbar-thumb-gray-800 hover:scrollbar-thumb-gray-700'
-          : 'scrollbar-track-gray-100 scrollbar-thumb-gray-300 hover:scrollbar-thumb-gray-400'
-      }`}>
-        <table className={`min-w-full divide-y ${
-          isDarkMode ? 'divide-gray-800/50' : 'divide-gray-200'
+      <div className="flex-grow min-w-[800px] overflow-x-auto overflow-y-auto">
+        <table className="min-w-full">
+        <thead className={`sticky top-0 z-10 backdrop-blur-xl ${
+          isDarkMode ? 'bg-black/95 border-b border-white/10' : 'bg-white/95 border-b border-black/10'
         }`}>
-        <thead className={`backdrop-blur-sm sticky top-0 z-10 ${
-          isDarkMode ? 'bg-black/90' : 'bg-gray-50/90'
-        }`}>
-          <tr className={`divide-x ${
-            isDarkMode ? 'divide-gray-800/30' : 'divide-gray-200/30'
-          }`}>
+          <tr>
             {/* Select All Column */}
             <th className="px-2 py-3 w-10">
               <div className="flex justify-center">
-                <div className="relative group flex items-center justify-center">
-                  <input
-                    ref={selectAllRef}
-                    type="checkbox"
-                    checked={areAllPageSelected}
-                    onChange={onSelectAllPage}
-                    disabled={items.length === 0 || !canSelectAllPage}
-                    className={`appearance-none h-6 w-6 rounded-md border-2 transition-all duration-200 focus:ring-2 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer shadow-md ${
-                      isDarkMode
-                        ? 'border-white bg-black focus:ring-white focus:border-white hover:border-white hover:shadow-white/30'
-                        : 'border-gray-400 bg-white focus:ring-blue-500 focus:border-blue-500 hover:border-blue-500 hover:shadow-blue-500/30'
-                    }`}
-                    aria-label="Seleccionar todos los artículos de la página"
-                  />
-                  {areAllPageSelected && (
-                    <span className="pointer-events-none absolute left-0 top-0 h-6 w-6 flex items-center justify-center">
-                      <CheckCircle className={`h-5 w-5 drop-shadow-lg animate-pulse ${
-                        isDarkMode ? 'text-white' : 'text-blue-600'
-                      }`} />
-                    </span>
-                  )}
-                  <span className={`absolute left-0 top-8 z-40 px-3 py-1.5 rounded-lg text-xs font-semibold shadow-xl border opacity-0 group-hover:opacity-100 group-hover:translate-y-1 transition-all pointer-events-none whitespace-nowrap w-auto min-w-[180px] ${
-                    isDarkMode
-                      ? 'bg-black text-white border-white'
-                      : 'bg-white text-gray-900 border-gray-300'
+                <button
+                  type="button"
+                  onClick={onSelectAllPage}
+                  disabled={items.length === 0 || !canSelectAllPage}
+                  className="relative group flex items-center justify-center disabled:opacity-40 disabled:cursor-not-allowed"
+                  aria-label="Seleccionar todos los artículos de la página"
+                >
+                  <div className={`h-5 w-5 rounded border flex items-center justify-center transition-all ${
+                    areAllPageSelected
+                      ? (isDarkMode
+                        ? 'bg-white/20 border-white/40'
+                        : 'bg-black/20 border-black/40')
+                      : isSomePageSelected
+                        ? (isDarkMode
+                          ? 'bg-white/10 border-white/30'
+                          : 'bg-black/10 border-black/30')
+                        : (isDarkMode
+                          ? 'border-white/20 bg-white/5 hover:bg-white/10'
+                          : 'border-black/20 bg-black/5 hover:bg-black/10')
                   }`}>
-                    Seleccionar todos los artículos de la página
+                    {areAllPageSelected ? (
+                      <CheckCircle className={`h-4 w-4 ${
+                        isDarkMode ? 'text-white' : 'text-black'
+                      }`} />
+                    ) : isSomePageSelected ? (
+                      <div className={`h-2 w-2 rounded-sm ${
+                        isDarkMode ? 'bg-white' : 'bg-black'
+                      }`} />
+                    ) : null}
+                  </div>
+                  <span className={`absolute left-0 top-8 z-40 px-2 py-1 rounded text-[10px] border opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap ${
+                    isDarkMode
+                      ? 'bg-black text-white border-white/20'
+                      : 'bg-white text-black border-black/20'
+                  }`}>
+                    {areAllPageSelected ? 'Deseleccionar página' : 'Seleccionar página'}
                   </span>
-                </div>
+                </button>
               </div>
             </th>
 
@@ -126,54 +118,50 @@ export function InventoryTable({
               <th
                 key={field}
                 onClick={() => onSort(field)}
-                className={`px-4 py-3 text-left text-xs font-medium uppercase tracking-wider cursor-pointer transition-all duration-200 group relative ${
-                  isDarkMode
-                    ? 'text-gray-400 hover:bg-gray-900/50'
-                    : 'text-gray-600 hover:bg-gray-100'
+                className={`px-4 py-3 text-left text-xs font-medium uppercase tracking-wider cursor-pointer transition-all ${
+                  sortField === field
+                    ? isDarkMode 
+                      ? 'text-white bg-white/[0.02]' 
+                      : 'text-black bg-black/[0.02]'
+                    : isDarkMode 
+                      ? 'text-white/60 hover:bg-white/[0.02] hover:text-white' 
+                      : 'text-black/60 hover:bg-black/[0.02] hover:text-black'
                 }`}
               >
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-1.5">
                   {label}
-                  <ArrowUpDown className={`h-3.5 w-3.5 transition-all duration-200 transform ${
-                    sortField === field
-                      ? (isDarkMode ? 'text-white scale-110 animate-pulse' : 'text-gray-900 scale-110 animate-pulse')
-                      : (isDarkMode ? 'text-gray-600 group-hover:text-gray-400' : 'text-gray-400 group-hover:text-gray-600')
-                  }`} />
+                  <ArrowUpDown size={12} className={sortField === field ? 'opacity-100' : 'opacity-40'} />
                 </div>
-                {sortField === field && (
-                  <div className={`absolute bottom-0 left-0 right-0 h-0.5 animate-pulse ${
-                    isDarkMode ? 'bg-white/50' : 'bg-gray-900/50'
-                  }`} />
-                )}
               </th>
             ))}
           </tr>
         </thead>
-        <tbody className={`bg-transparent divide-y ${
-          isDarkMode ? 'divide-gray-800/30' : 'divide-gray-200/30'
-        }`}>
+        <tbody>
           {loading ? (
             <TableSkeleton />
           ) : error ? (
             <tr className="h-96">
               <td colSpan={6} className="px-6 py-24 text-center">
-                <div className="flex flex-col items-center justify-center space-y-4 animate-fadeIn">
-                  <div className="relative">
-                    <AlertCircle className="h-16 w-16 text-red-500" />
-                    <div className="absolute inset-0 w-16 h-16 border-4 border-red-500/20 rounded-full animate-ping" />
-                  </div>
-                  <p className="text-lg font-medium text-red-400">Error al cargar datos</p>
-                  <p className={`text-sm ${
-                    isDarkMode ? 'text-gray-400' : 'text-gray-600'
+                <div className="flex flex-col items-center justify-center space-y-3">
+                  <AlertCircle className={`h-12 w-12 ${
+                    isDarkMode ? 'text-red-400' : 'text-red-500'
+                  }`} />
+                  <p className={`text-sm font-medium ${
+                    isDarkMode ? 'text-red-400' : 'text-red-500'
+                  }`}>
+                    Error al cargar datos
+                  </p>
+                  <p className={`text-xs ${
+                    isDarkMode ? 'text-white/40' : 'text-black/40'
                   }`}>
                     {error}
                   </p>
                   <button
                     onClick={onRetry}
-                    className={`px-4 py-2 rounded-lg text-sm transition-all duration-300 border hover:scale-105 transform ${
+                    className={`px-3 py-1.5 rounded text-xs border transition-colors ${
                       isDarkMode
-                        ? 'bg-black text-white hover:bg-gray-900 border-gray-800 hover:border-white'
-                        : 'bg-white text-gray-900 hover:bg-gray-50 border-gray-300 hover:border-blue-400'
+                        ? 'bg-white/5 text-white border-white/20 hover:bg-white/10'
+                        : 'bg-black/5 text-black border-black/20 hover:bg-black/10'
                     }`}
                   >
                     Intentar nuevamente
@@ -183,29 +171,26 @@ export function InventoryTable({
             </tr>
           ) : items.length === 0 ? (
             <tr className="h-96">
-              <td colSpan={6} className={`px-6 py-24 text-center ${
-                isDarkMode ? 'text-gray-400' : 'text-gray-600'
-              }`}>
-                <div className="flex flex-col items-center justify-center space-y-4 animate-fadeIn">
-                  <div className="relative">
-                    <Search className={`h-16 w-16 ${
-                      isDarkMode ? 'text-gray-500' : 'text-gray-400'
-                    }`} />
-                    <div className={`absolute inset-0 w-16 h-16 border-4 rounded-full animate-ping opacity-20 ${
-                      isDarkMode ? 'border-gray-800' : 'border-gray-300'
-                    }`} />
-                  </div>
-                  <p className="text-lg font-medium">No se encontraron resultados</p>
+              <td colSpan={6} className="px-6 py-24 text-center">
+                <div className="flex flex-col items-center justify-center space-y-3">
+                  <Search className={`h-12 w-12 ${
+                    isDarkMode ? 'text-white/20' : 'text-black/20'
+                  }`} />
+                  <p className={`text-sm ${
+                    isDarkMode ? 'text-white/60' : 'text-black/60'
+                  }`}>
+                    No se encontraron resultados
+                  </p>
                   {searchTerm && (
                     <button
                       onClick={onClearSearch}
-                      className={`px-4 py-2 rounded-lg text-sm transition-all duration-300 flex items-center gap-2 border hover:scale-105 transform group ${
+                      className={`px-3 py-1.5 rounded text-xs border transition-colors flex items-center gap-1.5 ${
                         isDarkMode
-                          ? 'bg-black text-white hover:bg-gray-900 border-gray-800 hover:border-white'
-                          : 'bg-white text-gray-900 hover:bg-gray-50 border-gray-300 hover:border-blue-400'
+                          ? 'bg-white/5 text-white border-white/20 hover:bg-white/10'
+                          : 'bg-black/5 text-black border-black/20 hover:bg-black/10'
                       }`}
                     >
-                      <X className="h-4 w-4 group-hover:rotate-90 transition-transform duration-300" />
+                      <X size={12} />
                       Limpiar búsqueda
                     </button>
                   )}
@@ -216,39 +201,35 @@ export function InventoryTable({
             items.map((mueble, index) => {
               const isSelected = selectedItems.some(m => m.id === mueble.id);
               return (
-                <tr
+                <motion.tr
                   key={mueble.id}
-                  className={`group transition-all duration-200 animate-fadeIn border-l-2 cursor-pointer ${
-                    isSelected
-                      ? (isDarkMode
-                        ? 'bg-gray-900/10 hover:bg-gray-900/20 border-white'
-                        : 'bg-blue-50 hover:bg-blue-100 border-blue-500'
-                      )
-                      : (isDarkMode
-                        ? 'hover:bg-gray-900/40 border-transparent hover:border-gray-700'
-                        : 'hover:bg-gray-50 border-transparent hover:border-gray-300'
-                      )
-                  }`}
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ delay: index * 0.02, duration: 0.2 }}
                   onClick={() => onToggleSelection(mueble)}
-                  style={{ animationDelay: `${index * 50}ms` }}
+                  className={`border-b transition-colors cursor-pointer ${
+                    isDarkMode 
+                      ? 'border-white/5 hover:bg-white/[0.02]' 
+                      : 'border-black/5 hover:bg-black/[0.02]'
+                  } ${isSelected ? (isDarkMode ? 'bg-white/[0.02]' : 'bg-black/[0.02]') : ''}`}
                 >
                   {/* Checkbox Cell */}
-                  <td className="px-2 py-4">
+                  <td className="px-2 py-3">
                     <div className="flex justify-center">
-                      <div className={`h-5 w-5 rounded-md border transform transition-all duration-300 flex items-center justify-center ${
+                      <div className={`h-4 w-4 rounded border flex items-center justify-center transition-all pointer-events-none ${
                         isSelected
                           ? (isDarkMode
-                            ? 'bg-white border-gray-300 scale-110'
-                            : 'bg-blue-600 border-blue-600 scale-110'
+                            ? 'bg-white/20 border-white/40'
+                            : 'bg-black/20 border-black/40'
                           )
                           : (isDarkMode
-                            ? 'border-gray-700 group-hover:border-white'
-                            : 'border-gray-300 group-hover:border-blue-500'
+                            ? 'border-white/20'
+                            : 'border-black/20'
                           )
                       }`}>
                         {isSelected && (
-                          <CheckCircle className={`h-4 w-4 animate-scale-check ${
-                            isDarkMode ? 'text-black' : 'text-white'
+                          <CheckCircle className={`h-3 w-3 ${
+                            isDarkMode ? 'text-white' : 'text-black'
                           }`} />
                         )}
                       </div>
@@ -256,83 +237,77 @@ export function InventoryTable({
                   </td>
 
                   {/* ID Cell */}
-                  <td className="px-4 py-4">
-                    <div className="flex flex-col space-y-1">
-                      <div className={`text-sm font-medium transition-colors ${
-                        isDarkMode
-                          ? 'text-white group-hover:text-gray-300'
-                          : 'text-gray-900 group-hover:text-gray-700'
+                  <td className="px-4 py-3">
+                    <div className="flex flex-col gap-1">
+                      <div className={`text-sm font-medium ${
+                        isDarkMode ? 'text-white' : 'text-black'
                       }`}>
                         {mueble.id_inv}
                       </div>
-                      <div className={`text-xs transition-colors ${
-                        isDarkMode
-                          ? 'text-gray-500 group-hover:text-gray-400'
-                          : 'text-gray-600 group-hover:text-gray-500'
+                      <div className={`text-xs ${
+                        isDarkMode ? 'text-white/60' : 'text-black/60'
                       }`}>
                         {mueble.rubro}
                       </div>
-                      <div className={`text-[10px] font-mono px-2 py-0.5 rounded-full border inline-block w-fit transition-all duration-300
+                      <span className={`text-[10px] font-mono px-1.5 py-0.5 rounded-full border inline-block w-fit
                         ${mueble.origen === 'INEA' ?
-                          (isDarkMode ? 'bg-gray-900/30 text-white border-white group-hover:bg-gray-900/40' : 'bg-blue-100 text-blue-800 border-blue-400 group-hover:bg-blue-200') :
+                          (isDarkMode ? 'bg-blue-500/10 text-blue-300 border-blue-500/30' : 'bg-blue-100 text-blue-700 border-blue-300') :
                           mueble.origen === 'ITEA' ?
-                            (isDarkMode ? 'bg-pink-900/30 text-pink-200 border-pink-700 group-hover:bg-pink-900/40' : 'bg-pink-100 text-pink-800 border-pink-400 group-hover:bg-pink-200') :
+                            (isDarkMode ? 'bg-pink-500/10 text-pink-300 border-pink-500/30' : 'bg-pink-100 text-pink-700 border-pink-300') :
                             mueble.origen === 'TLAXCALA' ?
-                              (isDarkMode ? 'bg-purple-900/30 text-purple-200 border-purple-700 group-hover:bg-purple-900/40' : 'bg-purple-100 text-purple-800 border-purple-400 group-hover:bg-purple-200') :
-                              (isDarkMode ? 'bg-gray-900/40 text-gray-400 border-gray-800 group-hover:bg-gray-900/60' : 'bg-gray-100 text-gray-600 border-gray-400 group-hover:bg-gray-200')}`}
+                              (isDarkMode ? 'bg-purple-500/10 text-purple-300 border-purple-500/30' : 'bg-purple-100 text-purple-700 border-purple-300') :
+                              (isDarkMode ? 'bg-white/5 text-white/60 border-white/20' : 'bg-black/5 text-black/60 border-black/20')}`}
                       >
                         {mueble.origen}
-                      </div>
+                      </span>
                     </div>
                   </td>
 
                   {/* Description Cell */}
-                  <td className="px-4 py-4">
-                    <div className={`text-sm transition-colors line-clamp-2 ${
-                      isDarkMode
-                        ? 'text-white group-hover:text-gray-300'
-                        : 'text-gray-900 group-hover:text-gray-700'
-                    }`}>
+                  <td className={`px-4 py-3 text-sm ${
+                    isDarkMode ? 'text-white/80' : 'text-black/80'
+                  }`}>
+                    <div className="line-clamp-2">
                       {mueble.descripcion}
                     </div>
                   </td>
 
                   {/* Area Cell */}
-                  <td className="px-4 py-4">
-                    <div className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border transition-all duration-300 
-                      ${getColorClass(mueble.area, isDarkMode)} transform group-hover:scale-105`}>
-                      {mueble.area || 'No especificada'}
-                    </div>
+                  <td className={`px-4 py-3 text-sm ${
+                    isDarkMode ? 'text-white/80' : 'text-black/80'
+                  }`}>
+                    {mueble.area || 'No especificada'}
                   </td>
 
                   {/* Usufinal Cell */}
-                  <td className="px-4 py-4">
-                    <div className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border gap-1 
-                      ${getColorClass(mueble.usufinal, isDarkMode)} transform group-hover:scale-105 transition-all duration-300`}>
-                      <User className={`h-3.5 w-3.5 ${
-                        isDarkMode ? 'text-white' : 'text-gray-700'
-                      }`} />
+                  <td className="px-4 py-3">
+                    <div className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium border ${
+                      isDarkMode 
+                        ? 'bg-white/5 text-white/80 border-white/10' 
+                        : 'bg-black/5 text-black/80 border-black/10'
+                    }`}>
+                      <User size={12} />
                       {mueble.usufinal || 'No asignado'}
                     </div>
                   </td>
 
                   {/* Estado Cell */}
-                  <td className="px-4 py-4">
-                    <div className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border transform group-hover:scale-105 transition-all duration-300
+                  <td className="px-4 py-3">
+                    <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium border
                       ${mueble.estado === 'B' ?
-                        (isDarkMode ? 'bg-green-900/20 text-green-300 border-green-900 group-hover:bg-green-900/30' : 'bg-green-100 text-green-800 border-green-400 group-hover:bg-green-200') :
+                        (isDarkMode ? 'bg-green-500/10 text-green-300 border-green-500/30' : 'bg-green-100 text-green-700 border-green-300') :
                         mueble.estado === 'R' ?
-                          (isDarkMode ? 'bg-yellow-900/20 text-yellow-300 border-yellow-900 group-hover:bg-yellow-900/30' : 'bg-yellow-100 text-yellow-800 border-yellow-400 group-hover:bg-yellow-200') :
+                          (isDarkMode ? 'bg-yellow-500/10 text-yellow-300 border-yellow-500/30' : 'bg-yellow-100 text-yellow-700 border-yellow-300') :
                           mueble.estado === 'M' ?
-                            (isDarkMode ? 'bg-red-900/20 text-red-300 border-red-900 group-hover:bg-red-900/30' : 'bg-red-100 text-red-800 border-red-400 group-hover:bg-red-200') :
+                            (isDarkMode ? 'bg-red-500/10 text-red-300 border-red-500/30' : 'bg-red-100 text-red-700 border-red-300') :
                             mueble.estado === 'N' ?
-                              (isDarkMode ? 'bg-gray-900/20 text-white border-gray-900 group-hover:bg-gray-900/30' : 'bg-gray-100 text-gray-800 border-gray-400 group-hover:bg-gray-200') :
-                              (isDarkMode ? 'bg-gray-900/20 text-gray-300 border-gray-900 group-hover:bg-gray-900/30' : 'bg-gray-100 text-gray-600 border-gray-400 group-hover:bg-gray-200')}`}
+                              (isDarkMode ? 'bg-white/10 text-white border-white/20' : 'bg-black/10 text-black border-black/20') :
+                              (isDarkMode ? 'bg-white/5 text-white/60 border-white/20' : 'bg-black/5 text-black/60 border-black/20')}`}
                     >
                       {mueble.estado}
-                    </div>
+                    </span>
                   </td>
-                </tr>
+                </motion.tr>
               );
             })
           )}

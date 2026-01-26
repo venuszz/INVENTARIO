@@ -77,10 +77,10 @@ export interface PdfData {
  */
 export interface ActiveFilter {
   term: string;
-  type: 'id' | 'descripcion' | 'rubro' | 'estado' | 'estatus' | 'area' | 'usufinal' | 'resguardante' | null;
+  type: 'id' | 'descripcion' | 'rubro' | 'estado' | 'estatus' | 'area' | 'usufinal' | 'resguardante' | 'director' | null;
 }
 
 /**
  * Type for search field matching
  */
-export type SearchMatchType = 'id' | 'descripcion' | 'rubro' | 'estado' | 'estatus' | 'area' | 'usufinal' | 'resguardante' | null;
+export type SearchMatchType = 'id' | 'descripcion' | 'rubro' | 'estado' | 'estatus' | 'area' | 'usufinal' | 'resguardante' | 'director' | null;

@@ -19,8 +19,8 @@ export function ResguardanteInput({ value, onChange, disabled }: ResguardanteInp
 
   return (
     <div className="mb-4">
-      <label className={`text-sm font-medium mb-1 ${
-        isDarkMode ? 'text-gray-400' : 'text-gray-600'
+      <label className={`block text-xs font-medium mb-1.5 ${
+        isDarkMode ? 'text-white/60' : 'text-black/60'
       }`}>
         Resguardante
       </label>
@@ -29,12 +29,11 @@ export function ResguardanteInput({ value, onChange, disabled }: ResguardanteInp
         value={value}
         onChange={(e) => onChange(e.target.value)}
         placeholder="Nombre del resguardante"
-        className={`block w-full border rounded-lg py-2.5 px-4 focus:outline-none focus:ring-2 transition-colors ${
+        className={`block w-full border rounded py-2 px-3 text-sm transition-colors focus:outline-none h-[38px] ${
           isDarkMode
-            ? 'bg-black border-gray-800 text-white placeholder-gray-500 focus:ring-blue-500 hover:border-blue-500'
-            : 'bg-white border-gray-300 text-gray-900 placeholder-gray-400 focus:ring-blue-500 hover:border-blue-400'
+            ? 'bg-white/5 border-white/10 text-white placeholder-white/40 focus:border-white/30'
+            : 'bg-black/5 border-black/10 text-black placeholder-black/40 focus:border-black/30'
         }`}
-        disabled={disabled}
       />
     </div>
   );

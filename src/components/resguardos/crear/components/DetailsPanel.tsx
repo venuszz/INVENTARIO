@@ -20,8 +20,8 @@ export default function DetailsPanel({ children }: DetailsPanelProps) {
     <div
       className={`flex-1 p-4 border-t lg:border-t-0 lg:border-l flex flex-col lg:col-span-2 ${
         isDarkMode
-          ? 'bg-black border-gray-800'
-          : 'bg-gray-50/30 border-gray-200'
+          ? 'bg-white/[0.02] border-white/10'
+          : 'bg-black/[0.02] border-black/10'
       }`}
     >
       {children}

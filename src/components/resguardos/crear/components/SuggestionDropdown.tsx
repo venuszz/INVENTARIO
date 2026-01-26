@@ -38,10 +38,10 @@ export function SuggestionDropdown<T>({
     <ul
       role="listbox"
       aria-label={ariaLabel}
-      className={`absolute left-0 top-full w-full mt-1 animate-fadeInUp max-h-80 overflow-y-auto rounded-lg shadow-sm border backdrop-blur-xl transition-all duration-200 z-50 ${
+      className={`absolute left-0 top-full w-full mt-1 max-h-80 overflow-y-auto rounded border backdrop-blur-xl z-50 ${
         isDarkMode
-          ? 'border-white/10 bg-black/90'
-          : 'border-gray-200 bg-white/95'
+          ? 'border-white/10 bg-black/95'
+          : 'border-black/10 bg-white/95'
       }`}
     >
       {items.map((item, index) => {

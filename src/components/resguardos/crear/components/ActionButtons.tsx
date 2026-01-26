@@ -3,7 +3,7 @@
  * Clear and save buttons for resguardo actions
  */
 
-import { X, Save, RefreshCw } from 'lucide-react';
+import { Trash2, Save, Loader2 } from 'lucide-react';
 import { useTheme } from '@/context/ThemeContext';
 
 interface ActionButtonsProps {
@@ -29,44 +29,51 @@ export function ActionButtons({
   const { isDarkMode } = useTheme();
 
   return (
-    <div className="flex flex-col sm:flex-row gap-2 sm:gap-4">
+    <div className="flex flex-col sm:flex-row items-center gap-2">
+      {/* Clear button */}
       <button
         onClick={onClear}
         disabled={!canClear || isSaving}
-        className={`px-4 py-2 rounded-lg text-sm flex items-center justify-center gap-2 transition-all border ${
+        className={`flex items-center gap-2 px-3 py-1.5 rounded-lg border text-sm font-medium transition-all ${
           !canClear || isSaving
             ? (isDarkMode
-              ? 'bg-black text-gray-600 border-gray-800 cursor-not-allowed'
-              : 'bg-gray-100 text-gray-400 border-gray-300 cursor-not-allowed'
+              ? 'bg-white/5 border-white/5 text-white/30 cursor-not-allowed'
+              : 'bg-black/5 border-black/5 text-black/30 cursor-not-allowed'
             )
             : (isDarkMode
-              ? 'bg-black text-gray-300 border-gray-700 hover:bg-gray-900 hover:border-blue-500 hover:text-blue-300'
-              : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50 hover:border-blue-400 hover:text-blue-600'
+              ? 'bg-white/5 border-white/10 text-white hover:bg-white/10'
+              : 'bg-black/5 border-black/10 text-black hover:bg-black/10'
             )
         }`}
       >
-        <X className="h-4 w-4" />
+        <Trash2 size={14} />
         Limpiar Selección
       </button>
+
+      {/* Save button */}
       <button
         onClick={onSave}
         disabled={!canSave || isSaving}
-        className={`px-4 py-2 rounded-lg text-sm flex items-center justify-center gap-2 flex-grow sm:flex-grow-0 transition-all transform hover:scale-[1.02] ${
+        className={`flex items-center gap-2 px-3 py-1.5 rounded-lg border text-sm font-medium transition-all flex-grow sm:flex-grow-0 ${
           !canSave || isSaving
             ? (isDarkMode
-              ? 'bg-blue-900/10 text-blue-300/50 border border-blue-900/20 cursor-not-allowed'
-              : 'bg-blue-100 text-blue-400 border border-blue-200 cursor-not-allowed'
+              ? 'bg-white/5 border-white/5 text-white/30 cursor-not-allowed'
+              : 'bg-black/5 border-black/5 text-black/30 cursor-not-allowed'
             )
-            : 'bg-blue-600 text-white hover:bg-blue-500 shadow-lg hover:shadow-blue-500/30'
+            : (isDarkMode
+              ? 'bg-white/5 border-white/10 text-white hover:bg-white/10'
+              : 'bg-black/5 border-black/10 text-black hover:bg-black/10'
+            )
         }`}
       >
         {isSaving ? (
-          <RefreshCw className="h-4 w-4 animate-spin" />
+          <Loader2 size={14} className="animate-spin" />
         ) : (
-          <Save className="h-4 w-4" />
+          <Save size={14} />
         )}
         Guardar Resguardo ({selectedCount})
       </button>
     </div>
   );
 }
+

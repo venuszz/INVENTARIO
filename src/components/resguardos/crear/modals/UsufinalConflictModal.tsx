@@ -1,6 +1,7 @@
 import React from 'react';
 import { useTheme } from '@/context/ThemeContext';
 import { AlertTriangle, X } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
 
 /**
  * UsufinalConflictModal Component
@@ -8,10 +9,6 @@ import { AlertTriangle, X } from 'lucide-react';
  * Modal dialog that warns the user when attempting to select items
  * with different responsables (usufinal). Only items with the same
  * responsable can be selected together.
- * 
- * @param show - Whether to display the modal
- * @param conflictUsufinal - The conflicting responsable name
- * @param onClose - Handler for closing the modal
  */
 interface UsufinalConflictModalProps {
   show: boolean;
@@ -26,56 +23,106 @@ export default function UsufinalConflictModal({
 }: UsufinalConflictModalProps) {
   const { isDarkMode } = useTheme();
 
-  if (!show) return null;
-
   return (
-    <div className={`fixed inset-0 flex items-center justify-center z-50 px-4 animate-fadeIn ${
-      isDarkMode ? 'bg-black/90' : 'bg-gray-900/50'
-    }`}>
-      <div className={`rounded-2xl shadow-2xl border w-full max-w-md overflow-hidden transition-all duration-300 transform ${
-        isDarkMode
-          ? 'bg-black border-red-600/30 hover:border-red-500/50'
-          : 'bg-white border-red-300'
-      }`}>
-        <div className={`relative p-6 ${isDarkMode ? 'bg-black' : 'bg-white'}`}>
-          <div className="absolute top-0 left-0 w-full h-1 bg-red-500/40 animate-pulse"></div>
-          
-          <div className="flex flex-col items-center text-center mb-4">
-            <div className="p-3 bg-red-500/10 rounded-full border border-red-500/30 mb-3 animate-pulse">
-              <AlertTriangle className="h-8 w-8 text-red-500" />
-            </div>
-            <h3 className={`text-2xl font-bold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
-              No se puede agregar
-            </h3>
-            <p className={`mt-2 ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>
-              Solo puedes seleccionar bienes que pertenezcan al mismo responsable.
-            </p>
-            <p className={`mt-2 text-sm ${isDarkMode ? 'text-red-300' : 'text-red-600'}`}>
-              El bien que intentas agregar actualmente pertenece a:{' '}
-              <span className="font-semibold">{conflictUsufinal}</span>
-            </p>
-            <p className={`text-xs italic pt-3 ${isDarkMode ? 'text-gray-700' : 'text-gray-500'}`}>
-              Te sugerimos editar las características del bien.
-            </p>
-          </div>
-        </div>
-        
-        <div className={`p-5 border-t flex justify-end gap-3 ${
-          isDarkMode ? 'bg-black border-gray-800' : 'bg-gray-50 border-gray-200'
-        }`}>
-          <button
-            onClick={onClose}
-            className={`px-5 py-2.5 rounded-lg text-sm border transition-colors flex items-center gap-2 ${
-              isDarkMode
-                ? 'bg-gray-900 text-white hover:bg-gray-800 border-gray-800 hover:border-red-500'
-                : 'bg-white text-gray-700 hover:bg-gray-50 border-gray-300 hover:border-red-400'
+    <AnimatePresence>
+      {show && (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          className={`fixed inset-0 z-[110] flex items-center justify-center px-4 backdrop-blur-sm ${
+            isDarkMode ? 'bg-black/80' : 'bg-black/50'
+          }`}
+          onClick={onClose}
+        >
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95, y: 20 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.95, y: 20 }}
+            transition={{ duration: 0.2 }}
+            className={`rounded-lg border w-full max-w-md overflow-hidden backdrop-blur-xl ${
+              isDarkMode ? 'bg-black/95 border-white/10' : 'bg-white/95 border-black/10'
             }`}
+            onClick={(e) => e.stopPropagation()}
           >
-            <X className="h-4 w-4" />
-            Cerrar
-          </button>
-        </div>
-      </div>
-    </div>
+            <div className="p-6">
+              {/* Header */}
+              <div className="flex items-start justify-between mb-4">
+                <div className="flex items-center gap-3">
+                  <div className={`p-2 rounded-lg ${
+                    isDarkMode ? 'bg-red-500/10' : 'bg-red-50'
+                  }`}>
+                    <AlertTriangle size={20} className={isDarkMode ? 'text-red-400' : 'text-red-600'} />
+                  </div>
+                  <div>
+                    <h3 className={`text-lg font-medium ${isDarkMode ? 'text-white' : 'text-black'}`}>
+                      No se puede agregar
+                    </h3>
+                    <p className={`text-sm ${
+                      isDarkMode ? 'text-white/60' : 'text-black/60'
+                    }`}>
+                      Conflicto de responsable
+                    </p>
+                  </div>
+                </div>
+                <motion.button
+                  onClick={onClose}
+                  className={`p-2 rounded-lg transition-colors ${
+                    isDarkMode
+                      ? 'hover:bg-white/10 text-white'
+                      : 'hover:bg-black/10 text-black'
+                  }`}
+                  whileHover={{ scale: 1.1 }}
+                  whileTap={{ scale: 0.9 }}
+                >
+                  <X size={16} />
+                </motion.button>
+              </div>
+
+              {/* Message */}
+              <div className="mb-6">
+                <p className={`text-sm mb-3 ${
+                  isDarkMode ? 'text-white/70' : 'text-black/70'
+                }`}>
+                  Solo puedes seleccionar bienes que pertenezcan al mismo responsable.
+                </p>
+                <div className={`rounded-lg border p-3 ${
+                  isDarkMode
+                    ? 'bg-red-500/5 border-red-500/20'
+                    : 'bg-red-50 border-red-200'
+                }`}>
+                  <p className={`text-sm ${
+                    isDarkMode ? 'text-red-300' : 'text-red-700'
+                  }`}>
+                    El bien que intentas agregar pertenece a:{' '}
+                    <span className="font-semibold">{conflictUsufinal}</span>
+                  </p>
+                </div>
+                <p className={`text-xs mt-3 italic ${
+                  isDarkMode ? 'text-white/40' : 'text-black/40'
+                }`}>
+                  Te sugerimos editar las características del bien.
+                </p>
+              </div>
+
+              {/* Action button */}
+              <motion.button
+                onClick={onClose}
+                className={`w-full px-4 py-2 rounded-lg border text-sm font-medium transition-all ${
+                  isDarkMode
+                    ? 'bg-black border-white/10 text-white hover:border-white/20 hover:bg-white/[0.02]'
+                    : 'bg-white border-black/10 text-black hover:border-black/20 hover:bg-black/[0.02]'
+                }`}
+                whileHover={{ scale: 1.01 }}
+                whileTap={{ scale: 0.99 }}
+              >
+                Entendido
+              </motion.button>
+            </div>
+          </motion.div>
+        </motion.div>
+      )}
+    </AnimatePresence>
   );
 }
+

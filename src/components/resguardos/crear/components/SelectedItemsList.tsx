@@ -3,7 +3,7 @@
  * Displays list of selected items with individual resguardante inputs
  */
 
-import { LayoutGrid, TagIcon, Trash2, Briefcase } from 'lucide-react';
+import { LayoutGrid, TagIcon, Trash2, Briefcase, MapPin } from 'lucide-react';
 import { useTheme } from '@/context/ThemeContext';
 import type { Mueble } from '../types';
 
@@ -26,34 +26,46 @@ export function SelectedItemsList({
   const { isDarkMode } = useTheme();
 
   return (
-    <div className={`rounded-xl border p-4 flex-grow overflow-y-hidden shadow-inner relative max-h-[70vh] hover:shadow-lg transition-shadow ${
+    <div className={`rounded-lg border p-4 flex-grow overflow-y-hidden relative max-h-[70vh] ${
       isDarkMode
-        ? 'bg-gray-900/30 border-gray-800'
-        : 'bg-white border-gray-200'
+        ? 'bg-white/[0.02] border-white/10'
+        : 'bg-black/[0.02] border-black/10'
     }`}>
       {/* Header */}
-      <div className={`flex items-center gap-2 mb-2 sticky top-0 z-30 p-2 -m-2 backdrop-blur-md ${
-        isDarkMode ? 'bg-black/80' : 'bg-white/80'
+      <div className={`flex items-center justify-between mb-3 pb-3 border-b ${
+        isDarkMode ? 'border-white/10' : 'border-black/10'
       }`}>
-        <LayoutGrid className={`h-5 w-5 animate-pulse ${
-          isDarkMode ? 'text-white' : 'text-gray-900'
-        }`} />
-        <span className={isDarkMode ? 'text-white' : 'text-gray-900'}>
-          Artículos Seleccionados ({items.length})
-        </span>
+        <div className="flex items-center gap-2">
+          <LayoutGrid className={`h-4 w-4 ${
+            isDarkMode ? 'text-white/60' : 'text-black/60'
+          }`} />
+          <span className={`text-sm font-medium ${
+            isDarkMode ? 'text-white' : 'text-black'
+          }`}>
+            Artículos Seleccionados
+          </span>
+          <span className={`text-xs px-2 py-0.5 rounded-full border ${
+            isDarkMode 
+              ? 'bg-white/10 text-white border-white/20' 
+              : 'bg-black/10 text-black border-black/20'
+          }`}>
+            {items.length}
+          </span>
+        </div>
         
         {/* Clear all button */}
         {items.length > 0 && (
           <button
             onClick={onClearAll}
-            className={`ml-2 px-3 py-1 rounded text-xs font-semibold transition-colors border flex items-center gap-1 ${
+            className={`px-2 py-1 rounded text-xs border transition-colors flex items-center gap-1 ${
               isDarkMode
-                ? 'bg-red-700/80 text-white hover:bg-red-600 border-red-900'
-                : 'bg-red-600 text-white hover:bg-red-700 border-red-700'
+                ? 'bg-red-500/10 text-red-300 border-red-500/30 hover:bg-red-500/20'
+                : 'bg-red-100 text-red-700 border-red-300 hover:bg-red-200'
             }`}
             title="Eliminar todos los artículos seleccionados"
           >
-            <Trash2 className="h-3 w-3" /> Eliminar todos
+            <Trash2 size={12} />
+            Limpiar
           </button>
         )}
       </div>
@@ -61,90 +73,136 @@ export function SelectedItemsList({
       {/* Empty state */}
       {items.length === 0 ? (
         <div className={`flex flex-col items-center justify-center h-full min-h-[200px] ${
-          isDarkMode ? 'text-gray-500' : 'text-gray-600'
+          isDarkMode ? 'text-white/40' : 'text-black/40'
         }`}>
-          <TagIcon className={`h-12 w-12 mb-2 ${
-            isDarkMode ? 'text-gray-600' : 'text-gray-400'
+          <TagIcon className={`h-10 w-10 mb-2 ${
+            isDarkMode ? 'text-white/20' : 'text-black/20'
           }`} />
           <p className="text-sm">No hay artículos seleccionados</p>
-          <p className="text-xs mt-1">Haga clic en un artículo para agregarlo</p>
+          <p className="text-xs mt-1">Selecciona artículos de la tabla</p>
         </div>
       ) : (
         /* Items list */
-        <div className="space-y-3 mt-2 max-h-[60vh] overflow-y-auto pr-1">
-          {items.map((mueble) => (
+        <div className="space-y-2 max-h-[60vh] overflow-y-auto pr-1">
+          {items.map((mueble) => {
+            // Helper function to get estado label
+            const getEstadoLabel = (estado: string | null) => {
+              if (!estado) return 'Sin estado';
+              switch (estado) {
+                case 'B': return 'Bueno';
+                case 'R': return 'Regular';
+                case 'M': return 'Malo';
+                case 'N': return 'Nuevo';
+                default: return estado;
+              }
+            };
+
+            return (
             <div
               key={`selected-${mueble.id}`}
-              className={`rounded-lg p-3 flex justify-between items-start border shadow-sm hover:shadow-md transition-all ${
+              className={`rounded-lg p-3 flex justify-between items-start border transition-colors ${
                 isDarkMode
-                  ? 'bg-black border-gray-800 hover:border-blue-500'
-                  : 'bg-gray-50 border-gray-200 hover:border-blue-400'
+                  ? 'bg-white/[0.02] border-white/10 hover:bg-white/[0.04]'
+                  : 'bg-black/[0.02] border-black/10 hover:bg-black/[0.04]'
               }`}
             >
               <div className="flex-1 min-w-0">
-                {/* ID and Estado */}
-                <div className="flex items-center gap-2">
-                  <div className={`text-sm font-medium truncate ${
-                    isDarkMode ? 'text-white' : 'text-gray-900'
+                {/* ID and badges row */}
+                <div className="flex items-center gap-2 mb-2 flex-wrap">
+                  {/* ID Inventario */}
+                  <div className={`text-sm font-medium ${
+                    isDarkMode ? 'text-white' : 'text-black'
                   }`}>
-                    {mueble.id_inv}
+                    {mueble.id_inv || (
+                      <span className={`italic ${
+                        isDarkMode ? 'text-white/40' : 'text-black/40'
+                      }`}>
+                        Sin ID
+                      </span>
+                    )}
                   </div>
-                  <div className={`inline-flex items-center px-1.5 py-0.5 rounded-full text-xs font-medium 
+                  
+                  {/* Estado badge */}
+                  <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium border
                     ${mueble.estado === 'B' ?
-                      (isDarkMode ? 'bg-green-900/20 text-green-300 border border-green-900' : 'bg-green-100 text-green-800 border border-green-400') :
+                      (isDarkMode ? 'bg-green-500/10 text-green-300 border-green-500/30' : 'bg-green-100 text-green-700 border-green-300') :
                       mueble.estado === 'R' ?
-                        (isDarkMode ? 'bg-yellow-900/20 text-yellow-300 border border-yellow-900' : 'bg-yellow-100 text-yellow-800 border border-yellow-400') :
+                        (isDarkMode ? 'bg-yellow-500/10 text-yellow-300 border-yellow-500/30' : 'bg-yellow-100 text-yellow-700 border-yellow-300') :
                         mueble.estado === 'M' ?
-                          (isDarkMode ? 'bg-red-900/20 text-red-300 border border-red-900' : 'bg-red-100 text-red-800 border border-red-400') :
+                          (isDarkMode ? 'bg-red-500/10 text-red-300 border-red-500/30' : 'bg-red-100 text-red-700 border-red-300') :
                           mueble.estado === 'N' ?
-                            (isDarkMode ? 'bg-blue-900/20 text-blue-300 border border-blue-900' : 'bg-blue-100 text-blue-800 border border-blue-400') :
-                            (isDarkMode ? 'bg-gray-900/20 text-gray-300 border border-gray-900' : 'bg-gray-100 text-gray-600 border border-gray-400')}`}>
-                    {mueble.estado}
-                  </div>
+                            (isDarkMode ? 'bg-blue-500/10 text-blue-300 border-blue-500/30' : 'bg-blue-100 text-blue-700 border-blue-300') :
+                            (isDarkMode ? 'bg-white/5 text-white/60 border-white/20' : 'bg-black/5 text-black/60 border-black/20')}`}>
+                    {getEstadoLabel(mueble.estado)}
+                  </span>
+                  
+                  {/* Origen badge */}
+                  <span className={`text-[10px] font-mono px-1.5 py-0.5 rounded-full border
+                    ${mueble.origen === 'INEA' ?
+                      (isDarkMode ? 'bg-blue-500/10 text-blue-300 border-blue-500/30' : 'bg-blue-100 text-blue-700 border-blue-300') :
+                      mueble.origen === 'ITEA' ?
+                        (isDarkMode ? 'bg-pink-500/10 text-pink-300 border-pink-500/30' : 'bg-pink-100 text-pink-700 border-pink-300') :
+                        mueble.origen === 'TLAXCALA' ?
+                          (isDarkMode ? 'bg-purple-500/10 text-purple-300 border-purple-500/30' : 'bg-purple-100 text-purple-700 border-purple-300') :
+                          (isDarkMode ? 'bg-white/5 text-white/60 border-white/20' : 'bg-black/5 text-black/60 border-black/20')}`}>
+                    {mueble.origen || 'Sin origen'}
+                  </span>
                 </div>
 
                 {/* Description */}
-                <p className={`text-sm mt-1 truncate ${
-                  isDarkMode ? 'text-gray-300' : 'text-gray-700'
+                <p className={`text-xs mb-1.5 line-clamp-2 ${
+                  isDarkMode ? 'text-white/70' : 'text-black/70'
                 }`}>
-                  {mueble.descripcion}
+                  {mueble.descripcion || (
+                    <span className={`italic ${
+                      isDarkMode ? 'text-white/40' : 'text-black/40'
+                    }`}>
+                      Sin descripción
+                    </span>
+                  )}
                 </p>
 
-                {/* Rubro */}
-                <div className={`text-xs mt-1 flex items-center gap-1 ${
-                  isDarkMode ? 'text-gray-500' : 'text-gray-600'
-                }`}>
-                  <Briefcase className="h-3 w-3" />
-                  {mueble.rubro}
-                </div>
-
-                {/* Origen badge */}
-                <div className={`text-[10px] mt-1 font-mono px-2 py-0.5 rounded-full border inline-block
-                  ${mueble.origen === 'INEA' ?
-                    (isDarkMode ? 'bg-blue-900/30 text-blue-300 border-blue-700' : 'bg-blue-100 text-blue-800 border-blue-400') :
-                    mueble.origen === 'ITEA' ?
-                      (isDarkMode ? 'bg-pink-900/30 text-pink-200 border-pink-700' : 'bg-pink-100 text-pink-800 border-pink-400') :
-                      mueble.origen === 'TLAXCALA' ?
-                        (isDarkMode ? 'bg-purple-900/30 text-purple-200 border-purple-700' : 'bg-purple-100 text-purple-800 border-purple-400') :
-                        (isDarkMode ? 'bg-gray-900/40 text-gray-400 border-gray-800' : 'bg-gray-100 text-gray-600 border-gray-400')}`}
-                >
-                  {mueble.origen}
+                {/* Rubro and Area - smaller and full display */}
+                <div className="flex flex-col gap-0.5 mb-2">
+                  {mueble.rubro && (
+                    <div className={`text-[10px] flex items-center gap-1 ${
+                      isDarkMode ? 'text-white/40' : 'text-black/40'
+                    }`}>
+                      <Briefcase size={9} />
+                      <span>{mueble.rubro}</span>
+                    </div>
+                  )}
+                  
+                  {mueble.area && (
+                    <div className={`text-[10px] flex items-center gap-1 ${
+                      isDarkMode ? 'text-white/40' : 'text-black/40'
+                    }`}>
+                      <MapPin size={9} />
+                      <span>{mueble.area}</span>
+                    </div>
+                  )}
+                  
+                  {!mueble.rubro && !mueble.area && (
+                    <div className={`text-[10px] italic ${
+                      isDarkMode ? 'text-white/30' : 'text-black/30'
+                    }`}>
+                      Sin rubro ni área
+                    </div>
+                  )}
                 </div>
 
                 {/* Individual resguardante input */}
-                <div className="mt-3 flex items-center gap-2">
-                  <input
-                    type="text"
-                    value={mueble.resguardanteAsignado || ''}
-                    onChange={(e) => onUpdateItemResguardante(mueble.id, e.target.value)}
-                    placeholder="Resguardante individual (opcional)"
-                    className={`block w-full border rounded-lg py-1.5 px-3 text-sm focus:outline-none focus:ring-1 focus:border-blue-500 transition-colors ${
-                      isDarkMode
-                        ? 'bg-gray-900/50 border-gray-800 text-white placeholder-gray-500 focus:ring-blue-500 hover:border-blue-500'
-                        : 'bg-white border-gray-300 text-gray-900 placeholder-gray-400 focus:ring-blue-500 hover:border-blue-400'
-                    }`}
-                  />
-                </div>
+                <input
+                  type="text"
+                  value={mueble.resguardanteAsignado || ''}
+                  onChange={(e) => onUpdateItemResguardante(mueble.id, e.target.value)}
+                  placeholder="Resguardante individual (opcional)"
+                  className={`block w-full border rounded py-1.5 px-2 text-xs transition-colors ${
+                    isDarkMode
+                      ? 'bg-white/5 border-white/10 text-white placeholder-white/40 focus:border-white/30 focus:outline-none'
+                      : 'bg-black/5 border-black/10 text-black placeholder-black/40 focus:border-black/30 focus:outline-none'
+                  }`}
+                />
               </div>
 
               {/* Remove button */}
@@ -154,16 +212,17 @@ export function SelectedItemsList({
                   e.stopPropagation();
                   onRemoveItem(mueble);
                 }}
-                className={`ml-2 p-1 rounded-full transition-colors ${
+                className={`ml-2 p-1 rounded transition-colors ${
                   isDarkMode
-                    ? 'text-gray-400 hover:text-red-400 hover:bg-gray-900/50'
-                    : 'text-gray-500 hover:text-red-600 hover:bg-gray-100'
+                    ? 'text-white/40 hover:text-red-400 hover:bg-white/5'
+                    : 'text-black/40 hover:text-red-600 hover:bg-black/5'
                 }`}
               >
-                <Trash2 className="h-4 w-4" />
+                <Trash2 size={14} />
               </button>
             </div>
-          ))}
+            );
+          })}
         </div>
       )}
     </div>
