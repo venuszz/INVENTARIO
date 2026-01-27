@@ -47,6 +47,12 @@ export default function DirectorioManagementComponent() {
     const newEmployeeInputRef = useRef<HTMLInputElement>(null);
     const { createNotification } = useNotifications();
 
+    // Función para verificar si un área coincide con la búsqueda
+    const areaMatchesSearch = (areaName: string) => {
+        if (!searchTerm) return false;
+        return areaName.toLowerCase().includes(searchTerm.toLowerCase());
+    };
+
     // Mapear directorioAreas a un objeto para fácil acceso
     const directorAreasMap = directorioAreasFromStore.reduce((acc, rel) => {
         if (!acc[rel.id_directorio]) acc[rel.id_directorio] = [];
@@ -55,11 +61,24 @@ export default function DirectorioManagementComponent() {
     }, {} as { [id_directorio: number]: number[] });
 
     // Filtrar directorio según el término de búsqueda
-    const filteredDirectorio = directorioFromStore.filter(item =>
-        item.nombre?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        item.puesto?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        item.id_directorio.toString().includes(searchTerm)
-    );
+    const filteredDirectorio = directorioFromStore.filter(item => {
+        const searchLower = searchTerm.toLowerCase();
+        
+        // Buscar en nombre, puesto e ID
+        const matchesBasicInfo = 
+            item.nombre?.toLowerCase().includes(searchLower) ||
+            item.puesto?.toLowerCase().includes(searchLower) ||
+            item.id_directorio.toString().includes(searchTerm);
+        
+        // Buscar en áreas asignadas
+        const employeeAreas = directorAreasMap[item.id_directorio] || [];
+        const matchesArea = employeeAreas.some(id_area => {
+            const areaObj = areasFromStore.find(a => a.id_area === id_area);
+            return areaObj?.nombre?.toLowerCase().includes(searchLower);
+        });
+        
+        return matchesBasicInfo || matchesArea;
+    });
 
     // Función para agregar área manualmente
     const addAreaManually = async (areaName: string, isEditing: boolean) => {
@@ -475,7 +494,7 @@ export default function DirectorioManagementComponent() {
                                     </label>
                                     <div className="flex flex-wrap gap-1.5">
                                         <AnimatePresence mode="popLayout">
-                                            {newEmployeeAreas.map(id_area => {
+                                            {Array.from(new Set(newEmployeeAreas)).map(id_area => {
                                                 const areaObj = areasFromStore.find(a => a.id_area === id_area);
                                                 return areaObj ? (
                                                     <motion.span 
@@ -635,7 +654,7 @@ export default function DirectorioManagementComponent() {
                                                 </label>
                                                 <div className="flex flex-wrap gap-2">
                                                     <AnimatePresence mode="popLayout">
-                                                        {editSelectedAreas.map(id_area => {
+                                                        {Array.from(new Set(editSelectedAreas)).map(id_area => {
                                                             const areaObj = areasFromStore.find(a => a.id_area === id_area);
                                                             return areaObj ? (
                                                                 <motion.span 
@@ -797,18 +816,26 @@ export default function DirectorioManagementComponent() {
                                             
                                             {/* Áreas */}
                                             <div className="flex flex-wrap gap-1.5">
-                                                {(directorAreasMap[employee.id_directorio] || []).map(id_area => {
+                                                {Array.from(new Set(directorAreasMap[employee.id_directorio] || [])).map(id_area => {
                                                     const areaObj = areasFromStore.find(a => a.id_area === id_area);
+                                                    const isHighlighted = areaObj && areaMatchesSearch(areaObj.nombre);
                                                     return areaObj ? (
-                                                        <span 
+                                                        <motion.span 
                                                             key={`view-area-${id_area}`}
-                                                            className={`px-2 py-0.5 rounded-full text-xs font-medium transition-colors ${isDarkMode
-                                                                ? 'bg-white/5 text-white/80 border border-white/10'
-                                                                : 'bg-black/5 text-black/80 border border-black/10'
-                                                                }`}
+                                                            className={`px-2 py-0.5 rounded-full text-xs font-medium transition-all ${
+                                                                isHighlighted
+                                                                    ? isDarkMode
+                                                                        ? 'bg-white/20 text-white border border-white/40 ring-2 ring-white/20'
+                                                                        : 'bg-black/20 text-black border border-black/40 ring-2 ring-black/20'
+                                                                    : isDarkMode
+                                                                        ? 'bg-white/5 text-white/80 border border-white/10'
+                                                                        : 'bg-black/5 text-black/80 border border-black/10'
+                                                            }`}
+                                                            animate={isHighlighted ? { scale: [1, 1.05, 1] } : {}}
+                                                            transition={{ duration: 0.3 }}
                                                         >
                                                             {areaObj.nombre}
-                                                        </span>
+                                                        </motion.span>
                                                     ) : null;
                                                 })}
                                             </div>
