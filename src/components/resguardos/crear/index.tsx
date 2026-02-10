@@ -97,7 +97,7 @@ export default function CrearResguardos() {
   const [selectAllErrorMsg, setSelectAllErrorMsg] = useState('');
 
   // Initialize hooks
-  const { folio, generateFolio, resetFolio } = useFolioGeneration();
+  const { folio, generateFolio, resetFolio, loadPreview } = useFolioGeneration();
   const { formData, setFormData, updateField, resetForm, isFormValid: formValid } = useResguardoForm(folio);
   const { allMuebles, loading, error: dataError, refetch, stats } = useInventoryData(sortField, sortDirection);
   
@@ -238,11 +238,11 @@ export default function CrearResguardos() {
     setShowPDFButton,
     generatePDF: handleGeneratePDF,
     generatingPDF
-  } = useResguardoSubmit(formData, selectedMuebles, directorio, () => {
+  } = useResguardoSubmit(formData, selectedMuebles, directorio, generateFolio, () => {
     // On success callback
     clearSelection();
     resetForm();
-    generateFolio();
+    loadPreview(); // Load preview of next folio (doesn't increment)
     setDirectorInputDisabled(false);
   });
 
@@ -383,10 +383,10 @@ export default function CrearResguardos() {
     fetchDirectorioAndAreas();
   }, []);
 
-  // Generate folio on mount
+  // Load folio preview on mount (doesn't increment counter)
   useEffect(() => {
-    generateFolio();
-  }, [generateFolio]);
+    loadPreview();
+  }, [loadPreview]);
 
   // Update error state from data loading
   useEffect(() => {

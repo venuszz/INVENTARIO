@@ -23,9 +23,10 @@ export interface UseResguardoSubmitReturn {
 /**
  * Hook for handling resguardo submission
  * 
- * @param formData - Form data
+ * @param formData - Form data (folio will be replaced with generated one)
  * @param selectedMuebles - Selected items
  * @param directorio - Array of directors
+ * @param generateFolio - Function to generate the actual folio
  * @param onSuccess - Callback on successful submission
  * @returns Object containing submission state and functions
  */
@@ -33,6 +34,7 @@ export function useResguardoSubmit(
   formData: ResguardoForm,
   selectedMuebles: Mueble[],
   directorio: Directorio[],
+  generateFolio: () => Promise<string | null>,
   onSuccess: () => void
 ): UseResguardoSubmitReturn {
   const [loading, setLoading] = useState(false);
@@ -49,15 +51,17 @@ export function useResguardoSubmit(
     console.log('🚀 [RESGUARDO] Iniciando handleSubmit');
     console.log('📋 [RESGUARDO] Validación de formulario:', { formData, selectedMueblesCount: selectedMuebles.length });
 
-    if (!formData.folio) {
-      console.error('❌ [RESGUARDO] No hay folio');
-      setError('No se pudo generar el folio');
-      return;
-    }
-
     try {
       setLoading(true);
       console.log('⏳ [RESGUARDO] Loading activado');
+
+      // Generate actual folio NOW (this increments the counter)
+      const actualFolio = await generateFolio();
+      
+      if (!actualFolio) {
+        setError('No se pudo generar el folio');
+        return;
+      }
 
       // Validate user session
       if (!user || !user.id) {
@@ -85,7 +89,7 @@ export function useResguardoSubmit(
       console.log('👤 [RESGUARDO] Director encontrado:', directorNombre);
 
       const pdfDataToSet = {
-        folio: formData.folio,
+        folio: actualFolio,
         fecha: new Date().toLocaleDateString(),
         director: directorNombre,
         area: formData.area.trim().toUpperCase(),
@@ -106,7 +110,8 @@ export function useResguardoSubmit(
 
       console.log('💾 [RESGUARDO] Iniciando guardado de artículos...');
       const resguardoPromises = selectedMuebles.map(async (mueble, index) => {
-        const tableName = mueble.origen === 'ITEA' ? 'mueblesitea' : mueble.origen === 'TLAXCALA' ? 'mueblestlaxcala' : 'muebles';
+        // Determinar tabla de origen según el campo origen del mueble
+        const tableName = mueble.origen === 'ITEA' ? 'itea' : mueble.origen === 'NO_LISTADO' ? 'no_listado' : 'inea';
         const resguardanteToUse = mueble.resguardanteAsignado || formData.resguardante;
 
         console.log(`📦 [RESGUARDO] Artículo ${index + 1}/${selectedMuebles.length}:`, {
@@ -115,17 +120,16 @@ export function useResguardoSubmit(
           tableName,
           resguardante: resguardanteToUse,
           director: directorNombre,
-          area: formData.area
+          area: formData.area,
+          origen: mueble.origen
         });
 
-        // UPDATE del mueble
+        // UPDATE del mueble - actualizar resguardante
         console.log(`🔄 [RESGUARDO] Actualizando ${tableName} id=${mueble.id}...`);
         const { error: updateError } = await supabase
           .from(tableName)
           .update({
-            resguardante: resguardanteToUse,
-            usufinal: directorNombre,
-            area: formData.area
+            resguardante: resguardanteToUse
           })
           .eq('id', mueble.id);
 
@@ -135,19 +139,15 @@ export function useResguardoSubmit(
         }
         console.log(`✅ [RESGUARDO] UPDATE exitoso en ${tableName}`);
 
-        // INSERT en resguardos
+        // INSERT en resguardos con nueva estructura normalizada
         const resguardoData = {
-          folio: formData.folio,
+          folio: actualFolio,
           f_resguardo: new Date(new Date().getFullYear(), new Date().getMonth(), new Date().getDate()).toISOString(),
-          area_resguardo: formData.area,
-          dir_area: directorNombre,
-          num_inventario: mueble.id_inv,
-          descripcion: mueble.descripcion,
-          rubro: mueble.rubro,
-          condicion: mueble.estado,
-          usufinal: resguardanteToUse,
-          puesto: formData.puesto,
-          origen: mueble.origen || '',
+          id_directorio: parseInt(formData.directorId),
+          id_mueble: mueble.id,
+          origen: mueble.origen || 'INEA',
+          puesto_resguardo: formData.puesto.trim().toUpperCase(),
+          resguardante: resguardanteToUse,
           created_by: user.id,
         };
         console.log(`➕ [RESGUARDO] Insertando en resguardos:`, resguardoData);
@@ -172,7 +172,7 @@ export function useResguardoSubmit(
         console.log('🔔 [RESGUARDO] Creando notificación...');
         const notificationDescription = `Se ha creado un nuevo resguardo para el área "${formData.area}" bajo la dirección de "${directorNombre}" con ${selectedMuebles.length} artículo(s).`;
         await createNotification({
-          title: `Nuevo resguardo creado: ${formData.folio}`,
+          title: `Nuevo resguardo creado: ${actualFolio}`,
           description: notificationDescription,
           type: 'success',
           category: 'system',
@@ -185,7 +185,7 @@ export function useResguardoSubmit(
               `Resguardante: ${formData.resguardante}`,
               `Artículos: ${selectedMuebles.map(m => m.id_inv).join(', ')}`
             ],
-            affectedTables: ['resguardos', 'muebles', 'mueblesitea']
+            affectedTables: ['resguardos', 'inea', 'itea', 'no_listado']
           }
         });
         console.log('✅ [RESGUARDO] Notificación creada');
@@ -194,7 +194,7 @@ export function useResguardoSubmit(
       }
 
       console.log('🧹 [RESGUARDO] Limpiando formulario...');
-      setSuccessMessage(`Resguardo ${formData.folio} creado correctamente con ${selectedMuebles.length} artículo(s)`);
+      setSuccessMessage(`Resguardo ${actualFolio} creado correctamente con ${selectedMuebles.length} artículo(s)`);
       setTimeout(() => setSuccessMessage(null), 3000);
 
       console.log('✅ [RESGUARDO] Proceso completado exitosamente');
@@ -212,7 +212,7 @@ export function useResguardoSubmit(
       setLoading(false);
       console.log('🏁 [RESGUARDO] handleSubmit finalizado');
     }
-  }, [formData, selectedMuebles, directorio, user, createNotification, onSuccess]);
+  }, [formData, selectedMuebles, directorio, generateFolio, user, createNotification, onSuccess]);
 
   const generatePDF = useCallback(async () => {
     setGeneratingPDF(true);

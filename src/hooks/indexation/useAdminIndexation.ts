@@ -272,13 +272,16 @@ export function useAdminIndexation() {
                                 break;
                             case 'DELETE':
                                 if (oldRecord) {
-                                    removeDirectorio((oldRecord as Directorio).id_directorio);
+                                    const deletedId = (oldRecord as Directorio).id_directorio;
+                                    removeDirectorio(deletedId);
+                                    // También eliminar las relaciones directorio_areas asociadas
+                                    removeDirectorioAreasByDirectorio(deletedId);
                                     addRealtimeChange({
                                         moduleKey: MODULE_KEY,
                                         moduleName: 'Admin',
                                         table: 'directorio',
                                         eventType: 'DELETE',
-                                        recordId: (oldRecord as Directorio).id_directorio,
+                                        recordId: deletedId,
                                         recordName: (oldRecord as Directorio).nombre ?? undefined,
                                     });
                                 }

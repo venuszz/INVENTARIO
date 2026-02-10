@@ -1,17 +1,18 @@
 /**
  * Custom hook for generating unique resguardo folios
  * 
- * Generates folios in the format: RES-YYYYMMDD-XXX
- * where XXX is a sequential number for the day
+ * Uses centralized folios table for consecutive numbering
+ * Format: RES-XXXX (e.g., RES-0001, RES-0002)
  */
 
-import { useState, useCallback } from 'react';
-import supabase from '@/app/lib/supabase/client';
+import { useState, useCallback, useEffect } from 'react';
+import { useFolioGenerator } from '@/hooks/useFolioGenerator';
 
 export interface UseFolioGenerationReturn {
   folio: string;
   generateFolio: () => Promise<string | null>;
   resetFolio: () => void;
+  loadPreview: () => Promise<void>;
 }
 
 /**
@@ -21,45 +22,47 @@ export interface UseFolioGenerationReturn {
  */
 export function useFolioGeneration(): UseFolioGenerationReturn {
   const [folio, setFolio] = useState('');
+  const { generateFolio: generateFolioFromDB, previewNextFolio } = useFolioGenerator();
 
+  /**
+   * Load preview of next folio without incrementing
+   * This is used to show the user what folio will be generated
+   */
+  const loadPreview = useCallback(async (): Promise<void> => {
+    try {
+      const preview = await previewNextFolio('RESGUARDO');
+      setFolio(preview);
+    } catch (err) {
+      console.error('Error al cargar preview del folio:', err);
+    }
+  }, [previewNextFolio]);
+
+  /**
+   * Generate actual folio and increment counter
+   * This should ONLY be called when actually creating a resguardo
+   */
   const generateFolio = useCallback(async (): Promise<string | null> => {
     try {
-      const today = new Date();
-      const year = today.getFullYear();
-      const month = String(today.getMonth() + 1).padStart(2, '0');
-      const day = String(today.getDate()).padStart(2, '0');
-      const datePart = `${year}${month}${day}`;
-
-      const startOfDay = new Date(today.setHours(0, 0, 0, 0)).toISOString();
-      const endOfDay = new Date(today.setHours(23, 59, 59, 999)).toISOString();
-
-      const { data, error } = await supabase
-        .from('resguardos')
-        .select('folio')
-        .gte('f_resguardo', startOfDay)
-        .lte('f_resguardo', endOfDay);
-
-      if (error) throw error;
-
-      const foliosUnicos = Array.from(new Set((data || []).map(r => r.folio)));
-      const sequential = String(foliosUnicos.length + 1).padStart(3, '0');
-      const newFolio = `RES-${datePart}-${sequential}`;
-
+      const newFolio = await generateFolioFromDB('RESGUARDO');
       setFolio(newFolio);
       return newFolio;
     } catch (err) {
       console.error('Error al generar el folio:', err);
       return null;
     }
-  }, []);
+  }, [generateFolioFromDB]);
 
+  /**
+   * Reset folio by loading a new preview
+   */
   const resetFolio = useCallback(() => {
-    generateFolio();
-  }, [generateFolio]);
+    loadPreview();
+  }, [loadPreview]);
 
   return {
     folio,
     generateFolio,
     resetFolio,
+    loadPreview,
   };
 }

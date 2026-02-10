@@ -16,6 +16,7 @@ import { useTheme } from '@/context/ThemeContext';
 import { useResguardosIndexation } from '@/hooks/indexation/useResguardosIndexation';
 import { useSearchParams } from 'next/navigation';
 import SectionRealtimeToggle from '@/components/SectionRealtimeToggle';
+import { useFolioGenerator } from '@/hooks/useFolioGenerator';
 
 interface Resguardo {
     id: number;
@@ -138,6 +139,7 @@ const limpiarDatosArticulo = async (
 
 export default function ConsultarResguardos({ folioParam }: { folioParam?: string | null }) {
     const { realtimeConnected } = useResguardosIndexation();
+    const { generateFolio } = useFolioGenerator();
     const [resguardos, setResguardos] = useState<Resguardo[]>([]);
     const [selectedResguardo, setSelectedResguardo] = useState<ResguardoDetalle | null>(null);
     const [loading, setLoading] = useState(false);
@@ -245,37 +247,6 @@ export default function ConsultarResguardos({ folioParam }: { folioParam?: strin
         );
     };
 
-    // Generar folio de baja
-    const generateFolioBaja = async () => {
-        try {
-            // Obtener el último folio de baja
-            const { data: lastFolio } = await supabase
-                .from('resguardos_bajas')
-                .select('folio_baja')
-                .order('id', { ascending: false })
-                .limit(1)
-                .single();
-
-            // Generar nuevo folio
-            const today = new Date();
-            const year = today.getFullYear().toString();
-            const prefix = 'BAJA-';
-
-            let sequence = 1;
-            if (lastFolio && lastFolio.folio_baja) {
-                const lastSequence = parseInt(lastFolio.folio_baja.split('-')[2]);
-                if (!isNaN(lastSequence)) {
-                    sequence = lastSequence + 1;
-                }
-            }
-
-            return `${prefix}${year}-${sequence.toString().padStart(4, '0')}`;
-        } catch (error) {
-            console.error('Error generando folio de baja:', error);
-            return `BAJA-${new Date().getFullYear()}-0001`;
-        }
-    };
-
     // Mover registros a la tabla de bajas
     const moveToResguardosBajas = async (articulos: Array<ResguardoArticulo>, folioBaja: string) => {
         if (!selectedResguardo) return;
@@ -305,7 +276,7 @@ export default function ConsultarResguardos({ folioParam }: { folioParam?: strin
         if (!selectedResguardo || selectedArticulos.length === 0) return;
         setDeleting(true);
         try {
-            const folioBaja = await generateFolioBaja();
+            const folioBaja = await generateFolio('BAJA');
 
             // Obtener las firmas
             const { data: firmas, error: firmasError } = await supabase
@@ -561,7 +532,7 @@ export default function ConsultarResguardos({ folioParam }: { folioParam?: strin
         if (!selectedResguardo) return;
         setDeleting(true);
         try {
-            const folioBaja = await generateFolioBaja();
+            const folioBaja = await generateFolio('BAJA');
 
             // Obtener las firmas antes de crear el PDF
             const { data: firmas, error: firmasError } = await supabase
@@ -636,7 +607,7 @@ export default function ConsultarResguardos({ folioParam }: { folioParam?: strin
         if (!selectedResguardo) return;
         setDeleting(true);
         try {
-            const folioBaja = await generateFolioBaja();
+            const folioBaja = await generateFolio('BAJA');
 
             // Obtener las firmas
             const { data: firmas, error: firmasError } = await supabase
