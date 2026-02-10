@@ -41,8 +41,7 @@ export function getTypeIcon(type: ActiveFilter['type']): string {
   switch (type) {
     case 'id': return 'ID';
     case 'area': return 'AR';
-    case 'usufinal': return 'US';
-    case 'resguardante': return 'RE';
+    case 'director': return 'DI';
     case 'descripcion': return 'DE';
     case 'rubro': return 'RU';
     case 'estado': return 'ED';
@@ -61,8 +60,7 @@ export function getTypeLabel(type: ActiveFilter['type']): string {
   switch (type) {
     case 'id': return 'ID';
     case 'area': return 'ÁREA';
-    case 'usufinal': return 'USUARIO FINAL';
-    case 'resguardante': return 'RESGUARDANTE';
+    case 'director': return 'DIRECTOR';
     case 'descripcion': return 'DESCRIPCIÓN';
     case 'rubro': return 'RUBRO';
     case 'estado': return 'ESTADO';

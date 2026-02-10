@@ -1,13 +1,13 @@
 "use client"
-import { useState, useEffect, useMemo, useRef, useDeferredValue, useCallback } from 'react';
+import { useState, useEffect, useMemo, useRef, useDeferredValue } from 'react';
 import { Search, X } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { useTheme } from '@/context/ThemeContext';
-import { useIneaIndexation } from '@/hooks/indexation/useIneaIndexation';
-import { useIteaIndexation } from '@/hooks/indexation/useIteaIndexation';
+import { useIneaStore } from '@/stores/ineaStore';
+import { useIteaStore } from '@/stores/iteaStore';
+import { useNoListadoStore } from '@/stores/noListadoStore';
+import { useIneaObsoletosStore } from '@/stores/ineaObsoletosStore';
+import { useIteaObsoletosStore } from '@/stores/iteaObsoletosStore';
 import { useResguardosIndexation } from '@/hooks/indexation/useResguardosIndexation';
-import { useIneaObsoletosIndexation } from '@/hooks/indexation/useIneaObsoletosIndexation';
-import { useIteaObsoletosIndexation } from '@/hooks/indexation/useIteaObsoletosIndexation';
 import { useResguardosBajasIndexation } from '@/hooks/indexation/useResguardosBajasIndexation';
 import { useRouter } from 'next/navigation';
 import { SearchResult } from './types';
@@ -30,11 +30,16 @@ interface UniversalSearchBarProps {
 
 export default function UniversalSearchBar({ isDarkMode, userRoles, onExpandChange }: UniversalSearchBarProps) {
     const router = useRouter();
-    const ineaContext = useIneaIndexation();
-    const iteaContext = useIteaIndexation();
+    
+    // Use stores directly for all inventory data
+    const ineaMuebles = useIneaStore(state => state.muebles);
+    const iteaMuebles = useIteaStore(state => state.muebles);
+    const noListadoMuebles = useNoListadoStore(state => state.muebles);
+    const ineaObsMuebles = useIneaObsoletosStore(state => state.muebles);
+    const iteaObsMuebles = useIteaObsoletosStore(state => state.muebles);
+    
+    // Use indexation hooks only for resguardos
     const resguardosContext = useResguardosIndexation();
-    const ineaObsContext = useIneaObsoletosIndexation();
-    const iteaObsContext = useIteaObsoletosIndexation();
     const resguardosBajasContext = useResguardosBajasIndexation();
 
     const [searchTerm, setSearchTerm] = useState('');
@@ -54,7 +59,7 @@ export default function UniversalSearchBar({ isDarkMode, userRoles, onExpandChan
             try {
                 setSearchHistory(JSON.parse(savedHistory));
             } catch (error) {
-                console.error('Error loading search history:', error);
+                // Silent error
             }
         }
     }, []);
@@ -71,7 +76,6 @@ export default function UniversalSearchBar({ isDarkMode, userRoles, onExpandChan
             if (e.key.toLowerCase() === 'f' && !isInputFocused && !e.ctrlKey && !e.metaKey && !e.altKey) {
                 e.preventDefault();
                 setIsExpanded(true);
-                // Usar setTimeout para asegurar que el input esté disponible después de la expansión
                 setTimeout(() => {
                     inputRef.current?.focus();
                 }, 50);
@@ -93,7 +97,7 @@ export default function UniversalSearchBar({ isDarkMode, userRoles, onExpandChan
         const newHistory = [
             { query, timestamp: Date.now(), resultsCount },
             ...searchHistory.filter(item => item.query !== query)
-        ].slice(0, 10); // Mantener solo los últimos 10
+        ].slice(0, 10);
         saveHistory(newHistory);
     };
 
@@ -110,59 +114,72 @@ export default function UniversalSearchBar({ isDarkMode, userRoles, onExpandChan
 
     // Combinar datos indexados
     const allData = useMemo(() => {
-        const ineaData: SearchResult[] = ineaContext.muebles.map(item => ({
+        const ineaData: SearchResult[] = (ineaMuebles || []).map((item: any) => ({
             id: item.id,
             id_inv: item.id_inv,
             descripcion: item.descripcion,
             rubro: item.rubro,
             valor: item.valor !== null ? String(item.valor) : null,
-            area: item.area,
+            area: item.area?.nombre || null,
             estado: item.estado,
             estatus: item.estatus,
             resguardante: item.resguardante,
             origen: 'INEA' as const
         }));
 
-        const iteaData: SearchResult[] = iteaContext.muebles.map(item => ({
+        const iteaData: SearchResult[] = (iteaMuebles || []).map((item: any) => ({
             id: item.id,
             id_inv: item.id_inv,
             descripcion: item.descripcion,
             rubro: item.rubro,
             valor: item.valor,
-            area: item.area,
+            area: item.area?.nombre || null,
             estado: item.estado,
             estatus: item.estatus,
             resguardante: item.resguardante,
             origen: 'ITEA' as const
         }));
 
-        const ineaObsData: SearchResult[] = ineaObsContext.muebles.map(item => ({
+        const noListadoData: SearchResult[] = (noListadoMuebles || []).map((item: any) => ({
+            id: item.id,
+            id_inv: item.id_inv,
+            descripcion: item.descripcion,
+            rubro: item.rubro,
+            valor: item.valor,
+            area: item.area?.nombre || null,
+            estado: item.estado,
+            estatus: item.estatus,
+            resguardante: item.resguardante,
+            origen: 'NO_LISTADO' as const
+        }));
+
+        const ineaObsData: SearchResult[] = (ineaObsMuebles || []).map((item: any) => ({
             id: item.id,
             id_inv: item.id_inv,
             descripcion: item.descripcion,
             rubro: item.rubro,
             valor: item.valor !== null ? String(item.valor) : null,
-            area: item.area,
+            area: item.area?.nombre || null,
             estado: item.estado,
             estatus: item.estatus,
             resguardante: item.resguardante,
             origen: 'INEA_OBS' as const
         }));
 
-        const iteaObsData: SearchResult[] = iteaObsContext.muebles.map(item => ({
+        const iteaObsData: SearchResult[] = (iteaObsMuebles || []).map((item: any) => ({
             id: item.id,
             id_inv: item.id_inv,
             descripcion: item.descripcion,
             rubro: item.rubro,
             valor: item.valor,
-            area: item.area,
+            area: item.area?.nombre || null,
             estado: item.estado,
             estatus: item.estatus,
             resguardante: item.resguardante,
             origen: 'ITEA_OBS' as const
         }));
 
-        const resguardosData: SearchResult[] = resguardosContext.resguardos.map(item => ({
+        const resguardosData: SearchResult[] = (resguardosContext.resguardos || []).map(item => ({
             id: item.id,
             id_inv: item.num_inventario,
             descripcion: item.descripcion,
@@ -182,7 +199,7 @@ export default function UniversalSearchBar({ isDarkMode, userRoles, onExpandChan
             condicion: item.condicion
         }));
 
-        const resguardosBajasData: SearchResult[] = resguardosBajasContext.resguardos.map(item => ({
+        const resguardosBajasData: SearchResult[] = (resguardosBajasContext.resguardos || []).map(item => ({
             id: item.id,
             id_inv: item.num_inventario as string | null,
             descripcion: item.descripcion as string | null,
@@ -205,8 +222,8 @@ export default function UniversalSearchBar({ isDarkMode, userRoles, onExpandChan
             motivo_baja: (item.motivo as string | null) ?? null
         }));
 
-        return [...ineaData, ...iteaData, ...ineaObsData, ...iteaObsData, ...resguardosData, ...resguardosBajasData];
-    }, [ineaContext.muebles, iteaContext.muebles, ineaObsContext.muebles, iteaObsContext.muebles, resguardosContext.resguardos, resguardosBajasContext.resguardos]);
+        return [...ineaData, ...iteaData, ...noListadoData, ...ineaObsData, ...iteaObsData, ...resguardosData, ...resguardosBajasData];
+    }, [ineaMuebles, iteaMuebles, noListadoMuebles, ineaObsMuebles, iteaObsMuebles, resguardosContext.resguardos, resguardosBajasContext.resguardos]);
 
     // Búsqueda en tiempo real
     const searchResults = useMemo(() => {
@@ -276,6 +293,7 @@ export default function UniversalSearchBar({ isDarkMode, userRoles, onExpandChan
     // Separar resultados por origen
     const ineaResults = searchResults.filter(r => r.origen === 'INEA');
     const iteaResults = searchResults.filter(r => r.origen === 'ITEA');
+    const noListadoResults = searchResults.filter(r => r.origen === 'NO_LISTADO');
     const ineaObsResults = searchResults.filter(r => r.origen === 'INEA_OBS');
     const iteaObsResults = searchResults.filter(r => r.origen === 'ITEA_OBS');
     const resguardosResults = searchResults.filter(r => r.origen === 'RESGUARDO');
@@ -376,6 +394,8 @@ export default function UniversalSearchBar({ isDarkMode, userRoles, onExpandChan
             router.push(`/consultas/inea/general?id=${result.id}`);
         } else if (result.origen === 'ITEA') {
             router.push(`/consultas/itea/general?id=${result.id}`);
+        } else if (result.origen === 'NO_LISTADO') {
+            router.push(`/consultas/no-listado?id=${result.id}`);
         } else if (result.origen === 'INEA_OBS') {
             router.push(`/consultas/inea/obsoletos?id=${result.id}`);
         } else if (result.origen === 'ITEA_OBS') {
@@ -601,6 +621,20 @@ export default function UniversalSearchBar({ isDarkMode, userRoles, onExpandChan
                                                             onMouseEnter={setSelectedIndex}
                                                         />
                                                         {(() => { currentIndex += iteaResults.length; return null; })()}
+                                                    </>
+                                                )}
+                                                {noListadoResults.length > 0 && (
+                                                    <>
+                                                        <SearchResultGroup 
+                                                            title="No Listado" 
+                                                            results={noListadoResults} 
+                                                            onResultClick={handleResultClick} 
+                                                            isDarkMode={isDarkMode}
+                                                            startIndex={currentIndex}
+                                                            selectedIndex={selectedIndex}
+                                                            onMouseEnter={setSelectedIndex}
+                                                        />
+                                                        {(() => { currentIndex += noListadoResults.length; return null; })()}
                                                     </>
                                                 )}
                                                 {ineaObsResults.length > 0 && (

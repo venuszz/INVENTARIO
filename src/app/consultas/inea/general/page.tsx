@@ -1,4 +1,4 @@
-import General from "@/components/consultas/inea/general"
+import General from "@/components/consultas/inea"
 import { Suspense } from "react";
 import { Metadata } from "next";
 

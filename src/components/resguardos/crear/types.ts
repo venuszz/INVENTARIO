@@ -13,8 +13,11 @@ export interface Mueble {
   estatus: string | null;          // Status (ACTIVO/INACTIVO)
   resguardante: string | null;     // Current custodian
   rubro: string | null;            // Category
-  usufinal: string | null;         // Final user/responsible
-  area: string | null;             // Area
+  
+  // Relational fields (NEW - always objects from JOINs)
+  directorio: { nombre: string; id_directorio: number; puesto: string } | null;  // Director
+  area: { nombre: string; id_area: number } | null;                              // Area
+  
   origen?: string;                 // Source (INEA/ITEA/TLAXCALA)
   resguardanteAsignado?: string;   // Individual override for resguardante
 }
@@ -24,8 +27,8 @@ export interface Mueble {
  */
 export interface Directorio {
   id_directorio: number;           // Primary key
-  nombre: string;                  // Director name
-  area: string | null;             // Area (deprecated, now N:M)
+  nombre: string | null;           // Director name
+  area: string | null;             // Area (deprecated, now N:M via directorio_areas)
   puesto: string | null;           // Position/title
 }
 
@@ -77,10 +80,10 @@ export interface PdfData {
  */
 export interface ActiveFilter {
   term: string;
-  type: 'id' | 'descripcion' | 'rubro' | 'estado' | 'estatus' | 'area' | 'usufinal' | 'resguardante' | 'director' | null;
+  type: 'id' | 'descripcion' | 'rubro' | 'estado' | 'estatus' | 'area' | 'director' | null;
 }
 
 /**
  * Type for search field matching
  */
-export type SearchMatchType = 'id' | 'descripcion' | 'rubro' | 'estado' | 'estatus' | 'area' | 'usufinal' | 'resguardante' | 'director' | null;
+export type SearchMatchType = 'id' | 'descripcion' | 'rubro' | 'estado' | 'estatus' | 'area' | 'director' | null;

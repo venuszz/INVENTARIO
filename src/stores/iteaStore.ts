@@ -13,13 +13,20 @@ import type { MuebleITEA } from '@/types/indexation';
 interface IteaStore {
   muebles: MuebleITEA[];
   lastFetchedAt: string | null;
+  syncingIds: string[];
+  isSyncing: boolean;
   setMuebles: (muebles: MuebleITEA[]) => void;
   addMueble: (mueble: MuebleITEA) => void;
   updateMueble: (id: string, updates: Partial<MuebleITEA>) => void; // UUID
+  updateMuebleBatch: (muebles: MuebleITEA[]) => void;
   removeMueble: (id: string) => void; // UUID
   isCacheValid: (maxAgeMinutes?: number) => boolean;
   clearCache: () => void;
   getMuebleById: (id: string) => MuebleITEA | undefined; // UUID
+  setSyncingIds: (ids: string[]) => void;
+  removeSyncingIds: (ids: string[]) => void;
+  clearSyncingIds: () => void;
+  setIsSyncing: (isSyncing: boolean) => void;
 }
 
 const DEFAULT_CACHE_DURATION_MINUTES = 30;
@@ -29,6 +36,8 @@ export const useIteaStore = create<IteaStore>()(
     (set, get) => ({
   muebles: [],
   lastFetchedAt: null,
+  syncingIds: [],
+  isSyncing: false,
   
   setMuebles: (muebles) => set({
     muebles,
@@ -45,6 +54,14 @@ export const useIteaStore = create<IteaStore>()(
     lastFetchedAt: new Date().toISOString(),
   })),
   
+  updateMuebleBatch: (muebles) => set((state) => {
+    const mueblesMap = new Map(muebles.map(m => [m.id, m]));
+    return {
+      muebles: state.muebles.map(m => mueblesMap.get(m.id) || m),
+      lastFetchedAt: new Date().toISOString(),
+    };
+  }),
+  
   removeMueble: (id) => set((state) => ({
     muebles: state.muebles.filter(m => m.id !== id),
     lastFetchedAt: new Date().toISOString(),
@@ -60,14 +77,36 @@ export const useIteaStore = create<IteaStore>()(
   clearCache: () => set({ muebles: [], lastFetchedAt: null }),
   
   getMuebleById: (id) => get().muebles.find(m => m.id === id),
+  
+  setSyncingIds: (ids) => set((state) => ({
+    syncingIds: [...new Set([...state.syncingIds, ...ids])]
+  })),
+  
+  removeSyncingIds: (ids) => set((state) => ({
+    syncingIds: state.syncingIds.filter(id => !ids.includes(id))
+  })),
+  
+  clearSyncingIds: () => set({ syncingIds: [] }),
+  
+  setIsSyncing: (isSyncing) => set({ isSyncing }),
 }),
     {
       name: 'itea-storage',
       storage: createJSONStorage(() => indexedDBStorage),
+      // Exclude syncingIds and isSyncing from persistence (they're runtime-only state)
+      partialize: (state) => ({
+        muebles: state.muebles,
+        lastFetchedAt: state.lastFetchedAt,
+      }),
       onRehydrateStorage: () => (state) => {
         console.log('🔄 [ITEA Store] Hydration complete:', {
           mueblesCount: state?.muebles.length ?? 0,
         });
+        // Ensure syncingIds is always an array after hydration
+        if (state) {
+          state.syncingIds = [];
+          state.isSyncing = false;
+        }
         useHydrationStore.getState().markAsHydrated('itea');
       },
     }

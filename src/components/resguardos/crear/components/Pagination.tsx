@@ -3,9 +3,8 @@
  * Provides page navigation and rows per page selector
  */
 
-import React, { useState, useRef, useEffect } from 'react';
-import { ChevronLeft, ChevronRight, ChevronDown, Check } from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
+import React from 'react';
+import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { useTheme } from '@/context/ThemeContext';
 
 interface PaginationProps {
@@ -28,27 +27,12 @@ export function Pagination({
 }: PaginationProps) {
   const { isDarkMode } = useTheme();
   const rowsOptions = [10, 25, 50, 100];
-  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
-  const dropdownRef = useRef<HTMLDivElement>(null);
 
-  // Close dropdown when clicking outside
-  useEffect(() => {
-    function handleClickOutside(event: MouseEvent) {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
-        setIsDropdownOpen(false);
-      }
-    }
-
-    if (isDropdownOpen) {
-      document.addEventListener('mousedown', handleClickOutside);
-      return () => document.removeEventListener('mousedown', handleClickOutside);
-    }
-  }, [isDropdownOpen]);
-
-  const handleRowsChange = (rows: number) => {
-    onRowsPerPageChange(rows);
+  const handleRowsRotate = () => {
+    const currentIndex = rowsOptions.indexOf(rowsPerPage);
+    const nextIndex = (currentIndex + 1) % rowsOptions.length;
+    onRowsPerPageChange(rowsOptions[nextIndex]);
     onPageChange(1);
-    setIsDropdownOpen(false);
   };
 
   return (
@@ -61,60 +45,17 @@ export function Pagination({
           Mostrar
         </span>
         
-        {/* Custom dropdown */}
-        <div className="relative" ref={dropdownRef}>
-          <button
-            onClick={() => setIsDropdownOpen(!isDropdownOpen)}
-            className={`flex items-center gap-2 px-3 py-1.5 rounded-lg border text-sm font-medium transition-all ${
-              isDarkMode
-                ? 'bg-white/5 border-white/10 text-white hover:bg-white/10'
-                : 'bg-black/5 border-black/10 text-black hover:bg-black/10'
-            }`}
-          >
-            {rowsPerPage}
-            <ChevronDown 
-              size={14} 
-              className={`transition-transform ${isDropdownOpen ? 'rotate-180' : ''}`}
-            />
-          </button>
-
-          <AnimatePresence>
-            {isDropdownOpen && (
-              <motion.div
-                initial={{ opacity: 0, y: -10 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -10 }}
-                transition={{ duration: 0.15 }}
-                className={`absolute top-full mt-1 left-0 min-w-[80px] rounded-lg border backdrop-blur-xl shadow-lg z-50 overflow-hidden ${
-                  isDarkMode 
-                    ? 'bg-black/95 border-white/10' 
-                    : 'bg-white/95 border-black/10'
-                }`}
-              >
-                {rowsOptions.map((option) => (
-                  <button
-                    key={option}
-                    onClick={() => handleRowsChange(option)}
-                    className={`w-full flex items-center justify-between px-3 py-2 text-sm transition-colors ${
-                      option === rowsPerPage
-                        ? isDarkMode
-                          ? 'bg-white/10 text-white'
-                          : 'bg-black/10 text-black'
-                        : isDarkMode
-                          ? 'text-white/80 hover:bg-white/5'
-                          : 'text-black/80 hover:bg-black/5'
-                    }`}
-                  >
-                    <span>{option}</span>
-                    {option === rowsPerPage && (
-                      <Check size={14} className={isDarkMode ? 'text-white' : 'text-black'} />
-                    )}
-                  </button>
-                ))}
-              </motion.div>
-            )}
-          </AnimatePresence>
-        </div>
+        <button
+          onClick={handleRowsRotate}
+          className={`px-3 py-1.5 rounded-lg border text-sm font-medium transition-all ${
+            isDarkMode
+              ? 'bg-white/5 border-white/10 text-white hover:bg-white/10'
+              : 'bg-black/5 border-black/10 text-black hover:bg-black/10'
+          }`}
+          title="Cambiar filas por página"
+        >
+          {rowsPerPage}
+        </button>
 
         <span className={`text-sm ${isDarkMode ? 'text-white/60' : 'text-black/60'}`}>
           registros

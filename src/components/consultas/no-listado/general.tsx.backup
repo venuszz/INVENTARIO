@@ -29,8 +29,15 @@ interface Mueble {
     ubicacion_no: string | null;
     estado: string | null;
     estatus: string | null;
-    area: string | null;
-    usufinal: string | null;
+    
+    // Relational fields (NEW)
+    id_area: number | null;
+    id_directorio: number | null;
+    
+    // Nested objects from JOINs (NEW)
+    area: { id_area: number; nombre: string } | null;
+    directorio: { id_directorio: number; nombre: string; puesto: string } | null;
+    
     fechabaja: string | null;
     causadebaja: string | null;
     resguardante?: string | null;
@@ -43,14 +50,24 @@ interface FilterOptions {
     areas: string[];
     rubros: string[] | null;
     formadq: string[] | null;
-    directores: { nombre: string; area: string }[];
+    directores: { nombre: string }[];
+}
+
+interface Area {
+    id_area: number;
+    nombre: string;
 }
 
 interface Directorio {
     id_directorio: number;
     nombre: string;
-    area: string | null;
     puesto: string | null;
+}
+
+interface DirectorioArea {
+    id: string; // UUID
+    id_directorio: number;
+    id_area: number;
 }
 
 interface Message {
@@ -244,8 +261,8 @@ export default function ConsultasNoListadoGeneral() {
         if (!muebles || muebles.length === 0) return null;
         return {
             id: muebles.map(m => m.id_inv || '').filter(Boolean),
-            area: muebles.map(m => m.area || '').filter(Boolean),
-            usufinal: muebles.map(m => m.usufinal || '').filter(Boolean),
+            area: muebles.map(m => m.area?.nombre || '').filter(Boolean),
+            usufinal: muebles.map(m => m.directorio?.nombre || '').filter(Boolean),
             resguardante: muebles.map(m => m.resguardante || '').filter(Boolean),
             descripcion: muebles.map(m => m.descripcion || '').filter(Boolean),
             rubro: muebles.map(m => m.rubro || '').filter(Boolean),
@@ -323,8 +340,7 @@ export default function ConsultasNoListadoGeneral() {
             // Actualizar la lista de directores en filterOptions
             if (directorioData) {
                 const directores = directorioData.map(item => ({
-                    nombre: item.nombre?.trim().toUpperCase() || '',
-                    area: item.area?.trim().toUpperCase() || ''
+                    nombre: item.nombre?.trim().toUpperCase() || ''
                 }));
 
                 setFilterOptions(prev => ({
@@ -344,19 +360,18 @@ export default function ConsultasNoListadoGeneral() {
     // Nueva función para obtener valores únicos de filtros desde la tabla mueblestlaxcala
     const fetchUniqueFilterOptions = useCallback(async () => {
         try {
-            // Traer todos los valores únicos de estado, estatus, área y rubro de la tabla mueblestlaxcala
+            // Traer todos los valores únicos de estado, estatus y rubro de la tabla mueblestlaxcala
             const { data, error } = await supabase
                 .from('mueblestlaxcala')
-                .select('estado, estatus, area, rubro');
+                .select('estado, estatus, rubro');
             if (error) throw error;
             const estados = Array.from(new Set(data?.map(item => item.estado).filter(Boolean)));
             const estatus = Array.from(new Set(data?.map(item => item.estatus).filter(Boolean)));
-            const areas = Array.from(new Set(data?.map(item => item.area).filter(Boolean)));
             const rubros = Array.from(new Set(data?.map(item => item.rubro).filter(Boolean)));
             setUniqueFilterOptions({
                 estados,
                 estatus,
-                areas,
+                areas: [], // No longer fetching from legacy field
                 rubros
             });
         } catch (error) {
@@ -365,8 +380,8 @@ export default function ConsultasNoListadoGeneral() {
     }, []);
 
     // Función para manejar la selección del director/jefe de área
-    const handleSelectDirector = (nombre: string) => {
-        const selected = directorio.find(d => d.nombre === nombre);
+    const handleSelectDirector = (idDirectorio: number) => {
+        const selected = directorio.find(d => d.id_directorio === idDirectorio);
         if (!selected) return;
 
         // Obtener áreas N:M del director
@@ -392,14 +407,18 @@ export default function ConsultasNoListadoGeneral() {
         if (editFormData) {
             setEditFormData(prev => ({
                 ...prev!,
-                usufinal: nombre,
-                area: areasForDirector[0].nombre
+                id_directorio: selected.id_directorio,
+                id_area: areasForDirector[0].id_area,
+                directorio: { id_directorio: selected.id_directorio, nombre: selected.nombre, puesto: selected.puesto || '' },
+                area: { id_area: areasForDirector[0].id_area, nombre: areasForDirector[0].nombre }
             }));
         } else if (selectedItem) {
             setSelectedItem(prev => ({
                 ...prev!,
-                usufinal: nombre,
-                area: areasForDirector[0].nombre
+                id_directorio: selected.id_directorio,
+                id_area: areasForDirector[0].id_area,
+                directorio: { id_directorio: selected.id_directorio, nombre: selected.nombre, puesto: selected.puesto || '' },
+                area: { id_area: areasForDirector[0].id_area, nombre: areasForDirector[0].nombre }
             }));
         }
     };
@@ -410,28 +429,109 @@ export default function ConsultasNoListadoGeneral() {
 
         setSavingDirector(true);
         try {
-            const { error: updateError } = await supabase
-                .from('directorio')
-                .update({
-                    area: directorFormData.area
-                })
-                .eq('id_directorio', incompleteDirector.id_directorio);
-
-            if (updateError) throw updateError;
-
-            // Actualizar estado local
-            const updatedDirectorio = directorio.map(d =>
-                d.id_directorio === incompleteDirector.id_directorio
-                    ? { ...d, area: directorFormData.area }
-                    : d
+            // Find or create the area in the area table
+            const areaName = directorFormData.area.trim().toUpperCase();
+            let areaId: number | null = null;
+            
+            // Check if area already exists
+            const checkAreaResponse = await fetch(
+                '/api/supabase-proxy?target=' + encodeURIComponent(`/rest/v1/area?nombre=ilike.${areaName}&select=id_area,nombre`),
+                {
+                    method: 'GET',
+                    credentials: 'include',
+                    headers: { 'Content-Type': 'application/json' }
+                }
             );
+            
+            if (checkAreaResponse.ok) {
+                const existingAreas = await checkAreaResponse.json();
+                if (existingAreas && existingAreas.length > 0) {
+                    areaId = existingAreas[0].id_area;
+                }
+            }
+            
+            if (!areaId) {
+                // Create new area
+                const createAreaResponse = await fetch(
+                    '/api/supabase-proxy?target=' + encodeURIComponent('/rest/v1/area?select=id_area'),
+                    {
+                        method: 'POST',
+                        credentials: 'include',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Prefer': 'return=representation'
+                        },
+                        body: JSON.stringify({ nombre: areaName })
+                    }
+                );
+                
+                if (!createAreaResponse.ok) {
+                    const error = await createAreaResponse.json();
+                    throw new Error(error.message || 'Error al crear área');
+                }
+                
+                const newArea = await createAreaResponse.json();
+                areaId = newArea[0].id_area;
+                
+                // Update local areas state
+                setAreas(prev => [...prev, { id_area: newArea[0].id_area, nombre: areaName }]);
+            }
 
-            setDirectorio(updatedDirectorio);
+            // 3. Create relationship in directorio_areas table (if not exists)
+            if (areaId) {
+                // Check if relationship already exists
+                const checkRelResponse = await fetch(
+                    '/api/supabase-proxy?target=' + encodeURIComponent(
+                        `/rest/v1/directorio_areas?id_directorio=eq.${incompleteDirector.id_directorio}&id_area=eq.${areaId}&select=id`
+                    ),
+                    {
+                        method: 'GET',
+                        credentials: 'include',
+                        headers: { 'Content-Type': 'application/json' }
+                    }
+                );
+                
+                if (checkRelResponse.ok) {
+                    const existingRels = await checkRelResponse.json();
+                    
+                    if (!existingRels || existingRels.length === 0) {
+                        const createRelResponse = await fetch(
+                            '/api/supabase-proxy?target=' + encodeURIComponent('/rest/v1/directorio_areas'),
+                            {
+                                method: 'POST',
+                                credentials: 'include',
+                                headers: {
+                                    'Content-Type': 'application/json',
+                                    'Prefer': 'return=minimal'
+                                },
+                                body: JSON.stringify({
+                                    id_directorio: incompleteDirector.id_directorio,
+                                    id_area: areaId
+                                })
+                            }
+                        );
+                        
+                        if (!createRelResponse.ok) {
+                            const error = await createRelResponse.json();
+                            throw new Error(error.message || 'Error al crear relación');
+                        }
+                        
+                        // Update local directorAreasMap
+                        setDirectorAreasMap(prev => ({
+                            ...prev,
+                            [incompleteDirector.id_directorio]: [
+                                ...(prev[incompleteDirector.id_directorio] || []),
+                                areaId
+                            ]
+                        }));
+                    }
+                }
+            }
 
-            // Actualizar filterOptions.directores
-            const updatedDirectores = updatedDirectorio.map(item => ({
-                nombre: item.nombre?.trim().toUpperCase() || '',
-                area: item.area?.trim().toUpperCase() || ''
+            // 4. Update local directorio state (no changes needed since we removed legacy field)
+            // Update filterOptions.directores
+            const updatedDirectores = directorio.map(item => ({
+                nombre: item.nombre?.trim().toUpperCase() || ''
             }));
 
             setFilterOptions(prev => ({
@@ -439,19 +539,33 @@ export default function ConsultasNoListadoGeneral() {
                 directores: updatedDirectores
             }));
 
-            // Actualizar el formulario o el item seleccionado
-            if (editFormData) {
-                setEditFormData(prev => ({
-                    ...prev!,
-                    usufinal: incompleteDirector.nombre,
-                    area: directorFormData.area
-                }));
-            } else if (selectedItem) {
-                setSelectedItem(prev => ({
-                    ...prev!,
-                    usufinal: incompleteDirector.nombre,
-                    area: directorFormData.area
-                }));
+            // 5. Update form state with the new area assignment
+            if (areaId) {
+                if (editFormData) {
+                    setEditFormData(prev => ({
+                        ...prev!,
+                        id_directorio: incompleteDirector.id_directorio,
+                        id_area: areaId,
+                        directorio: { 
+                            id_directorio: incompleteDirector.id_directorio, 
+                            nombre: incompleteDirector.nombre, 
+                            puesto: incompleteDirector.puesto || '' 
+                        },
+                        area: { id_area: areaId, nombre: areaName }
+                    }));
+                } else if (selectedItem) {
+                    setSelectedItem(prev => ({
+                        ...prev!,
+                        id_directorio: incompleteDirector.id_directorio,
+                        id_area: areaId,
+                        directorio: { 
+                            id_directorio: incompleteDirector.id_directorio, 
+                            nombre: incompleteDirector.nombre, 
+                            puesto: incompleteDirector.puesto || '' 
+                        },
+                        area: { id_area: areaId, nombre: areaName }
+                    }));
+                }
             }
 
             setShowDirectorModal(false);
@@ -484,11 +598,28 @@ export default function ConsultasNoListadoGeneral() {
             const today = todayDate.getFullYear() + '-' +
                 String(todayDate.getMonth() + 1).padStart(2, '0') + '-' +
                 String(todayDate.getDate()).padStart(2, '0');
-            const { error } = await supabase
-                .from('mueblestlaxcala')
-                .update({ estatus: 'BAJA', causadebaja: bajaCause, fechabaja: today })
-                .eq('id', selectedItem.id);
-            if (error) throw error;
+            
+            const updateResponse = await fetch(
+                '/api/supabase-proxy?target=' + encodeURIComponent(`/rest/v1/mueblestlaxcala?id=eq.${selectedItem.id}`),
+                {
+                    method: 'PATCH',
+                    credentials: 'include',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Prefer': 'return=representation'
+                    },
+                    body: JSON.stringify({ 
+                        estatus: 'BAJA', 
+                        causadebaja: bajaCause, 
+                        fechabaja: today 
+                    })
+                }
+            );
+            
+            if (!updateResponse.ok) {
+                const error = await updateResponse.json();
+                throw new Error(error.message || 'Error al dar de baja');
+            }
 
             // Obtener nombre completo del usuario desde el hook useSession
             let createdBy = 'SISTEMA';
@@ -496,13 +627,29 @@ export default function ConsultasNoListadoGeneral() {
                 createdBy = `${user.firstName} ${user.lastName}`;
             }
 
-            await supabase.from('deprecated').insert({
-                id_inv: selectedItem.id_inv,
-                descripcion: selectedItem.descripcion || '',
-                area: selectedItem.area || '',
-                created_by: createdBy,
-                motive: bajaCause
-            });
+            const insertResponse = await fetch(
+                '/api/supabase-proxy?target=' + encodeURIComponent('/rest/v1/deprecated'),
+                {
+                    method: 'POST',
+                    credentials: 'include',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Prefer': 'return=minimal'
+                    },
+                    body: JSON.stringify({
+                        id_inv: selectedItem.id_inv,
+                        descripcion: selectedItem.descripcion || '',
+                        area: selectedItem.area?.nombre || '',
+                        created_by: createdBy,
+                        motive: bajaCause
+                    })
+                }
+            );
+            
+            if (!insertResponse.ok) {
+                const error = await insertResponse.json();
+                throw new Error(error.message || 'Error al insertar en deprecated');
+            }
 
             // Notificación de baja
             await createNotification({
@@ -671,24 +818,91 @@ export default function ConsultasNoListadoGeneral() {
         setImagePreview(null);
     };
 
+    // Función para validar la relación director-área
+    const validateDirectorAreaRelation = async (idDirectorio: number, idArea: number): Promise<boolean> => {
+        try {
+            const response = await fetch(
+                '/api/supabase-proxy?target=' + encodeURIComponent(
+                    `/rest/v1/directorio_areas?id_directorio=eq.${idDirectorio}&id_area=eq.${idArea}&select=id`
+                ),
+                {
+                    method: 'GET',
+                    credentials: 'include',
+                    headers: { 'Content-Type': 'application/json' }
+                }
+            );
+
+            if (!response.ok) {
+                console.error('Error validating director-area relation');
+                return false;
+            }
+
+            const data = await response.json();
+            return data && data.length > 0;
+        } catch (err) {
+            console.error('Error validating director-area relation:', err);
+            return false;
+        }
+    };
+
     const saveChanges = async () => {
         if (!editFormData) return;
 
         setUploading(true);
 
         try {
+            // Validar relación director-área si ambos campos están presentes
+            if (editFormData.id_directorio && editFormData.id_area) {
+                const isValid = await validateDirectorAreaRelation(
+                    editFormData.id_directorio,
+                    editFormData.id_area
+                );
+
+                if (!isValid) {
+                    setMessage({
+                        type: 'error',
+                        text: 'La combinación de director y área no es válida. El director seleccionado no está asignado a esta área.'
+                    });
+                    setUploading(false);
+                    return;
+                }
+            }
+
             let imagePath = editFormData.image_path;
             if (imageFile) {
                 const newPath = await uploadImage(editFormData.id);
                 if (newPath) imagePath = newPath;
             }
 
-            const { error } = await supabase
-                .from('mueblestlaxcala')
-                .update({ ...editFormData, image_path: imagePath })
-                .eq('id', editFormData.id);
+            // Extract only the database columns (exclude nested objects)
+            const { area, directorio, ...dbFields } = editFormData;
+            
+            const response = await fetch(
+                '/api/supabase-proxy?target=' + encodeURIComponent(`/rest/v1/mueblestlaxcala?id=eq.${editFormData.id}`),
+                {
+                    method: 'PATCH',
+                    credentials: 'include',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Prefer': 'return=representation'
+                    },
+                    body: JSON.stringify({ ...dbFields, image_path: imagePath })
+                }
+            );
 
-            if (error) throw error;
+            if (!response.ok) {
+                const error = await response.json();
+                // Manejar errores de restricción de clave foránea
+                if (error.code === '23503') {
+                    setMessage({
+                        type: 'error',
+                        text: 'Error: La referencia de director o área no es válida. Por favor, verifique los datos.'
+                    });
+                    setUploading(false);
+                    return;
+                }
+                throw new Error(error.message || 'Error al guardar cambios');
+            }
 
             // Notificación de edición
             await createNotification({
@@ -701,8 +915,28 @@ export default function ConsultasNoListadoGeneral() {
                 data: { changes: [`Edición de artículo: ${editFormData.id_inv}`], affectedTables: ['mueblestlaxcala'] }
             });
 
+            // Refetch el mueble con JOINs para obtener los objetos anidados actualizados
+            const refetchResponse = await fetch(
+                '/api/supabase-proxy?target=' + encodeURIComponent(
+                    `/rest/v1/mueblestlaxcala?id=eq.${editFormData.id}&select=*,area:area(id_area,nombre),directorio:directorio(id_directorio,nombre,puesto)`
+                ),
+                {
+                    method: 'GET',
+                    credentials: 'include',
+                    headers: { 'Content-Type': 'application/json' }
+                }
+            );
+
+            let refetchedMueble = null;
+            if (refetchResponse.ok) {
+                const data = await refetchResponse.json();
+                if (data && data.length > 0) {
+                    refetchedMueble = data[0];
+                }
+            }
+
             // El contexto actualizará automáticamente via realtime
-            setSelectedItem({ ...editFormData, image_path: imagePath });
+            setSelectedItem(refetchedMueble || { ...editFormData, image_path: imagePath });
             setIsEditing(false);
             setEditFormData(null);
             setImageFile(null);
@@ -741,12 +975,23 @@ export default function ConsultasNoListadoGeneral() {
         if (!selectedItem) return;
         setShowInactiveModal(false);
         try {
-            const { error } = await supabase
-                .from('mueblestlaxcala')
-                .update({ estatus: 'INACTIVO' })
-                .eq('id', selectedItem.id);
+            const response = await fetch(
+                '/api/supabase-proxy?target=' + encodeURIComponent(`/rest/v1/mueblestlaxcala?id=eq.${selectedItem.id}`),
+                {
+                    method: 'PATCH',
+                    credentials: 'include',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Prefer': 'return=representation'
+                    },
+                    body: JSON.stringify({ estatus: 'INACTIVO' })
+                }
+            );
 
-            if (error) throw error;
+            if (!response.ok) {
+                const error = await response.json();
+                throw new Error(error.message || 'Error al marcar como inactivo');
+            }
 
             // Notificación de inactivación
             await createNotification({
@@ -811,6 +1056,12 @@ export default function ConsultasNoListadoGeneral() {
             case 'valor':
                 newData.valor = value || null;
                 break;
+            case 'id_area':
+                newData.id_area = value ? parseInt(value) : null;
+                break;
+            case 'id_directorio':
+                newData.id_directorio = value ? parseInt(value) : null;
+                break;
             case 'rubro':
             case 'descripcion':
             case 'f_adq':
@@ -822,8 +1073,6 @@ export default function ConsultasNoListadoGeneral() {
             case 'ubicacion_no':
             case 'estado':
             case 'estatus':
-            case 'area':
-            case 'usufinal':
             case 'fechabaja':
             case 'causadebaja':
             case 'resguardante':
@@ -906,7 +1155,6 @@ export default function ConsultasNoListadoGeneral() {
     const userRole = useUserRole();
 
     // --- OMNIBOX MATCH TYPE DETECTION ---
-    // --- OMNIBOX MATCH TYPE DETECTION ---
     useEffect(() => {
         if (!deferredSearchTerm || muebles.length === 0) {
             setSearchMatchType(null);
@@ -917,15 +1165,15 @@ export default function ConsultasNoListadoGeneral() {
 
         // Optimización: Iteración simple sin regex pesado
         for (const item of muebles) {
-            if ((item.usufinal && (item.usufinal.toLowerCase().includes(term))) || (item.resguardante && item.resguardante.toLowerCase().includes(term))) {
-                const exact = (item.usufinal?.toLowerCase() === term) || (item.resguardante?.toLowerCase() === term);
+            if ((item.directorio?.nombre && (item.directorio.nombre.toLowerCase().includes(term))) || (item.resguardante && item.resguardante.toLowerCase().includes(term))) {
+                const exact = (item.directorio?.nombre?.toLowerCase() === term) || (item.resguardante?.toLowerCase() === term);
                 const score = exact ? 10 : 9;
-                if (score > bestMatch.score) bestMatch = { type: 'usufinal', value: item.usufinal || item.resguardante || '', score };
+                if (score > bestMatch.score) bestMatch = { type: 'usufinal', value: item.directorio?.nombre || item.resguardante || '', score };
             }
-            else if (item.area && item.area.toLowerCase().includes(term)) {
-                const exact = item.area.toLowerCase() === term;
+            else if (item.area?.nombre && item.area.nombre.toLowerCase().includes(term)) {
+                const exact = item.area.nombre.toLowerCase() === term;
                 const score = exact ? 8 : 7;
-                if (score > bestMatch.score) bestMatch = { type: 'area', value: item.area, score };
+                if (score > bestMatch.score) bestMatch = { type: 'area', value: item.area.nombre, score };
             }
             else if (item.id_inv && item.id_inv.toLowerCase().includes(term)) {
                 const exact = item.id_inv.toLowerCase() === term;
@@ -1132,8 +1380,8 @@ export default function ConsultasNoListadoGeneral() {
                     case 'rubro': return (item.rubro?.toLowerCase() || '').includes(filterTerm);
                     case 'estado': return (item.estado?.toLowerCase() || '').includes(filterTerm);
                     case 'estatus': return (item.estatus?.toLowerCase() || '').includes(filterTerm);
-                    case 'area': return (item.area?.toLowerCase() || '').includes(filterTerm);
-                    case 'usufinal': return (item.usufinal?.toLowerCase() || '').includes(filterTerm);
+                    case 'area': return (item.area?.nombre?.toLowerCase() || '').includes(filterTerm);
+                    case 'usufinal': return (item.directorio?.nombre?.toLowerCase() || '').includes(filterTerm);
                     case 'resguardante': return (item.resguardante?.toLowerCase() || '').includes(filterTerm);
                     default: return true;
                 }
@@ -1150,8 +1398,8 @@ export default function ConsultasNoListadoGeneral() {
                 (item.rubro?.toLowerCase() || '').includes(term) ||
                 (item.estado?.toLowerCase() || '').includes(term) ||
                 (item.estatus?.toLowerCase() || '').includes(term) ||
-                (item.area?.toLowerCase() || '').includes(term) ||
-                (item.usufinal?.toLowerCase() || '').includes(term) ||
+                (item.area?.nombre?.toLowerCase() || '').includes(term) ||
+                (item.directorio?.nombre?.toLowerCase() || '').includes(term) ||
                 (item.resguardante?.toLowerCase() || '').includes(term)
             );
         });
@@ -1161,8 +1409,21 @@ export default function ConsultasNoListadoGeneral() {
     const paginatedMuebles = filteredMueblesOmni
         .slice()
         .sort((a, b) => {
-            const aValue = a[sortField] ?? '';
-            const bValue = b[sortField] ?? '';
+            let aValue: any;
+            let bValue: any;
+            
+            // Handle nested object fields for sorting
+            if (sortField === 'area') {
+                aValue = a.area?.nombre ?? '';
+                bValue = b.area?.nombre ?? '';
+            } else if (sortField === 'directorio') {
+                aValue = a.directorio?.nombre ?? '';
+                bValue = b.directorio?.nombre ?? '';
+            } else {
+                aValue = a[sortField] ?? '';
+                bValue = b[sortField] ?? '';
+            }
+            
             if (aValue < bValue) return sortDirection === 'asc' ? -1 : 1;
             if (aValue > bValue) return sortDirection === 'asc' ? 1 : -1;
             return 0;
@@ -1184,8 +1445,21 @@ export default function ConsultasNoListadoGeneral() {
                 const sortedFiltered = filteredMueblesOmni
                     .slice()
                     .sort((a, b) => {
-                        const aValue = a[sortField] ?? '';
-                        const bValue = b[sortField] ?? '';
+                        let aValue: any;
+                        let bValue: any;
+                        
+                        // Handle nested object fields for sorting
+                        if (sortField === 'area') {
+                            aValue = a.area?.nombre ?? '';
+                            bValue = b.area?.nombre ?? '';
+                        } else if (sortField === 'directorio') {
+                            aValue = a.directorio?.nombre ?? '';
+                            bValue = b.directorio?.nombre ?? '';
+                        } else {
+                            aValue = a[sortField] ?? '';
+                            bValue = b[sortField] ?? '';
+                        }
+                        
                         if (aValue < bValue) return sortDirection === 'asc' ? -1 : 1;
                         if (aValue > bValue) return sortDirection === 'asc' ? 1 : -1;
                         return 0;
@@ -1556,7 +1830,7 @@ export default function ConsultasNoListadoGeneral() {
                                                 </div>
                                             </th>
                                             <th
-                                                onClick={() => handleSort('usufinal')}
+                                                onClick={() => handleSort('directorio' as keyof Mueble)}
                                                 className={`px-4 py-3 text-left text-xs font-medium uppercase tracking-wider cursor-pointer transition-colors ${isDarkMode
                                                     ? 'text-amber-200 hover:bg-amber-900/20'
                                                     : 'text-gray-600 hover:bg-gray-100'
@@ -1670,11 +1944,11 @@ export default function ConsultasNoListadoGeneral() {
                                                         </td>
                                                         <td className={`px-4 py-3 text-sm ${isDarkMode ? 'text-gray-300' : 'text-gray-700'
                                                             }`}>
-                                                            {truncateText(item.area, 20)}
+                                                            {truncateText(item.area?.nombre ?? null, 20)}
                                                         </td>
                                                         <td className={`px-4 py-3 text-sm ${isDarkMode ? 'text-gray-300' : 'text-gray-700'
                                                             }`}>
-                                                            {truncateText(item.usufinal, 20)}
+                                                            {truncateText(item.directorio?.nombre ?? null, 20)}
                                                         </td>
                                                         <td className="px-4 py-3 text-sm">
                                                             {/* Badge de estatus con color automático */}
@@ -2296,7 +2570,7 @@ export default function ConsultasNoListadoGeneral() {
                                                 <div className="relative">
                                                     <input
                                                         type="text"
-                                                        value={editFormData?.area || ''}
+                                                        value={editFormData?.area?.nombre || ''}
                                                         readOnly
                                                         className={`w-full border rounded-lg pl-4 pr-10 py-2.5 cursor-not-allowed ${isDarkMode
                                                             ? 'bg-gray-700 border-gray-600 text-white'
@@ -2313,17 +2587,17 @@ export default function ConsultasNoListadoGeneral() {
                                                 <div className="relative">
                                                     <select
                                                         title='Seleccione el Director/Jefe de Área'
-                                                        name="usufinal"
-                                                        value={editFormData?.usufinal || ''}
-                                                        onChange={(e) => handleSelectDirector(e.target.value)}
+                                                        name="id_directorio"
+                                                        value={editFormData?.id_directorio || ''}
+                                                        onChange={(e) => handleSelectDirector(Number(e.target.value))}
                                                         className={`w-full border rounded-lg pl-4 pr-10 py-2.5 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all appearance-none ${isDarkMode
                                                             ? 'bg-gray-800 border-gray-700 text-white'
                                                             : 'bg-white border-gray-300 text-gray-900'
                                                             }`}
                                                     >
                                                         <option value="">Seleccionar Director/Jefe</option>
-                                                        {filterOptions.directores.map((director, index) => (
-                                                            <option key={index} value={director.nombre}>{director.nombre}</option>
+                                                        {directorio.map((dir) => (
+                                                            <option key={dir.id_directorio} value={dir.id_directorio}>{dir.nombre}</option>
                                                         ))}
                                                     </select>
                                                     <ChevronDown className={`absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 pointer-events-none ${isDarkMode ? 'text-gray-400' : 'text-gray-500'
@@ -2534,7 +2808,7 @@ export default function ConsultasNoListadoGeneral() {
                                                 <h3 className={`text-xs font-medium uppercase tracking-wider ${isDarkMode ? 'text-gray-400' : 'text-gray-600'
                                                     }`}>Área</h3>
                                                 <p className={`mt-2 font-medium ${isDarkMode ? 'text-white' : 'text-gray-900'
-                                                    }`}>{selectedItem.area || 'No especificado'}</p>
+                                                    }`}>{selectedItem.area?.nombre || 'No especificado'}</p>
                                             </div>
                                             <div className={`detail-card rounded-lg p-4 transition-all ${isDarkMode
                                                 ? 'bg-gray-800/50 hover:bg-gray-800/80'
@@ -2543,7 +2817,7 @@ export default function ConsultasNoListadoGeneral() {
                                                 <h3 className={`text-xs font-medium uppercase tracking-wider ${isDarkMode ? 'text-gray-400' : 'text-gray-600'
                                                     }`}>Director/Jefe de Área</h3>
                                                 <p className={`mt-2 font-medium ${isDarkMode ? 'text-white' : 'text-gray-900'
-                                                    }`}>{selectedItem.usufinal || 'No especificado'}</p>
+                                                    }`}>{selectedItem.directorio?.nombre || 'No especificado'}</p>
                                             </div>
                                             <div className={`detail-card rounded-lg p-4 transition-all ${isDarkMode
                                                 ? 'bg-gray-800/50 hover:bg-gray-800/80'
@@ -2759,15 +3033,21 @@ export default function ConsultasNoListadoGeneral() {
                                             key={area.id_area}
                                             className="w-full px-4 py-2.5 rounded-lg bg-gray-900/70 border border-gray-800 text-gray-200 hover:border-blue-500 hover:bg-gray-900 hover:text-blue-300 focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 text-sm font-medium"
                                             onClick={() => {
-                                                if (editFormData) {
+                                                if (editFormData && incompleteDirector) {
                                                     setEditFormData(prev => ({
                                                         ...prev!,
-                                                        area: area.nombre
+                                                        id_area: area.id_area,
+                                                        id_directorio: incompleteDirector.id_directorio,
+                                                        area: { id_area: area.id_area, nombre: area.nombre },
+                                                        directorio: { id_directorio: incompleteDirector.id_directorio, nombre: incompleteDirector.nombre, puesto: incompleteDirector.puesto || '' }
                                                     }));
-                                                } else if (selectedItem) {
+                                                } else if (selectedItem && incompleteDirector) {
                                                     setSelectedItem(prev => ({
                                                         ...prev!,
-                                                        area: area.nombre
+                                                        id_area: area.id_area,
+                                                        id_directorio: incompleteDirector.id_directorio,
+                                                        area: { id_area: area.id_area, nombre: area.nombre },
+                                                        directorio: { id_directorio: incompleteDirector.id_directorio, nombre: incompleteDirector.nombre, puesto: incompleteDirector.puesto || '' }
                                                     }));
                                                 }
                                                 setShowAreaSelectModal(false);
@@ -2817,7 +3097,7 @@ export default function ConsultasNoListadoGeneral() {
                                             <div><span className={`font-bold ${isDarkMode ? 'text-white' : 'text-gray-900'
                                                 }`}>Descripción:</span> {selectedItem.descripcion}</div>
                                             <div><span className={`font-bold ${isDarkMode ? 'text-white' : 'text-gray-900'
-                                                }`}>Área:</span> {selectedItem.area}</div>
+                                                }`}>Área:</span> {selectedItem.area?.nombre || 'No especificado'}</div>
                                         </div>
                                     </div>
                                     <div>
@@ -2914,7 +3194,7 @@ export default function ConsultasNoListadoGeneral() {
                                         <div><span className={`font-bold ${isDarkMode ? 'text-white' : 'text-gray-900'
                                             }`}>Descripción:</span> {selectedItem.descripcion}</div>
                                         <div><span className={`font-bold ${isDarkMode ? 'text-white' : 'text-gray-900'
-                                            }`}>Área:</span> {selectedItem.area}</div>
+                                            }`}>Área:</span> {selectedItem.area?.nombre || 'No especificado'}</div>
                                     </div>
                                 </div>
                                 <div className={`p-5 border-t flex justify-end gap-3 ${isDarkMode

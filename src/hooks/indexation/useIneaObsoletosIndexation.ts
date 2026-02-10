@@ -49,7 +49,6 @@ export function useIneaObsoletosIndexation() {
   
   const indexData = useCallback(async () => {
     if (isIndexingRef.current) {
-      console.warn('⚠️ Indexation already in progress for INEA Obsoletos');
       return;
     }
     
@@ -62,8 +61,6 @@ export function useIneaObsoletosIndexation() {
       
       const stage1 = STAGES[0];
       updateProgress(MODULE_KEY, accumulatedProgress, stage1.label);
-      
-      console.log(`📦 Starting stage: ${stage1.label} (INEA Obsoletos)`);
       
       // Fetch data in batches of 1000
       const fetchedMuebles: MuebleINEA[] = [];
@@ -95,28 +92,19 @@ export function useIneaObsoletosIndexation() {
         updateProgress(MODULE_KEY, accumulatedProgress + fetchProgress, `${stage1.label} (${fetchedMuebles.length} registros)`);
       }
       
-      console.log(`✅ Fetched ${fetchedMuebles.length} obsolete muebles in batches of ${BATCH_SIZE}`);
-      
       setMuebles(fetchedMuebles);
       accumulatedProgress += stage1.weight;
       updateProgress(MODULE_KEY, accumulatedProgress, stage1.label);
       
-      console.log(`✅ Stage completed: ${stage1.label} (${fetchedMuebles.length} muebles obsoletos)`);
-      
       const stage2 = STAGES[1];
       updateProgress(MODULE_KEY, accumulatedProgress, stage2.label);
-      
-      console.log(`📡 Starting stage: ${stage2.label} (INEA Obsoletos)`);
       
       await setupRealtimeSubscription();
       
       accumulatedProgress += stage2.weight;
       updateProgress(MODULE_KEY, accumulatedProgress, stage2.label);
       
-      console.log(`✅ Stage completed: ${stage2.label} (INEA Obsoletos)`);
-      
       completeIndexation(MODULE_KEY);
-      console.log(`🎉 Indexation completed for INEA Obsoletos`);
       
     } catch (error) {
       console.error('❌ Error indexing INEA Obsoletos:', error);
@@ -132,8 +120,6 @@ export function useIneaObsoletosIndexation() {
       channelRef.current = null;
     }
     
-    console.log('📡 Setting up realtime subscription for INEA Obsoletos');
-    
     const channel = supabase
       .channel(`${TABLE}-obsoletos-changes`)
       .on(
@@ -145,8 +131,6 @@ export function useIneaObsoletosIndexation() {
         },
         async (payload: RealtimePostgresChangesPayload<MuebleINEA>) => {
           const { eventType, new: newRecord, old: oldRecord } = payload;
-          
-          console.log(`🔔 Realtime event: ${eventType} on ${TABLE} (Obsoletos)`, payload);
           
           updateLastEventReceived(MODULE_KEY);
           
@@ -168,7 +152,6 @@ export function useIneaObsoletosIndexation() {
                 
                 if (insertedData && insertedData.estatus === 'BAJA') {
                   addMueble(insertedData);
-                  console.log('✅ Mueble obsoleto added:', insertedData.id_inv);
                 }
                 break;
               }
@@ -188,10 +171,8 @@ export function useIneaObsoletosIndexation() {
                 if (updatedData) {
                   if (updatedData.estatus === 'BAJA') {
                     updateMueble(updatedData.id, updatedData);
-                    console.log('✏️ Mueble obsoleto updated:', updatedData.id_inv);
                   } else {
                     removeMueble(updatedData.id);
-                    console.log('🗑️ Mueble removed (no longer BAJA):', updatedData.id_inv);
                   }
                 }
                 break;
@@ -200,7 +181,6 @@ export function useIneaObsoletosIndexation() {
               case 'DELETE': {
                 if (oldRecord?.id) {
                   removeMueble(oldRecord.id);
-                  console.log('🗑️ Mueble obsoleto deleted:', oldRecord.id);
                 }
                 break;
               }
@@ -215,18 +195,14 @@ export function useIneaObsoletosIndexation() {
         const wasConnected = indexationState?.realtimeConnected ?? false;
         const isConnected = status === 'SUBSCRIBED' || status === 'ok';
         
-        console.log(`📡 Realtime status changed: ${status} (INEA Obsoletos)`);
-        
         updateRealtimeConnection(MODULE_KEY, isConnected);
         
         if (wasConnected && !isConnected) {
-          console.warn('⚠️ Realtime disconnected (INEA Obsoletos)');
           setDisconnectedAt(MODULE_KEY, new Date().toISOString());
           handleReconnection();
         }
         
         if (!wasConnected && isConnected) {
-          console.log('✅ Realtime reconnected (INEA Obsoletos)');
           handleReconciliation();
         }
       })
@@ -252,11 +228,6 @@ export function useIneaObsoletosIndexation() {
       RECONNECTION_CONFIG.maxDelay
     );
     
-    console.log(
-      `🔄 Reconnecting INEA Obsoletos in ${delay}ms ` +
-      `(attempt ${state.reconnectionAttempts + 1}/${state.maxReconnectionAttempts})`
-    );
-    
     reconnectionTimeoutRef.current = setTimeout(async () => {
       incrementReconnectionAttempts(MODULE_KEY);
       await setupRealtimeSubscription();
@@ -270,16 +241,12 @@ export function useIneaObsoletosIndexation() {
     const disconnectionDuration = Date.now() - new Date(state.disconnectedAt).getTime();
     const disconnectionSeconds = Math.floor(disconnectionDuration / 1000);
     
-    console.log(`🔄 Reconciling data after ${disconnectionSeconds}s disconnection (INEA Obsoletos)`);
-    
     if (disconnectionDuration > 5000) {
       updateReconnectionStatus(MODULE_KEY, 'reconciling');
       await new Promise(resolve => setTimeout(resolve, 1000));
       updateReconnectionStatus(MODULE_KEY, 'idle');
-      console.log('✅ Reconciliation completed (INEA Obsoletos)');
     } else {
       updateReconnectionStatus(MODULE_KEY, 'idle');
-      console.log('✅ Reconnected (no reconciliation needed) (INEA Obsoletos)');
     }
     
     resetReconnectionAttempts(MODULE_KEY);
@@ -308,13 +275,11 @@ export function useIneaObsoletosIndexation() {
         });
         
         if (!response.ok) {
-          console.warn('⚠️ Not authenticated, skipping indexation (INEA Obsoletos)');
           return;
         }
         
         const sessionData = await response.json();
         if (!sessionData.isAuthenticated) {
-          console.warn('⚠️ Not authenticated, skipping indexation (INEA Obsoletos)');
           return;
         }
       } catch (error) {
@@ -330,21 +295,10 @@ export function useIneaObsoletosIndexation() {
       // Esto previene loops infinitos en módulos vacíos
       const isAlreadyIndexed = currentState?.isIndexed && currentState?.lastIndexedAt;
       
-      console.log('🔍 [INEA OBSOLETOS] Verificando estado de indexación:', {
-        moduleKey: MODULE_KEY,
-        isIndexed: currentState?.isIndexed,
-        mueblesCount: currentMuebles.length,
-        isAlreadyIndexed,
-        lastIndexedAt: currentState?.lastIndexedAt,
-        isStoreHydrated,
-      });
-      
       if (isAlreadyIndexed) {
-        console.log('✅ [INEA OBSOLETOS] Already indexed, skipping indexation');
         completeIndexation(MODULE_KEY);
         await setupRealtimeSubscription();
       } else {
-        console.log('⚠️ [INEA OBSOLETOS] Not indexed yet, starting full indexation');
         await indexData();
       }
       

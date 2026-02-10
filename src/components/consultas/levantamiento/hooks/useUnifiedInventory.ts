@@ -60,21 +60,38 @@ export function useUnifiedInventory(): UseUnifiedInventoryReturn {
    * Uses useMemo to prevent unnecessary recalculations
    */
   const muebles = useMemo(() => {
-    // Map each source's data and add origin label
+    // Map INEA data - PRESERVE relational fields
     const ineaData = ineaContext.muebles.map(item => ({ 
-      ...item, 
+      ...item,
+      // Preserve relational fields
+      id_area: item.id_area,
+      id_directorio: item.id_directorio,
+      area: item.area,           // Keep nested object
+      directorio: item.directorio, // Keep nested object
       origen: 'INEA' as const 
     }));
     
+    // Map ITEA data - PRESERVE relational fields
     const iteaData = iteaContext.muebles.map(item => ({ 
-      ...item, 
+      ...item,
+      // Preserve relational fields
+      id_area: item.id_area,
+      id_directorio: item.id_directorio,
+      area: item.area,           // Keep nested object
+      directorio: item.directorio, // Keep nested object
       origen: 'ITEA' as const 
     }));
     
+    // Map TLAXCALA data - PRESERVE relational fields
     const tlaxcalaData = tlaxcalaContext.muebles.map(item => ({ 
       ...item,
       resguardante: item.resguardante ?? null, // Ensure undefined becomes null
       image_path: item.image_path ?? null, // Ensure undefined becomes null
+      // Preserve relational fields
+      id_area: item.id_area,
+      id_directorio: item.id_directorio,
+      area: item.area,           // Keep nested object
+      directorio: item.directorio, // Keep nested object
       origen: 'TLAXCALA' as const 
     }));
 

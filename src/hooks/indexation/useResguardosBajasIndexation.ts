@@ -214,21 +214,10 @@ export function useResguardosBajasIndexation() {
       // Esto previene loops infinitos en módulos vacíos
       const isAlreadyIndexed = currentState?.isIndexed && currentState?.lastIndexedAt;
       
-      console.log('🔍 [RESGUARDOS BAJAS] Verificando estado de indexación:', {
-        moduleKey: MODULE_KEY,
-        isIndexed: currentState?.isIndexed,
-        resguardosCount: currentResguardos.length,
-        isAlreadyIndexed,
-        lastIndexedAt: currentState?.lastIndexedAt,
-        isStoreHydrated,
-      });
-      
       if (isAlreadyIndexed) {
-        console.log('✅ [RESGUARDOS BAJAS] Already indexed, skipping indexation');
         completeIndexation(MODULE_KEY);
         await setupRealtimeSubscription();
       } else {
-        console.log('⚠️ [RESGUARDOS BAJAS] Not indexed yet, starting full indexation');
         await indexData();
       }
       isInitializedRef.current = true;

@@ -2,7 +2,7 @@
  * Custom hook for managing omnibox search with suggestions and active filters
  */
 
-import { useState, useEffect, useMemo, useDeferredValue, useCallback } from 'react';
+import { useState, useEffect, useMemo, useDeferredValue, useCallback, useRef } from 'react';
 import type { Mueble, ActiveFilter, SearchMatchType } from '../types';
 
 export interface UseSearchAndFiltersReturn {
@@ -37,24 +37,61 @@ export function useSearchAndFilters(
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [highlightedIndex, setHighlightedIndex] = useState(-1);
 
-  // Pre-calculate searchable vectors
-  const searchableData = useMemo(() => {
-    if (!allMuebles || allMuebles.length === 0) return null;
-    return {
-      id: allMuebles.map(m => m.id_inv || '').filter(Boolean),
-      area: allMuebles.map(m => m.area || '').filter(Boolean),
-      usufinal: allMuebles.map(m => m.usufinal || '').filter(Boolean),
-      resguardante: allMuebles.map(m => m.resguardante || '').filter(Boolean),
-      descripcion: allMuebles.map(m => m.descripcion || '').filter(Boolean),
-      rubro: allMuebles.map(m => m.rubro || '').filter(Boolean),
-      estado: allMuebles.map(m => m.estado || '').filter(Boolean),
-      estatus: allMuebles.map(m => m.estatus || '').filter(Boolean),
-    };
+  // Create a stable reference for allMuebles to prevent unnecessary recalculations
+  // Only update when the actual data changes, not just the reference
+  const allMueblesRef = useRef<Mueble[]>([]);
+  const allMueblesVersion = useRef(0);
+  
+  useEffect(() => {
+    // Check if data actually changed (not just reference)
+    const hasChanged = allMuebles.length !== allMueblesRef.current.length ||
+      allMuebles.some((m, i) => {
+        const prev = allMueblesRef.current[i];
+        if (!prev) return true;
+        // Only check if relational fields changed
+        const areaChanged = JSON.stringify(m.area) !== JSON.stringify(prev.area);
+        const directorChanged = JSON.stringify(m.directorio) !== JSON.stringify(prev.directorio);
+        return areaChanged || directorChanged || m.id !== prev.id;
+      });
+    
+    if (hasChanged) {
+      allMueblesRef.current = allMuebles;
+      allMueblesVersion.current += 1;
+    }
   }, [allMuebles]);
+
+  // Pre-calculate searchable vectors - only recalculate when version changes
+  const searchableData = useMemo(() => {
+    const muebles = allMueblesRef.current;
+    if (!muebles || muebles.length === 0) return null;
+    
+    // Helper to get string value from relational field
+    const getAreaValue = (area: Mueble['area']): string => {
+      if (!area) return '';
+      return typeof area === 'object' ? area.nombre : area;
+    };
+    
+    const getDirectorValue = (directorio: Mueble['directorio']): string => {
+      if (!directorio) return '';
+      return typeof directorio === 'object' ? directorio.nombre : '';
+    };
+    
+    return {
+      id: muebles.map((m: Mueble) => m.id_inv || '').filter(Boolean),
+      area: muebles.map((m: Mueble) => getAreaValue(m.area)).filter(Boolean),
+      director: muebles.map((m: Mueble) => getDirectorValue(m.directorio)).filter(Boolean),
+      descripcion: muebles.map((m: Mueble) => m.descripcion || '').filter(Boolean),
+      rubro: muebles.map((m: Mueble) => m.rubro || '').filter(Boolean),
+      estado: muebles.map((m: Mueble) => m.estado || '').filter(Boolean),
+      estatus: muebles.map((m: Mueble) => m.estatus || '').filter(Boolean),
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [allMueblesVersion.current]);
 
   // Detect search match type
   useEffect(() => {
-    if (!deferredSearchTerm || !allMuebles.length) {
+    const muebles = allMueblesRef.current;
+    if (!deferredSearchTerm || !muebles.length) {
       setSearchMatchType(null);
       return;
     }
@@ -62,19 +99,33 @@ export function useSearchAndFilters(
     const term = deferredSearchTerm.toLowerCase().trim();
     let bestMatch = { type: null, value: '', score: 0 } as { type: SearchMatchType, value: string, score: number };
 
+    // Helper to get string value from relational field
+    const getAreaValue = (area: Mueble['area']): string => {
+      if (!area) return '';
+      return typeof area === 'object' ? area.nombre : area;
+    };
+    
+    const getDirectorValue = (directorio: Mueble['directorio']): string => {
+      if (!directorio) return '';
+      return typeof directorio === 'object' ? directorio.nombre : '';
+    };
+
     const isMatch = (val: string | null | undefined) => val && val.toLowerCase().includes(term);
     const isExact = (val: string | null | undefined) => val && val.toLowerCase() === term;
 
-    for (const item of allMuebles) {
-      if (isMatch(item.usufinal) || isMatch(item.resguardante)) {
-        const exact = isExact(item.usufinal) || isExact(item.resguardante);
+    for (const item of muebles) {
+      const directorValue = getDirectorValue(item.directorio);
+      const areaValue = getAreaValue(item.area);
+      
+      if (isMatch(directorValue)) {
+        const exact = isExact(directorValue);
         const score = exact ? 6 : 5;
-        if (score > bestMatch.score) bestMatch = { type: 'director', value: item.usufinal || item.resguardante || '', score };
+        if (score > bestMatch.score) bestMatch = { type: 'director', value: directorValue, score };
       }
-      else if (isMatch(item.area)) {
-        const exact = isExact(item.area);
+      else if (isMatch(areaValue)) {
+        const exact = isExact(areaValue);
         const score = exact ? 5 : 4;
-        if (score > bestMatch.score) bestMatch = { type: 'area', value: item.area!, score };
+        if (score > bestMatch.score) bestMatch = { type: 'area', value: areaValue, score };
       }
       else if (isMatch(item.id_inv)) {
         const exact = isExact(item.id_inv);
@@ -89,7 +140,7 @@ export function useSearchAndFilters(
     }
 
     setSearchMatchType(bestMatch.type);
-  }, [deferredSearchTerm, allMuebles]);
+  }, [deferredSearchTerm, allMueblesVersion.current]);
 
   // Generate suggestions
   useEffect(() => {
@@ -111,8 +162,7 @@ export function useSearchAndFilters(
     const fields = [
       { type: 'id' as SearchMatchType, data: searchableData.id },
       { type: 'area' as SearchMatchType, data: searchableData.area },
-      { type: 'usufinal' as SearchMatchType, data: searchableData.usufinal },
-      { type: 'resguardante' as SearchMatchType, data: searchableData.resguardante },
+      { type: 'director' as SearchMatchType, data: searchableData.director },
       { type: 'descripcion' as SearchMatchType, data: searchableData.descripcion },
       { type: 'rubro' as SearchMatchType, data: searchableData.rubro },
       { type: 'estado' as SearchMatchType, data: searchableData.estado },

@@ -849,12 +849,12 @@ export default function ConsultasIneaBajas() {
         };
 
         calculateItemPage();
-    }, [searchParams, muebles.length, searchTerm, filters, sortField, sortDirection, rowsPerPage, selectedItem?.id]);
+    }, [searchParams, (!muebles || !Array.isArray(muebles) ? 0 : muebles.length), searchTerm, filters, sortField, sortDirection, rowsPerPage, selectedItem?.id]);
 
     // Buscar el item cuando se carguen los muebles después de cambiar la página
     useEffect(() => {
         const idParam = searchParams.get('id');
-        if (!idParam || muebles.length === 0) return;
+        if (!idParam || !muebles || !Array.isArray(muebles) || muebles.length === 0) return;
         
         // Si ya está seleccionado el item correcto, no hacer nada
         if (selectedItem?.id === idParam) return; // UUID comparison
@@ -1619,7 +1619,7 @@ export default function ConsultasIneaBajas() {
                                                     </div>
                                                 </td>
                                             </tr>
-                                        ) : muebles.length === 0 ? (
+                                        ) : !muebles || !Array.isArray(muebles) || muebles.length === 0 ? (
                                             <tr className="h-96">
                                                 <td colSpan={5} className={`px-6 py-24 text-center ${
                                                     isDarkMode ? 'text-gray-400' : 'text-gray-600'

@@ -23,8 +23,13 @@ export interface LevMueble {
   ubicacion_no: string | null;
   estado: string | null;
   estatus: string | null;
-  area: string | null;
-  usufinal: string | null;
+  
+  // Relational fields
+  id_area: number | null;
+  id_directorio: number | null;
+  area: { id_area: number; nombre: string } | null;
+  directorio: { id_directorio: number; nombre: string; puesto: string } | null;
+  
   fechabaja: string | null;
   causadebaja: string | null;
   resguardante: string | null;
@@ -38,6 +43,14 @@ export interface LevMueble {
 export interface Message {
   type: 'success' | 'error' | 'info' | 'warning';
   text: string;
+}
+
+/**
+ * Area de la organización
+ */
+export interface Area {
+  id_area: number;
+  nombre: string;
 }
 
 /**
@@ -76,8 +89,8 @@ export type SearchMatchType = 'id' | 'descripcion' | 'usufinal' | 'area' | 'resg
  */
 export interface SearchableData {
   id: string[];
-  area: string[];
-  usufinal: string[];
+  area: string[];        // From area.nombre
+  usufinal: string[];    // From directorio.nombre
   resguardante: string[];
   descripcion: string[];
   rubro: string[];

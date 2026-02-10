@@ -141,12 +141,6 @@ export function useIteaObsoletosIndexation() {
         const wasConnected = indexationState?.realtimeConnected ?? false;
         const isConnected = status === 'SUBSCRIBED' || status === 'ok';
         
-        console.log(`📡 [ITEA OBSOLETOS] Realtime status changed: ${status}`, {
-          wasConnected,
-          isConnected,
-          willUpdate: wasConnected !== isConnected
-        });
-        
         updateRealtimeConnection(MODULE_KEY, isConnected);
         
         if (wasConnected && !isConnected) {
@@ -227,22 +221,10 @@ export function useIteaObsoletosIndexation() {
       // Esto previene loops infinitos en módulos vacíos
       const isAlreadyIndexed = currentState?.isIndexed && currentState?.lastIndexedAt;
       
-      console.log('🔍 [ITEA OBSOLETOS] Verificando estado de indexación:', {
-        moduleKey: MODULE_KEY,
-        isIndexed: currentState?.isIndexed,
-        mueblesCount: currentMuebles.length,
-        isAlreadyIndexed,
-        lastIndexedAt: currentState?.lastIndexedAt,
-        isStoreHydrated,
-        realtimeConnected: currentState?.realtimeConnected,
-      });
-      
       if (isAlreadyIndexed) {
-        console.log('✅ [ITEA OBSOLETOS] Already indexed, skipping indexation');
         completeIndexation(MODULE_KEY);
         await setupRealtimeSubscription();
       } else {
-        console.log('⚠️ [ITEA OBSOLETOS] Not indexed yet, starting full indexation');
         await indexData();
       }
       isInitializedRef.current = true;

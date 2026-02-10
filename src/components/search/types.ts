@@ -8,7 +8,7 @@ export interface SearchResult {
     estado: string | null;
     estatus: string | null;
     resguardante: string | null;
-    origen: 'INEA' | 'ITEA' | 'INEA_OBS' | 'ITEA_OBS' | 'RESGUARDO' | 'RESGUARDO_BAJA';
+    origen: 'INEA' | 'ITEA' | 'NO_LISTADO' | 'INEA_OBS' | 'ITEA_OBS' | 'RESGUARDO' | 'RESGUARDO_BAJA';
     // Campos específicos para resguardos
     folio?: string | null;
     folio_resguardo?: string | null;
@@ -26,6 +26,7 @@ export interface SearchResult {
 export interface SearchResultsByOrigin {
     inea: SearchResult[];
     itea: SearchResult[];
+    noListado: SearchResult[];
     ineaObs: SearchResult[];
     iteaObs: SearchResult[];
     resguardos: SearchResult[];

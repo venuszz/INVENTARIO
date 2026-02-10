@@ -85,8 +85,8 @@ export function useSearchAndFilters({
     
     return {
       id: muebles.map(m => m.id_inv || '').filter(Boolean),
-      area: muebles.map(m => m.area || '').filter(Boolean),
-      usufinal: muebles.map(m => m.usufinal || '').filter(Boolean),
+      area: muebles.map(m => m.area?.nombre || '').filter(Boolean),        // FROM area.nombre
+      usufinal: muebles.map(m => m.directorio?.nombre || '').filter(Boolean), // FROM directorio.nombre
       resguardante: muebles.map(m => m.resguardante || '').filter(Boolean),
       descripcion: muebles.map(m => m.descripcion || '').filter(Boolean),
       rubro: muebles.map(m => m.rubro || '').filter(Boolean),
@@ -115,14 +115,14 @@ export function useSearchAndFilters({
     const cleanVal = (v: string) => 
       (v || '').normalize('NFKD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim();
 
-    // Get unique areas and directors from data
+    // Get unique areas and directors from relational data
     const uniqueAreas = Array.from(
-      new Set(muebles.map(m => m.area).filter((a): a is string => !!a))
-    ).map(cleanVal);
+      new Set(muebles.map(m => m.area?.nombre).filter((a): a is string => !!a))
+    ).map(a => cleanVal(a));
     
     const uniqueDirectores = Array.from(
-      new Set(muebles.map(m => m.usufinal).filter((u): u is string => !!u))
-    ).map(cleanVal);
+      new Set(muebles.map(m => m.directorio?.nombre).filter((u): u is string => !!u))
+    ).map(u => cleanVal(u));
 
     const areaIsValid = uniqueAreas.includes(cleanVal(areaFilter.term));
     const directorIsValid = uniqueDirectores.includes(cleanVal(directorFilter.term));
@@ -161,22 +161,22 @@ export function useSearchAndFilters({
           bestMatch = { type: 'id', value: item.id_inv!, score };
         }
       }
-      // Area match
-      else if (isMatch(item.area)) {
-        const exact = isExact(item.area);
+      // Area match (from area.nombre)
+      else if (isMatch(item.area?.nombre)) {
+        const exact = isExact(item.area?.nombre);
         const score = exact ? 5 : 3;
         if (score > bestMatch.score) {
-          bestMatch = { type: 'area', value: item.area!, score };
+          bestMatch = { type: 'area', value: item.area!.nombre, score };
         }
       }
-      // Usufinal/Resguardante match
-      else if (isMatch(item.usufinal) || isMatch(item.resguardante)) {
-        const exact = isExact(item.usufinal) || isExact(item.resguardante);
+      // Usufinal/Resguardante match (from directorio.nombre)
+      else if (isMatch(item.directorio?.nombre) || isMatch(item.resguardante)) {
+        const exact = isExact(item.directorio?.nombre) || isExact(item.resguardante);
         const score = exact ? 4 : 2;
         if (score > bestMatch.score) {
           bestMatch = { 
             type: 'usufinal', 
-            value: item.usufinal || item.resguardante || '', 
+            value: item.directorio?.nombre || item.resguardante || '', 
             score 
           };
         }
@@ -237,7 +237,6 @@ export function useSearchAndFilters({
       { type: 'id' as ActiveFilter['type'], data: searchableData.id },
       { type: 'area' as ActiveFilter['type'], data: searchableData.area },
       { type: 'usufinal' as ActiveFilter['type'], data: searchableData.usufinal },
-      { type: 'resguardante' as ActiveFilter['type'], data: searchableData.resguardante },
       { type: 'descripcion' as ActiveFilter['type'], data: searchableData.descripcion },
       { type: 'rubro' as ActiveFilter['type'], data: searchableData.rubro },
       { type: 'estado' as ActiveFilter['type'], data: searchableData.estado },
@@ -310,9 +309,9 @@ export function useSearchAndFilters({
             case 'estatus':
               return (item.estatus?.toLowerCase() || '').includes(filterTerm);
             case 'area':
-              return (item.area?.toLowerCase() || '').includes(filterTerm);
+              return (item.area?.nombre?.toLowerCase() || '').includes(filterTerm);
             case 'usufinal':
-              return (item.usufinal?.toLowerCase() || '').includes(filterTerm);
+              return (item.directorio?.nombre?.toLowerCase() || '').includes(filterTerm);
             case 'resguardante':
               return (item.resguardante?.toLowerCase() || '').includes(filterTerm);
             default:
@@ -328,8 +327,8 @@ export function useSearchAndFilters({
         return (
           (item.id_inv?.toLowerCase() || '').includes(term) ||
           (item.descripcion?.toLowerCase() || '').includes(term) ||
-          (item.area?.toLowerCase() || '').includes(term) ||
-          (item.usufinal?.toLowerCase() || '').includes(term) ||
+          (item.area?.nombre?.toLowerCase() || '').includes(term) ||
+          (item.directorio?.nombre?.toLowerCase() || '').includes(term) ||
           (item.resguardante?.toLowerCase() || '').includes(term) ||
           (item.rubro?.toLowerCase() || '').includes(term) ||
           (item.estado?.toLowerCase() || '').includes(term) ||

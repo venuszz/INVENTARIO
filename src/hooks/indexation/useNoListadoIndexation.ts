@@ -26,13 +26,104 @@ export function useNoListadoIndexation() {
     addRealtimeChange,
   } = useIndexationStore();
   
-  const { muebles, setMuebles, addMueble, updateMueble, removeMueble, isCacheValid } = useNoListadoStore();
+  const { muebles, setMuebles, addMueble, updateMueble, removeMueble, isCacheValid, updateMuebleBatch, setSyncingIds, removeSyncingIds, clearSyncingIds, setIsSyncing } = useNoListadoStore();
   
   const isIndexingRef = useRef(false);
   const channelRef = useRef<RealtimeChannel | null>(null);
   const reconnectionTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const isInitializedRef = useRef(false);
   const hasHydratedRef = useRef(false);
+  const syncQueueRef = useRef<{ ids: string[]; type: 'area' | 'directorio'; refId: number } | null>(null);
+  const isSyncingRef = useRef(false);
+  
+  /**
+   * Process updates in batches to avoid UI lag and handle Supabase 1000-record limit
+   */
+  const processBatchUpdates = useCallback(async (
+    _ids: string[],
+    type: 'area' | 'directorio',
+    refId: number
+  ) => {
+    if (isSyncingRef.current) {
+      syncQueueRef.current = { ids: _ids, type, refId };
+      return;
+    }
+    
+    isSyncingRef.current = true;
+    setIsSyncing(true);
+    
+    const BATCH_SIZE = 1000;
+    const allFetchedMuebles: MuebleNoListado[] = [];
+    const filterField = type === 'area' ? 'id_area' : 'id_directorio';
+    
+    // Fetch all affected records in batches of 1000
+    let hasMore = true;
+    let offset = 0;
+    
+    while (hasMore) {
+      try {
+        const { data: affectedMuebles, error } = await supabase
+          .from(TABLE)
+          .select(`
+            *,
+            area:area(id_area, nombre),
+            directorio:directorio(id_directorio, nombre, puesto)
+          `)
+          .eq(filterField, refId)
+          .neq('estatus', 'BAJA')
+          .range(offset, offset + BATCH_SIZE - 1);
+        
+        if (error) {
+          console.error(`Error fetching batch at offset ${offset}:`, error);
+          break;
+        }
+        
+        if (affectedMuebles && affectedMuebles.length > 0) {
+          allFetchedMuebles.push(...affectedMuebles);
+          
+          // Set syncing IDs for skeleton display
+          const ids = affectedMuebles.map(m => m.id);
+          setSyncingIds(ids);
+          
+          hasMore = affectedMuebles.length === BATCH_SIZE;
+          offset += BATCH_SIZE;
+        } else {
+          hasMore = false;
+        }
+      } catch (error) {
+        console.error(`Error processing batch at offset ${offset}:`, error);
+        break;
+      }
+    }
+    
+    // Update store in batches of 50 to avoid UI lag
+    const UI_BATCH_SIZE = 50;
+    for (let i = 0; i < allFetchedMuebles.length; i += UI_BATCH_SIZE) {
+      const batch = allFetchedMuebles.slice(i, i + UI_BATCH_SIZE);
+      updateMuebleBatch(batch);
+      
+      const syncedIds = batch.map(m => m.id);
+      removeSyncingIds(syncedIds);
+      
+      await new Promise(resolve => {
+        if (typeof requestIdleCallback !== 'undefined') {
+          requestIdleCallback(() => resolve(undefined), { timeout: 100 });
+        } else {
+          setTimeout(resolve, 16);
+        }
+      });
+    }
+    
+    clearSyncingIds();
+    setIsSyncing(false);
+    isSyncingRef.current = false;
+    
+    if (syncQueueRef.current) {
+      const queued = syncQueueRef.current;
+      syncQueueRef.current = null;
+      await processBatchUpdates(queued.ids, queued.type, queued.refId);
+    }
+  }, [updateMuebleBatch, setSyncingIds, removeSyncingIds, clearSyncingIds, setIsSyncing]);
   
   const indexData = useCallback(async () => {
     if (isIndexingRef.current) return;
@@ -56,7 +147,11 @@ export function useNoListadoIndexation() {
           async () => {
             const { data, error } = await supabase
               .from(TABLE)
-              .select('*')
+              .select(`
+                *,
+                area:area(id_area, nombre),
+                directorio:directorio(id_directorio, nombre, puesto)
+              `)
               .neq('estatus', 'BAJA')
               .range(offset, offset + BATCH_SIZE - 1);
             if (error) throw error;
@@ -110,7 +205,15 @@ export function useNoListadoIndexation() {
             switch (eventType) {
               case 'INSERT': {
                 await new Promise(resolve => setTimeout(resolve, 300));
-                const { data, error } = await supabase.from(TABLE).select('*').eq('id', newRecord.id).single();
+                const { data, error } = await supabase
+                  .from(TABLE)
+                  .select(`
+                    *,
+                    area:area(id_area, nombre),
+                    directorio:directorio(id_directorio, nombre, puesto)
+                  `)
+                  .eq('id', newRecord.id)
+                  .single();
                 if (!error && data && data.estatus !== 'BAJA') {
                   addMueble(data);
                   noListadoEmitter.emit({ type: 'INSERT', data, timestamp: new Date().toISOString() });
@@ -126,7 +229,15 @@ export function useNoListadoIndexation() {
                 break;
               }
               case 'UPDATE': {
-                const { data, error } = await supabase.from(TABLE).select('*').eq('id', newRecord.id).single();
+                const { data, error } = await supabase
+                  .from(TABLE)
+                  .select(`
+                    *,
+                    area:area(id_area, nombre),
+                    directorio:directorio(id_directorio, nombre, puesto)
+                  `)
+                  .eq('id', newRecord.id)
+                  .single();
                 if (!error && data) {
                   if (data.estatus === 'BAJA') {
                     removeMueble(data.id);
@@ -166,6 +277,32 @@ export function useNoListadoIndexation() {
           }
         }
       )
+      // Listen to area table changes
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'area' },
+        async (payload: any) => {
+          const { new: updatedArea } = payload;
+          updateLastEventReceived(MODULE_KEY);
+          
+          try {
+            processBatchUpdates([], 'area', updatedArea.id_area);
+          } catch (error) {
+            console.error('Error handling area update:', error);
+          }
+        }
+      )
+      // Listen to directorio table changes
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'directorio' },
+        async (payload: any) => {
+          const { new: updatedDirector } = payload;
+          updateLastEventReceived(MODULE_KEY);
+          
+          try {
+            processBatchUpdates([], 'directorio', updatedDirector.id_directorio);
+          } catch (error) {
+            console.error('Error handling director update:', error);
+          }
+        }
+      )
       .on('system', {}, (payload) => {
         const { status } = payload;
         const wasConnected = indexationState?.realtimeConnected ?? false;
@@ -182,7 +319,7 @@ export function useNoListadoIndexation() {
       .subscribe();
     
     channelRef.current = channel;
-  }, [indexationState?.realtimeConnected, updateRealtimeConnection, updateLastEventReceived, setDisconnectedAt, addMueble, updateMueble, removeMueble]);
+  }, [indexationState?.realtimeConnected, updateRealtimeConnection, updateLastEventReceived, setDisconnectedAt, addMueble, updateMueble, removeMueble, processBatchUpdates, addRealtimeChange]);
   
   const handleReconnection = useCallback(async () => {
     const state = indexationState;
@@ -247,22 +384,10 @@ export function useNoListadoIndexation() {
       const hasDataInIndexedDB = currentMuebles.length > 0;
       const isAlreadyIndexed = currentState?.isIndexed && hasDataInIndexedDB;
       
-      console.log('🔍 [NO_LISTADO] Verificando estado de indexación:', {
-        moduleKey: MODULE_KEY,
-        isIndexed: currentState?.isIndexed,
-        mueblesCount: muebles.length,
-        hasDataInIndexedDB,
-        isAlreadyIndexed,
-        lastIndexedAt: currentState?.lastIndexedAt,
-        isStoreHydrated,
-      });
-      
       if (isAlreadyIndexed) {
-        console.log('✅ [NO_LISTADO] Data found in IndexedDB, skipping indexation');
         completeIndexation(MODULE_KEY);
         await setupRealtimeSubscription();
       } else {
-        console.log('⚠️ [NO_LISTADO] No data in IndexedDB, starting full indexation');
         await indexData();
       }
       isInitializedRef.current = true;

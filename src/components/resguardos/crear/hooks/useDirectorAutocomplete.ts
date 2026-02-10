@@ -23,7 +23,8 @@ export interface UseDirectorAutocompleteReturn {
 /**
  * Utility function to clean and normalize text for comparison
  */
-function clean(text: string): string {
+function clean(text: string | null): string {
+  if (!text) return '';
   return text
     .toLowerCase()
     .normalize('NFD')

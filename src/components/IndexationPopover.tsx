@@ -73,14 +73,14 @@ export default function IndexationPopover() {
 
     // Módulos para iterar
     const modules: ModuleState[] = useMemo(() => [
-        { key: 'inea', name: 'INEA', state: ineaState, config: MODULE_CONFIGS.inea, count: ineaState.muebles.length },
-        { key: 'itea', name: 'ITEA', state: iteaState, config: MODULE_CONFIGS.itea, count: iteaState.muebles.length },
-        { key: 'ineaObsoletos', name: 'INEA Obsoletos', state: ineaObsState, config: MODULE_CONFIGS.ineaObsoletos, count: ineaObsState.muebles.length },
-        { key: 'iteaObsoletos', name: 'ITEA Obsoletos', state: iteaObsState, config: MODULE_CONFIGS.iteaObsoletos, count: iteaObsState.muebles.length },
-        { key: 'noListado', name: 'No Listado', state: noListadoState, config: MODULE_CONFIGS.noListado, count: noListadoState.muebles.length },
-        { key: 'resguardos', name: 'Resguardos', state: resguardosState, config: MODULE_CONFIGS.resguardos, count: resguardosState.resguardos.length },
-        { key: 'resguardosBajas', name: 'Resguardos Bajas', state: resguardosBajasState, config: MODULE_CONFIGS.resguardosBajas, count: resguardosBajasState.resguardos.length },
-        { key: 'admin', name: 'Admin', state: adminState, config: MODULE_CONFIGS.admin, count: adminState.directorio.length + adminState.areas.length + adminState.config.length + adminState.firmas.length },
+        { key: 'inea', name: 'INEA', state: ineaState, config: MODULE_CONFIGS.inea, count: ineaState.muebles?.length || 0 },
+        { key: 'itea', name: 'ITEA', state: iteaState, config: MODULE_CONFIGS.itea, count: iteaState.muebles?.length || 0 },
+        { key: 'ineaObsoletos', name: 'INEA Obsoletos', state: ineaObsState, config: MODULE_CONFIGS.ineaObsoletos, count: ineaObsState.muebles?.length || 0 },
+        { key: 'iteaObsoletos', name: 'ITEA Obsoletos', state: iteaObsState, config: MODULE_CONFIGS.iteaObsoletos, count: iteaObsState.muebles?.length || 0 },
+        { key: 'noListado', name: 'No Listado', state: noListadoState, config: MODULE_CONFIGS.noListado, count: noListadoState.muebles?.length || 0 },
+        { key: 'resguardos', name: 'Resguardos', state: resguardosState, config: MODULE_CONFIGS.resguardos, count: resguardosState.resguardos?.length || 0 },
+        { key: 'resguardosBajas', name: 'Resguardos Bajas', state: resguardosBajasState, config: MODULE_CONFIGS.resguardosBajas, count: resguardosBajasState.resguardos?.length || 0 },
+        { key: 'admin', name: 'Admin', state: adminState, config: MODULE_CONFIGS.admin, count: (adminState.directorio?.length || 0) + (adminState.areas?.length || 0) + (adminState.config?.length || 0) + (adminState.firmas?.length || 0) },
     ], [ineaState, iteaState, ineaObsState, iteaObsState, noListadoState, resguardosState, resguardosBajasState, adminState]);
 
     const activeModules = useMemo(() => {

@@ -25,9 +25,7 @@ function getFilterTypeLabel(type: ActiveFilter['type']): string {
     case 'estado': return 'Estado';
     case 'estatus': return 'Estatus';
     case 'area': return 'Área';
-    case 'usufinal': return 'Director';
     case 'director': return 'Director';
-    case 'resguardante': return 'Resguardante';
     default: return type || 'Filtro';
   }
 }

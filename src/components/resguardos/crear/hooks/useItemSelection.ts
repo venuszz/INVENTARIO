@@ -42,18 +42,29 @@ export function useItemSelection(): UseItemSelectionReturn {
       return;
     }
 
-    // Validate usufinal consistency
-    const currentUsufinal = selectedMuebles[0]?.usufinal?.trim().toUpperCase();
-    const newUsufinal = mueble.usufinal?.trim().toUpperCase();
+    // Helper to get string value from relational field
+    const getDirectorValue = (directorio: typeof mueble.directorio): string => {
+      if (!directorio) return '';
+      return typeof directorio === 'object' ? directorio.nombre : directorio;
+    };
+    
+    const getAreaValue = (area: typeof mueble.area): string => {
+      if (!area) return '';
+      return typeof area === 'object' ? area.nombre : area;
+    };
 
-    if (selectedMuebles.length > 0 && currentUsufinal && newUsufinal && currentUsufinal !== newUsufinal) {
-      setUsufinalConflict(newUsufinal || '');
+    // Validate director consistency
+    const currentDirector = getDirectorValue(selectedMuebles[0]?.directorio).trim().toUpperCase();
+    const newDirector = getDirectorValue(mueble.directorio).trim().toUpperCase();
+
+    if (selectedMuebles.length > 0 && currentDirector && newDirector && currentDirector !== newDirector) {
+      setUsufinalConflict(newDirector || '');
       return;
     }
 
     // Validate area consistency
-    const currentArea = selectedMuebles[0]?.area?.trim().toUpperCase();
-    const newArea = mueble.area?.trim().toUpperCase();
+    const currentArea = getAreaValue(selectedMuebles[0]?.area).trim().toUpperCase();
+    const newArea = getAreaValue(mueble.area).trim().toUpperCase();
 
     if (selectedMuebles.length > 0 && currentArea && newArea && currentArea !== newArea) {
       setAreaConflict(newArea || '');
@@ -81,12 +92,23 @@ export function useItemSelection(): UseItemSelectionReturn {
     if (items.length === 0) return false;
     if (selectedMuebles.length === 0) return true;
 
-    const currentUsufinal = selectedMuebles[0]?.usufinal?.trim().toUpperCase();
-    const currentArea = selectedMuebles[0]?.area?.trim().toUpperCase();
+    // Helper to get string value from relational field
+    const getDirectorValue = (directorio: Mueble['directorio']): string => {
+      if (!directorio) return '';
+      return typeof directorio === 'object' ? directorio.nombre : directorio;
+    };
+    
+    const getAreaValue = (area: Mueble['area']): string => {
+      if (!area) return '';
+      return typeof area === 'object' ? area.nombre : area;
+    };
+
+    const currentDirector = getDirectorValue(selectedMuebles[0]?.directorio).trim().toUpperCase();
+    const currentArea = getAreaValue(selectedMuebles[0]?.area).trim().toUpperCase();
 
     return items.every(m =>
-      (!currentUsufinal || (m.usufinal?.trim().toUpperCase() === currentUsufinal)) &&
-      (!currentArea || (m.area?.trim().toUpperCase() === currentArea))
+      (!currentDirector || (getDirectorValue(m.directorio).trim().toUpperCase() === currentDirector)) &&
+      (!currentArea || (getAreaValue(m.area).trim().toUpperCase() === currentArea))
     );
   }, [selectedMuebles]);
 
@@ -105,21 +127,32 @@ export function useItemSelection(): UseItemSelectionReturn {
       return { success: true };
     }
 
+    // Helper to get string value from relational field
+    const getDirectorValue = (directorio: Mueble['directorio']): string => {
+      if (!directorio) return '';
+      return typeof directorio === 'object' ? directorio.nombre : directorio;
+    };
+    
+    const getAreaValue = (area: Mueble['area']): string => {
+      if (!area) return '';
+      return typeof area === 'object' ? area.nombre : area;
+    };
+
     // Select all items on page
     const newSelection = [...selectedMuebles];
-    let constraintUsufinal = selectedMuebles[0]?.usufinal?.trim().toUpperCase();
-    let constraintArea = selectedMuebles[0]?.area?.trim().toUpperCase();
+    let constraintDirector = getDirectorValue(selectedMuebles[0]?.directorio).trim().toUpperCase();
+    let constraintArea = getAreaValue(selectedMuebles[0]?.area).trim().toUpperCase();
 
-    if (!constraintUsufinal && items.length > 0) {
-      constraintUsufinal = items[0]?.usufinal?.trim().toUpperCase();
+    if (!constraintDirector && items.length > 0) {
+      constraintDirector = getDirectorValue(items[0]?.directorio).trim().toUpperCase();
     }
     if (!constraintArea && items.length > 0) {
-      constraintArea = items[0]?.area?.trim().toUpperCase();
+      constraintArea = getAreaValue(items[0]?.area).trim().toUpperCase();
     }
 
     const canAddAll = items.every(m =>
-      (!constraintUsufinal || (m.usufinal?.trim().toUpperCase() === constraintUsufinal)) &&
-      (!constraintArea || (m.area?.trim().toUpperCase() === constraintArea))
+      (!constraintDirector || (getDirectorValue(m.directorio).trim().toUpperCase() === constraintDirector)) &&
+      (!constraintArea || (getAreaValue(m.area).trim().toUpperCase() === constraintArea))
     );
 
     if (!canAddAll) {

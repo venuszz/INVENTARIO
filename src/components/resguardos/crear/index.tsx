@@ -10,6 +10,7 @@ import { useTheme } from '@/context/ThemeContext';
 import { useIneaIndexation } from '@/hooks/indexation/useIneaIndexation';
 import { useIteaIndexation } from '@/hooks/indexation/useIteaIndexation';
 import { useNoListadoIndexation } from '@/hooks/indexation/useNoListadoIndexation';
+import { useResguardosCrearStore } from '@/stores/resguardosCrearStore';
 
 // Import types
 import { Mueble, Directorio, PdfData } from './types';
@@ -100,6 +101,10 @@ export default function CrearResguardos() {
   const { formData, setFormData, updateField, resetForm, isFormValid: formValid } = useResguardoForm(folio);
   const { allMuebles, loading, error: dataError, refetch, stats } = useInventoryData(sortField, sortDirection);
   
+  // Get syncing state from store
+  const syncingIds = useResguardosCrearStore(state => state.syncingIds) || [];
+  const isSyncing = useResguardosCrearStore(state => state.isSyncing);
+  
   const {
     selectedMuebles,
     toggleSelection,
@@ -115,7 +120,9 @@ export default function CrearResguardos() {
     clearConflicts
   } = useItemSelection();
 
-  const initialDirectorSuggestion = selectedMuebles.length > 0 ? (selectedMuebles[0]?.usufinal || '') : '';
+  const initialDirectorSuggestion = selectedMuebles.length > 0 
+    ? (selectedMuebles[0]?.directorio?.nombre || '')
+    : '';
   
   const {
     searchTerm,
@@ -162,15 +169,25 @@ export default function CrearResguardos() {
         const filterTerm = filter.term.toLowerCase();
         if (!filterTerm) return true;
 
+        // Helper to get string value from relational field
+        const getAreaValue = (area: typeof item.area): string => {
+          if (!area) return '';
+          return typeof area === 'object' ? area.nombre.toLowerCase() : '';
+        };
+        
+        const getDirectorValue = (directorio: typeof item.directorio): string => {
+          if (!directorio) return '';
+          return typeof directorio === 'object' ? directorio.nombre.toLowerCase() : '';
+        };
+
         switch (filter.type) {
           case 'id': return (item.id_inv?.toLowerCase() || '').includes(filterTerm);
           case 'descripcion': return (item.descripcion?.toLowerCase() || '').includes(filterTerm);
           case 'rubro': return (item.rubro?.toLowerCase() || '').includes(filterTerm);
           case 'estado': return (item.estado?.toLowerCase() || '').includes(filterTerm);
           case 'estatus': return (item.estatus?.toLowerCase() || '').includes(filterTerm);
-          case 'area': return (item.area?.toLowerCase() || '').includes(filterTerm);
-          case 'usufinal': return (item.usufinal?.toLowerCase() || '').includes(filterTerm);
-          case 'resguardante': return (item.resguardante?.toLowerCase() || '').includes(filterTerm);
+          case 'area': return getAreaValue(item.area).includes(filterTerm);
+          case 'director': return getDirectorValue(item.directorio).includes(filterTerm);
           default: return true;
         }
       });
@@ -180,15 +197,24 @@ export default function CrearResguardos() {
       // Apply current search term
       if (!term) return true;
 
+      const getAreaValue = (area: typeof item.area): string => {
+        if (!area) return '';
+        return typeof area === 'object' ? area.nombre.toLowerCase() : '';
+      };
+      
+      const getDirectorValue = (directorio: typeof item.directorio): string => {
+        if (!directorio) return '';
+        return typeof directorio === 'object' ? directorio.nombre.toLowerCase() : '';
+      };
+
       return (
         (item.id_inv?.toLowerCase() || '').includes(term) ||
         (item.descripcion?.toLowerCase() || '').includes(term) ||
         (item.rubro?.toLowerCase() || '').includes(term) ||
         (item.estado?.toLowerCase() || '').includes(term) ||
         (item.estatus?.toLowerCase() || '').includes(term) ||
-        (item.area?.toLowerCase() || '').includes(term) ||
-        (item.usufinal?.toLowerCase() || '').includes(term) ||
-        (item.resguardante?.toLowerCase() || '').includes(term)
+        getAreaValue(item.area).includes(term) ||
+        getDirectorValue(item.directorio).includes(term)
       );
     });
   }, [allMuebles, deferredSearchTerm, activeFilters]);
@@ -247,7 +273,12 @@ export default function CrearResguardos() {
     
     // If selecting the first item, try to autocomplete director
     if (selectedMuebles.length === 0) {
-      const matchingDirector = directorio.find(dir => dir.nombre.toLowerCase() === mueble.usufinal?.toLowerCase());
+      // Get director value from relational field
+      const directorValue = mueble.directorio?.nombre;
+      
+      const matchingDirector = directorio.find(dir => 
+        dir.nombre?.toLowerCase() === directorValue?.toLowerCase()
+      );
       
       if (matchingDirector) {
         const areasForDirector = getAreasForDirector(matchingDirector.id_directorio.toString());
@@ -298,49 +329,51 @@ export default function CrearResguardos() {
 
   // Computed values
   const isFormValid = formValid && selectedMuebles.length > 0;
-  const inputsDisabled = selectedMuebles.length > 0 && directorInputDisabled;
+  // Disable all inputs when items are selected (data comes from relational IDs)
+  const inputsDisabled = selectedMuebles.length > 0;
 
   // Fetch directorio and areas on mount
   useEffect(() => {
     const fetchDirectorioAndAreas = async () => {
       try {
-        // Usar el proxy para acceder a las tablas protegidas
-        const [dirRes, areasRes, relRes] = await Promise.all([
-          fetch('/api/supabase-proxy?target=/rest/v1/directorio?select=*&order=nombre.asc', {
-            credentials: 'include',
-            headers: { 'Content-Type': 'application/json' }
-          }),
-          fetch('/api/supabase-proxy?target=/rest/v1/area?select=*&order=nombre.asc', {
-            credentials: 'include',
-            headers: { 'Content-Type': 'application/json' }
-          }),
-          fetch('/api/supabase-proxy?target=/rest/v1/directorio_areas?select=*', {
-            credentials: 'include',
-            headers: { 'Content-Type': 'application/json' }
-          })
-        ]);
+        const { data: directorioData, error: dirError } = await supabase
+          .from('directorio')
+          .select('*')
+          .order('nombre', { ascending: true });
 
-        if (dirRes.ok) {
-          const dirData = await dirRes.json();
-          setDirectorio(dirData || []);
+        if (dirError) throw dirError;
+
+        if (directorioData) {
+          const formattedDirectorio = directorioData.map(item => ({
+            id_directorio: item.id_directorio,
+            nombre: item.nombre?.trim().toUpperCase() || '',
+            area: item.area?.trim().toUpperCase() || null,
+            puesto: item.puesto?.trim().toUpperCase() || null
+          }));
+          setDirectorio(formattedDirectorio);
         }
 
-        if (areasRes.ok) {
-          const areasData = await areasRes.json();
-          setAreas(areasData || []);
-        }
-        
-        if (relRes.ok) {
-          const rels = await relRes.json();
-          
-          if (rels) {
-            const map: { [id_directorio: number]: number[] } = {};
-            rels.forEach((rel: { id_directorio: number, id_area: number }) => {
-              if (!map[rel.id_directorio]) map[rel.id_directorio] = [];
-              map[rel.id_directorio].push(rel.id_area);
-            });
-            setDirectorAreasMap(map);
-          }
+        const { data: areasData, error: areasError } = await supabase
+          .from('area')
+          .select('*')
+          .order('nombre', { ascending: true });
+
+        if (areasError) throw areasError;
+        if (areasData) setAreas(areasData);
+
+        const { data: relData, error: relError } = await supabase
+          .from('directorio_areas')
+          .select('*');
+
+        if (relError) throw relError;
+
+        if (relData) {
+          const map: { [id_directorio: number]: number[] } = {};
+          relData.forEach((rel: { id_directorio: number, id_area: number }) => {
+            if (!map[rel.id_directorio]) map[rel.id_directorio] = [];
+            map[rel.id_directorio].push(rel.id_area);
+          });
+          setDirectorAreasMap(map);
         }
       } catch (err) {
         console.error('Error fetching directorio/areas:', err);
@@ -386,7 +419,11 @@ export default function CrearResguardos() {
   // Check if there's an area mismatch
   const hasAreaMismatch = React.useMemo(() => {
     if (!formData.area || selectedMuebles.length === 0) return false;
-    return selectedMuebles.some(m => m.area && m.area !== formData.area);
+    return selectedMuebles.some(m => {
+      if (!m.area) return false;
+      const areaValue = typeof m.area === 'object' ? m.area.nombre : m.area;
+      return areaValue !== formData.area;
+    });
   }, [formData.area, selectedMuebles]);
 
   // Get area suggestion from selected items
@@ -394,13 +431,20 @@ export default function CrearResguardos() {
     if (selectedMuebles.length === 0) return null;
     const firstArea = selectedMuebles[0]?.area;
     if (!firstArea) return null;
-    const allSameArea = selectedMuebles.every(m => m.area === firstArea);
-    return allSameArea ? firstArea : null;
+    
+    const firstAreaValue = typeof firstArea === 'object' ? firstArea.nombre : firstArea;
+    const allSameArea = selectedMuebles.every(m => {
+      if (!m.area) return false;
+      const areaValue = typeof m.area === 'object' ? m.area.nombre : m.area;
+      return areaValue === firstAreaValue;
+    });
+    
+    return allSameArea ? firstAreaValue : null;
   }, [selectedMuebles]);
 
   // Handle director selection from suggestions
   const handleDirectorSuggestionClick = useCallback((director: Directorio) => {
-    console.log('[DIRECTOR] Seleccionado:', director.nombre);
+    console.log('[DIRECTOR] Seleccionado:', director.nombre || 'Sin nombre');
     
     if (!director.area || !director.puesto) {
       console.log('[DIRECTOR] Faltan datos, abriendo modal');
@@ -416,7 +460,7 @@ export default function CrearResguardos() {
         area: director.area || '',
         puesto: director.puesto || ''
       }));
-      setDirectorSearchTerm(director.nombre);
+      setDirectorSearchTerm(director.nombre || '');
       setShowMissingDirectorDataError(false);
     }
     
@@ -442,97 +486,63 @@ export default function CrearResguardos() {
 
     setSavingDirector(true);
     try {
-      // 1. Buscar o crear el área
-      const areaNombre = directorFormData.area.trim();
+      const areaNombre = directorFormData.area.trim().toUpperCase();
       let id_area: number | null = null;
       
-      // Buscar área por nombre usando el proxy
-      const areaSearchResponse = await fetch(
-        `/api/supabase-proxy?target=/rest/v1/area?select=id_area&nombre=eq.${encodeURIComponent(areaNombre)}`,
-        {
-          credentials: 'include',
-          headers: { 'Content-Type': 'application/json' }
-        }
-      );
+      // 1. Buscar o crear el área
+      const { data: existingAreas, error: searchError } = await supabase
+        .from('area')
+        .select('id_area, nombre')
+        .ilike('nombre', areaNombre);
       
-      if (!areaSearchResponse.ok) throw new Error('Error buscando área');
+      if (searchError) throw searchError;
       
-      const areaData = await areaSearchResponse.json();
-      
-      if (!areaData || areaData.length === 0) {
-        // Si no existe, crearla
-        const createAreaResponse = await fetch(
-          '/api/supabase-proxy?target=/rest/v1/area',
-          {
-            method: 'POST',
-            credentials: 'include',
-            headers: { 
-              'Content-Type': 'application/json',
-              'Prefer': 'return=representation'
-            },
-            body: JSON.stringify({ nombre: areaNombre })
-          }
-        );
-        
-        if (!createAreaResponse.ok) throw new Error('Error creando área');
-        
-        const newArea = await createAreaResponse.json();
-        id_area = newArea[0].id_area;
+      if (existingAreas && existingAreas.length > 0) {
+        id_area = existingAreas[0].id_area;
       } else {
-        id_area = areaData[0].id_area;
+        // Crear nueva área
+        const { data: newArea, error: createError } = await supabase
+          .from('area')
+          .insert({ nombre: areaNombre })
+          .select('id_area')
+          .single();
+        
+        if (createError) throw createError;
+        id_area = newArea.id_area;
       }
 
-      // 2. Actualizar solo el puesto
-      const updateDirectorResponse = await fetch(
-        `/api/supabase-proxy?target=/rest/v1/directorio?id_directorio=eq.${incompleteDirector.id_directorio}`,
-        {
-          method: 'PATCH',
-          credentials: 'include',
-          headers: { 
-            'Content-Type': 'application/json',
-            'Prefer': 'return=minimal'
-          },
-          body: JSON.stringify({ puesto: directorFormData.puesto })
-        }
-      );
+      // 2. Actualizar solo el puesto del director
+      const { error: updateError } = await supabase
+        .from('directorio')
+        .update({ puesto: directorFormData.puesto.trim().toUpperCase() })
+        .eq('id_directorio', incompleteDirector.id_directorio);
       
-      if (!updateDirectorResponse.ok) throw new Error('Error actualizando director');
+      if (updateError) throw updateError;
 
       // 3. Eliminar relaciones viejas
-      await fetch(
-        `/api/supabase-proxy?target=/rest/v1/directorio_areas?id_directorio=eq.${incompleteDirector.id_directorio}`,
-        {
-          method: 'DELETE',
-          credentials: 'include',
-          headers: { 'Content-Type': 'application/json' }
-        }
-      );
+      const { error: deleteError } = await supabase
+        .from('directorio_areas')
+        .delete()
+        .eq('id_directorio', incompleteDirector.id_directorio);
+      
+      if (deleteError) throw deleteError;
 
       // 4. Insertar nueva relación
-      const createRelResponse = await fetch(
-        '/api/supabase-proxy?target=/rest/v1/directorio_areas',
-        {
-          method: 'POST',
-          credentials: 'include',
-          headers: { 
-            'Content-Type': 'application/json',
-            'Prefer': 'return=minimal'
-          },
-          body: JSON.stringify({ 
-            id_directorio: incompleteDirector.id_directorio, 
-            id_area 
-          })
-        }
-      );
+      const { error: insertError } = await supabase
+        .from('directorio_areas')
+        .insert({ 
+          id_directorio: incompleteDirector.id_directorio, 
+          id_area 
+        });
       
-      if (!createRelResponse.ok) throw new Error('Error creando relación');
+      if (insertError) throw insertError;
 
-      // 5. Actualizar estado local (solo si id_area no es null)
+      // 5. Actualizar estado local
       if (id_area === null) throw new Error('No se pudo obtener el ID del área');
       
       setDirectorio(prev => prev.map(d =>
         d.id_directorio === incompleteDirector.id_directorio
-          ? { ...d, puesto: directorFormData.puesto }
+          ? { ...d, puesto: directorFormData.puesto.trim().toUpperCase() }
           : d
       ));
       
@@ -551,7 +561,7 @@ export default function CrearResguardos() {
         ...prev,
         directorId: incompleteDirector.id_directorio.toString(),
         area: areaNombre,
-        puesto: directorFormData.puesto
+        puesto: directorFormData.puesto.trim().toUpperCase()
       }));
       setShowDirectorModal(false);
       setSuccessMessage('Información del director actualizada correctamente');
@@ -562,7 +572,7 @@ export default function CrearResguardos() {
     } finally {
       setSavingDirector(false);
     }
-  }, [incompleteDirector, directorFormData, setFormData]);
+  }, [incompleteDirector, directorFormData, setFormData, areas]);
 
   // Handle closing director modal
   const handleCloseDirectorModal = useCallback(() => {
@@ -707,6 +717,7 @@ export default function CrearResguardos() {
                 onRetry={refetch}
                 searchTerm={searchTerm}
                 onClearSearch={() => setSearchTerm('')}
+                syncingIds={syncingIds}
               />
 
               <Pagination
@@ -735,7 +746,7 @@ export default function CrearResguardos() {
                   onFocus={() => { setShowDirectorSuggestions(true); setForceShowAllDirectors(false); }}
                   onKeyDown={handleDirectorKeyDown}
                   onBlur={handleDirectorBlur}
-                  disabled={inputsDisabled || directorInputDisabled}
+                  disabled={inputsDisabled}
                   suggestions={filteredDirectors}
                   showSuggestions={showDirectorSuggestions}
                   highlightedIndex={highlightedDirectorIndex}
@@ -782,6 +793,7 @@ export default function CrearResguardos() {
               onRemoveItem={removeItem}
               onUpdateItemResguardante={updateItemResguardante}
               onClearAll={handleClearSelection}
+              syncingIds={syncingIds}
             />
 
             <ActionButtons

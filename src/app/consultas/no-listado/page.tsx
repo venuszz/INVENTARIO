@@ -1,5 +1,5 @@
 import { Suspense } from 'react';
-import NoListadoGeneral from '@/components/consultas/no-listado/general';
+import NoListadoGeneral from '@/components/consultas/no-listado/index';
 
 export default function NoListadoPage() {
     return (

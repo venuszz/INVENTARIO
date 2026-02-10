@@ -25,6 +25,7 @@ interface InventoryTableProps {
   onRetry: () => void;
   searchTerm: string;
   onClearSearch: () => void;
+  syncingIds?: string[];
 }
 
 /**
@@ -45,7 +46,8 @@ export function InventoryTable({
   error,
   onRetry,
   searchTerm,
-  onClearSearch
+  onClearSearch,
+  syncingIds = []
 }: InventoryTableProps) {
   const { isDarkMode } = useTheme();
 
@@ -58,7 +60,7 @@ export function InventoryTable({
   ];
 
   return (
-    <div className={`rounded-lg border overflow-hidden mb-4 flex flex-col flex-grow max-h-[60vh] ${
+    <div className={`rounded-lg border overflow-hidden mb-4 flex flex-col flex-grow max-h-[89vh] ${
       isDarkMode
         ? 'bg-white/[0.02] border-white/10'
         : 'bg-black/[0.02] border-black/10'
@@ -200,6 +202,8 @@ export function InventoryTable({
           ) : (
             items.map((mueble, index) => {
               const isSelected = selectedItems.some(m => m.id === mueble.id);
+              const isSyncing = Array.isArray(syncingIds) && syncingIds.includes(mueble.id);
+              
               return (
                 <motion.tr
                   key={mueble.id}
@@ -276,19 +280,31 @@ export function InventoryTable({
                   <td className={`px-4 py-3 text-sm ${
                     isDarkMode ? 'text-white/80' : 'text-black/80'
                   }`}>
-                    {mueble.area || 'No especificada'}
+                    {isSyncing ? (
+                      <div className={`h-4 rounded animate-pulse ${
+                        isDarkMode ? 'bg-white/10' : 'bg-black/10'
+                      }`} />
+                    ) : (
+                      mueble.area?.nombre || 'No especificada'
+                    )}
                   </td>
 
-                  {/* Usufinal Cell */}
+                  {/* Director/Responsable Cell */}
                   <td className="px-4 py-3">
-                    <div className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium border ${
-                      isDarkMode 
-                        ? 'bg-white/5 text-white/80 border-white/10' 
-                        : 'bg-black/5 text-black/80 border-black/10'
-                    }`}>
-                      <User size={12} />
-                      {mueble.usufinal || 'No asignado'}
-                    </div>
+                    {isSyncing ? (
+                      <div className={`h-6 w-32 rounded-full animate-pulse ${
+                        isDarkMode ? 'bg-white/10' : 'bg-black/10'
+                      }`} />
+                    ) : (
+                      <div className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium border ${
+                        isDarkMode 
+                          ? 'bg-white/5 text-white/80 border-white/10' 
+                          : 'bg-black/5 text-black/80 border-black/10'
+                      }`}>
+                        <User size={12} />
+                        {mueble.directorio?.nombre || 'No asignado'}
+                      </div>
+                    )}
                   </td>
 
                   {/* Estado Cell */}

@@ -58,8 +58,8 @@ export function DirectorSelection({
   const { isDarkMode } = useTheme();
 
   const displayValue = selectedDirectorId
-    ? directorio.find(d => d.id_directorio.toString() === selectedDirectorId)?.nombre || value
-    : value;
+    ? directorio.find(d => d.id_directorio.toString() === selectedDirectorId)?.nombre || value || ''
+    : value || '';
 
   return (
     <div className="mb-4">
@@ -102,7 +102,7 @@ export function DirectorSelection({
                   <span className={`font-medium ${
                     isDarkMode ? 'text-white' : 'text-black'
                   } ${isSuggested ? 'font-semibold' : ''}`}>
-                    {director.nombre}
+                    {director.nombre || <span className="italic text-white/40">Sin nombre</span>}
                   </span>
                   {isSuggested && (
                     <span className={`px-1.5 py-0.5 rounded-full text-[10px] border ${
@@ -131,7 +131,7 @@ export function DirectorSelection({
       </div>
       
       {/* Suggested director chip */}
-      {(!value && !selectedDirectorId && suggestedDirector && initialSuggestion) && (
+      {!disabled && (!value && !selectedDirectorId && suggestedDirector && initialSuggestion) && (
         <div className="mt-2 flex flex-wrap gap-2">
           <button
             type="button"
@@ -146,13 +146,13 @@ export function DirectorSelection({
             }`}
             title={`Usar sugerencia: ${suggestedDirector.nombre}`}
           >
-            <span className="font-medium">Sugerido:</span> {suggestedDirector.nombre}
+            <span className="font-medium">Sugerido:</span> {suggestedDirector.nombre || 'Sin nombre'}
           </button>
         </div>
       )}
       
       {/* Show all directors button */}
-      {(!value && !selectedDirectorId && suggestedDirector && initialSuggestion) && (
+      {!disabled && (!value && !selectedDirectorId && suggestedDirector && initialSuggestion) && (
         <div className="mt-2">
           <button
             type="button"

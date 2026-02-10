@@ -1,4 +1,4 @@
-import General from "@/components/consultas/itea/general"
+import ConsultasIteaGeneral from "@/components/consultas/itea"
 import { Suspense } from "react";
 import { Metadata } from "next";
 
@@ -11,7 +11,7 @@ export default function Add() {
     return (
         <div className="max-h-[calc(100vh-4rem)] overflow-auto">
             <Suspense>
-                <General />
+                <ConsultasIteaGeneral />
             </Suspense>
         </div>
     )

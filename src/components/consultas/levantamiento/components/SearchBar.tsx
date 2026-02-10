@@ -45,7 +45,7 @@ export function SearchBar({
         />
         <input
           type="text"
-          placeholder="Buscar por ID, descripción, área, usuario..."
+          placeholder="Buscar por ID, descripción, área, jefe/director..."
           value={searchTerm}
           onChange={(e) => onSearchChange(e.target.value)}
           onKeyDown={onKeyDown}
@@ -115,6 +115,7 @@ export function SearchBar({
                       {suggestion.type === 'id' ? <Hash className="w-3.5 h-3.5" /> : 
                        suggestion.type === 'area' ? <MapPin className="w-3.5 h-3.5" /> :
                        suggestion.type === 'usufinal' ? <User className="w-3.5 h-3.5" /> :
+                       suggestion.type === 'resguardante' ? <User className="w-3.5 h-3.5" /> :
                        suggestion.type === 'descripcion' ? <FileText className="w-3.5 h-3.5" /> : 
                        <Search className="w-3.5 h-3.5" />}
                     </span>
@@ -129,9 +130,9 @@ export function SearchBar({
                           ? (isDarkMode ? 'text-white/60' : 'text-black/60')
                           : (isDarkMode ? 'text-white/40' : 'text-black/40')
                       }`}>
-                        {suggestion.type === 'id' ? 'ID de Inventario' :
+                        {suggestion.type === 'id' ? 'ID Inventario' :
                          suggestion.type === 'area' ? 'Área' :
-                         suggestion.type === 'usufinal' ? 'Usuario Final' :
+                         suggestion.type === 'usufinal' ? 'Jefe/Director' :
                          suggestion.type === 'descripcion' ? 'Descripción' :
                          suggestion.type === 'resguardante' ? 'Resguardante' :
                          suggestion.type === 'rubro' ? 'Rubro' :

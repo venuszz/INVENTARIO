@@ -12,6 +12,7 @@ interface SelectedItemsListProps {
   onRemoveItem: (mueble: Mueble) => void;
   onUpdateItemResguardante: (itemId: string, resguardante: string) => void;
   onClearAll: () => void;
+  syncingIds?: string[];
 }
 
 /**
@@ -21,12 +22,13 @@ export function SelectedItemsList({
   items,
   onRemoveItem,
   onUpdateItemResguardante,
-  onClearAll
+  onClearAll,
+  syncingIds = []
 }: SelectedItemsListProps) {
   const { isDarkMode } = useTheme();
 
   return (
-    <div className={`rounded-lg border p-4 flex-grow overflow-y-hidden relative max-h-[70vh] ${
+    <div className={`rounded-lg border p-4 flex-grow overflow-y-hidden relative h-[70vh] ${
       isDarkMode
         ? 'bg-white/[0.02] border-white/10'
         : 'bg-black/[0.02] border-black/10'
@@ -83,8 +85,10 @@ export function SelectedItemsList({
         </div>
       ) : (
         /* Items list */
-        <div className="space-y-2 max-h-[60vh] overflow-y-auto pr-1">
+        <div className="space-y-2 max-h-[60vh] overflow-y-auto pr-1 pb-6">
           {items.map((mueble) => {
+            const isSyncing = Array.isArray(syncingIds) && syncingIds.includes(mueble.id);
+            
             // Helper function to get estado label
             const getEstadoLabel = (estado: string | null) => {
               if (!estado) return 'Sin estado';
@@ -178,7 +182,13 @@ export function SelectedItemsList({
                       isDarkMode ? 'text-white/40' : 'text-black/40'
                     }`}>
                       <MapPin size={9} />
-                      <span>{mueble.area}</span>
+                      {isSyncing ? (
+                        <div className={`h-3 w-20 rounded animate-pulse ${
+                          isDarkMode ? 'bg-white/10' : 'bg-black/10'
+                        }`} />
+                      ) : (
+                        <span>{typeof mueble.area === 'object' ? mueble.area.nombre : mueble.area}</span>
+                      )}
                     </div>
                   )}
                   

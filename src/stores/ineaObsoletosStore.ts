@@ -102,7 +102,7 @@ export const useIneaObsoletosStore = create<IneaObsoletosStore>()(
   
   getMueblesByArea: (area) => {
     const { muebles } = get();
-    return muebles.filter(mueble => mueble.area === area);
+    return muebles.filter(mueble => mueble.area?.nombre === area);
   },
 }),
     {
@@ -127,7 +127,8 @@ export const selectMueblesCount = (state: IneaObsoletosStore) => state.muebles.l
 export const selectUniqueAreas = (state: IneaObsoletosStore) => {
   const areas = state.muebles
     .map(m => m.area)
-    .filter((area): area is string => area !== null);
+    .filter((area): area is { id_area: number; nombre: string } => area !== null)
+    .map(area => area.nombre);
   return Array.from(new Set(areas)).sort();
 };
 

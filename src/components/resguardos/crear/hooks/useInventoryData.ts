@@ -2,16 +2,18 @@
  * Custom hook for fetching and managing inventory data from multiple sources
  * 
  * Combines data from INEA, ITEA, and TLAXCALA sources and filters out
- * items that are already resguarded
+ * items that are already resguarded. Also handles realtime sync for relational fields.
  */
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import supabase from '@/app/lib/supabase/client';
 import { useIneaIndexation } from '@/hooks/indexation/useIneaIndexation';
 import { useIneaObsoletosIndexation } from '@/hooks/indexation/useIneaObsoletosIndexation';
 import { useIteaIndexation } from '@/hooks/indexation/useIteaIndexation';
 import { useNoListadoIndexation } from '@/hooks/indexation/useNoListadoIndexation';
+import { useResguardosCrearStore } from '@/stores/resguardosCrearStore';
 import type { Mueble } from '../types';
+import type { RealtimeChannel } from '@supabase/supabase-js';
 
 export interface UseInventoryDataReturn {
   allMuebles: Mueble[];
@@ -49,6 +51,8 @@ export function useInventoryData(
   const { muebles: ineaObsoletosData } = useIneaObsoletosIndexation();
   const { muebles: iteaData } = useIteaIndexation();
   const { muebles: noListadoData } = useNoListadoIndexation();
+  
+  const { setSyncingIds, removeSyncingIds, setIsSyncing } = useResguardosCrearStore();
 
   const [allMuebles, setAllMuebles] = useState<Mueble[]>([]);
   const [loading, setLoading] = useState(false);
@@ -67,6 +71,9 @@ export function useInventoryData(
     excludedByResguardo: 0,
     availableCount: 0,
   });
+  
+  const areaChannelRef = useRef<RealtimeChannel | null>(null);
+  const directorioChannelRef = useRef<RealtimeChannel | null>(null);
 
   const fetchData = useCallback(async () => {
     setLoading(true);
@@ -151,6 +158,177 @@ export function useInventoryData(
   useEffect(() => {
     fetchData();
   }, [fetchData]);
+
+  // ============================================================================
+  // REALTIME SYNC FOR RELATIONAL FIELDS
+  // ============================================================================
+  
+  /**
+   * Sync relational field changes in batches to prevent UI lag
+   * Uses a ref to avoid dependency on allMuebles state
+   */
+  const allMueblesRef = useRef<Mueble[]>([]);
+  
+  // Keep ref in sync with state
+  useEffect(() => {
+    allMueblesRef.current = allMuebles;
+  }, [allMuebles]);
+  
+  const syncRelationalFieldChanges = useCallback(async (
+    changedId: number,
+    fieldType: 'area' | 'directorio',
+    newData: { nombre: string; id_area?: number; id_directorio?: number }
+  ) => {
+    // Use ref to get current data without triggering re-renders
+    const currentMuebles = allMueblesRef.current;
+    
+    // Find all muebles that reference this changed entity
+    const affectedMuebles = currentMuebles.filter(m => {
+      if (fieldType === 'area') {
+        return m.area?.id_area === changedId;
+      } else {
+        return m.directorio?.id_directorio === changedId;
+      }
+    });
+    
+    if (affectedMuebles.length === 0) return;
+    
+    console.log(`🔄 [RESGUARDOS CREAR] Syncing ${affectedMuebles.length} records for ${fieldType} change`);
+    
+    // Mark all affected IDs as syncing
+    const affectedIds = affectedMuebles.map(m => m.id);
+    setSyncingIds(affectedIds);
+    setIsSyncing(true);
+    
+    // For small updates, do it all at once
+    if (affectedMuebles.length <= 100) {
+      setAllMuebles(prev => prev.map(m => {
+        const shouldUpdate = affectedIds.includes(m.id);
+        if (!shouldUpdate) return m;
+        
+        if (fieldType === 'area') {
+          return {
+            ...m,
+            area: { nombre: newData.nombre, id_area: newData.id_area! }
+          };
+        } else {
+          return {
+            ...m,
+            directorio: { nombre: newData.nombre, id_directorio: newData.id_directorio!, puesto: '' }
+          };
+        }
+      }));
+      
+      // Small delay for visual feedback
+      await new Promise(resolve => setTimeout(resolve, 100));
+      removeSyncingIds(affectedIds);
+      setIsSyncing(false);
+      console.log(`✅ [RESGUARDOS CREAR] Sync complete for ${fieldType}`);
+      return;
+    }
+    
+    // For large updates, process in batches of 100
+    const BATCH_SIZE = 100;
+    const batches = [];
+    for (let i = 0; i < affectedMuebles.length; i += BATCH_SIZE) {
+      batches.push(affectedMuebles.slice(i, i + BATCH_SIZE));
+    }
+    
+    for (let i = 0; i < batches.length; i++) {
+      const batch = batches[i];
+      const batchIds = batch.map(m => m.id);
+      
+      // Update the batch using functional update to avoid stale closure
+      setAllMuebles(prev => prev.map(m => {
+        const shouldUpdate = batchIds.includes(m.id);
+        if (!shouldUpdate) return m;
+        
+        if (fieldType === 'area') {
+          return {
+            ...m,
+            area: { nombre: newData.nombre, id_area: newData.id_area! }
+          };
+        } else {
+          return {
+            ...m,
+            directorio: { nombre: newData.nombre, id_directorio: newData.id_directorio!, puesto: '' }
+          };
+        }
+      }));
+      
+      // Remove syncing state for this batch
+      removeSyncingIds(batchIds);
+      
+      // Very small delay between batches
+      if (i < batches.length - 1) {
+        await new Promise(resolve => setTimeout(resolve, 10));
+      }
+    }
+    
+    setIsSyncing(false);
+    console.log(`✅ [RESGUARDOS CREAR] Sync complete for ${fieldType}`);
+  }, [setSyncingIds, removeSyncingIds, setIsSyncing]);
+  
+  /**
+   * Setup realtime listeners for area and directorio tables
+   */
+  useEffect(() => {
+    // Area changes listener
+    if (areaChannelRef.current) {
+      supabase.removeChannel(areaChannelRef.current);
+    }
+    
+    const areaChannel = supabase
+      .channel('resguardos-crear-area-changes')
+      .on('postgres_changes', 
+        { event: 'UPDATE', schema: 'public', table: 'area' },
+        async (payload: any) => {
+          const { new: newRecord } = payload;
+          if (newRecord?.id_area && newRecord?.nombre) {
+            await syncRelationalFieldChanges(newRecord.id_area, 'area', {
+              nombre: newRecord.nombre,
+              id_area: newRecord.id_area
+            });
+          }
+        }
+      )
+      .subscribe();
+    
+    areaChannelRef.current = areaChannel;
+    
+    // Directorio changes listener
+    if (directorioChannelRef.current) {
+      supabase.removeChannel(directorioChannelRef.current);
+    }
+    
+    const directorioChannel = supabase
+      .channel('resguardos-crear-directorio-changes')
+      .on('postgres_changes',
+        { event: 'UPDATE', schema: 'public', table: 'directorio' },
+        async (payload: any) => {
+          const { new: newRecord } = payload;
+          if (newRecord?.id_directorio && newRecord?.nombre) {
+            await syncRelationalFieldChanges(newRecord.id_directorio, 'directorio', {
+              nombre: newRecord.nombre,
+              id_directorio: newRecord.id_directorio
+            });
+          }
+        }
+      )
+      .subscribe();
+    
+    directorioChannelRef.current = directorioChannel;
+    
+    // Cleanup on unmount
+    return () => {
+      if (areaChannelRef.current) {
+        supabase.removeChannel(areaChannelRef.current);
+      }
+      if (directorioChannelRef.current) {
+        supabase.removeChannel(directorioChannelRef.current);
+      }
+    };
+  }, [syncRelationalFieldChanges]);
 
   return {
     allMuebles,

@@ -61,32 +61,28 @@ export function AreaPuestoInputs({
         />
       </div>
 
-      {/* Area Select */}
+      {/* Area Input */}
       <div className="w-full">
         <label className={`block text-xs font-medium mb-1.5 ${
           isDarkMode ? 'text-white/60' : 'text-black/60'
         }`}>
           Área
         </label>
-        <select
-          title="Selecciona un área"
+        <input
+          type="text"
           value={area}
           onChange={(e) => onAreaChange(e.target.value)}
-          disabled={!directorSelected}
+          placeholder="Área del director"
           className={`w-full border rounded py-2 px-3 text-sm transition-colors focus:outline-none h-[38px] ${
             isDarkMode
-              ? 'bg-white/5 border-white/10 text-white focus:border-white/30'
-              : 'bg-black/5 border-black/10 text-black focus:border-black/30'
-          } ${!directorSelected ? 'opacity-50 cursor-not-allowed' : ''}`}
-        >
-          <option value="">Selecciona un área</option>
-          {availableAreas.map(a => (
-            <option key={a.id_area} value={a.nombre}>{a.nombre}</option>
-          ))}
-        </select>
+              ? 'bg-white/5 border-white/10 text-white placeholder-white/40 focus:border-white/30'
+              : 'bg-black/5 border-black/10 text-black placeholder-black/40 focus:border-black/30'
+          } ${disabled ? 'opacity-50 cursor-not-allowed' : ''}`}
+          disabled={disabled}
+        />
 
-        {/* Badges container - only shows when needed */}
-        {(showAreaSuggestion || hasAreaMismatch) && (
+        {/* Badges container - only shows when needed and not disabled */}
+        {!disabled && (showAreaSuggestion || hasAreaMismatch) && (
           <div className="mt-1.5 flex flex-col items-center gap-1">
             {/* Area suggestion - shown first */}
             {showAreaSuggestion && (

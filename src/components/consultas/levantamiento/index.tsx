@@ -7,7 +7,7 @@
 
 "use client";
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useTheme } from '@/context/ThemeContext';
 import { useUserRole } from '@/hooks/useUserRole';
@@ -23,6 +23,7 @@ import { generatePDF as generatePDFPerArea } from '@/components/consultas/PDFLev
 import { useUnifiedInventory } from './hooks/useUnifiedInventory';
 import { useSearchAndFilters } from './hooks/useSearchAndFilters';
 import { useDirectorManagement } from './hooks/useDirectorManagement';
+import { useAreaManagement } from './hooks/useAreaManagement';
 
 // Import components
 import { LoadingStates } from './components/LoadingStates';
@@ -36,9 +37,11 @@ import { Pagination } from './components/Pagination';
 import { ExportModal } from './modals/ExportModal';
 import { CustomPDFModal } from './modals/CustomPDFModal';
 import { DirectorDataModal } from './modals/DirectorDataModal';
+import AreaSelectionModal from './modals/AreaSelectionModal';
+import DirectorModal from './modals/DirectorModal';
 
 // Import types
-import { Message, ExportType, DirectorioOption, LevMueble } from './types';
+import { Message, ExportType, DirectorioOption, LevMueble, Area } from './types';
 
 /**
  * LevantamientoUnificado component
@@ -96,9 +99,11 @@ export default function LevantamientoUnificado() {
     directorOptions,
     fetchDirectorFromDirectorio,
     saveDirectorData,
-    loading: directorLoading,
-    error: directorError
+    loading: directorLoading
   } = useDirectorManagement({ isAdmin });
+
+  // Initialize area management hook
+  const { areas, directorAreasMap } = useAreaManagement();
 
   // Message state
   const [message, setMessage] = useState<Message | null>(null);
@@ -112,14 +117,22 @@ export default function LevantamientoUnificado() {
   const [showAreaPDFModal, setShowAreaPDFModal] = useState(false);
   const [areaPDFLoading, setAreaPDFLoading] = useState(false);
   const [areaPDFError, setAreaPDFError] = useState<string | null>(null);
-  const [areaPDFTarget, setAreaPDFTarget] = useState<{ area: string; usufinal: string }>({ 
+  const [areaPDFTarget, setAreaPDFTarget] = useState<{ area: string; director: string }>({ 
     area: '', 
-    usufinal: '' 
+    director: '' 
   });
 
   // Director data modal state
   const [showDirectorDataModal, setShowDirectorDataModal] = useState(false);
   const [directorToUpdate, setDirectorToUpdate] = useState<DirectorioOption | null>(null);
+
+  // Area selection state
+  const [showAreaSelectionModal, setShowAreaSelectionModal] = useState(false);
+  const [showDirectorModal, setShowDirectorModal] = useState(false);
+  const [incompleteDirector, setIncompleteDirector] = useState<DirectorioOption | null>(null);
+  const [areaOptions, setAreaOptions] = useState<Area[]>([]);
+  const [directorFormData, setDirectorFormData] = useState<{ area: string }>({ area: '' });
+  const [savingDirector, setSavingDirector] = useState(false);
 
   // Folio resguardo state
   const [foliosResguardo, setFoliosResguardo] = useState<Record<string, string>>({});
@@ -213,6 +226,8 @@ export default function LevantamientoUnificado() {
         const formattedData = exportData.map((item, index) => ({
           ...item,
           _counter: index + 1,
+          area: item.area?.nombre || '',
+          usufinal: item.directorio?.nombre || '',
           valor: item.valor?.toString() || '',
           f_adq: item.f_adq || '',
           fechabaja: item.fechabaja || ''
@@ -230,6 +245,8 @@ export default function LevantamientoUnificado() {
         const formattedData = exportData.map((item, index) => ({
           ...item,
           _counter: index + 1,
+          area: item.area?.nombre || '',
+          usufinal: item.directorio?.nombre || ''
         }));
         await generatePDF({
           data: formattedData,
@@ -259,7 +276,29 @@ export default function LevantamientoUnificado() {
     const areaTerm = areaFilter?.term || '';
     const directorTerm = usufinalFilter?.term || '';
     
-    setAreaPDFTarget({ area: areaTerm, usufinal: directorTerm });
+    // Filter by relational fields
+    const filtered = filteredMuebles.filter(item => 
+      item.area?.nombre && item.directorio?.nombre
+    );
+    
+    // Extract unique directors with id_directorio
+    const uniqueDirectors = new Map<number, DirectorioOption>();
+    filtered.forEach(item => {
+      if (item.directorio && item.id_directorio) {
+        if (!uniqueDirectors.has(item.id_directorio)) {
+          uniqueDirectors.set(item.id_directorio, {
+            id_directorio: item.id_directorio,
+            nombre: item.directorio.nombre,
+            puesto: item.directorio.puesto,
+            area: item.area?.nombre || ''
+          });
+        }
+      }
+    });
+    
+    const directorOptionsArray = Array.from(uniqueDirectors.values());
+    
+    setAreaPDFTarget({ area: areaTerm, director: directorTerm });
     await fetchDirectorFromDirectorio(areaTerm, directorTerm);
     setShowAreaPDFModal(true);
   };
@@ -272,8 +311,8 @@ export default function LevantamientoUnificado() {
       item && 
       typeof item === 'object' && 
       item.id_inv && 
-      item.area && 
-      item.usufinal
+      item.area?.nombre && 
+      item.directorio?.nombre
     );
   };
 
@@ -298,7 +337,11 @@ export default function LevantamientoUnificado() {
         return;
       }
 
-      const plainData = dataToExport.map(item => ({ ...item }));
+      const plainData = dataToExport.map(item => ({
+        ...item,
+        area: item.area?.nombre || '',
+        usufinal: item.directorio?.nombre || ''
+      }));
       
       if (!plainData.every(obj => obj && typeof obj === 'object' && obj.id_inv && obj.area && obj.usufinal)) {
         setAreaPDFError('Error: Hay registros corruptos o incompletos.');
@@ -306,7 +349,7 @@ export default function LevantamientoUnificado() {
       }
 
       await generatePDFPerArea({
-        data: plainData,
+        data: plainData as Record<string, unknown>[],
         firmas,
         columns: [
           { header: 'ID INVENTARIO', key: 'id_inv', width: 60 },
@@ -334,9 +377,166 @@ export default function LevantamientoUnificado() {
    * Handle director selection in custom PDF modal
    */
   const handleDirectorSelect = (director: DirectorioOption) => {
+    // Check if director has incomplete data
     if ((!director.nombre || !director.puesto) && isAdmin) {
       setDirectorToUpdate(director);
       setShowDirectorDataModal(true);
+      return;
+    }
+    
+    // Get director areas from directorAreasMap
+    const directorAreas = directorAreasMap[director.id_directorio] || [];
+    
+    if (directorAreas.length === 0) {
+      // 0 areas: show DirectorModal to create area
+      setIncompleteDirector(director);
+      setDirectorFormData({ area: '' });
+      setShowAreaPDFModal(false);
+      setShowDirectorModal(true);
+    } else if (directorAreas.length === 1) {
+      // 1 area: generate PDF directly
+      const area = areas.find(a => a.id_area === directorAreas[0]);
+      if (area) {
+        generatePDFForDirectorAndArea(director, area);
+      } else {
+        setMessage({ type: 'error', text: 'No se encontró el área asociada' });
+      }
+    } else {
+      // Multiple areas: show AreaSelectionModal
+      const directorAreaOptions = areas.filter(a => directorAreas.includes(a.id_area));
+      setIncompleteDirector(director);
+      setAreaOptions(directorAreaOptions);
+      setShowAreaPDFModal(false);
+      setShowAreaSelectionModal(true);
+    }
+  };
+
+  /**
+   * Handle area selection from AreaSelectionModal
+   */
+  const handleAreaSelect = (area: Area) => {
+    if (incompleteDirector) {
+      generatePDFForDirectorAndArea(incompleteDirector, area);
+      setShowAreaSelectionModal(false);
+      setIncompleteDirector(null);
+      setAreaOptions([]);
+    }
+  };
+
+  /**
+   * Handle save director area from DirectorModal
+   */
+  const handleSaveDirectorArea = async () => {
+    if (!incompleteDirector || !directorFormData.area.trim()) return;
+    
+    setSavingDirector(true);
+    try {
+      // Create new area
+      let area: Area | undefined = areas.find(a => a.nombre.toLowerCase() === directorFormData.area.toLowerCase());
+      
+      if (!area) {
+        // Create new area
+        const { data: newArea, error: areaError } = await supabase
+          .from('area')
+          .insert({ nombre: directorFormData.area })
+          .select()
+          .single();
+        
+        if (areaError) throw areaError;
+        area = newArea as Area;
+      }
+      
+      if (!area) {
+        throw new Error('No se pudo crear o encontrar el área');
+      }
+      
+      // Create directorio_areas relationship
+      const { error: relError } = await supabase
+        .from('directorio_areas')
+        .insert({
+          id_directorio: incompleteDirector.id_directorio,
+          id_area: area.id_area
+        });
+      
+      if (relError && relError.code !== '23505') { // Ignore duplicate key error
+        throw relError;
+      }
+      
+      // Generate PDF
+      generatePDFForDirectorAndArea(incompleteDirector, area);
+      
+      // Close modal and reset state
+      setShowDirectorModal(false);
+      setIncompleteDirector(null);
+      setDirectorFormData({ area: '' });
+      setMessage({ type: 'success', text: 'Área creada y asignada correctamente' });
+    } catch (error) {
+      console.error('Error al guardar área:', error);
+      setMessage({ type: 'error', text: 'Error al guardar el área' });
+    } finally {
+      setSavingDirector(false);
+    }
+  };
+
+  /**
+   * Generate PDF for director and area
+   */
+  const generatePDFForDirectorAndArea = async (director: DirectorioOption, area: Area) => {
+    setAreaPDFLoading(true);
+    setAreaPDFError(null);
+    
+    try {
+      // Filter data by area.nombre and directorio.nombre
+      const dataToExport = filteredMuebles.filter(item => 
+        item.area?.nombre === area.nombre && 
+        item.directorio?.nombre === director.nombre
+      );
+      
+      if (dataToExport.length === 0) {
+        setAreaPDFError('No hay datos para exportar con esta combinación de área y director.');
+        return;
+      }
+      
+      // Build metadata object with relational data
+      const metadata = {
+        directorNombre: director.nombre,
+        directorPuesto: director.puesto,
+        areaNombre: area.nombre
+      };
+      
+      const firmas = [{
+        concepto: 'DIRECTOR DE ÁREA',
+        nombre: metadata.directorNombre,
+        puesto: metadata.directorPuesto
+      }];
+      
+      // Call PDF generator with metadata
+      await generatePDFPerArea({
+        data: dataToExport.map(item => ({
+          ...item,
+          area: item.area?.nombre || '',
+          usufinal: item.directorio?.nombre || ''
+        })) as Record<string, unknown>[],
+        firmas,
+        columns: [
+          { header: 'ID INVENTARIO', key: 'id_inv', width: 60 },
+          { header: 'DESCRIPCIÓN', key: 'descripcion', width: 120 },
+          { header: 'ESTADO', key: 'estado', width: 50 },
+          { header: 'ESTATUS', key: 'estatus', width: 50 },
+          { header: 'ÁREA', key: 'area', width: 60 },
+          { header: 'USUARIO FINAL', key: 'usufinal', width: 70 },
+        ],
+        title: 'LEVANTAMIENTO DE INVENTARIO',
+        fileName: `levantamiento_${area.nombre}_${new Date().toISOString().slice(0, 10)}`
+      });
+      
+      setMessage({ type: 'success', text: 'PDF generado exitosamente.' });
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'Error al generar el PDF.';
+      setAreaPDFError(msg);
+      setMessage({ type: 'error', text: msg });
+    } finally {
+      setAreaPDFLoading(false);
     }
   };
 
@@ -349,7 +549,7 @@ export default function LevantamientoUnificado() {
       setShowDirectorDataModal(false);
       setMessage({ type: 'success', text: 'Datos del director actualizados correctamente' });
       // Refresh director options
-      await fetchDirectorFromDirectorio(areaPDFTarget.area, areaPDFTarget.usufinal);
+      await fetchDirectorFromDirectorio(areaPDFTarget.area, areaPDFTarget.director);
     } catch (error) {
       console.error('Error al actualizar datos del director:', error);
       setMessage({ type: 'error', text: 'Error al actualizar los datos del director' });
@@ -606,7 +806,7 @@ export default function LevantamientoUnificado() {
       <CustomPDFModal
         show={showAreaPDFModal}
         area={areaPDFTarget.area}
-        director={areaPDFTarget.usufinal}
+        director={areaPDFTarget.director}
         directorOptions={directorOptions}
         onConfirm={handleCustomPDFConfirm}
         onCancel={() => setShowAreaPDFModal(false)}
@@ -624,6 +824,34 @@ export default function LevantamientoUnificado() {
         onCancel={() => setShowDirectorDataModal(false)}
         loading={directorLoading}
         isDarkMode={isDarkMode}
+      />
+
+      <AreaSelectionModal
+        show={showAreaSelectionModal}
+        areaOptions={areaOptions}
+        incompleteDirector={incompleteDirector}
+        isDarkMode={isDarkMode}
+        onClose={() => {
+          setShowAreaSelectionModal(false);
+          setIncompleteDirector(null);
+          setAreaOptions([]);
+        }}
+        onSelectArea={handleAreaSelect}
+      />
+
+      <DirectorModal
+        show={showDirectorModal}
+        incompleteDirector={incompleteDirector}
+        directorFormData={directorFormData}
+        savingDirector={savingDirector}
+        isDarkMode={isDarkMode}
+        onClose={() => {
+          setShowDirectorModal(false);
+          setIncompleteDirector(null);
+          setDirectorFormData({ area: '' });
+        }}
+        onSave={handleSaveDirectorArea}
+        onAreaChange={(area) => setDirectorFormData({ area })}
       />
     </>
   );

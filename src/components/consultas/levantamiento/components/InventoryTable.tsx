@@ -107,8 +107,16 @@ export function InventoryTable({
               </th>
               <SortableHeader field="id_inv" label="ID Inventario" />
               <SortableHeader field="descripcion" label="Descripción" />
-              <SortableHeader field="area" label="Área" />
-              <SortableHeader field="usufinal" label="Jefe/Director" />
+              <th className={`px-4 py-3 text-left text-xs font-medium uppercase tracking-wider ${
+                isDarkMode ? 'text-white/60' : 'text-black/60'
+              }`}>
+                Área
+              </th>
+              <th className={`px-4 py-3 text-left text-xs font-medium uppercase tracking-wider ${
+                isDarkMode ? 'text-white/60' : 'text-black/60'
+              }`}>
+                Jefe/Director
+              </th>
               <SortableHeader field="estatus" label="Estatus" />
             </tr>
           </thead>
@@ -182,7 +190,7 @@ export function InventoryTable({
                 <td className={`px-4 py-3 text-sm ${
                   isDarkMode ? 'text-white/80' : 'text-black/80'
                 }`}>
-                  {truncateText(item.area, 20)}
+                  {item.area?.nombre ? truncateText(item.area.nombre, 20) : '-'}
                 </td>
 
                 {/* Usuario Final / Resguardante */}
@@ -193,7 +201,7 @@ export function InventoryTable({
                     <span className={`font-medium ${
                       isDarkMode ? 'text-white' : 'text-black'
                     }`}>
-                      {truncateText(item.usufinal, 20) || (
+                      {item.directorio?.nombre ? truncateText(item.directorio.nombre, 20) : (
                         <span className={isDarkMode ? 'text-white/40' : 'text-black/40'}>
                           Sin director
                         </span>
