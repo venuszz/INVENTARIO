@@ -39,10 +39,20 @@ export const useIteaStore = create<IteaStore>()(
   syncingIds: [],
   isSyncing: false,
   
-  setMuebles: (muebles) => set({
-    muebles,
-    lastFetchedAt: new Date().toISOString(),
-  }),
+  setMuebles: (muebles) => {
+    console.log('🎨 [iteaStore] setMuebles called with:', {
+      total: muebles.length,
+      first_item: muebles[0],
+      items_with_color: muebles.filter(m => m.color).length,
+      items_with_colores_object: muebles.filter(m => m.colores).length,
+      sample_with_color: muebles.find(m => m.colores)
+    });
+    
+    set({
+      muebles,
+      lastFetchedAt: new Date().toISOString(),
+    });
+  },
   
   addMueble: (mueble) => set((state) => ({
     muebles: [...state.muebles, mueble],

@@ -5,7 +5,6 @@ import supabase from '@/app/lib/supabase/client';
 import { generateResguardoPDF } from '../ResguardoPDFReport';
 import { useUserRole } from "@/hooks/useUserRole";
 import { useSession } from "@/hooks/useSession";
-import { useNotifications } from '@/hooks/useNotifications';
 import { useTheme } from '@/context/ThemeContext';
 import { useIneaIndexation } from '@/hooks/indexation/useIneaIndexation';
 import { useIteaIndexation } from '@/hooks/indexation/useIteaIndexation';
@@ -60,7 +59,6 @@ export default function CrearResguardos() {
   const { user } = useSession();
   const role = useUserRole();
   const isUsuario = role === "usuario";
-  const { createNotification } = useNotifications();
   
   // Realtime connections
   const { muebles: ineaData, realtimeConnected: ineaConnected } = useIneaIndexation();

@@ -16,6 +16,50 @@ import type { MuebleITEA } from '@/types/indexation';
 const MODULE_KEY = 'itea';
 const { stages: STAGES, table: TABLE } = ITEA_CONFIG;
 
+// Cache for colors to avoid repeated API calls
+let colorsCache: { [id: string]: { id: string; nombre: string; significado: string | null } } = {};
+let colorsCacheTime: number = 0;
+const COLORS_CACHE_TTL = 5 * 60 * 1000; // 5 minutes
+
+/**
+ * Fetch colors from API and cache them
+ */
+async function fetchColorsMap(): Promise<{ [id: string]: { id: string; nombre: string; significado: string | null } }> {
+  const now = Date.now();
+  
+  // Return cached colors if still valid
+  if (Object.keys(colorsCache).length > 0 && (now - colorsCacheTime) < COLORS_CACHE_TTL) {
+    return colorsCache;
+  }
+  
+  try {
+    const response = await fetch('/api/colores');
+    if (response.ok) {
+      const { colors } = await response.json();
+      colorsCache = colors.reduce((acc: any, color: any) => {
+        acc[color.id] = color;
+        return acc;
+      }, {});
+      colorsCacheTime = now;
+      return colorsCache;
+    }
+  } catch (error) {
+    console.warn('⚠️ Failed to fetch colors:', error);
+  }
+  
+  return {};
+}
+
+/**
+ * Attach color data to muebles based on color field
+ */
+function attachColorData(muebles: any[], colorsMap: { [id: string]: any }): MuebleITEA[] {
+  return muebles.map(item => ({
+    ...item,
+    colores: item.color ? colorsMap[item.color] || null : null
+  }));
+}
+
 export function useIteaIndexation() {
   const indexationState = useIndexationStore(state => state.modules[MODULE_KEY]);
   const {
@@ -55,6 +99,9 @@ export function useIteaIndexation() {
     const allFetchedMuebles: MuebleITEA[] = [];
     const filterField = type === 'area' ? 'id_area' : 'id_directorio';
     
+    // Get colors map
+    const colorsMap = await fetchColorsMap();
+    
     // Fetch all affected records in batches of 1000
     let hasMore = true;
     let offset = 0;
@@ -78,10 +125,12 @@ export function useIteaIndexation() {
         }
         
         if (affectedMuebles && affectedMuebles.length > 0) {
-          allFetchedMuebles.push(...affectedMuebles);
+          // Attach color data
+          const mueblesWithColors = attachColorData(affectedMuebles, colorsMap);
+          allFetchedMuebles.push(...mueblesWithColors);
           
           // Set syncing IDs for skeleton display
-          const ids = affectedMuebles.map(m => m.id);
+          const ids = mueblesWithColors.map(m => m.id);
           setSyncingIds(ids);
           
           hasMore = affectedMuebles.length === BATCH_SIZE;
@@ -135,6 +184,29 @@ export function useIteaIndexation() {
       const stage1 = STAGES[0];
       updateProgress(MODULE_KEY, accumulatedProgress, stage1.label);
       
+      // Fetch colors from API first (bypasses RLS)
+      console.log('🎨 [ITEA Indexation] Fetching colors from API...');
+      let coloresMap: { [id: string]: { id: string; nombre: string; significado: string | null } } = {};
+      
+      try {
+        const coloresResponse = await fetch('/api/colores');
+        if (coloresResponse.ok) {
+          const { colors } = await coloresResponse.json();
+          coloresMap = colors.reduce((acc: any, color: any) => {
+            acc[color.id] = color;
+            return acc;
+          }, {});
+          console.log('🎨 [ITEA Indexation] Colors loaded:', {
+            count: colors.length,
+            sample: colors[0]
+          });
+        } else {
+          console.warn('⚠️ [ITEA Indexation] Failed to fetch colors, continuing without them');
+        }
+      } catch (colorError) {
+        console.warn('⚠️ [ITEA Indexation] Error fetching colors:', colorError);
+      }
+      
       // Fetch data in batches of 1000
       const fetchedMuebles: MuebleITEA[] = [];
       let hasMore = true;
@@ -153,8 +225,24 @@ export function useIteaIndexation() {
               `)
               .neq('estatus', 'BAJA')
               .range(offset, offset + BATCH_SIZE - 1);
-            if (error) throw error;
-            return data as MuebleITEA[];
+            
+            if (error) {
+              console.error('❌ [ITEA Indexation] Query failed:', error);
+              throw error;
+            }
+            
+            // Manually attach color data
+            const dataWithColors = (data || []).map((item: any) => ({
+              ...item,
+              colores: item.color ? coloresMap[item.color] || null : null
+            }));
+            
+            console.log('✅ [ITEA Indexation] Batch fetched:', {
+              records: dataWithColors.length,
+              with_colors: dataWithColors.filter((i: any) => i.colores).length
+            });
+            
+            return dataWithColors as MuebleITEA[];
           },
           FETCH_RETRY_CONFIG
         );
@@ -204,6 +292,8 @@ export function useIteaIndexation() {
             switch (eventType) {
               case 'INSERT': {
                 await new Promise(resolve => setTimeout(resolve, 300));
+                const colorsMap = await fetchColorsMap();
+                
                 const { data, error } = await supabase
                   .from(TABLE)
                   .select(`
@@ -213,21 +303,28 @@ export function useIteaIndexation() {
                   `)
                   .eq('id', newRecord.id)
                   .single();
-                if (!error && data && data.estatus !== 'BAJA') {
-                  addMueble(data);
-                  iteaEmitter.emit({ type: 'INSERT', data, timestamp: new Date().toISOString() });
-                  addRealtimeChange({
-                    moduleKey: MODULE_KEY,
-                    moduleName: 'ITEA',
-                    table: TABLE,
-                    eventType: 'INSERT',
-                    recordId: data.id,
-                    recordName: data.id_inv,
-                  });
+                
+                if (!error && data) {
+                  const dataWithColor = attachColorData([data], colorsMap)[0];
+                  
+                  if (dataWithColor.estatus !== 'BAJA') {
+                    addMueble(dataWithColor);
+                    iteaEmitter.emit({ type: 'INSERT', data: dataWithColor, timestamp: new Date().toISOString() });
+                    addRealtimeChange({
+                      moduleKey: MODULE_KEY,
+                      moduleName: 'ITEA',
+                      table: TABLE,
+                      eventType: 'INSERT',
+                      recordId: dataWithColor.id,
+                      recordName: dataWithColor.id_inv,
+                    });
+                  }
                 }
                 break;
               }
               case 'UPDATE': {
+                const colorsMap = await fetchColorsMap();
+                
                 const { data, error } = await supabase
                   .from(TABLE)
                   .select(`
@@ -237,21 +334,24 @@ export function useIteaIndexation() {
                   `)
                   .eq('id', newRecord.id)
                   .single();
+                  
                 if (!error && data) {
-                  if (data.estatus === 'BAJA') {
-                    removeMueble(data.id);
+                  const dataWithColor = attachColorData([data], colorsMap)[0];
+                  
+                  if (dataWithColor.estatus === 'BAJA') {
+                    removeMueble(dataWithColor.id);
                   } else {
-                    updateMueble(data.id, data);
+                    updateMueble(dataWithColor.id, dataWithColor);
                     addRealtimeChange({
                       moduleKey: MODULE_KEY,
                       moduleName: 'ITEA',
                       table: TABLE,
                       eventType: 'UPDATE',
-                      recordId: data.id,
-                      recordName: data.id_inv,
+                      recordId: dataWithColor.id,
+                      recordName: dataWithColor.id_inv,
                     });
                   }
-                  iteaEmitter.emit({ type: 'UPDATE', data, timestamp: new Date().toISOString() });
+                  iteaEmitter.emit({ type: 'UPDATE', data: dataWithColor, timestamp: new Date().toISOString() });
                 }
                 break;
               }

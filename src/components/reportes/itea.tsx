@@ -12,7 +12,6 @@ import { generateExcel } from './excelgenerator';
 import { generatePDF } from './pdfgenerator';
 import { useUserRole } from "@/hooks/useUserRole";
 import RoleGuard from "@/components/roleGuard";
-import { useNotifications } from '@/hooks/useNotifications';
 import { useAdminIndexation } from '@/hooks/indexation/useAdminIndexation';
 import type { Firma } from '@/types/admin';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -59,8 +58,8 @@ export default function ReportesIneaDashboard() {
     const [exportingFormat, setExportingFormat] = useState<string | null>(null);
     const [reportes, setReportes] = useState<Reporte[]>([]);
     const [loadingReportes, setLoadingReportes] = useState(true);
+    const [viewMode, setViewMode] = useState<'estatus' | 'colores'>('estatus');
 
-    const { createNotification } = useNotifications();
     const { firmas } = useAdminIndexation();
 
     // Obtener valores únicos de estatus al cargar el componente
@@ -69,67 +68,113 @@ export default function ReportesIneaDashboard() {
             try {
                 setLoadingReportes(true);
                 
-                // Obtener todos los registros con paginación para asegurar que obtenemos todos los estatus únicos
-                let allEstatus: string[] = [];
-                let from = 0;
-                const pageSize = 1000;
-                let hasMore = true;
-
-                while (hasMore) {
-                    const { data, error } = await supabase
-                        .from('mueblesitea')
-                        .select('estatus')
-                        .not('estatus', 'is', null)
-                        .range(from, from + pageSize - 1);
-
-                    if (error) throw error;
-
-                    if (data && data.length > 0) {
-                        allEstatus = allEstatus.concat(data.map(d => d.estatus).filter(Boolean) as string[]);
-                        if (data.length < pageSize) {
-                            hasMore = false;
-                        } else {
-                            from += pageSize;
+                if (viewMode === 'colores') {
+                    // Fetch colors from API
+                    const response = await fetch('/api/colores');
+                    if (!response.ok) throw new Error('Error al cargar colores');
+                    
+                    const { colors } = await response.json();
+                    
+                    const getColorHex = (colorName: string) => {
+                        const name = colorName.toUpperCase();
+                        switch (name) {
+                            case 'ROJO': return '#ef4444';
+                            case 'BLANCO': return '#ffffff';
+                            case 'VERDE': return '#22c55e';
+                            case 'AMARILLO': return '#eab308';
+                            case 'AZUL': return '#3b82f6';
+                            case 'NARANJA': return '#f97316';
+                            default: return '#9ca3af';
                         }
-                    } else {
-                        hasMore = false;
+                    };
+                    
+                    // Create color reports
+                    const colorReportes: Reporte[] = [
+                        {
+                            id: 1,
+                            title: 'General',
+                            path: '/reportes/itea/general',
+                            icon: <Database className="h-5 w-5" />,
+                            estatus: null
+                        },
+                        ...colors.map((color: any, index: number) => ({
+                            id: index + 2,
+                            title: color.nombre,
+                            path: `/reportes/itea/color-${color.nombre.toLowerCase()}`,
+                            icon: (
+                                <div 
+                                    className="w-5 h-5 rounded-full"
+                                    style={{
+                                        backgroundColor: getColorHex(color.nombre),
+                                        border: color.nombre === 'BLANCO' ? '2px solid rgba(0,0,0,0.2)' : 'none'
+                                    }}
+                                />
+                            ),
+                            estatus: color.nombre // Using estatus field to store color name
+                        }))
+                    ];
+                    
+                    setReportes(colorReportes);
+                } else {
+                    // Original estatus logic
+                    let allEstatus: string[] = [];
+                    let from = 0;
+                    const pageSize = 1000;
+                    let hasMore = true;
+
+                    while (hasMore) {
+                        const { data, error } = await supabase
+                            .from('mueblesitea')
+                            .select('estatus')
+                            .not('estatus', 'is', null)
+                            .range(from, from + pageSize - 1);
+
+                        if (error) throw error;
+
+                        if (data && data.length > 0) {
+                            allEstatus = allEstatus.concat(data.map(d => d.estatus).filter(Boolean) as string[]);
+                            if (data.length < pageSize) {
+                                hasMore = false;
+                            } else {
+                                from += pageSize;
+                            }
+                        } else {
+                            hasMore = false;
+                        }
                     }
+
+                    const uniqueEstatus = [...new Set(allEstatus)];
+
+                    const getIconForEstatus = (estatus: string): React.ReactElement => {
+                        const estatusLower = estatus.toLowerCase();
+                        if (estatusLower.includes('activo') && !estatusLower.includes('inactivo')) return <CheckCircle className="h-5 w-5" />;
+                        if (estatusLower.includes('inactivo')) return <UserX className="h-5 w-5" />;
+                        if (estatusLower.includes('localizado')) return <MapPin className="h-5 w-5" />;
+                        if (estatusLower.includes('obsoleto')) return <Trash2 className="h-5 w-5" />;
+                        return <Database className="h-5 w-5" />;
+                    };
+
+                    const dynamicReportes: Reporte[] = [
+                        {
+                            id: 1,
+                            title: 'General',
+                            path: '/reportes/itea/general',
+                            icon: <Database className="h-5 w-5" />,
+                            estatus: null
+                        },
+                        ...uniqueEstatus.map((estatus, index) => ({
+                            id: index + 2,
+                            title: estatus,
+                            path: `/reportes/itea/${estatus.toLowerCase().replace(/\s+/g, '-')}`,
+                            icon: getIconForEstatus(estatus),
+                            estatus: estatus
+                        }))
+                    ];
+
+                    setReportes(dynamicReportes);
                 }
-
-                // Obtener valores únicos de estatus
-                const uniqueEstatus = [...new Set(allEstatus)];
-
-                // Generar iconos dinámicamente basados en el nombre del estatus
-                const getIconForEstatus = (estatus: string): React.ReactElement => {
-                    const estatusLower = estatus.toLowerCase();
-                    if (estatusLower.includes('activo') && !estatusLower.includes('inactivo')) return <CheckCircle className="h-5 w-5" />;
-                    if (estatusLower.includes('inactivo')) return <UserX className="h-5 w-5" />;
-                    if (estatusLower.includes('localizado')) return <MapPin className="h-5 w-5" />;
-                    if (estatusLower.includes('obsoleto')) return <Trash2 className="h-5 w-5" />;
-                    return <Database className="h-5 w-5" />;
-                };
-
-                // Crear array de reportes: General + reportes dinámicos
-                const dynamicReportes: Reporte[] = [
-                    {
-                        id: 1,
-                        title: 'General',
-                        path: '/reportes/itea/general',
-                        icon: <Database className="h-5 w-5" />,
-                        estatus: null
-                    },
-                    ...uniqueEstatus.map((estatus, index) => ({
-                        id: index + 2,
-                        title: estatus,
-                        path: `/reportes/itea/${estatus.toLowerCase().replace(/\s+/g, '-')}`,
-                        icon: getIconForEstatus(estatus),
-                        estatus: estatus
-                    }))
-                ];
-
-                setReportes(dynamicReportes);
             } catch (error) {
-                console.error('Error al obtener estatus:', error);
+                console.error('Error al obtener datos:', error);
                 setError('Error al cargar las categorías de reportes');
             } finally {
                 setLoadingReportes(false);
@@ -137,7 +182,7 @@ export default function ReportesIneaDashboard() {
         };
 
         fetchEstatus();
-    }, []);
+    }, [viewMode]);
 
     const exportColumns = [
         { header: 'ID Inventario', key: 'id_inv', width: 18 },
@@ -175,9 +220,26 @@ export default function ReportesIneaDashboard() {
             
             let query = supabase.from('mueblesitea').select('*', { count: 'exact', head: false });
             
-            // Aplicar filtro solo si no es "General"
+            // Aplicar filtro según el modo de vista
             if (selectedReporte?.estatus) {
-                query = query.eq('estatus', selectedReporte.estatus);
+                if (viewMode === 'colores') {
+                    // Filter by color - need to fetch with color data
+                    // First get all records, then filter by color in memory since we can't JOIN in export
+                    const colorName = selectedReporte.estatus;
+                    
+                    // Get color ID from API
+                    const colorsResponse = await fetch('/api/colores');
+                    if (!colorsResponse.ok) throw new Error('Error al cargar colores');
+                    const { colors } = await colorsResponse.json();
+                    const selectedColor = colors.find((c: any) => c.nombre === colorName);
+                    
+                    if (selectedColor) {
+                        query = query.eq('color', selectedColor.id);
+                    }
+                } else {
+                    // Filter by estatus
+                    query = query.eq('estatus', selectedReporte.estatus);
+                }
             }
 
             const firmasData = firmas;
@@ -221,6 +283,8 @@ export default function ReportesIneaDashboard() {
                 let reportTitle;
                 if (selectedReport === 'General') {
                     reportTitle = 'INVENTARIO GENERAL DE BIENES MUEBLES';
+                } else if (viewMode === 'colores') {
+                    reportTitle = `INVENTARIO DE BIENES MUEBLES - COLOR ${selectedReport.toUpperCase()}`;
                 } else {
                     reportTitle = `INVENTARIO DE BIENES MUEBLES - ${selectedReport.toUpperCase()}`;
                 }
@@ -263,27 +327,11 @@ export default function ReportesIneaDashboard() {
                 a.click();
             }
             setExportModalOpen(false);
-            await createNotification({
-                title: `reporte ITEA exportado (${format})`,
-                description: `El usuario exportó el reporte ITEA en formato ${format} para la categoría "${selectedReport}".`,
-                type: 'success',
-                category: 'reportes',
-                device: 'web',
-                importance: 'medium',
-                data: { changes: [`Exportación de reporte: ${selectedReport}`], affectedTables: ['mueblesitea'] }
-            });
+            // Notification removed
         } catch (error: Error | unknown) {
             setError('Error al exportar el reporte: ' + (error instanceof Error ? error.message : 'Error desconocido'));
             console.error(error);
-            await createNotification({
-                title: 'Error al exportar reporte ITEA',
-                description: `Error al exportar el reporte ITEA: ${(error instanceof Error ? error.message : 'Error desconocido')}`,
-                type: 'danger',
-                category: 'reportes',
-                device: 'web',
-                importance: 'high',
-                data: { affectedTables: ['mueblesitea'] }
-            });
+            // Notification removed
         } finally {
             setIsExporting(false);
             setExportingFormat(null);
@@ -319,21 +367,62 @@ export default function ReportesIneaDashboard() {
                             Exporta reportes en diferentes formatos
                         </p>
                     </div>
-                    <RoleGuard roles={["admin", "superadmin"]} userRole={userRole}>
-                        <motion.button
-                            onClick={() => setFirmasModalOpen(true)}
-                            className={`p-2 rounded-lg transition-colors ${
-                                isDarkMode 
-                                    ? 'hover:bg-white/5'
-                                    : 'hover:bg-black/5'
-                            }`}
-                            title="Configurar Firmas"
-                            whileHover={{ scale: 1.05 }}
-                            whileTap={{ scale: 0.95 }}
-                        >
-                            <Settings2 size={20} />
-                        </motion.button>
-                    </RoleGuard>
+                    <div className="flex items-center gap-3">
+                        {/* Toggle View Mode */}
+                        <div className={`flex items-center gap-1 p-1 rounded-lg border ${
+                            isDarkMode ? 'bg-white/5 border-white/10' : 'bg-black/5 border-black/10'
+                        }`}>
+                            <motion.button
+                                onClick={() => setViewMode('estatus')}
+                                className={`px-3 py-1.5 rounded-md text-xs font-medium transition-all ${
+                                    viewMode === 'estatus'
+                                        ? isDarkMode
+                                            ? 'bg-white text-black'
+                                            : 'bg-black text-white'
+                                        : isDarkMode
+                                            ? 'text-white/60 hover:text-white'
+                                            : 'text-black/60 hover:text-black'
+                                }`}
+                                whileHover={{ scale: 1.02 }}
+                                whileTap={{ scale: 0.98 }}
+                            >
+                                Por Estatus
+                            </motion.button>
+                            <motion.button
+                                onClick={() => setViewMode('colores')}
+                                className={`px-3 py-1.5 rounded-md text-xs font-medium transition-all flex items-center gap-1.5 ${
+                                    viewMode === 'colores'
+                                        ? isDarkMode
+                                            ? 'bg-white text-black'
+                                            : 'bg-black text-white'
+                                        : isDarkMode
+                                            ? 'text-white/60 hover:text-white'
+                                            : 'text-black/60 hover:text-black'
+                                }`}
+                                whileHover={{ scale: 1.02 }}
+                                whileTap={{ scale: 0.98 }}
+                            >
+                                <div className="w-2 h-2 rounded-full bg-gradient-to-r from-red-500 via-green-500 to-blue-500" />
+                                Por Colores
+                            </motion.button>
+                        </div>
+                        
+                        <RoleGuard roles={["admin", "superadmin"]} userRole={userRole}>
+                            <motion.button
+                                onClick={() => setFirmasModalOpen(true)}
+                                className={`p-2 rounded-lg transition-colors ${
+                                    isDarkMode 
+                                        ? 'hover:bg-white/5'
+                                        : 'hover:bg-black/5'
+                                }`}
+                                title="Configurar Firmas"
+                                whileHover={{ scale: 1.05 }}
+                                whileTap={{ scale: 0.95 }}
+                            >
+                                <Settings2 size={20} />
+                            </motion.button>
+                        </RoleGuard>
+                    </div>
                 </div>
 
                 {/* Main content */}
@@ -386,7 +475,9 @@ export default function ReportesIneaDashboard() {
                                             <p className={`text-xs ${isDarkMode ? 'text-white/40' : 'text-black/40'}`}>
                                                 {reporte.title === 'General' 
                                                     ? 'Información completa de todos los registros' 
-                                                    : `Registros con estatus: ${reporte.title}`}
+                                                    : viewMode === 'colores'
+                                                        ? `Registros con color: ${reporte.title}`
+                                                        : `Registros con estatus: ${reporte.title}`}
                                             </p>
                                         </div>
                                     </div>
@@ -699,27 +790,10 @@ export default function ReportesIneaDashboard() {
                                                                     }
                                                                     
                                                                     setEditingFirma(null);
-                                                                    
-                                                                    await createNotification({
-                                                                        title: 'Firma editada',
-                                                                        description: `La firma "${firma.concepto}" fue editada correctamente.`,
-                                                                        type: 'info',
-                                                                        category: 'firmas',
-                                                                        device: 'web',
-                                                                        importance: 'medium',
-                                                                        data: { changes: [`Edición de firma: ${firma.concepto}`], affectedTables: ['firmas'] }
-                                                                    });
+                                                                    // Notification removed
                                                                 } catch (error) {
                                                                     setError('Error al actualizar la firma');
-                                                                    await createNotification({
-                                                                        title: 'Error al editar firma',
-                                                                        description: 'Error al editar la firma.',
-                                                                        type: 'danger',
-                                                                        category: 'firmas',
-                                                                        device: 'web',
-                                                                        importance: 'high',
-                                                                        data: { affectedTables: ['firmas'] }
-                                                                    });
+                                                                    // Notification removed
                                                                 }
                                                             }} 
                                                             className="space-y-3"

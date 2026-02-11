@@ -10,7 +10,6 @@ import supabase from '@/app/lib/supabase/client';
 import { generateBajaPDF } from './BajaPDFReport';
 import { useUserRole } from "@/hooks/useUserRole";
 import RoleGuard from "@/components/roleGuard";
-import { useNotifications } from '@/hooks/useNotifications';
 import { useTheme } from '@/context/ThemeContext';
 import { useResguardosBajasIndexation } from '@/hooks/indexation/useResguardosBajasIndexation';
 import { useSearchParams } from 'next/navigation';
@@ -104,7 +103,6 @@ const ConsultarBajasResguardos = () => {
         articulos?: ResguardoBajaArticulo[];
         singleArticulo?: ResguardoBajaArticulo;
     } | null>(null);
-    const { createNotification } = useNotifications();
     const { isDarkMode } = useTheme();
     const searchParams = useSearchParams();
     const [folioParamLoading, setFolioParamLoading] = useState(false);
@@ -312,15 +310,7 @@ const ConsultarBajasResguardos = () => {
                 firmas: firmas || undefined
             });
             setShowPDFModal(true);
-            await createNotification({
-                title: `PDF de baja generado (${firstGroup.folio_baja})`,
-                description: `Se generó un PDF de baja para el folio ${firstGroup.folio_baja} (director: ${selectedBaja.dir_area}, área: ${selectedBaja.area_resguardo || ''}) con ${firstGroup.articulos.length} artículo(s).`,
-                type: 'info',
-                category: 'bajas',
-                device: 'web',
-                importance: 'medium' as const,
-                data: { affectedTables: ['resguardos_bajas'], changes: firstGroup.articulos.map(a => a.num_inventario) }
-            });
+            // Notification removed
         } catch (err) {
             setError('Error al preparar el PDF de baja');
             console.error(err);
@@ -552,10 +542,7 @@ const ConsultarBajasResguardos = () => {
             }
 
             if (result?.error) throw result.error;
-
-            if (notificationData) {
-                await createNotification(notificationData);
-            }
+            // Notification removed
 
             await fetchBajas();
             setSelectedBaja(null);

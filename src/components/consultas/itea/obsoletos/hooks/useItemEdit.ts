@@ -1,7 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import supabase from '@/app/lib/supabase/client';
-import { useNotifications } from '@/hooks/useNotifications';
 import { useIteaObsoletosIndexation } from '@/hooks/indexation/useIteaObsoletosIndexation';
 import type { MuebleITEA, FilterState } from '../types';
 
@@ -59,8 +58,6 @@ export function useItemEdit({
   const router = useRouter();
   const searchParams = useSearchParams();
   const { reindex: reindexObsoletos } = useIteaObsoletosIndexation();
-  const { createNotification } = useNotifications();
-  
   const [selectedItem, setSelectedItem] = useState<MuebleITEA | null>(null);
   const [isEditing, setIsEditing] = useState(false);
   const [editFormData, setEditFormData] = useState<Partial<MuebleITEA>>({});
@@ -275,15 +272,7 @@ export function useItemEdit({
 
       if (error) throw error;
 
-      await createNotification({
-        title: `Artículo de baja ITEA editado (ID: ${editFormData.id_inv})`,
-        description: `El artículo "${editFormData.descripcion}" dado de baja fue editado. Cambios guardados por el usuario actual.`,
-        type: 'info',
-        category: 'bajas',
-        device: 'web',
-        importance: 'medium',
-        data: { changes: [`Edición de artículo dado de baja ITEA: ${editFormData.id_inv}`], affectedTables: ['mueblesitea'] }
-      });
+            // Notification removed
 
       await fetchMuebles();
       
@@ -305,15 +294,6 @@ export function useItemEdit({
       setMessage({
         type: 'error',
         text: 'Error al guardar los cambios. Por favor, intente nuevamente.'
-      });
-      await createNotification({
-        title: 'Error al editar artículo de baja ITEA',
-        description: 'Error al guardar los cambios en el artículo dado de baja.',
-        type: 'danger',
-        category: 'bajas',
-        device: 'web',
-        importance: 'high',
-        data: { affectedTables: ['mueblesitea'] }
       });
     } finally {
       setLoading(false);
@@ -386,15 +366,7 @@ export function useItemEdit({
         
       if (error) throw error;
       
-      await createNotification({
-        title: `Artículo ITEA reactivado (ID: ${selectedItem.id_inv})`,
-        description: `El artículo "${selectedItem.descripcion}" fue reactivado y regresó a inventario activo.`,
-        type: 'success',
-        category: 'bajas',
-        device: 'web',
-        importance: 'medium',
-        data: { changes: [`Reactivación de artículo ITEA: ${selectedItem.id_inv}`], affectedTables: ['mueblesitea'] }
-      });
+            // Notification removed
       
       await fetchMuebles();
       await reindexObsoletos();
@@ -404,15 +376,6 @@ export function useItemEdit({
     } catch (error) {
       console.error('Error al reactivar artículo:', error);
       setMessage({ type: 'error', text: 'Error al reactivar el artículo. Por favor, intente nuevamente.' });
-      await createNotification({
-        title: 'Error al reactivar artículo de baja ITEA',
-        description: 'Error al reactivar el artículo dado de baja.',
-        type: 'danger',
-        category: 'bajas',
-        device: 'web',
-        importance: 'high',
-        data: { affectedTables: ['mueblesitea'] }
-      });
     } finally {
       setReactivating(false);
       setLoading(false);

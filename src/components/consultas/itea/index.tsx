@@ -7,6 +7,7 @@ import { useUserRole } from '@/hooks/useUserRole';
 import { useIteaIndexation } from '@/hooks/indexation/useIteaIndexation';
 import { useIteaStore } from '@/stores/iteaStore';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useColorManagement } from '@/hooks/useColorManagement';
 
 // Import custom hooks
 import { useResguardoData } from './hooks/useResguardoData';
@@ -29,10 +30,11 @@ import InactiveModal from './modals/InactiveModal';
 import BajaModal from './modals/BajaModal';
 import AreaSelectionModal from './modals/AreaSelectionModal';
 import DirectorModal from './modals/DirectorModal';
+import ColorAssignmentModal from './modals/ColorAssignmentModal';
 
 // Import types
 import { Mueble, Message, FilterOptions, Directorio, Area } from './types';
-import { Save, X, Edit, AlertTriangle, Trash2, Plus } from 'lucide-react';
+import { Save, X, Edit, AlertTriangle, Trash2, Plus, Palette } from 'lucide-react';
 
 export default function ConsultasIteaGeneral() {
   const { isDarkMode } = useTheme();
@@ -45,6 +47,13 @@ export default function ConsultasIteaGeneral() {
   const { muebles, isIndexing, realtimeConnected, reindex } = useIteaIndexation();
   const syncingIds = useIteaStore(state => state.syncingIds) || [];
   const isSyncing = useIteaStore(state => state.isSyncing);
+
+  // Initialize color management hook
+  const { colors, assignColor, removeColor, getColorById, getColorHex } = useColorManagement();
+
+  // Color assignment modal state
+  const [showColorModal, setShowColorModal] = useState(false);
+  const [isAssigningColor, setIsAssigningColor] = useState(false);
 
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
@@ -286,6 +295,48 @@ export default function ConsultasIteaGeneral() {
       console.error(err);
     } finally {
       setSavingDirector(false);
+    }
+  };
+
+  // Handle color assignment
+  const handleAssignColor = async (colorId: string) => {
+    if (!selectedItem) return;
+    
+    setIsAssigningColor(true);
+    try {
+      const success = await assignColor(selectedItem.id, colorId);
+      if (success) {
+        setMessage({ type: 'success', text: 'Color asignado correctamente' });
+        setShowColorModal(false);
+        // The realtime subscription will update the UI automatically
+      } else {
+        setMessage({ type: 'error', text: 'Error al asignar el color' });
+      }
+    } catch (err) {
+      setMessage({ type: 'error', text: 'Error al asignar el color' });
+    } finally {
+      setIsAssigningColor(false);
+    }
+  };
+
+  // Handle color removal
+  const handleRemoveColor = async () => {
+    if (!selectedItem) return;
+    
+    setIsAssigningColor(true);
+    try {
+      const success = await removeColor(selectedItem.id);
+      if (success) {
+        setMessage({ type: 'success', text: 'Color removido correctamente' });
+        setShowColorModal(false);
+        // The realtime subscription will update the UI automatically
+      } else {
+        setMessage({ type: 'error', text: 'Error al remover el color' });
+      }
+    } catch (err) {
+      setMessage({ type: 'error', text: 'Error al remover el color' });
+    } finally {
+      setIsAssigningColor(false);
     }
   };
 
@@ -579,6 +630,19 @@ export default function ConsultasIteaGeneral() {
                         userRole && ['admin', 'superadmin'].includes(userRole) && (
                           <>
                             <motion.button
+                              onClick={() => setShowColorModal(true)}
+                              className={`flex items-center gap-2 px-4 py-2 rounded-lg border text-sm font-light tracking-tight transition-all ${
+                                isDarkMode
+                                  ? 'bg-white/5 border-white/10 text-white hover:bg-white/10'
+                                  : 'bg-black/5 border-black/10 text-black hover:bg-black/10'
+                              }`}
+                              whileHover={{ scale: 1.02 }}
+                              whileTap={{ scale: 0.98 }}
+                            >
+                              <Palette className="h-3.5 w-3.5" />
+                              Color
+                            </motion.button>
+                            <motion.button
                               onClick={handleStartEdit}
                               className={`flex items-center gap-2 px-4 py-2 rounded-lg border text-sm font-light tracking-tight transition-all ${
                                 isDarkMode
@@ -706,6 +770,18 @@ export default function ConsultasIteaGeneral() {
         onSave={saveDirectorInfo}
         onClose={() => setShowDirectorModal(false)}
         isDarkMode={isDarkMode}
+      />
+
+      <ColorAssignmentModal
+        show={showColorModal}
+        itemIdInv={selectedItem?.id_inv || null}
+        currentColor={selectedItem?.colores ? getColorById(selectedItem.color) : null}
+        colors={colors}
+        onAssign={handleAssignColor}
+        onRemove={handleRemoveColor}
+        onClose={() => setShowColorModal(false)}
+        isDarkMode={isDarkMode}
+        isAssigning={isAssigningColor}
       />
     </>
   );

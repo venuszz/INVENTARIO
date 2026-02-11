@@ -4,7 +4,6 @@ import "./globals.css";
 import HeaderContainer from "@/components/HeaderContainer";
 import { SpeedInsights } from '@vercel/speed-insights/next';
 import { ThemeProvider } from "@/context/ThemeContext";
-import { NotificationProvider } from "@/context/NotificationContext";
 import IndexationPopover from "@/components/IndexationPopover";
 
 const geistSans = Geist({
@@ -38,16 +37,14 @@ export default function RootLayout({
         className={`${geistSans.variable} ${geistMono.variable} antialiased flex flex-col h-screen`}
       >
         <ThemeProvider>
-          <NotificationProvider>
-            <div>
-              <HeaderContainer />
-            </div>
-            <main className="flex-1 overflow-hidden">
-              {children}
-              <SpeedInsights />
-            </main>
-            <IndexationPopover />
-          </NotificationProvider>
+          <div>
+            <HeaderContainer />
+          </div>
+          <main className="flex-1 overflow-hidden">
+            {children}
+            <SpeedInsights />
+          </main>
+          <IndexationPopover />
         </ThemeProvider>
       </body>
     </html>

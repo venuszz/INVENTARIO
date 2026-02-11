@@ -5,7 +5,6 @@
 import { useState, useCallback } from 'react';
 import supabase from '@/app/lib/supabase/client';
 import { useSession } from '@/hooks/useSession';
-import { useNotifications } from '@/hooks/useNotifications';
 import type { ResguardoForm, Mueble, Directorio, PdfData } from '../types';
 
 export interface UseResguardoSubmitReturn {
@@ -45,8 +44,6 @@ export function useResguardoSubmit(
   const [generatingPDF, setGeneratingPDF] = useState(false);
   
   const { user } = useSession();
-  const { createNotification } = useNotifications();
-
   const handleSubmit = useCallback(async () => {
     console.log('🚀 [RESGUARDO] Iniciando handleSubmit');
     console.log('📋 [RESGUARDO] Validación de formulario:', { formData, selectedMueblesCount: selectedMuebles.length });
@@ -171,23 +168,7 @@ export function useResguardoSubmit(
       try {
         console.log('🔔 [RESGUARDO] Creando notificación...');
         const notificationDescription = `Se ha creado un nuevo resguardo para el área "${formData.area}" bajo la dirección de "${directorNombre}" con ${selectedMuebles.length} artículo(s).`;
-        await createNotification({
-          title: `Nuevo resguardo creado: ${actualFolio}`,
-          description: notificationDescription,
-          type: 'success',
-          category: 'system',
-          device: navigator.userAgent,
-          importance: 'high',
-          data: {
-            changes: [
-              `Área: ${formData.area}`,
-              `Puesto: ${formData.puesto}`,
-              `Resguardante: ${formData.resguardante}`,
-              `Artículos: ${selectedMuebles.map(m => m.id_inv).join(', ')}`
-            ],
-            affectedTables: ['resguardos', 'inea', 'itea', 'no_listado']
-          }
-        });
+            // Notification removed
         console.log('✅ [RESGUARDO] Notificación creada');
       } catch (notifErr) {
         console.warn('⚠️ [RESGUARDO] Error en notificación (no crítico):', notifErr);
@@ -212,7 +193,7 @@ export function useResguardoSubmit(
       setLoading(false);
       console.log('🏁 [RESGUARDO] handleSubmit finalizado');
     }
-  }, [formData, selectedMuebles, directorio, generateFolio, user, createNotification, onSuccess]);
+  }, [formData, selectedMuebles, directorio, generateFolio, user, onSuccess]);
 
   const generatePDF = useCallback(async () => {
     setGeneratingPDF(true);

@@ -1,14 +1,11 @@
 import { useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import supabase from '@/app/lib/supabase/client';
-import { useNotifications } from '@/hooks/useNotifications';
 import { Mueble, Message } from '../types';
 
 export function useItemEdit() {
     const router = useRouter();
     const searchParams = useSearchParams();
-    const { createNotification } = useNotifications();
-    
     const [selectedItem, setSelectedItem] = useState<Mueble | null>(null);
     const [isEditing, setIsEditing] = useState(false);
     const [editFormData, setEditFormData] = useState<Mueble | null>(null);
@@ -190,15 +187,7 @@ export function useItemEdit() {
             }
 
             // Notification for edit
-            await createNotification({
-                title: `Artículo editado (ID: ${editFormData.id_inv})`,
-                description: `El artículo "${editFormData.descripcion}" fue editado. Cambios guardados por el usuario actual.`,
-                type: 'info',
-                category: 'inventario',
-                device: 'web',
-                importance: 'medium',
-                data: { changes: [`Edición de artículo: ${editFormData.id_inv}`], affectedTables: ['mueblestlaxcala'] }
-            });
+            // Notification removed
 
             // Refetch the mueble with JOINs to get updated nested objects
             const refetchResponse = await fetch(
@@ -234,15 +223,6 @@ export function useItemEdit() {
             setMessage({
                 type: 'error',
                 text: 'Error al guardar los cambios. Por favor, intente nuevamente.'
-            });
-            await createNotification({
-                title: 'Error al editar artículo',
-                description: 'Error al guardar los cambios en el artículo.',
-                type: 'danger',
-                category: 'inventario',
-                device: 'web',
-                importance: 'high',
-                data: { affectedTables: ['mueblestlaxcala'] }
             });
         } finally {
             setUploading(false);
@@ -367,30 +347,13 @@ export function useItemEdit() {
                 throw new Error(error.message || 'Error al insertar en deprecated');
             }
 
-            await createNotification({
-                title: `Artículo dado de baja (ID: ${selectedItem.id_inv})`,
-                description: `El artículo "${selectedItem.descripcion}" fue dado de baja. Motivo: ${bajaCause}.`,
-                type: 'danger',
-                category: 'inventario',
-                device: 'web',
-                importance: 'high',
-                data: { changes: [`Baja de artículo: ${selectedItem.id_inv}`], affectedTables: ['mueblestlaxcala', 'deprecated'] }
-            });
+            // Notification removed
 
             setSelectedItem(null);
             setMessage({ type: 'success', text: 'Artículo dado de baja correctamente' });
         } catch (error) {
             console.error('Error al dar de baja:', error);
             setMessage({ type: 'error', text: 'Error al dar de baja. Por favor, intente nuevamente.' });
-            await createNotification({
-                title: 'Error al dar de baja artículo',
-                description: 'Error al dar de baja el artículo.',
-                type: 'danger',
-                category: 'inventario',
-                device: 'web',
-                importance: 'high',
-                data: { affectedTables: ['mueblestlaxcala', 'deprecated'] }
-            });
         }
     };
 
@@ -422,15 +385,7 @@ export function useItemEdit() {
                 throw new Error(error.message || 'Error al marcar como inactivo');
             }
 
-            await createNotification({
-                title: `Artículo marcado como INACTIVO (ID: ${selectedItem.id_inv})`,
-                description: `El artículo "${selectedItem.descripcion}" fue marcado como INACTIVO por el usuario actual.`,
-                type: 'warning',
-                category: 'inventario',
-                device: 'web',
-                importance: 'medium',
-                data: { changes: [`Inactivación de artículo: ${selectedItem.id_inv}`], affectedTables: ['mueblestlaxcala'] }
-            });
+            // Notification removed
 
             setSelectedItem(null);
             setMessage({
@@ -442,15 +397,6 @@ export function useItemEdit() {
             setMessage({
                 type: 'error',
                 text: 'Error al cambiar el estatus. Por favor, intente nuevamente.'
-            });
-            await createNotification({
-                title: 'Error al marcar como INACTIVO',
-                description: 'Error al cambiar el estatus del artículo.',
-                type: 'danger',
-                category: 'inventario',
-                device: 'web',
-                importance: 'high',
-                data: { affectedTables: ['mueblestlaxcala'] }
             });
         }
     };

@@ -2,7 +2,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { useTheme } from '@/context/ThemeContext';
 import { Plus, Trash2, Edit, X, Search } from 'lucide-react';
-import { useNotifications } from '@/hooks/useNotifications';
 import SectionRealtimeToggle from '@/components/SectionRealtimeToggle';
 import { useAdminIndexation } from '@/hooks/indexation/useAdminIndexation';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -37,8 +36,6 @@ export default function ConfigManagementComponent() {
 
     const editInputRef = useRef<HTMLInputElement>(null);
     const newItemInputRef = useRef<HTMLInputElement>(null);
-
-    const { createNotification } = useNotifications();
 
     // Efecto para enfocar el input de edición cuando se activa
     useEffect(() => {
@@ -101,27 +98,10 @@ export default function ConfigManagementComponent() {
             }
 
             setDeletingRow(null);
-
-            await createNotification({
-                title: `Concepto eliminado (${item?.tipo})`,
-                description: `Se eliminó el concepto "${item?.concepto}" del tipo "${item?.tipo}" en configuración.`,
-                type: 'danger',
-                category: 'config',
-                device: 'web',
-                importance: 'high',
-                data: { changes: [`Eliminado: ${item?.concepto}`], affectedTables: ['config'] }
-            });
+            // Notification removed
         } catch (error: unknown) {
             const errorMessage = (error instanceof Error) ? error.message : 'Ha ocurrido un error';
-            await createNotification({
-                title: 'Error al eliminar concepto',
-                description: errorMessage,
-                type: 'danger',
-                category: 'config',
-                device: 'web',
-                importance: 'high',
-                data: { affectedTables: ['config'] }
-            });
+            // Notification removed
         } finally {
             setIsSubmitting(false);
         }
@@ -165,27 +145,10 @@ export default function ConfigManagementComponent() {
             }
 
             setEditingRow(null);
-
-            await createNotification({
-                title: `Concepto actualizado (${oldItem?.tipo})`,
-                description: `Se actualizó el concepto "${oldItem?.concepto}" a "${conceptoValue}" en el tipo "${oldItem?.tipo}" de configuración.`,
-                type: 'info',
-                category: 'config',
-                device: 'web',
-                importance: 'medium',
-                data: { changes: [`Edición: ${oldItem?.concepto} → ${conceptoValue}`], affectedTables: ['config'] }
-            });
+            // Notification removed
         } catch (error: unknown) {
             const errorMessage = (error instanceof Error) ? error.message : 'Ha ocurrido un error';
-            await createNotification({
-                title: 'Error al editar concepto',
-                description: errorMessage,
-                type: 'danger',
-                category: 'config',
-                device: 'web',
-                importance: 'high',
-                data: { affectedTables: ['config'] }
-            });
+            // Notification removed
         } finally {
             setIsSubmitting(false);
         }
@@ -225,27 +188,10 @@ export default function ConfigManagementComponent() {
 
             setNewItemValue('');
             newItemInputRef.current?.focus();
-
-            await createNotification({
-                title: `Concepto agregado (${activeTab})`,
-                description: `Se agregó el concepto "${conceptoValue}" al tipo "${activeTab}" en configuración.`,
-                type: 'success',
-                category: 'config',
-                device: 'web',
-                importance: 'medium',
-                data: { changes: [`Alta: ${conceptoValue}`], affectedTables: ['config'] }
-            });
+            // Notification removed
         } catch (error: unknown) {
             const errorMessage = (error instanceof Error) ? error.message : 'Ha ocurrido un error';
-            await createNotification({
-                title: 'Error al agregar concepto',
-                description: errorMessage,
-                type: 'danger',
-                category: 'config',
-                device: 'web',
-                importance: 'high',
-                data: { affectedTables: ['config'] }
-            });
+            // Notification removed
         } finally {
             setIsSubmitting(false);
         }

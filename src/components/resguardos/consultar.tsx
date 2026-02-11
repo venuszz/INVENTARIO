@@ -11,7 +11,6 @@ import { SupabaseClient } from '@supabase/supabase-js';
 import { generateResguardoPDF } from './ResguardoPDFReport';
 import { useUserRole } from "@/hooks/useUserRole";
 import RoleGuard from "@/components/roleGuard";
-import { useNotifications } from '@/hooks/useNotifications';
 import { useTheme } from '@/context/ThemeContext';
 import { useResguardosIndexation } from '@/hooks/indexation/useResguardosIndexation';
 import { useSearchParams } from 'next/navigation';
@@ -176,7 +175,6 @@ export default function ConsultarResguardos({ folioParam }: { folioParam?: strin
     const [editedResguardantes, setEditedResguardantes] = useState<{ [id: number]: string }>({});
     const [savingResguardantes, setSavingResguardantes] = useState(false);
 
-    const { createNotification } = useNotifications();
     const searchParams = useSearchParams();
     const [folioParamLoading, setFolioParamLoading] = useState(false);
     const { isDarkMode } = useTheme();
@@ -218,15 +216,7 @@ export default function ConsultarResguardos({ folioParam }: { folioParam?: strin
             }
             // Notificación de edición de resguardantes
             if (cambios.length > 0) {
-                await createNotification({
-                    title: `Resguardantes editados en folio ${selectedResguardo.folio}`,
-                    description: `Se actualizaron los resguardantes del resguardo (folio ${selectedResguardo.folio}, director ${selectedResguardo.dir_area}, área ${selectedResguardo.area_resguardo || ''}). Cambios: ${cambios.join('; ')}`,
-                    type: 'info',
-                    category: 'resguardos',
-                    device: 'web',
-                    importance: 'medium',
-                    data: { changes: cambios, affectedTables: ['resguardos', 'muebles', 'mueblesitea'] }
-                });
+                // Notification removed
             }
             // Refrescar detalles
             await fetchResguardoDetails(selectedResguardo.folio);
@@ -330,15 +320,7 @@ export default function ConsultarResguardos({ folioParam }: { folioParam?: strin
             }
 
             // Notificación de eliminación de artículos
-            await createNotification({
-                title: `Artículos eliminados del resguardo ${selectedResguardo.folio}`,
-                description: `Se eliminaron ${selectedArticulos.length} artículo(s) del resguardo (folio ${selectedResguardo.folio}, director ${selectedResguardo.dir_area}, área ${selectedResguardo.area_resguardo || ''}). Inventarios: ${selectedArticulos.join(', ')}`,
-                type: 'danger',
-                category: 'resguardos',
-                device: 'web',
-                importance: 'high',
-                data: { affectedTables: ['resguardos', 'resguardos_bajas'], changes: selectedArticulos }
-            });
+            // Notification removed
 
             await fetchResguardoDetails(selectedResguardo.folio);
             setShowDeleteSelectedModal(false);
@@ -580,15 +562,7 @@ export default function ConsultarResguardos({ folioParam }: { folioParam?: strin
             }
 
             // Notificación de eliminación de resguardo completo
-            await createNotification({
-                title: `Resguardo dado de baja (folio ${selectedResguardo.folio})`,
-                description: `Se eliminó el resguardo completo (folio ${selectedResguardo.folio}, director ${selectedResguardo.dir_area}, área ${selectedResguardo.area_resguardo || ''}) con ${selectedResguardo.articulos.length} artículo(s).`,
-                type: 'danger',
-                category: 'resguardos',
-                device: 'web',
-                importance: 'high',
-                data: { affectedTables: ['resguardos', 'resguardos_bajas'], changes: selectedResguardo.articulos.map(a => a.num_inventario) }
-            });
+            // Notification removed
 
             setSelectedResguardo(null);
             setShowDeleteAllModal(false);

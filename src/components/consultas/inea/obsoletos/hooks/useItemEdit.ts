@@ -1,7 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import supabase from '@/app/lib/supabase/client';
-import { useNotifications } from '@/hooks/useNotifications';
 import { useIneaObsoletosIndexation } from '@/hooks/indexation/useIneaObsoletosIndexation';
 import type { Mueble } from '../types';
 
@@ -58,8 +57,6 @@ export function useItemEdit({
   const router = useRouter();
   const searchParams = useSearchParams();
   const { reindex: reindexObsoletos } = useIneaObsoletosIndexation();
-  const { createNotification } = useNotifications();
-  
   const [selectedItem, setSelectedItem] = useState<Mueble | null>(null);
   const [isEditing, setIsEditing] = useState(false);
   const [editFormData, setEditFormData] = useState<Mueble | null>(null);
@@ -251,15 +248,7 @@ export function useItemEdit({
 
       if (error) throw error;
 
-      await createNotification({
-        title: `Artículo de baja editado (ID: ${editFormData.id_inv})`,
-        description: `El artículo "${editFormData.descripcion}" dado de baja fue editado. Cambios guardados por el usuario actual.`,
-        type: 'info',
-        category: 'bajas',
-        device: 'web',
-        importance: 'medium',
-        data: { changes: [`Edición de artículo dado de baja: ${editFormData.id_inv}`], affectedTables: ['muebles'] }
-      });
+            // Notification removed
 
       fetchMuebles();
       setSelectedItem({ ...editFormData, image_path: imagePath });
@@ -276,15 +265,6 @@ export function useItemEdit({
       setMessage({
         type: 'error',
         text: 'Error al guardar los cambios. Por favor, intente nuevamente.'
-      });
-      await createNotification({
-        title: 'Error al editar artículo de baja',
-        description: 'Error al guardar los cambios en el artículo dado de baja.',
-        type: 'danger',
-        category: 'bajas',
-        device: 'web',
-        importance: 'high',
-        data: { affectedTables: ['muebles'] }
       });
     } finally {
       setLoading(false);
@@ -359,15 +339,7 @@ export function useItemEdit({
         .eq('id', selectedItem.id);
       if (error) throw error;
       
-      await createNotification({
-        title: `Artículo reactivado (ID: ${selectedItem.id_inv})`,
-        description: `El artículo "${selectedItem.descripcion}" fue reactivado y regresó a inventario activo.`,
-        type: 'success',
-        category: 'bajas',
-        device: 'web',
-        importance: 'medium',
-        data: { changes: [`Reactivación de artículo: ${selectedItem.id_inv}`], affectedTables: ['muebles'] }
-      });
+            // Notification removed
       
       fetchMuebles();
       await reindexObsoletos();
@@ -375,15 +347,6 @@ export function useItemEdit({
       setMessage({ type: 'success', text: 'Artículo reactivado correctamente' });
     } catch {
       setMessage({ type: 'error', text: 'Error al reactivar el artículo. Por favor, intente nuevamente.' });
-      await createNotification({
-        title: 'Error al reactivar artículo de baja',
-        description: 'Error al reactivar el artículo dado de baja.',
-        type: 'danger',
-        category: 'bajas',
-        device: 'web',
-        importance: 'high',
-        data: { affectedTables: ['muebles'] }
-      });
     } finally {
       setReactivating(false);
       setShowReactivarModal(false);

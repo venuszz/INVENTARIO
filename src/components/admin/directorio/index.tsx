@@ -2,7 +2,6 @@
 import { useState, useRef, useMemo } from 'react';
 import { useTheme } from '@/context/ThemeContext';
 import { Plus, Trash2, Edit, X, Search, FileText, Package } from 'lucide-react';
-import { useNotifications } from '@/hooks/useNotifications';
 import SectionRealtimeToggle from '@/components/SectionRealtimeToggle';
 import { useAdminIndexation } from '@/hooks/indexation/useAdminIndexation';
 import { useDirectorioStats } from './hooks/useDirectorioStats';
@@ -85,7 +84,6 @@ export function DirectorioManager() {
 
     const editInputRef = useRef<HTMLInputElement>(null);
     const newEmployeeInputRef = useRef<HTMLInputElement>(null);
-    const { createNotification } = useNotifications();
 
     // Función para verificar si un área coincide con la búsqueda
     const areaMatchesSearch = (areaName: string) => {
@@ -187,15 +185,7 @@ export function DirectorioManager() {
         
         if (employeeStats && employeeStats.bienesACargo > 0) {
             // No permitir eliminar si tiene bienes
-            await createNotification({
-                title: 'No se puede eliminar',
-                description: `Este empleado tiene ${employeeStats.bienesACargo} bien(es) asignado(s). Debe reasignar los bienes antes de eliminarlo.`,
-                type: 'danger',
-                category: 'directorio',
-                device: 'web',
-                importance: 'high',
-                data: { affectedTables: ['directorio'] }
-            });
+            // Notification removed
             return; // CRITICAL: Stop execution here - do NOT set deletingId
         }
         
@@ -265,27 +255,10 @@ export function DirectorioManager() {
             setEditEmployee({ id_directorio: 0, nombre: '', area: '', puesto: '' });
             setEditSelectedAreas([]);
             setNewAreaInput('');
-
-            await createNotification({
-                title: 'Empleado actualizado',
-                description: `Se actualizó la información de ${nombreEmployee} en el directorio.`,
-                type: 'info',
-                category: 'directorio',
-                device: 'web',
-                importance: 'medium',
-                data: { changes: [`Edición: ${nombreEmployee}`], affectedTables: ['directorio', 'directorio_areas'] }
-            });
+            // Notification removed
         } catch (error: unknown) {
             const errorMessage = (error instanceof Error) ? error.message : 'Ha ocurrido un error';
-            await createNotification({
-                title: 'Error al editar empleado',
-                description: errorMessage,
-                type: 'danger',
-                category: 'directorio',
-                device: 'web',
-                importance: 'high',
-                data: { affectedTables: ['directorio'] }
-            });
+            // Notification removed
         } finally {
             setIsSubmitting(false);
         }
@@ -303,27 +276,10 @@ export function DirectorioManager() {
             });
 
             setDeletingId(null);
-
-            await createNotification({
-                title: 'Empleado eliminado',
-                description: `Se eliminó a ${empleado?.nombre || ''} del directorio.`,
-                type: 'danger',
-                category: 'directorio',
-                device: 'web',
-                importance: 'high',
-                data: { changes: [`Baja: ${empleado?.nombre || ''}`], affectedTables: ['directorio'] }
-            });
+            // Notification removed
         } catch (error: unknown) {
             const errorMessage = (error instanceof Error) ? error.message : 'Ha ocurrido un error';
-            await createNotification({
-                title: 'Error al eliminar empleado',
-                description: errorMessage,
-                type: 'danger',
-                category: 'directorio',
-                device: 'web',
-                importance: 'high',
-                data: { affectedTables: ['directorio'] }
-            });
+            // Notification removed
         } finally {
             setIsSubmitting(false);
         }
@@ -376,27 +332,10 @@ export function DirectorioManager() {
             setNewEmployeeAreas([]);
             setNewAreaInputAdd('');
             setIsAddingNew(false);
-
-            await createNotification({
-                title: 'Nuevo empleado agregado',
-                description: `Se agregó a ${nombreEmployee} al directorio.`,
-                type: 'success',
-                category: 'directorio',
-                device: 'web',
-                importance: 'medium',
-                data: { changes: [`Alta: ${nombreEmployee}`], affectedTables: ['directorio', 'directorio_areas'] }
-            });
+            // Notification removed
         } catch (error: unknown) {
             const errorMessage = (error instanceof Error) ? error.message : 'Ha ocurrido un error';
-            await createNotification({
-                title: 'Error al agregar empleado',
-                description: errorMessage,
-                type: 'danger',
-                category: 'directorio',
-                device: 'web',
-                importance: 'high',
-                data: { affectedTables: ['directorio'] }
-            });
+            // Notification removed
         } finally {
             setIsSubmitting(false);
         }

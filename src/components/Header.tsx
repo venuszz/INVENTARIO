@@ -8,7 +8,6 @@ import { useRouter } from 'next/navigation';
 import supabase from '@/app/lib/supabase/client';
 import RoleGuard from "@/components/roleGuard";
 import NotificationsPanel from './NotificationCenter';
-import { useNotifications } from '@/hooks/useNotifications';
 import { useTheme } from "@/context/ThemeContext";
 import { UniversalSearchBar } from './search';
 import { useSession } from '@/hooks/useSession';
@@ -124,8 +123,6 @@ export default function NavigationBar() {
     const [showAvatarPopover, setShowAvatarPopover] = useState(false);
     const [showLinkingSuccess, setShowLinkingSuccess] = useState(false);
     const handleLogout = useCerrarSesion();
-    const { notifications, doNotDisturb } = useNotifications();
-    const unreadCount = notifications.filter(n => !n.is_read && !n.data?.is_deleted).length;
 
     // Refs para detectar colisiones
     const logoRef = useRef<HTMLDivElement>(null);
@@ -186,12 +183,6 @@ export default function NavigationBar() {
             window.removeEventListener('resize', checkCollisions);
         };
     }, [openMenu, openSubmenu, isSearchExpanded, isHeaderExpanded]);
-
-    // Efecto para actualizar el estado cuando cambia doNotDisturb
-    useEffect(() => {
-        // Este efecto se ejecutará cada vez que doNotDisturb cambie
-        // asegurando que el Header se actualice inmediatamente
-    }, [doNotDisturb]);
 
     // Cerrar menús al hacer clic fuera
     useEffect(() => {
@@ -926,29 +917,12 @@ export default function NavigationBar() {
                                     <button
                                         onClick={() => setNotificationsOpen(!notificationsOpen)}
                                         className={`p-2 rounded-full relative transition-all duration-300 hover:scale-110 ${isDarkMode
-                                            ? doNotDisturb ? 'text-purple-400 bg-purple-500/10' : 'text-gray-300 hover:text-white hover:bg-gray-800'
-                                            : doNotDisturb ? 'text-purple-600 bg-purple-100' : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
+                                            ? 'text-gray-300 hover:text-white hover:bg-gray-800'
+                                            : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
                                             }`}
-                                        title={doNotDisturb ? "Modo No Molestar activo" : "Notificaciones"}
+                                        title="Notificaciones"
                                     >
-                                        <Bell className={`h-5 w-5 transition-all duration-300 ${doNotDisturb ? 'fill-purple-500/20' : ''}`} />
-                                        {(unreadCount > 0 || doNotDisturb) && (
-                                            <>
-                                                {unreadCount > 0 && !doNotDisturb && (
-                                                    <>
-                                                        <span className="absolute top-0 right-0 h-2 w-2 rounded-full bg-white ring-2 ring-black"></span>
-                                                        <span className="absolute -top-2 -right-2 bg-white text-black text-[10px] font-bold rounded-full px-1.5 min-w-[18px] h-[18px] flex items-center justify-center border border-black shadow-sm">
-                                                            {unreadCount}
-                                                        </span>
-                                                    </>
-                                                )}
-                                                {doNotDisturb && (
-                                                    <span className="absolute -top-0.5 -right-0.5 bg-purple-600 text-white rounded-full p-0.5 shadow-sm animate-in zoom-in-50 duration-500 ring-1 ring-white dark:ring-black">
-                                                        <Moon size={8} className="fill-current" />
-                                                    </span>
-                                                )}
-                                            </>
-                                        )}
+                                        <Bell className="h-5 w-5" />
                                     </button>
                                     {notificationsOpen && (
                                         <div className="absolute right-0 top-full mt-2 z-50 animate-in slide-in-from-top-2 fade-in duration-200">

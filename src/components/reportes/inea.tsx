@@ -12,7 +12,6 @@ import { generateExcel } from './excelgenerator';
 import { generatePDF } from './pdfgenerator';
 import { useUserRole } from "@/hooks/useUserRole";
 import RoleGuard from "@/components/roleGuard";
-import { useNotifications } from '@/hooks/useNotifications';
 import { useAdminIndexation } from '@/hooks/indexation/useAdminIndexation';
 import type { Firma } from '@/types/admin';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -60,7 +59,6 @@ export default function ReportesIneaDashboard() {
     const [reportes, setReportes] = useState<Reporte[]>([]);
     const [loadingReportes, setLoadingReportes] = useState(true);
 
-    const { createNotification } = useNotifications();
     const { firmas } = useAdminIndexation();
 
     // Obtener valores únicos de estatus al cargar el componente
@@ -262,27 +260,11 @@ export default function ReportesIneaDashboard() {
                 a.click();
             }
             setExportModalOpen(false);
-            await createNotification({
-                title: `Reporte INEA exportado (${format})`,
-                description: `El usuario exportó el reporte INEA en formato ${format} para la categoría "${selectedReport}".`,
-                type: 'success',
-                category: 'reportes',
-                device: 'web',
-                importance: 'medium',
-                data: { changes: [`Exportación de reporte: ${selectedReport}`], affectedTables: ['muebles'] }
-            });
+            // Notification removed
         } catch (error: Error | unknown) {
             setError('Error al exportar el reporte: ' + (error instanceof Error ? error.message : 'Error desconocido'));
             console.error(error);
-            await createNotification({
-                title: 'Error al exportar reporte INEA',
-                description: `Error al exportar el reporte INEA: ${(error instanceof Error ? error.message : 'Error desconocido')}`,
-                type: 'danger',
-                category: 'reportes',
-                device: 'web',
-                importance: 'high',
-                data: { affectedTables: ['muebles'] }
-            });
+            // Notification removed
         } finally {
             setIsExporting(false);
             setExportingFormat(null);
@@ -698,27 +680,10 @@ export default function ReportesIneaDashboard() {
                                                                     }
                                                                     
                                                                     setEditingFirma(null);
-                                                                    
-                                                                    await createNotification({
-                                                                        title: 'Firma editada',
-                                                                        description: `La firma "${firma.concepto}" fue editada correctamente.`,
-                                                                        type: 'info',
-                                                                        category: 'firmas',
-                                                                        device: 'web',
-                                                                        importance: 'medium',
-                                                                        data: { changes: [`Edición de firma: ${firma.concepto}`], affectedTables: ['firmas'] }
-                                                                    });
+                                                                    // Notification removed
                                                                 } catch (error) {
                                                                     setError('Error al actualizar la firma');
-                                                                    await createNotification({
-                                                                        title: 'Error al editar firma',
-                                                                        description: 'Error al editar la firma.',
-                                                                        type: 'danger',
-                                                                        category: 'firmas',
-                                                                        device: 'web',
-                                                                        importance: 'high',
-                                                                        data: { affectedTables: ['firmas'] }
-                                                                    });
+                                                                    // Notification removed
                                                                 }
                                                             }} 
                                                             className="space-y-3"

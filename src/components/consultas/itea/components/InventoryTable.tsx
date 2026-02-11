@@ -218,9 +218,73 @@ export default function InventoryTable({
                                         <td className={`px-4 py-3.5 whitespace-nowrap text-sm transition-all ${
                                             isDarkMode ? 'text-white' : 'text-black'
                                         } ${isSelected ? 'font-medium' : 'font-light'}`}>
-                                            <span className={`${isSelected ? 'opacity-100' : 'opacity-90'}`}>
-                                                {item.id_inv}
-                                            </span>
+                                            <div className="flex items-center gap-2">
+                                                {/* Color indicator */}
+                                                {item.colores?.nombre && (() => {
+                                                    const colorHex = 
+                                                        item.colores.nombre === 'ROJO' ? '#ef4444' :
+                                                        item.colores.nombre === 'BLANCO' ? '#ffffff' :
+                                                        item.colores.nombre === 'VERDE' ? '#22c55e' :
+                                                        '#9ca3af';
+                                                    
+                                                    const isWhite = item.colores.nombre === 'BLANCO';
+                                                    
+                                                    return (
+                                                        <div className="relative group/color">
+                                                            <div 
+                                                                className="w-2 h-2 rounded-full flex-shrink-0 transition-all duration-200 cursor-help group-hover/color:scale-150 group-hover/color:shadow-lg"
+                                                                style={{
+                                                                    backgroundColor: colorHex,
+                                                                    border: isWhite 
+                                                                        ? `1.5px solid ${isDarkMode ? 'rgba(255,255,255,0.4)' : 'rgba(0,0,0,0.3)'}` 
+                                                                        : 'none',
+                                                                    opacity: 0.9,
+                                                                    boxShadow: `0 0 8px ${colorHex}40`
+                                                                }}
+                                                            />
+                                                            {/* Popover on hover */}
+                                                            <div 
+                                                                className="absolute left-0 top-full mt-2 px-3 py-2 rounded-lg text-xs whitespace-nowrap pointer-events-none opacity-0 group-hover/color:opacity-100 transition-all duration-200 z-50 shadow-xl backdrop-blur-sm"
+                                                                style={{
+                                                                    backgroundColor: `${colorHex}f5`,
+                                                                    border: `2px solid ${colorHex}`,
+                                                                    color: isWhite ? '#000000' : '#ffffff',
+                                                                    minWidth: '120px'
+                                                                }}
+                                                            >
+                                                                {/* Arrow */}
+                                                                <div 
+                                                                    className="absolute -top-1.5 left-2 w-3 h-3 rotate-45"
+                                                                    style={{
+                                                                        backgroundColor: colorHex,
+                                                                        border: `2px solid ${colorHex}`,
+                                                                        borderRight: 'none',
+                                                                        borderBottom: 'none'
+                                                                    }}
+                                                                />
+                                                                <div className="relative">
+                                                                    <div className="font-bold text-sm tracking-wide mb-1">
+                                                                        {item.colores.nombre}
+                                                                    </div>
+                                                                    {item.colores.significado && (
+                                                                        <div 
+                                                                            className="text-[11px] leading-tight font-light"
+                                                                            style={{
+                                                                                color: isWhite ? 'rgba(0,0,0,0.75)' : 'rgba(255,255,255,0.85)'
+                                                                            }}
+                                                                        >
+                                                                            {item.colores.significado}
+                                                                        </div>
+                                                                    )}
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    );
+                                                })()}
+                                                <span className={`${isSelected ? 'opacity-100' : 'opacity-90'}`}>
+                                                    {item.id_inv}
+                                                </span>
+                                            </div>
                                         </td>
                                         <td className={`px-4 py-3.5 text-sm font-light transition-all ${
                                             isDarkMode ? 'text-white/90' : 'text-black/90'

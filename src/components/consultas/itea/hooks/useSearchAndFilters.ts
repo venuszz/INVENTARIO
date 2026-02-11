@@ -29,6 +29,7 @@ export function useSearchAndFilters(muebles: Mueble[]) {
       rubro: muebles.map(m => m.rubro || '').filter(Boolean),
       estado: muebles.map(m => m.estado || '').filter(Boolean),
       estatus: muebles.map(m => m.estatus || '').filter(Boolean),
+      color: muebles.map(m => m.colores?.nombre || '').filter(Boolean),
     };
   }, [muebles]);
 
@@ -44,6 +45,13 @@ export function useSearchAndFilters(muebles: Mueble[]) {
 
     // Simple iteration without heavy regex
     for (const item of muebles) {
+      // Color
+      const colorNombre = item.colores?.nombre || '';
+      if (colorNombre && colorNombre.toLowerCase().includes(term)) {
+        const exact = colorNombre.toLowerCase() === term;
+        const score = exact ? 12 : 11;
+        if (score > bestMatch.score) bestMatch = { type: 'color', value: colorNombre, score };
+      }
       // Usufinal/Resguardante (using relational field)
       const usufinal = item.directorio?.nombre || '';
       const resguardante = item.resguardante || '';
@@ -97,6 +105,7 @@ export function useSearchAndFilters(muebles: Mueble[]) {
 
     const seen = new Set<string>();
     const fields = [
+      { type: 'color' as ActiveFilter['type'], label: 'Color', data: searchableData.color },
       { type: 'id' as ActiveFilter['type'], label: 'ID', data: searchableData.id },
       { type: 'area' as ActiveFilter['type'], label: 'Área', data: searchableData.area },
       { type: 'usufinal' as ActiveFilter['type'], label: 'Director', data: searchableData.usufinal },
@@ -164,6 +173,7 @@ export function useSearchAndFilters(muebles: Mueble[]) {
           case 'area': return (item.area?.nombre?.toLowerCase() || '').includes(filterTerm);
           case 'usufinal': return (item.directorio?.nombre?.toLowerCase() || '').includes(filterTerm);
           case 'resguardante': return (item.resguardante?.toLowerCase() || '').includes(filterTerm);
+          case 'color': return (item.colores?.nombre?.toLowerCase() || '').includes(filterTerm);
           default: return true;
         }
       });
@@ -181,7 +191,8 @@ export function useSearchAndFilters(muebles: Mueble[]) {
         (item.estatus?.toLowerCase() || '').includes(term) ||
         (item.area?.nombre?.toLowerCase() || '').includes(term) ||
         (item.directorio?.nombre?.toLowerCase() || '').includes(term) ||
-        (item.resguardante?.toLowerCase() || '').includes(term)
+        (item.resguardante?.toLowerCase() || '').includes(term) ||
+        (item.colores?.nombre?.toLowerCase() || '').includes(term)
       );
     });
   }, [muebles, activeFilters, deferredSearchTerm]);

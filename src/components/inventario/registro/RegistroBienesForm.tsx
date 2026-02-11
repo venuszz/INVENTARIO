@@ -3,7 +3,6 @@ import React, { useState, useRef, useEffect } from 'react';
 import { CheckCircle, AlertTriangle, X } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import supabase from "@/app/lib/supabase/client";
-import { useNotifications } from '@/hooks/useNotifications';
 import { useTheme } from '@/context/ThemeContext';
 
 // Import custom hooks
@@ -24,9 +23,8 @@ import AreaSelectionModal from './modals/AreaSelectionModal';
 import { Institucion, Message } from './types';
 
 export default function RegistroBienesForm() {
-  // Theme and notifications
+  // Theme
   const { isDarkMode } = useTheme();
-  const { createNotification } = useNotifications();
 
   // State management
   const [currentStep, setCurrentStep] = useState<number>(0);
@@ -257,16 +255,7 @@ export default function RegistroBienesForm() {
         text: `Bien registrado correctamente en ${institucion}`
       });
 
-      // Success notification
-      await createNotification({
-        title: `Nuevo bien registrado (${institucion})`,
-        description: `Se registró el bien "${formData.descripcion}" con ID ${formData.id_inv} en el área "${formData.area}".`,
-        type: 'success',
-        category: 'inventario',
-        device: 'web',
-        importance: 'medium',
-        data: { changes: [`Registro de bien: ${formData.id_inv}`], affectedTables: [tableName] }
-      });
+      // Notification removed
 
       // Reset form immediately (realtime will update the store automatically)
       resetForm(
@@ -305,15 +294,7 @@ export default function RegistroBienesForm() {
       });
 
       // Error notification
-      await createNotification({
-        title: 'Error al registrar bien',
-        description: 'Ocurrió un error al guardar el registro de un bien.',
-        type: 'danger',
-        category: 'inventario',
-        device: 'web',
-        importance: 'high',
-        data: { affectedTables: [institucion === 'INEA' ? 'muebles' : institucion === 'ITEA' ? 'mueblesitea' : 'mueblestlaxcala'] }
-      });
+      // Notification removed
     } finally {
       setIsSubmitting(false);
     }
