@@ -5,7 +5,7 @@ import {
   ClipboardList, X, Edit, Plus, Calendar, DollarSign, Store, Receipt, 
   Building2, Shield, AlertTriangle, Info, ChevronDown, RotateCw
 } from 'lucide-react';
-import { Mueble, FilterOptions, Directorio, BajaInfo } from '../types';
+import { MuebleITEA, FilterOptions, Directorio, BajaInfo } from '../types';
 import { formatDate } from '../utils';
 
 interface ImagePreviewProps {
@@ -38,7 +38,7 @@ const ImagePreview: React.FC<ImagePreviewProps> = ({ imagePath }) => {
         const supabase = (await import('@/app/lib/supabase/client')).default;
         const { data, error } = await supabase
           .storage
-          .from('muebles.inea')
+          .from('muebles.itea')
           .createSignedUrl(imagePath, 3600);
 
         if (error) throw error;
@@ -104,10 +104,10 @@ const ImagePreview: React.FC<ImagePreviewProps> = ({ imagePath }) => {
 };
 
 interface DetailPanelProps {
-  selectedItem: Mueble | null;
+  selectedItem: MuebleITEA | null;
   detailRef: RefObject<HTMLDivElement | null>;
   isEditing: boolean;
-  editFormData: Mueble | null;
+  editFormData: Partial<MuebleITEA>;
   imagePreview: string | null;
   uploading: boolean;
   filterOptions: FilterOptions;
@@ -116,8 +116,8 @@ interface DetailPanelProps {
   bajaInfoLoading: boolean;
   onClose: () => void;
   onImageChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
-  onFormChange: (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>, field: keyof Mueble) => void;
-  onSelectDirector: (nombre: string) => void;
+  onFormChange: (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>, field: keyof MuebleITEA) => void;
+  onSelectDirector: (director: Directorio) => void;
   onStartEdit: () => void;
   onSaveChanges: () => Promise<void>;
   onCancelEdit: () => void;
@@ -223,17 +223,18 @@ export const DetailPanel: React.FC<DetailPanelProps> = ({
   );
 };
 
+
 // EditMode Component
 interface EditModeProps {
-  editFormData: Mueble | null;
+  editFormData: Partial<MuebleITEA>;
   imagePreview: string | null;
   uploading: boolean;
   filterOptions: FilterOptions;
   directorio: Directorio[];
   isDarkMode: boolean;
   onImageChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
-  onFormChange: (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>, field: keyof Mueble) => void;
-  onSelectDirector: (nombre: string) => void;
+  onFormChange: (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>, field: keyof MuebleITEA) => void;
+  onSelectDirector: (director: Directorio) => void;
 }
 
 function EditMode({
@@ -634,8 +635,11 @@ function EditMode({
           }`}>Director/Jefe de Área</label>
           <div className="relative">
             <select
-              value={editFormData?.usufinal || ''}
-              onChange={(e) => onSelectDirector(e.target.value)}
+              value={editFormData?.directorio?.nombre || ''}
+              onChange={(e) => {
+                const selectedDir = directorio.find(d => d.nombre === e.target.value);
+                if (selectedDir) onSelectDirector(selectedDir);
+              }}
               className={`w-full border rounded-lg px-4 py-2.5 focus:outline-none focus:ring-2 focus:border-transparent transition-all ${
                 isDarkMode
                   ? 'bg-gray-800 border-gray-700 text-white focus:ring-white/50'
@@ -674,9 +678,10 @@ function EditMode({
   );
 }
 
+
 // ViewMode Component
 interface ViewModeProps {
-  selectedItem: Mueble;
+  selectedItem: MuebleITEA;
   bajaInfo: BajaInfo | null;
   bajaInfoLoading: boolean;
   isDarkMode: boolean;
@@ -767,7 +772,7 @@ function ViewMode({
         <DetailCard label="Descripción" value={selectedItem.descripcion || 'No especificado'} isDarkMode={isDarkMode} colSpan2 />
         <DetailCard 
           label="Valor" 
-          value={selectedItem.valor ? `$${parseFloat(String(selectedItem.valor)).toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : '$0.00'} 
+          value={selectedItem.valor ? `${parseFloat(String(selectedItem.valor)).toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : '$0.00'} 
           isDarkMode={isDarkMode} 
         />
         <DetailCard label="Fecha de Adquisición" value={formatDate(selectedItem.f_adq) || 'No especificado'} isDarkMode={isDarkMode} />
@@ -780,7 +785,7 @@ function ViewMode({
         <DetailCard label="Nomenclatura" value={selectedItem.ubicacion_no || 'No especificado'} isDarkMode={isDarkMode} />
         <DetailCard label="Estatus" value={selectedItem.estatus || 'No especificado'} isDarkMode={isDarkMode} />
         <DetailCard label="Área" value={isSyncing ? null : (selectedItem.area?.nombre || 'No especificado')} isDarkMode={isDarkMode} isSyncing={isSyncing} />
-        <DetailCard label="Director/Jefe de Área" value={isSyncing ? null : (selectedItem.directorio?.nombre || selectedItem.usufinal || 'No especificado')} isDarkMode={isDarkMode} isSyncing={isSyncing} />
+        <DetailCard label="Director/Jefe de Área" value={isSyncing ? null : (selectedItem.directorio?.nombre || 'No especificado')} isDarkMode={isDarkMode} isSyncing={isSyncing} />
         <DetailCard label="Resguardante" value={selectedItem.resguardante || 'No especificado'} isDarkMode={isDarkMode} />
       </div>
     </div>
