@@ -73,7 +73,11 @@ export function useIneaObsoletosIndexation() {
           async () => {
             const { data, error } = await supabase
               .from(TABLE)
-              .select('*')
+              .select(`
+                *,
+                area:id_area(id_area, nombre),
+                directorio:id_directorio(id_directorio, nombre, puesto)
+              `)
               .eq('estatus', 'BAJA')
               .range(offset, offset + BATCH_SIZE - 1);
             
@@ -141,7 +145,11 @@ export function useIneaObsoletosIndexation() {
                 
                 const { data: insertedData, error } = await supabase
                   .from(TABLE)
-                  .select('*')
+                  .select(`
+                    *,
+                    area:id_area(id_area, nombre),
+                    directorio:id_directorio(id_directorio, nombre, puesto)
+                  `)
                   .eq('id', newRecord.id)
                   .single();
                 
@@ -159,7 +167,11 @@ export function useIneaObsoletosIndexation() {
               case 'UPDATE': {
                 const { data: updatedData, error } = await supabase
                   .from(TABLE)
-                  .select('*')
+                  .select(`
+                    *,
+                    area:id_area(id_area, nombre),
+                    directorio:id_directorio(id_directorio, nombre, puesto)
+                  `)
                   .eq('id', newRecord.id)
                   .single();
                 

@@ -1,4 +1,4 @@
-import Obsoletos from "@/components/consultas/inea/obsoletos";
+import ConsultasIneaObsoletos from "@/components/consultas/inea/obsoletos";
 import { Suspense } from "react";
 import { Metadata } from "next";
 
@@ -11,7 +11,7 @@ export default function Add() {
     return (
         <div className="max-h-full overflow-auto">
             <Suspense>
-                <Obsoletos />
+                <ConsultasIneaObsoletos />
             </Suspense>
         </div>
     )
