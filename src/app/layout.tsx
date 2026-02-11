@@ -37,14 +37,16 @@ export default function RootLayout({
         className={`${geistSans.variable} ${geistMono.variable} antialiased flex flex-col h-screen`}
       >
         <ThemeProvider>
-          <div>
+          <div className="header-container">
             <HeaderContainer />
           </div>
           <main className="flex-1 overflow-hidden">
             {children}
             <SpeedInsights />
           </main>
-          <IndexationPopover />
+          <div className="indexation-popover-container">
+            <IndexationPopover />
+          </div>
         </ThemeProvider>
       </body>
     </html>

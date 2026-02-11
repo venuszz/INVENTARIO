@@ -68,6 +68,25 @@ export async function POST(request: NextRequest) {
     
     const user = userData;
     
+    // Validar que el usuario no esté pendiente de aprobación
+    if (user.pending_approval && !user.is_active) {
+      return NextResponse.json({ 
+        success: false, 
+        error: 'Tu cuenta está pendiente de aprobación. Un administrador la revisará pronto.',
+        redirectTo: '/pending-approval',
+        userId: user.id
+      }, { status: 403 });
+    }
+    
+    // Validar que el usuario esté activo (rechazado o desactivado)
+    if (!user.is_active) {
+      return NextResponse.json({ 
+        success: false, 
+        error: 'Tu cuenta ha sido desactivada. Contacta al administrador.',
+        redirectTo: '/account-disabled'
+      }, { status: 403 });
+    }
+    
     // Autenticar con Supabase usando email y password
     const { data: authData, error: authError } = await supabase.auth
       .signInWithPassword({
