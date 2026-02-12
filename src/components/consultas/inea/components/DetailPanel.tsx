@@ -550,7 +550,11 @@ function EditMode({
             Director/Jefe de Área
           </label>
           <CustomSelect
-            value={editFormData?.usufinal || ''}
+            value={
+              typeof editFormData?.directorio === 'object' && editFormData?.directorio !== null 
+                ? editFormData.directorio.nombre 
+                : (editFormData?.usufinal || '')
+            }
             onChange={(val) => onSelectDirector(val)}
             options={[
               { value: '', label: 'Seleccionar Director/Jefe' },
@@ -733,7 +737,11 @@ function ViewMode({
         />
         <DetailCard
           label="Director/Jefe de Área"
-          value={isSyncing ? null : (selectedItem.usufinal || 'No especificado')}
+          value={isSyncing ? null : (
+            typeof selectedItem.directorio === 'object' && selectedItem.directorio !== null 
+              ? selectedItem.directorio.nombre 
+              : (selectedItem.usufinal || 'No especificado')
+          )}
           isDarkMode={isDarkMode}
           isSyncing={isSyncing}
         />

@@ -7,6 +7,7 @@ import {
 } from 'lucide-react';
 import { Mueble, FilterOptions, Directorio, BajaInfo } from '../types';
 import { formatDate } from '../utils';
+import CustomSelect from './CustomSelect';
 
 interface ImagePreviewProps {
   imagePath: string | null;
@@ -379,21 +380,13 @@ function EditMode({
           >
             Rubro
           </label>
-          <select
+          <CustomSelect
             value={editFormData?.rubro || ''}
-            onChange={(e) => onFormChange(e, 'rubro')}
-            className={`w-full border rounded-lg px-4 py-2.5 text-sm transition-all ${
-              isDarkMode
-                ? 'bg-black border-white/10 text-white focus:border-white/20'
-                : 'bg-white border-black/10 text-black focus:border-black/20'
-            }`}
-          >
-            {filterOptions.rubros.map((rubro) => (
-              <option key={rubro} value={rubro}>
-                {rubro}
-              </option>
-            ))}
-          </select>
+            onChange={(val) => onFormChange({ target: { value: val } } as any, 'rubro')}
+            options={filterOptions.rubros.map(rubro => ({ value: rubro, label: rubro }))}
+            placeholder="Seleccione el rubro"
+            isDarkMode={isDarkMode}
+          />
         </div>
 
         <div className="form-group col-span-2">
@@ -469,25 +462,19 @@ function EditMode({
         </div>
 
         <div className="form-group">
-          <label className={`flex items-center gap-2 text-sm font-medium mb-2 ${
-            isDarkMode ? 'text-gray-300' : 'text-gray-700'
+          <label className={`flex items-center gap-2 text-xs font-medium uppercase tracking-wider mb-2 ${
+            isDarkMode ? 'text-white/60' : 'text-black/60'
           }`}>Forma de Adquisición</label>
-          <div className="relative">
-            <select
-              value={editFormData?.formadq || ''}
-              onChange={(e) => onFormChange(e, 'formadq')}
-              className={`w-full border rounded-lg px-4 py-2.5 focus:outline-none focus:ring-2 focus:border-transparent transition-all ${
-                isDarkMode
-                  ? 'bg-gray-800 border-gray-700 text-white focus:ring-white/50'
-                  : 'bg-white border-gray-300 text-gray-900 focus:ring-blue-500'
-              }`}
-            >
-              <option value="">Seleccionar forma de adquisición</option>
-              {filterOptions.formadq.map((forma) => (
-                <option key={forma} value={forma}>{forma}</option>
-              ))}
-            </select>
-          </div>
+          <CustomSelect
+            value={editFormData?.formadq || ''}
+            onChange={(val) => onFormChange({ target: { value: val } } as any, 'formadq')}
+            options={[
+              { value: '', label: 'Seleccionar forma de adquisición' },
+              ...filterOptions.formadq.map(forma => ({ value: forma, label: forma }))
+            ]}
+            placeholder="Seleccionar forma de adquisición"
+            isDarkMode={isDarkMode}
+          />
         </div>
 
         <div className="form-group">
@@ -591,25 +578,19 @@ function EditMode({
         </div>
 
         <div className="form-group">
-          <label className={`flex items-center gap-2 text-sm font-medium mb-2 ${
-            isDarkMode ? 'text-gray-300' : 'text-gray-700'
+          <label className={`flex items-center gap-2 text-xs font-medium uppercase tracking-wider mb-2 ${
+            isDarkMode ? 'text-white/60' : 'text-black/60'
           }`}>Estado Físico</label>
-          <div className="relative">
-            <select
-              value={editFormData?.estado || ''}
-              onChange={(e) => onFormChange(e, 'estado')}
-              className={`w-full border rounded-lg px-4 py-2.5 focus:outline-none focus:ring-2 focus:border-transparent transition-all ${
-                isDarkMode
-                  ? 'bg-gray-800 border-gray-700 text-white focus:ring-white/50'
-                  : 'bg-white border-gray-300 text-gray-900 focus:ring-blue-500'
-              }`}
-            >
-              <option value="">Seleccione un estado</option>
-              {filterOptions.estados.map((estado) => (
-                <option key={estado} value={estado}>{estado}</option>
-              ))}
-            </select>
-          </div>
+          <CustomSelect
+            value={editFormData?.estado || ''}
+            onChange={(val) => onFormChange({ target: { value: val } } as any, 'estado')}
+            options={[
+              { value: '', label: 'Seleccione un estado' },
+              ...filterOptions.estados.map(estado => ({ value: estado, label: estado }))
+            ]}
+            placeholder="Seleccione un estado"
+            isDarkMode={isDarkMode}
+          />
         </div>
 
         <div className="form-group">
@@ -629,25 +610,23 @@ function EditMode({
         </div>
 
         <div className="form-group">
-          <label className={`flex items-center gap-2 text-sm font-medium mb-2 ${
-            isDarkMode ? 'text-gray-300' : 'text-gray-700'
+          <label className={`flex items-center gap-2 text-xs font-medium uppercase tracking-wider mb-2 ${
+            isDarkMode ? 'text-white/60' : 'text-black/60'
           }`}>Director/Jefe de Área</label>
-          <div className="relative">
-            <select
-              value={editFormData?.usufinal || ''}
-              onChange={(e) => onSelectDirector(e.target.value)}
-              className={`w-full border rounded-lg px-4 py-2.5 focus:outline-none focus:ring-2 focus:border-transparent transition-all ${
-                isDarkMode
-                  ? 'bg-gray-800 border-gray-700 text-white focus:ring-white/50'
-                  : 'bg-white border-gray-300 text-gray-900 focus:ring-blue-500'
-              }`}
-            >
-              <option value="">Seleccionar Director/Jefe</option>
-              {directorio.map((dir) => (
-                <option key={dir.id_directorio} value={dir.nombre}>{dir.nombre}</option>
-              ))}
-            </select>
-          </div>
+          <CustomSelect
+            value={
+              typeof editFormData?.directorio === 'object' && editFormData?.directorio !== null 
+                ? editFormData.directorio.nombre 
+                : (editFormData?.usufinal || '')
+            }
+            onChange={(val) => onSelectDirector(val)}
+            options={[
+              { value: '', label: 'Seleccionar Director/Jefe' },
+              ...directorio.map(dir => ({ value: dir.nombre || '', label: dir.nombre || '' }))
+            ]}
+            placeholder="Seleccionar Director/Jefe"
+            isDarkMode={isDarkMode}
+          />
         </div>
 
         <div className="form-group">

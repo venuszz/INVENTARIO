@@ -122,6 +122,9 @@ export default function NavigationBar() {
     const [axpertAvatarUrl, setAxpertAvatarUrl] = useState<string | null>(null);
     const [showAvatarPopover, setShowAvatarPopover] = useState(false);
     const [showLinkingSuccess, setShowLinkingSuccess] = useState(false);
+    const [hideCollapsibleButtons, setHideCollapsibleButtons] = useState(false);
+    const [hideNotifications, setHideNotifications] = useState(false);
+    const [hideMenus, setHideMenus] = useState(false);
     const handleLogout = useCerrarSesion();
 
     // Refs para detectar colisiones
@@ -152,27 +155,77 @@ export default function NavigationBar() {
         }
     }, []);
 
-    // Gestionar visibilidad de elementos
+    // Gestionar visibilidad de elementos con ocultación progresiva
     useEffect(() => {
         const checkCollisions = () => {
+            const windowWidth = window.innerWidth;
+            
+            // Breakpoints progresivos para ocultar elementos
+            const BREAKPOINT_HIDE_COLLAPSIBLE = 1400; // Ocultar botones colapsables (Dashboard, Validar usuarios, Dark mode)
+            const BREAKPOINT_HIDE_SEARCH = 1200;      // Ocultar barra de búsqueda
+            const BREAKPOINT_HIDE_NOTIFICATIONS = 1100; // Ocultar notificaciones
+            const BREAKPOINT_HIDE_MENUS = 900;        // Ocultar menús y mostrar hamburguesa
+
+            // Aplicar ocultación progresiva según el ancho
+            if (windowWidth < BREAKPOINT_HIDE_MENUS) {
+                setHideMenus(true);
+                setHideNotifications(true);
+                setSearchBarShouldHide(true);
+                setHideCollapsibleButtons(true);
+            } else if (windowWidth < BREAKPOINT_HIDE_NOTIFICATIONS) {
+                setHideMenus(false);
+                setHideNotifications(true);
+                setSearchBarShouldHide(true);
+                setHideCollapsibleButtons(true);
+            } else if (windowWidth < BREAKPOINT_HIDE_SEARCH) {
+                setHideMenus(false);
+                setHideNotifications(false);
+                setSearchBarShouldHide(true);
+                setHideCollapsibleButtons(true);
+            } else if (windowWidth < BREAKPOINT_HIDE_COLLAPSIBLE) {
+                setHideMenus(false);
+                setHideNotifications(false);
+                setSearchBarShouldHide(false);
+                setHideCollapsibleButtons(true);
+            } else {
+                setHideMenus(false);
+                setHideNotifications(false);
+                setSearchBarShouldHide(false);
+                setHideCollapsibleButtons(false);
+            }
+
+            // Lógica adicional para el logo
+            const logoRect = logoRef.current?.getBoundingClientRect();
+            const menuRect = menuContainerRef.current?.getBoundingClientRect();
             const searchRect = searchBarRef.current?.getBoundingClientRect();
-            const actionButtonsContainerRect = actionButtonsContainerRef.current?.getBoundingClientRect();
+            
+            let logoHasCollision = false;
 
-            let searchBarHasCollision = false;
-
-            // Ocultar barra de búsqueda si no hay espacio cuando el menú de botones está abierto
-            if (isHeaderExpanded && searchRect && actionButtonsContainerRect) {
-                const availableSpace = actionButtonsContainerRect.left - searchRect.right;
-                if (availableSpace < 20) {
-                    searchBarHasCollision = true;
+            // Solo ocultar logo si realmente hay colisión con otros elementos
+            if (logoRect && menuRect && !hideMenus) {
+                const logoToMenuGap = menuRect.left - logoRect.right;
+                if (logoToMenuGap < 10) {
+                    logoHasCollision = true;
                 }
             }
 
-            // Ocultar logo cuando se expande la búsqueda o los botones
-            const shouldHideLogo = isSearchExpanded || isHeaderExpanded;
+            // Si la búsqueda está expandida, verificar si hay espacio suficiente
+            if (isSearchExpanded && logoRect && searchRect && !searchBarShouldHide) {
+                const totalNeededSpace = logoRect.width + searchRect.width + 400;
+                if (windowWidth < totalNeededSpace) {
+                    logoHasCollision = true;
+                }
+            }
 
-            setLogoShouldHide(shouldHideLogo);
-            setSearchBarShouldHide(searchBarHasCollision);
+            // Si los botones están expandidos, verificar colisión real
+            if (isHeaderExpanded && logoRect) {
+                const totalNeededSpace = logoRect.width + 800;
+                if (windowWidth < totalNeededSpace) {
+                    logoHasCollision = true;
+                }
+            }
+
+            setLogoShouldHide(logoHasCollision);
         };
 
         const timer = setTimeout(checkCollisions, 50);
@@ -452,10 +505,10 @@ export default function NavigationBar() {
     return (
         <nav className={`${pathname === '/' ? (isDarkMode ? 'text-white' : 'text-gray-900') : (isDarkMode ? 'bg-black text-white' : 'bg-white text-gray-900')} ${pathname === '/' ? 'fixed top-0 left-0 right-0' : 'relative'} z-50 transition-colors duration-300`}>
             {/* Desktop Navigation */}
-            <div className="max-w-7xl mx-auto px-4">
-                <div className="flex items-center h-16 relative">
+            <div className="max-w-[1920px] mx-auto px-4">
+                <div className="flex items-center justify-between h-16 relative gap-4">
                     {/* Left side - Logo */}
-                    <div className="flex items-center">
+                    <div className="flex items-center flex-shrink-0">
                         <div
                             ref={logoRef}
                             className={`flex items-center transition-all duration-300 ease-in-out ${logoShouldHide ? 'opacity-0 scale-90 pointer-events-none' : 'opacity-100 scale-100'
@@ -477,7 +530,7 @@ export default function NavigationBar() {
                     </div>
 
                     {/* Center - Navigation Menus */}
-                    <div ref={menuContainerRef} className="flex-1 flex justify-center relative z-10">
+                    <div ref={menuContainerRef} className={`flex-1 flex justify-center relative z-10 min-w-0 transition-all duration-300 ${hideMenus ? 'opacity-0 pointer-events-none' : 'opacity-100'}`}>
                         <div className="hidden md:flex md:space-x-1">
                             <RoleGuard roles={["admin", "superadmin"]} userRole={userData.rol}>
                                 <motion.div
@@ -794,9 +847,9 @@ export default function NavigationBar() {
                     {/* Search Bar - After Menus */}
                     <div
                         ref={searchBarRef}
-                        className={`hidden md:flex items-center transition-all duration-300 ease-in-out ${searchBarShouldHide ? 'opacity-0 scale-90 pointer-events-none' : 'opacity-100 scale-100'
-                            }`
-                        }
+                        className={`hidden md:flex items-center flex-shrink-0 transition-all duration-300 ease-in-out ${
+                            searchBarShouldHide ? 'w-0 opacity-0 scale-90 pointer-events-none' : 'w-auto opacity-100 scale-100'
+                        }`}
                     >
                         <UniversalSearchBar 
                             isDarkMode={isDarkMode}
@@ -806,34 +859,25 @@ export default function NavigationBar() {
                     </div>
 
                     {/* Right side - Action buttons */}
-                    < div ref={actionButtonsContainerRef} className="hidden md:flex items-center h-full ml-auto" >
+                    <div ref={actionButtonsContainerRef} className="hidden md:flex items-center h-full flex-shrink-0">
                         {/* Hover trigger area for expanding buttons */}
-                        < div
+                        <div
                             className="flex items-center h-full"
                             onMouseEnter={() => handleHeaderExpand(true)}
                             onMouseLeave={() => handleHeaderExpand(false)}
                         >
                             {/* Collapsible buttons container */}
-                            < div
+                            <div
                                 ref={actionButtonsRef}
-                                className={`flex items-center transition-all duration-500 ease-in-out overflow-hidden ${isHeaderExpanded
-                                    ? 'max-w-96 opacity-100'
-                                    : 'max-w-0 opacity-0'
+                                className={`flex items-center transition-all duration-500 ease-in-out overflow-hidden ${
+                                    hideCollapsibleButtons 
+                                        ? 'max-w-0 opacity-0' 
+                                        : isHeaderExpanded
+                                            ? 'max-w-96 opacity-100'
+                                            : 'max-w-0 opacity-0'
                                     }`}
                             >
                                 <div className="flex items-center space-x-2 pr-2">
-                                    <RoleGuard roles={["superadmin"]} userRole={userData.rol}>
-                                        <Link
-                                            href="/register"
-                                            className={`p-2 rounded-full transition-all duration-200 hover:scale-110 ${isDarkMode
-                                                ? 'text-gray-300 hover:text-white hover:bg-gray-800'
-                                                : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
-                                                }`}
-                                            title="Añadir usuario"
-                                        >
-                                            <User className="h-5 w-5" />
-                                        </Link>
-                                    </RoleGuard>
                                     <RoleGuard roles={["superadmin", "admin"]} userRole={userData.rol}>
                                         <Link
                                             href="/dashboard"
@@ -874,12 +918,15 @@ export default function NavigationBar() {
                                         )}
                                     </button>
                                 </div>
-                            </div >
+                            </div>
 
                             {/* Hover trigger indicator - Minimalist */}
-                            < div className={`flex items-center justify-center transition-all duration-500 ease-in-out ${isHeaderExpanded
-                                ? 'w-2 h-6 opacity-30'
-                                : 'w-6 h-6 opacity-70 hover:opacity-100'
+                            <div className={`flex items-center justify-center transition-all duration-500 ease-in-out ${
+                                hideCollapsibleButtons 
+                                    ? 'w-0 opacity-0 pointer-events-none'
+                                    : isHeaderExpanded
+                                        ? 'w-2 h-6 opacity-30'
+                                        : 'w-6 h-6 opacity-70 hover:opacity-100'
                                 } ${isDarkMode
                                     ? 'hover:bg-gray-800/30'
                                     : 'hover:bg-gray-200/30'
@@ -899,15 +946,18 @@ export default function NavigationBar() {
                                         </>
                                     )}
                                 </div>
-                            </div >
-                        </div >
+                            </div>
+                        </div>
 
                         {/* Always visible buttons */}
-                        < div className={`flex items-center space-x-3 transition-all duration-500 ${isHeaderExpanded ? 'ml-1' : 'ml-3'
+                        <div className={`flex items-center space-x-3 transition-all duration-500 ${
+                            hideCollapsibleButtons 
+                                ? 'ml-0' 
+                                : isHeaderExpanded ? 'ml-1' : 'ml-3'
                             }`}>
                             
                             <RoleGuard roles={["superadmin", "admin"]} userRole={userData.rol}>
-                                <div className="relative" ref={notificationWrapperRef}>
+                                <div className={`relative transition-all duration-300 ${hideNotifications ? 'opacity-0 scale-90 pointer-events-none w-0' : 'opacity-100 scale-100'}`} ref={notificationWrapperRef}>
                                     <button
                                         onClick={() => setNotificationsOpen(!notificationsOpen)}
                                         className={`p-2 rounded-full relative transition-all duration-300 hover:scale-110 ${isDarkMode
@@ -1162,20 +1212,20 @@ export default function NavigationBar() {
                                 </div>
                             )}
 
-                        </div >
-                    </div >
+                        </div>
+                    </div>
 
                     <button
                         onClick={toggleMobileMenu}
-                        className={`md:hidden p-2 rounded-full transition-all duration-200 hover:scale-110 ${isDarkMode
+                        className={`${hideMenus ? '' : 'md:hidden'} p-2 rounded-full transition-all duration-200 hover:scale-110 ${isDarkMode
                             ? 'text-gray-300 hover:text-white hover:bg-gray-800'
                             : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
                             }`}
                     >
                         {mobileMenuOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
                     </button>
-                </div >
-            </div >
+                </div>
+            </div>
 
             {/* Mobile Menu */}
             {

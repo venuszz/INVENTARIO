@@ -87,7 +87,7 @@ export default function CustomSelect({
             <div className="max-h-60 overflow-y-auto scrollbar-thin">
               {options.map((option, index) => (
                 <motion.button
-                  key={option.value}
+                  key={`${option.value}-${index}`}
                   type="button"
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}

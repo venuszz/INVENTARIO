@@ -128,6 +128,7 @@ export default function ConsultasIneaObsoletos() {
     showAreaSelectModal,
     areaOptionsForDirector,
     fetchDirectorio,
+    fetchFilterOptions,
     handleSelectDirector: handleSelectDirectorHook,
     saveDirectorInfo,
     setShowDirectorModal,
@@ -145,10 +146,22 @@ export default function ConsultasIneaObsoletos() {
     isEditing,
   });
 
-  // Load directorio on mount
+  // Load directorio and filter options on mount
   useEffect(() => {
-    fetchDirectorio();
-  }, [fetchDirectorio]);
+    const loadData = async () => {
+      const options = await fetchFilterOptions();
+      await fetchDirectorio();
+      
+      setFilterOptions(prev => ({
+        ...prev,
+        estados: options.estados || [],
+        rubros: options.rubros || [],
+        estatus: options.estatus || [],
+        formadq: options.formadq || []
+      }));
+    };
+    loadData();
+  }, [fetchDirectorio, fetchFilterOptions]);
 
   // Auto-dismiss messages
   useEffect(() => {

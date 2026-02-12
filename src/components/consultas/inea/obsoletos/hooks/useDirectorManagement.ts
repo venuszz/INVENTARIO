@@ -1,6 +1,6 @@
 import { useState, useCallback } from 'react';
 import supabase from '@/app/lib/supabase/client';
-import type { Directorio, Mueble } from '../types';
+import type { Directorio, Mueble, FilterOptions } from '../types';
 
 interface UseDirectorManagementReturn {
   directorio: Directorio[];
@@ -11,6 +11,7 @@ interface UseDirectorManagementReturn {
   showAreaSelectModal: boolean;
   areaOptionsForDirector: string[];
   fetchDirectorio: () => Promise<void>;
+  fetchFilterOptions: () => Promise<Partial<FilterOptions>>;
   handleSelectDirector: (nombre: string, selectedItem: Mueble | null, editFormData: Mueble | null, setEditFormData: (data: Mueble) => void, setSelectedItem: (item: Mueble) => void) => void;
   saveDirectorInfo: () => Promise<void>;
   setShowDirectorModal: (show: boolean) => void;
@@ -90,6 +91,54 @@ export function useDirectorManagement({
       });
     }
   }, [setMessage, setFilterOptions]);
+
+  /**
+   * Obtiene las opciones de filtro desde la base de datos
+   * @returns Objeto parcial con las opciones de filtro
+   */
+  const fetchFilterOptions = useCallback(async (): Promise<Partial<FilterOptions>> => {
+    try {
+      // Obtener estados desde muebles
+      const { data: estados } = await supabase
+        .from('muebles')
+        .select('estado')
+        .filter('estado', 'not.is', null)
+        .limit(1000);
+
+      // Obtener rubros desde config
+      const { data: rubros } = await supabase
+        .from('config')
+        .select('concepto')
+        .eq('tipo', 'rubro');
+
+      // Obtener estatus desde config
+      const { data: estatus } = await supabase
+        .from('config')
+        .select('concepto')
+        .eq('tipo', 'estatus');
+
+      // Obtener formas de adquisición desde config
+      const { data: formasAdq } = await supabase
+        .from('config')
+        .select('concepto')
+        .eq('tipo', 'formadq');
+
+      return {
+        estados: [...new Set(estados?.map(item => item.estado?.trim()).filter(Boolean))] as string[],
+        rubros: rubros?.map(item => item.concepto?.trim()).filter(Boolean) || [],
+        estatus: estatus?.map(item => item.concepto?.trim()).filter(Boolean) || [],
+        formadq: formasAdq?.map(item => item.concepto?.trim()).filter(Boolean) || []
+      };
+    } catch (error) {
+      console.error('Error al cargar opciones de filtro:', error);
+      return {
+        estados: [],
+        rubros: [],
+        estatus: [],
+        formadq: []
+      };
+    }
+  }, []);
 
   const handleSelectDirector = (
     nombre: string,
@@ -289,6 +338,7 @@ export function useDirectorManagement({
     showAreaSelectModal,
     areaOptionsForDirector,
     fetchDirectorio,
+    fetchFilterOptions,
     handleSelectDirector,
     saveDirectorInfo,
     setShowDirectorModal,

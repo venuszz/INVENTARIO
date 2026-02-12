@@ -119,14 +119,14 @@ export default function Inicio() {
       </div>
 
       {/* Derechos Reservados - Abajo a la izquierda */}
-      <div className={`absolute bottom-8 left-8 z-20 text-[10px] tracking-widest uppercase transition-colors duration-500 ${isDarkMode ? 'text-gray-600' : 'text-gray-400'
+      <div className={`absolute bottom-8 left-8 z-20 text-[10px] tracking-widest uppercase transition-colors duration-500 ${isDarkMode ? 'text-white' : 'text-gray-400'
         }`}>
         Derechos Reservados © 2026  
       </div>
 
       {/* Created by - Abajo a la derecha, visible solo en hover */}
       <div className={`absolute bottom-8 right-8 z-20 flex items-center gap-2 opacity-0 hover:opacity-100 transition-opacity duration-500`}>
-        <span className={`text-[10px] tracking-wider transition-colors duration-500 ${isDarkMode ? 'text-gray-600' : 'text-gray-400'
+        <span className={`text-[10px] tracking-wider transition-colors duration-500 ${isDarkMode ? 'text-white' : 'text-gray-400'
           }`}>
           Created by:
         </span>
