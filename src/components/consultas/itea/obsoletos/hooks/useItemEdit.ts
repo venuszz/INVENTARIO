@@ -157,7 +157,11 @@ export function useItemEdit({
   const handleStartEdit = useCallback(() => {
     if (!selectedItem) return;
     setIsEditing(true);
-    setEditFormData({ ...selectedItem });
+    
+    // Create edit form data excluding joined objects (area, directorio, colores)
+    // Only include actual table columns
+    const { area, directorio, colores, ...editableFields } = selectedItem as any;
+    setEditFormData(editableFields);
   }, [selectedItem]);
 
   const cancelEdit = useCallback(() => {
@@ -242,7 +246,7 @@ export function useItemEdit({
         if (newPath) imagePath = newPath;
       }
 
-      // Prepare update data with relational fields
+      // Prepare update data - only include actual table columns, not joined objects
       const updateData: any = {
         id_inv: editFormData.id_inv,
         rubro: editFormData.rubro,
@@ -264,6 +268,11 @@ export function useItemEdit({
         resguardante: editFormData.resguardante,
         image_path: imagePath,
       };
+
+      // Add color if it exists in editFormData (it's a UUID foreign key)
+      if ('color' in editFormData) {
+        updateData.color = (editFormData as any).color || null;
+      }
 
       const { error } = await supabase
         .from('mueblesitea')
@@ -337,9 +346,16 @@ export function useItemEdit({
           id_directorio: value ? parseInt(value) : null
         }));
         break;
+      case 'color':
+        setEditFormData(prev => ({
+          ...prev,
+          color: value || null
+        }));
+        break;
       case 'area':
       case 'directorio':
-        // These are relational fields, handled separately by director management hook
+      case 'colores':
+        // These are relational fields, handled separately
         break;
       default:
         setEditFormData(prev => ({

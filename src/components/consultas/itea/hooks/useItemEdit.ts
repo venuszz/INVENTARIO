@@ -28,7 +28,11 @@ export function useItemEdit() {
     const handleStartEdit = () => {
         if (!selectedItem) return;
         setIsEditing(true);
-        setEditFormData({ ...selectedItem });
+        
+        // Create edit form data excluding joined objects (area, directorio, colores)
+        // Only include actual table columns
+        const { area, directorio, colores, ...editableFields } = selectedItem as any;
+        setEditFormData(editableFields);
     };
 
     const cancelEdit = () => {
@@ -158,7 +162,7 @@ export function useItemEdit() {
             }
 
             // Extract only the database columns (exclude nested objects)
-            const { area, directorio, ...dbFields } = editFormData;
+            const { area, directorio, colores, ...dbFields } = editFormData;
             
             const response = await fetch(
                 '/api/supabase-proxy?target=' + encodeURIComponent(`/rest/v1/mueblesitea?id=eq.${editFormData.id}`),
@@ -192,7 +196,7 @@ export function useItemEdit() {
             // Refetch the mueble with JOINs to get updated nested objects
             const refetchResponse = await fetch(
                 '/api/supabase-proxy?target=' + encodeURIComponent(
-                    `/rest/v1/mueblesitea?id=eq.${editFormData.id}&select=*,area:area(id_area,nombre),directorio:directorio(id_directorio,nombre,puesto)`
+                    `/rest/v1/mueblesitea?id=eq.${editFormData.id}&select=*,area:area(id_area,nombre),directorio:directorio(id_directorio,nombre,puesto),colores:colores(id,nombre,significado)`
                 ),
                 {
                     method: 'GET',
@@ -231,11 +235,11 @@ export function useItemEdit() {
 
     const handleEditFormChange = (
         e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>,
-        field: keyof Mueble
+        field: keyof Mueble | 'color'
     ) => {
         if (!editFormData) return;
 
-        const newData = { ...editFormData };
+        const newData = { ...editFormData } as any;
 
         // Force uppercase for text inputs and textarea
         let value = e.target.value;
@@ -258,6 +262,9 @@ export function useItemEdit() {
                 break;
             case 'id_directorio':
                 newData.id_directorio = value ? parseInt(value) : null;
+                break;
+            case 'color':
+                newData.color = value || null;
                 break;
             case 'rubro':
             case 'descripcion':

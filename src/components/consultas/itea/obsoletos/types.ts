@@ -38,6 +38,10 @@ export interface MuebleITEA {
   id_area: number | null;
   /** Director ID (foreign key) */
   id_directorio: number | null;
+  /** Color ID (foreign key) */
+  color: string | null;
+  /** Color information (relational) */
+  colores: { id: string; nombre: string; significado: string | null } | null;
   /** Date of deprecation */
   fechabaja: string | null;
   /** Reason for deprecation */
