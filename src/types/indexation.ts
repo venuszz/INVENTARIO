@@ -205,7 +205,7 @@ export interface MuebleITEA {
   // Relational fields (NEW)
   id_area: number | null;
   id_directorio: number | null;
-  color: string | null; // UUID del color
+  color: string | null;
   
   // Nested objects from JOINs (NEW)
   area: { id_area: number; nombre: string } | null;
