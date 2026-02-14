@@ -439,6 +439,10 @@ export default function NavigationBar() {
                     path: '/consultas/levantamiento',
                 },
                 {
+                    title: 'Inventario TLAXCALA',
+                    path: '/consultas/no-listado',
+                },
+                {
                     title: 'Inventario INEA',
                     path: '/consultas/inea',
                     children: [
@@ -453,10 +457,6 @@ export default function NavigationBar() {
                         { title: 'Vista general', path: '/consultas/itea/general' },
                         { title: 'Bienes obsoletos', path: '/consultas/itea/obsoletos' }
                     ]
-                },
-                {
-                    title: 'Inventario TLAXCALA',
-                    path: '/consultas/no-listado',
                 }
             ]
         },

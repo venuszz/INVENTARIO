@@ -1,6 +1,7 @@
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Palette } from 'lucide-react';
+import { X, Palette, Check } from 'lucide-react';
 import { Color } from '@/hooks/useColorManagement';
+import { useState, useEffect } from 'react';
 
 interface ColorAssignmentModalProps {
   show: boolean;
@@ -25,7 +26,29 @@ export default function ColorAssignmentModal({
   isDarkMode,
   isAssigning
 }: ColorAssignmentModalProps) {
+  const [selectedColorId, setSelectedColorId] = useState<string | null>(null);
+
+  // Reset selection when modal opens/closes
+  useEffect(() => {
+    if (!show) {
+      setSelectedColorId(null);
+    }
+  }, [show]);
+
   if (!show) return null;
+
+  const handleColorSelect = (colorId: string) => {
+    setSelectedColorId(colorId);
+  };
+
+  const handleConfirmAssign = () => {
+    if (!selectedColorId) return;
+    onAssign(selectedColorId);
+  };
+
+  const handleRemoveColor = () => {
+    onRemove();
+  };
 
   const getColorHex = (colorName: string) => {
     const name = colorName.toUpperCase();
@@ -126,51 +149,72 @@ export default function ColorAssignmentModal({
             }`}>
               Selecciona un color
             </p>
-            {colors.map((color) => (
-              <button
-                key={color.id}
-                onClick={() => onAssign(color.id)}
-                disabled={isAssigning || currentColor?.id === color.id}
-                className={`w-full p-3 rounded-lg border text-left transition-all ${
-                  currentColor?.id === color.id
-                    ? isDarkMode
-                      ? 'bg-white/10 border-white/20'
-                      : 'bg-black/10 border-black/20'
-                    : isDarkMode
-                      ? 'bg-white/[0.02] border-white/10 hover:bg-white/5'
-                      : 'bg-black/[0.02] border-black/10 hover:bg-black/5'
-                } ${isAssigning ? 'opacity-50 cursor-not-allowed' : ''}`}
-              >
-                <div className="flex items-center gap-3">
-                  <div
-                    className="w-6 h-6 rounded-full border-2 flex-shrink-0"
-                    style={{
-                      backgroundColor: getColorHex(color.nombre),
-                      borderColor: color.nombre === 'BLANCO'
-                        ? isDarkMode ? 'rgba(255,255,255,0.3)' : 'rgba(0,0,0,0.2)'
-                        : 'transparent'
-                    }}
-                  />
-                  <div className="flex-1 min-w-0">
-                    <p className="font-medium">{color.nombre}</p>
-                    {color.significado && (
-                      <p className={`text-xs ${
-                        isDarkMode ? 'text-white/60' : 'text-black/60'
-                      }`}>
-                        {color.significado}
-                      </p>
-                    )}
+            {colors.map((color) => {
+              const isSelected = selectedColorId === color.id;
+              const isCurrent = currentColor?.id === color.id;
+              
+              return (
+                <button
+                  key={color.id}
+                  onClick={() => handleColorSelect(color.id)}
+                  disabled={isAssigning}
+                  className={`w-full p-3 rounded-lg border text-left transition-all ${
+                    isSelected
+                      ? isDarkMode
+                        ? 'bg-white/10 border-white/30 ring-2 ring-white/20'
+                        : 'bg-black/10 border-black/30 ring-2 ring-black/20'
+                      : isCurrent
+                        ? isDarkMode
+                          ? 'bg-white/5 border-white/20'
+                          : 'bg-black/5 border-black/20'
+                        : isDarkMode
+                          ? 'bg-white/[0.02] border-white/10 hover:bg-white/5'
+                          : 'bg-black/[0.02] border-black/10 hover:bg-black/5'
+                  } ${isAssigning ? 'opacity-50 cursor-not-allowed' : ''}`}
+                >
+                  <div className="flex items-center gap-3">
+                    <div
+                      className="w-6 h-6 rounded-full border-2 flex-shrink-0"
+                      style={{
+                        backgroundColor: getColorHex(color.nombre),
+                        borderColor: color.nombre === 'BLANCO'
+                          ? isDarkMode ? 'rgba(255,255,255,0.3)' : 'rgba(0,0,0,0.2)'
+                          : 'transparent'
+                      }}
+                    />
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2">
+                        <p className="font-medium">{color.nombre}</p>
+                        {isCurrent && (
+                          <span className={`text-xs px-2 py-0.5 rounded ${
+                            isDarkMode ? 'bg-white/10' : 'bg-black/10'
+                          }`}>
+                            Actual
+                          </span>
+                        )}
+                        {isSelected && (
+                          <Check className="h-4 w-4 ml-auto" />
+                        )}
+                      </div>
+                      {color.significado && (
+                        <p className={`text-xs ${
+                          isDarkMode ? 'text-white/60' : 'text-black/60'
+                        }`}>
+                          {color.significado}
+                        </p>
+                      )}
+                    </div>
                   </div>
-                </div>
-              </button>
-            ))}
+                </button>
+              );
+            })}
           </div>
 
           {/* Actions */}
           <div className="flex gap-2">
             {currentColor && (
               <button
-                onClick={onRemove}
+                onClick={handleRemoveColor}
                 disabled={isAssigning}
                 className={`flex-1 py-2 px-4 rounded-lg border text-sm font-medium transition-colors ${
                   isDarkMode
@@ -178,9 +222,24 @@ export default function ColorAssignmentModal({
                     : 'bg-black/[0.02] border-black/10 hover:bg-black/5'
                 } ${isAssigning ? 'opacity-50 cursor-not-allowed' : ''}`}
               >
-                Remover Color
+                {isAssigning ? 'Procesando...' : 'Remover Color'}
               </button>
             )}
+            <button
+              onClick={handleConfirmAssign}
+              disabled={isAssigning || !selectedColorId || selectedColorId === currentColor?.id}
+              className={`flex-1 py-2 px-4 rounded-lg border text-sm font-medium transition-colors ${
+                selectedColorId && selectedColorId !== currentColor?.id && !isAssigning
+                  ? isDarkMode
+                    ? 'bg-white/10 border-white/20 hover:bg-white/[0.15]'
+                    : 'bg-black/10 border-black/20 hover:bg-black/[0.15]'
+                  : isDarkMode
+                    ? 'bg-white/[0.02] border-white/10 opacity-50 cursor-not-allowed'
+                    : 'bg-black/[0.02] border-black/10 opacity-50 cursor-not-allowed'
+              }`}
+            >
+              {isAssigning ? 'Asignando...' : 'Confirmar'}
+            </button>
             <button
               onClick={onClose}
               disabled={isAssigning}

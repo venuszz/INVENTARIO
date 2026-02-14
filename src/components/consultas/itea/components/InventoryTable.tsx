@@ -257,7 +257,8 @@ export default function InventoryTable({
                                                                     className="absolute -top-1.5 left-2 w-3 h-3 rotate-45"
                                                                     style={{
                                                                         backgroundColor: colorHex,
-                                                                        border: `2px solid ${colorHex}`,
+                                                                        borderTop: `2px solid ${colorHex}`,
+                                                                        borderLeft: `2px solid ${colorHex}`,
                                                                         borderRight: 'none',
                                                                         borderBottom: 'none'
                                                                     }}

@@ -1,5 +1,4 @@
 import { useState, useCallback, useEffect } from 'react';
-import supabase from '@/app/lib/supabase/client';
 
 export interface Color {
   id: string;
@@ -26,15 +25,8 @@ export function useColorManagement() {
       }
 
       const { colors } = await response.json();
-
-      console.log('🎨 [useColorManagement] Colors fetched via API:', {
-        count: colors?.length || 0,
-        colors
-      });
-
       setColors(colors || []);
     } catch (err: any) {
-      console.error('🎨 [useColorManagement] Error fetching colors:', err);
       setError(err.message || 'Error al cargar colores');
     } finally {
       setLoading(false);
@@ -44,22 +36,21 @@ export function useColorManagement() {
   // Assign color to a mueble
   const assignColor = useCallback(async (muebleId: string, colorId: string) => {
     try {
-      console.log('🎨 [useColorManagement] Assigning color:', {
-        muebleId,
-        colorId
+      const response = await fetch('/api/colores', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ muebleId, colorId }),
       });
 
-      const { error: updateError } = await supabase
-        .from('mueblesitea')
-        .update({ color: colorId })
-        .eq('id', muebleId);
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to assign color');
+      }
 
-      if (updateError) throw updateError;
-
-      console.log('🎨 [useColorManagement] Color assigned successfully');
       return true;
     } catch (err: any) {
-      console.error('🎨 [useColorManagement] Error assigning color:', err);
       setError(err.message || 'Error al asignar color');
       return false;
     }
@@ -68,19 +59,17 @@ export function useColorManagement() {
   // Remove color from a mueble
   const removeColor = useCallback(async (muebleId: string) => {
     try {
-      console.log('🎨 [useColorManagement] Removing color from:', muebleId);
+      const response = await fetch(`/api/colores?muebleId=${encodeURIComponent(muebleId)}`, {
+        method: 'DELETE',
+      });
 
-      const { error: updateError } = await supabase
-        .from('mueblesitea')
-        .update({ color: null })
-        .eq('id', muebleId);
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to remove color');
+      }
 
-      if (updateError) throw updateError;
-
-      console.log('🎨 [useColorManagement] Color removed successfully');
       return true;
     } catch (err: any) {
-      console.error('🎨 [useColorManagement] Error removing color:', err);
       setError(err.message || 'Error al remover color');
       return false;
     }

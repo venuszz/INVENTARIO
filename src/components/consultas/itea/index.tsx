@@ -305,10 +305,10 @@ export default function ConsultasIteaGeneral() {
     setIsAssigningColor(true);
     try {
       const success = await assignColor(selectedItem.id, colorId);
+      
       if (success) {
         setMessage({ type: 'success', text: 'Color asignado correctamente' });
         setShowColorModal(false);
-        // The realtime subscription will update the UI automatically
       } else {
         setMessage({ type: 'error', text: 'Error al asignar el color' });
       }
@@ -326,10 +326,10 @@ export default function ConsultasIteaGeneral() {
     setIsAssigningColor(true);
     try {
       const success = await removeColor(selectedItem.id);
+      
       if (success) {
         setMessage({ type: 'success', text: 'Color removido correctamente' });
         setShowColorModal(false);
-        // The realtime subscription will update the UI automatically
       } else {
         setMessage({ type: 'error', text: 'Error al remover el color' });
       }
