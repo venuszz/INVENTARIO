@@ -23,18 +23,42 @@ export const BajaDetailsPanel: React.FC<BajaDetailsPanelProps> = ({
   userRole,
   isDarkMode
 }) => {
+  // Color palette for resguardantes badges
+  const colorPaletteDark = [
+    'from-pink-500/80 to-pink-400/80 border-pink-400 text-pink-100',
+    'from-blue-500/80 to-blue-400/80 border-blue-400 text-blue-100',
+    'from-green-500/80 to-green-400/80 border-green-400 text-green-100',
+    'from-yellow-500/80 to-yellow-400/80 border-yellow-400 text-yellow-900',
+    'from-purple-500/80 to-purple-400/80 border-purple-400 text-purple-100',
+    'from-fuchsia-500/80 to-fuchsia-400/80 border-fuchsia-400 text-fuchsia-100',
+    'from-cyan-500/80 to-cyan-400/80 border-cyan-400 text-cyan-900',
+    'from-orange-500/80 to-orange-400/80 border-orange-400 text-orange-900',
+    'from-rose-500/80 to-rose-400/80 border-rose-400 text-rose-100',
+    'from-emerald-500/80 to-emerald-400/80 border-emerald-400 text-emerald-100',
+  ];
+  const colorPaletteLight = [
+    'from-pink-400 to-pink-300 border-pink-500 text-pink-900',
+    'from-blue-400 to-blue-300 border-blue-500 text-blue-900',
+    'from-green-400 to-green-300 border-green-500 text-green-900',
+    'from-yellow-400 to-yellow-300 border-yellow-500 text-yellow-900',
+    'from-purple-400 to-purple-300 border-purple-500 text-purple-900',
+    'from-fuchsia-400 to-fuchsia-300 border-fuchsia-500 text-fuchsia-900',
+    'from-cyan-400 to-cyan-300 border-cyan-500 text-cyan-900',
+    'from-orange-400 to-orange-300 border-orange-500 text-orange-900',
+    'from-rose-400 to-rose-300 border-rose-500 text-rose-900',
+    'from-emerald-400 to-emerald-300 border-emerald-500 text-emerald-900',
+  ];
+
   return (
-    <div className={`rounded-xl border p-4 mb-4 shadow-inner ${
+    <div className={`rounded-lg border p-4 mb-4 ${
       isDarkMode
-        ? 'bg-gray-900/30 border-gray-800'
-        : 'bg-white border-gray-200'
+        ? 'bg-white/[0.02] border-white/10'
+        : 'bg-black/[0.02] border-black/10'
     }`}>
       <h2 className={`text-lg font-medium mb-4 flex items-center gap-2 ${
-        isDarkMode ? 'text-gray-100' : 'text-gray-900'
+        isDarkMode ? 'text-white' : 'text-black'
       }`}>
-        <FileText className={`h-5 w-5 ${
-          isDarkMode ? 'text-red-400' : 'text-red-600'
-        }`} />
+        <FileText className="h-5 w-5" />
         Detalles del Resguardo
       </h2>
 
@@ -42,98 +66,95 @@ export const BajaDetailsPanel: React.FC<BajaDetailsPanelProps> = ({
         <>
           <div className="space-y-4">
             <div>
-              <label className={`block text-xs uppercase tracking-wider mb-1 ${
-                isDarkMode ? 'text-gray-500' : 'text-gray-600'
-              }`}>Folio Resguardo</label>
+              <label className={`block text-xs font-medium mb-2 ${
+                isDarkMode ? 'text-white/60' : 'text-black/60'
+              }`}>
+                Folio Resguardo
+              </label>
               <div className={`text-lg font-medium flex items-center gap-2 ${
-                isDarkMode ? 'text-red-400' : 'text-red-600'
+                isDarkMode ? 'text-blue-400' : 'text-blue-600'
               }`}>
                 <FileDigit className="h-5 w-5" />
                 {selectedBaja.folio_resguardo}
               </div>
             </div>
 
-            <div>
-              <label className={`block text-xs uppercase tracking-wider mb-1 ${
-                isDarkMode ? 'text-gray-500' : 'text-gray-600'
-              }`}>Fecha</label>
-              <div className={`text-sm flex items-center gap-2 ${
-                isDarkMode ? 'text-white' : 'text-gray-900'
-              }`}>
-                <Calendar className={`h-4 w-4 ${
-                  isDarkMode ? 'text-gray-400' : 'text-gray-500'
-                }`} />
-                {selectedBaja.f_resguardo.slice(0, 10).split('-').reverse().join('/')}
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className={`block text-xs font-medium mb-2 ${
+                  isDarkMode ? 'text-white/60' : 'text-black/60'
+                }`}>
+                  Fecha
+                </label>
+                <div className={`text-sm flex items-center gap-2 ${
+                  isDarkMode ? 'text-white/80' : 'text-black/80'
+                }`}>
+                  <Calendar className="h-4 w-4" />
+                  {selectedBaja.f_resguardo.slice(0, 10).split('-').reverse().join('/')}
+                </div>
+              </div>
+              <div>
+                <label className={`block text-xs font-medium mb-2 ${
+                  isDarkMode ? 'text-white/60' : 'text-black/60'
+                }`}>
+                  Artículos
+                </label>
+                <div className={`text-sm ${
+                  isDarkMode ? 'text-white/80' : 'text-black/80'
+                }`}>
+                  {selectedBaja.articulos.length}
+                </div>
               </div>
             </div>
 
             <div>
-              <label className={`block text-xs uppercase tracking-wider mb-1 ${
-                isDarkMode ? 'text-gray-500' : 'text-gray-600'
-              }`}>Director de Área</label>
-              <div className={`text-sm flex items-center gap-2 ${
-                isDarkMode ? 'text-white' : 'text-gray-900'
+              <label className={`block text-xs font-medium mb-2 ${
+                isDarkMode ? 'text-white/60' : 'text-black/60'
               }`}>
-                <Building2 className={`h-4 w-4 ${
-                  isDarkMode ? 'text-gray-400' : 'text-gray-500'
-                }`} />
+                Director de Área
+              </label>
+              <div className={`text-sm flex items-center gap-2 ${
+                isDarkMode ? 'text-white/80' : 'text-black/80'
+              }`}>
+                <Building2 className="h-4 w-4" />
                 {selectedBaja.dir_area}
               </div>
               <div className={`text-xs mt-1 ${
-                isDarkMode ? 'text-gray-500' : 'text-gray-600'
+                isDarkMode ? 'text-white/60' : 'text-black/60'
               }`}>
                 {selectedBaja.area_resguardo}
               </div>
             </div>
 
             <div>
-              <label className={`block text-xs uppercase tracking-wider mb-1 ${
-                isDarkMode ? 'text-gray-500' : 'text-gray-600'
-              }`}>Puesto</label>
-              <div className={`text-sm flex items-center gap-2 ${
-                isDarkMode ? 'text-white' : 'text-gray-900'
+              <label className={`block text-xs font-medium mb-2 ${
+                isDarkMode ? 'text-white/60' : 'text-black/60'
               }`}>
-                <User className={`h-4 w-4 ${
-                  isDarkMode ? 'text-gray-400' : 'text-gray-500'
-                }`} />
+                Puesto
+              </label>
+              <div className={`text-sm flex items-center gap-2 ${
+                isDarkMode ? 'text-white/80' : 'text-black/80'
+              }`}>
+                <User className="h-4 w-4" />
                 {selectedBaja.puesto}
               </div>
             </div>
 
             <div>
-              <label className={`block text-xs uppercase tracking-wider mb-1 ${
-                isDarkMode ? 'text-gray-500' : 'text-gray-600'
-              }`}>Resguardantes</label>
+              <label className={`block text-xs font-medium mb-2 ${
+                isDarkMode ? 'text-white/60' : 'text-black/60'
+              }`}>
+                Resguardantes
+              </label>
               <div className="flex flex-wrap gap-2">
                 {Array.from(new Set(selectedBaja.articulos.map(a => a.usufinal || 'Sin asignar'))).map((resguardante, idx) => {
-                  const colorPalette = isDarkMode ? [
-                    'from-slate-800 to-slate-700 border-slate-600 text-slate-200',
-                    'from-zinc-800 to-zinc-700 border-zinc-600 text-zinc-200',
-                    'from-neutral-800 to-neutral-700 border-neutral-600 text-neutral-200',
-                    'from-stone-800 to-stone-700 border-stone-600 text-stone-200',
-                    'from-red-900 to-red-800 border-red-700 text-red-200',
-                    'from-orange-900 to-orange-800 border-orange-700 text-orange-200',
-                    'from-amber-900 to-amber-800 border-amber-700 text-amber-200',
-                    'from-emerald-900 to-emerald-800 border-emerald-700 text-emerald-200',
-                    'from-teal-900 to-teal-800 border-teal-700 text-teal-200',
-                    'from-cyan-900 to-cyan-800 border-cyan-700 text-cyan-200',
-                  ] : [
-                    'from-slate-200 to-slate-300 border-slate-400 text-slate-800',
-                    'from-zinc-200 to-zinc-300 border-zinc-400 text-zinc-800',
-                    'from-neutral-200 to-neutral-300 border-neutral-400 text-neutral-800',
-                    'from-stone-200 to-stone-300 border-stone-400 text-stone-800',
-                    'from-red-200 to-red-300 border-red-400 text-red-800',
-                    'from-orange-200 to-orange-300 border-orange-400 text-orange-800',
-                    'from-amber-200 to-amber-300 border-amber-400 text-amber-800',
-                    'from-emerald-200 to-emerald-300 border-emerald-400 text-emerald-800',
-                    'from-teal-200 to-teal-300 border-teal-400 text-teal-800',
-                    'from-cyan-200 to-cyan-300 border-cyan-400 text-cyan-800',
-                  ];
-                  const color = colorPalette[idx % colorPalette.length];
+                  const color = isDarkMode
+                    ? colorPaletteDark[idx % colorPaletteDark.length]
+                    : colorPaletteLight[idx % colorPaletteLight.length];
                   return (
                     <span
                       key={idx}
-                      className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-gradient-to-r ${color} border shadow-md transition-all duration-200 hover:scale-105 tracking-wider`}
+                      className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-gradient-to-r ${color} border shadow-md transition-all duration-200 hover:scale-105 tracking-tight`}
                     >
                       <User className="h-3.5 w-3.5 mr-1 opacity-80" />
                       {resguardante}
@@ -146,10 +167,10 @@ export const BajaDetailsPanel: React.FC<BajaDetailsPanelProps> = ({
 
           <button
             onClick={onGeneratePDF}
-            className={`mt-6 w-full py-2.5 border rounded-lg transition-all duration-300 flex items-center justify-center gap-2 shadow-lg ${
+            className={`mt-6 w-full py-2.5 border rounded-lg transition-colors flex items-center justify-center gap-2 ${
               isDarkMode
-                ? 'bg-red-900/20 border-red-800 text-red-400 hover:bg-red-800/30 hover:text-white hover:shadow-red-500/20'
-                : 'bg-red-50 border-red-300 text-red-700 hover:bg-red-100 hover:border-red-400 hover:text-red-800'
+                ? 'bg-blue-600 hover:bg-blue-500 text-white border-blue-600'
+                : 'bg-blue-600 hover:bg-blue-700 text-white border-blue-600'
             }`}
           >
             <Download className="h-4 w-4" />
@@ -159,10 +180,10 @@ export const BajaDetailsPanel: React.FC<BajaDetailsPanelProps> = ({
           <RoleGuard roles={["admin", "superadmin"]} userRole={userRole ?? undefined}>
             <button
               onClick={onDeleteFolio}
-              className={`w-full py-2 rounded-lg transition-all duration-300 border flex items-center justify-center gap-2 mt-2 shadow-lg ${
+              className={`mt-2 w-full py-2.5 border rounded-lg transition-colors flex items-center justify-center gap-2 ${
                 isDarkMode
-                  ? 'bg-gradient-to-r from-red-900/20 to-red-900/10 text-red-400 hover:from-red-900/30 hover:to-red-900/20 border-red-900/50 hover:text-white hover:shadow-red-500/20'
-                  : 'bg-gradient-to-r from-red-100 to-red-50 text-red-700 hover:from-red-200 hover:to-red-100 border-red-300 hover:text-red-800'
+                  ? 'bg-red-600 hover:bg-red-500 text-white border-red-600'
+                  : 'bg-red-600 hover:bg-red-700 text-white border-red-600'
               }`}
             >
               <X className="h-4 w-4" />
@@ -172,10 +193,10 @@ export const BajaDetailsPanel: React.FC<BajaDetailsPanelProps> = ({
         </>
       ) : (
         <div className={`flex flex-col items-center justify-center h-full min-h-[200px] ${
-          isDarkMode ? 'text-gray-500' : 'text-gray-600'
+          isDarkMode ? 'text-white/60' : 'text-black/60'
         }`}>
-          <Info className={`h-12 w-12 mb-2 animate-pulse ${
-            isDarkMode ? 'text-gray-600' : 'text-gray-400'
+          <Info className={`h-12 w-12 mb-2 ${
+            isDarkMode ? 'text-white/20' : 'text-black/20'
           }`} />
           <p className="text-sm">Seleccione una baja</p>
           <p className="text-xs mt-1">Haga clic en un folio para ver los detalles</p>

@@ -21,71 +21,80 @@ export const Pagination: React.FC<PaginationProps> = ({
   setRowsPerPage,
   isDarkMode
 }) => {
+  const rowsOptions = [10, 25, 50, 100];
+
+  const handleRowsRotate = () => {
+    const currentIndex = rowsOptions.indexOf(rowsPerPage);
+    const nextIndex = (currentIndex + 1) % rowsOptions.length;
+    setRowsPerPage(rowsOptions[nextIndex]);
+    setCurrentPage(1);
+  };
+
   return (
-    <div className={`flex items-center justify-between p-4 rounded-xl border shadow-inner mb-4 ${
-      isDarkMode
-        ? 'bg-gray-900/30 border-gray-800'
-        : 'bg-gray-50/50 border-gray-200'
+    <div className={`flex flex-col sm:flex-row items-center justify-between gap-4 px-4 py-3 ${
+      isDarkMode ? 'text-white' : 'text-black'
     }`}>
-      <div className="flex items-center space-x-4">
-        <span className={`text-sm ${
-          isDarkMode ? 'text-gray-400' : 'text-gray-600'
-        }`}>
-          Página {currentPage} de {totalPages}
+      <div className="flex items-center gap-3">
+        <span className={`text-sm ${isDarkMode ? 'text-white/60' : 'text-black/60'}`}>
+          Mostrar
         </span>
-        <select
-          title='Resguardos por página'
-          value={rowsPerPage}
-          onChange={(e) => {
-            setRowsPerPage(Number(e.target.value));
-            setCurrentPage(1);
-          }}
-          className={`border rounded-lg text-sm py-1.5 px-3 focus:outline-none focus:ring-2 transition-all duration-300 ${
-            isDarkMode
-              ? 'bg-black border-gray-800 text-white focus:ring-red-500 hover:border-gray-700'
-              : 'bg-white border-gray-300 text-gray-900 focus:ring-red-500 hover:border-red-400'
-          }`}
-        >
-          <option value={10}>10 por página</option>
-          <option value={25}>25 por página</option>
-          <option value={50}>50 por página</option>
-          <option value={100}>100 por página</option>
-        </select>
-      </div>
-      <div className="flex items-center space-x-2">
+        
         <button
-          title='Anterior'
+          onClick={handleRowsRotate}
+          className={`px-3 py-1.5 rounded-lg border text-sm font-medium transition-all ${
+            isDarkMode
+              ? 'bg-white/5 border-white/10 text-white hover:bg-white/10'
+              : 'bg-black/5 border-black/10 text-black hover:bg-black/10'
+          }`}
+          title="Cambiar filas por página"
+        >
+          {rowsPerPage}
+        </button>
+
+        <span className={`text-sm ${isDarkMode ? 'text-white/60' : 'text-black/60'}`}>
+          registros
+        </span>
+      </div>
+
+      <div className="flex items-center gap-2">
+        <button
           onClick={() => setCurrentPage(Math.max(currentPage - 1, 1))}
           disabled={currentPage === 1}
-          className={`p-2 rounded-lg ${
+          className={`p-2 rounded-lg border transition-all ${
             currentPage === 1
-              ? (isDarkMode
-                ? 'text-gray-600 bg-black cursor-not-allowed'
-                : 'text-gray-400 bg-gray-100 cursor-not-allowed'
-              )
-              : (isDarkMode
-                ? 'text-white bg-black hover:bg-gray-900 border border-gray-800 hover:border-gray-600 transition-colors'
-                : 'text-gray-900 bg-white hover:bg-gray-50 border border-gray-300 hover:border-red-400 transition-colors'
-              )
+              ? isDarkMode
+                ? 'border-white/5 text-white/20 cursor-not-allowed'
+                : 'border-black/5 text-black/20 cursor-not-allowed'
+              : isDarkMode
+                ? 'border-white/10 text-white hover:bg-white/5'
+                : 'border-black/10 text-black hover:bg-black/5'
           }`}
+          title="Página anterior"
         >
           <ChevronLeft className="h-5 w-5" />
         </button>
+
+        <div className={`flex items-center gap-2 px-3 py-1.5 text-sm ${
+          isDarkMode ? 'text-white/80' : 'text-black/80'
+        }`}>
+          <span className="font-medium">{currentPage}</span>
+          <span className={isDarkMode ? 'text-white/40' : 'text-black/40'}>de</span>
+          <span className="font-medium">{totalPages}</span>
+        </div>
+
         <button
-          title='Siguiente'
           onClick={() => setCurrentPage(Math.min(currentPage + 1, totalPages))}
           disabled={currentPage >= totalPages}
-          className={`p-2 rounded-lg ${
+          className={`p-2 rounded-lg border transition-all ${
             currentPage >= totalPages
-              ? (isDarkMode
-                ? 'text-gray-600 bg-black cursor-not-allowed'
-                : 'text-gray-400 bg-gray-100 cursor-not-allowed'
-              )
-              : (isDarkMode
-                ? 'text-white bg-black hover:bg-gray-900 border border-gray-800 hover:border-gray-600 transition-colors'
-                : 'text-gray-900 bg-white hover:bg-gray-50 border border-gray-300 hover:border-red-400 transition-colors'
-              )
+              ? isDarkMode
+                ? 'border-white/5 text-white/20 cursor-not-allowed'
+                : 'border-black/5 text-black/20 cursor-not-allowed'
+              : isDarkMode
+                ? 'border-white/10 text-white hover:bg-white/5'
+                : 'border-black/10 text-black hover:bg-black/5'
           }`}
+          title="Página siguiente"
         >
           <ChevronRight className="h-5 w-5" />
         </button>

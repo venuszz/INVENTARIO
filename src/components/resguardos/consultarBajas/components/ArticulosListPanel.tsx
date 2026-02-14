@@ -1,4 +1,4 @@
-import { ListChecks, X, FileDigit, Calendar } from 'lucide-react';
+import { ListChecks, X, FileDigit, Calendar, User, Briefcase, CircleX, XOctagon } from 'lucide-react';
 import RoleGuard from '@/components/roleGuard';
 import type { ResguardoBajaDetalle, ResguardoBajaArticulo } from '../types';
 
@@ -34,196 +34,190 @@ export const ArticulosListPanel: React.FC<ArticulosListPanelProps> = ({
   const selectedCount = Object.values(selectedItems).filter(Boolean).length;
 
   return (
-    <div className={`rounded-xl border p-4 flex-grow shadow-inner relative max-h-[70vh] overflow-hidden ${
+    <div className={`rounded-lg border p-4 flex-grow flex flex-col overflow-hidden ${
       isDarkMode
-        ? 'bg-gray-900/30 border-gray-800'
-        : 'bg-white border-gray-200'
+        ? 'bg-white/[0.02] border-white/10'
+        : 'bg-black/[0.02] border-black/10'
     }`}>
-      <h2 className={`text-lg font-medium mb-4 flex items-center gap-2 sticky top-0 z-20 p-2 -m-2 backdrop-blur-md ${
-        isDarkMode
-          ? 'text-gray-100 bg-black'
-          : 'text-gray-900 bg-white'
+      <h2 className={`text-lg font-medium mb-4 flex items-center gap-2 ${
+        isDarkMode ? 'text-white' : 'text-black'
       }`}>
-        <ListChecks className={`h-5 w-5 ${
-          isDarkMode ? 'text-red-400' : 'text-red-600'
-        }`} />
+        <ListChecks className="h-5 w-5" />
         Artículos Dados de Baja ({selectedBaja?.articulos.length || 0})
       </h2>
 
-      {selectedBaja ? (
-        <div className="space-y-3 mt-2 overflow-auto max-h-[54vh]">
-          {/* Sticky header with actions */}
-          <div className={`sticky top-0 z-10 backdrop-blur-sm p-2 -mx-2 mb-2 border-b ${
-            isDarkMode
-              ? 'bg-gradient-to-b from-black/90 to-black/80 border-gray-800/50'
-              : 'bg-gradient-to-b from-white/90 to-white/80 border-gray-200/50'
-          }`}>
-            <div className="flex items-center justify-between gap-2">
-              <div className="flex items-center gap-2">
+      <div className="flex-1 overflow-y-auto max-h-[70vh]">
+        {selectedBaja ? (
+          <>
+            {selectedCount > 0 && (
+              <div className="flex justify-end items-center gap-2 mb-4 overflow-auto">
+                <RoleGuard roles={["admin", "superadmin"]} userRole={userRole ?? undefined}>
+                  <button
+                    className={`px-4 py-2 rounded-lg text-sm font-semibold flex items-center gap-2 transition-colors ${
+                      isDarkMode
+                        ? 'bg-red-600 hover:bg-red-500 text-white'
+                        : 'bg-red-600 hover:bg-red-700 text-white'
+                    }`}
+                    onClick={onDeleteSelected}
+                  >
+                    <XOctagon className="h-4 w-4" />
+                    Eliminar seleccionados ({selectedCount})
+                  </button>
+                </RoleGuard>
                 <button
+                  className={`px-3 py-2 rounded-lg text-xs font-medium flex items-center gap-2 border transition-colors ${
+                    isDarkMode
+                      ? 'border-white/10 hover:bg-white/5 text-white'
+                      : 'border-black/10 hover:bg-black/5 text-black'
+                  }`}
                   onClick={onClearSelections}
-                  className={`px-3 py-1.5 rounded-lg text-sm transition-all duration-300 border ${
-                    isDarkMode
-                      ? 'bg-black text-gray-400 hover:bg-gray-900 border-gray-800/50 hover:text-gray-300'
-                      : 'bg-white text-gray-600 hover:bg-gray-50 border-gray-300 hover:text-gray-700'
-                  }`}
                 >
-                  Limpiar Selección
+                  <X className="h-4 w-4" />
+                  Limpiar selección
                 </button>
-                {selectedCount > 0 && (
-                  <RoleGuard roles={["admin", "superadmin"]} userRole={userRole ?? undefined}>
-                    <button
-                      onClick={onDeleteSelected}
-                      className={`px-3 py-1.5 rounded-lg text-sm transition-all duration-300 border flex items-center gap-2 ${
-                        isDarkMode
-                          ? 'bg-red-900/20 text-red-400 hover:bg-red-900/30 border-red-900/50 hover:text-white'
-                          : 'bg-red-50 text-red-700 hover:bg-red-100 border-red-300 hover:text-red-800'
-                      }`}
-                    >
-                      <X className="h-3 w-3" />
-                      Eliminar Seleccionados
-                    </button>
-                  </RoleGuard>
-                )}
               </div>
-              <span className={`text-sm ${
-                isDarkMode ? 'text-gray-400' : 'text-gray-600'
+            )}
+
+            {Object.entries(groupedItems).map(([folioBaja, articulos]) => (
+              <div key={folioBaja} className={`mb-8 rounded-lg border ${
+                isDarkMode
+                  ? 'bg-white/[0.02] border-white/10'
+                  : 'bg-black/[0.02] border-black/10'
               }`}>
-                {selectedCount} seleccionados
-              </span>
-            </div>
-          </div>
-
-          {/* Grouped articles */}
-          {Object.entries(groupedItems).map(([folioBaja, articulos]) => (
-            <div key={folioBaja} className={`mb-6 p-4 rounded-xl border ${
-              isDarkMode
-                ? 'bg-gray-900/20 border-gray-800/50'
-                : 'bg-gray-50 border-gray-200'
-            }`}>
-              <div className="flex items-center justify-between mb-3">
-                <h3 className={`text-sm font-medium flex items-center gap-2 group ${
-                  isDarkMode ? 'text-red-400' : 'text-red-600'
+                <div className={`flex items-center justify-between px-6 py-3 border-b ${
+                  isDarkMode ? 'border-white/10' : 'border-black/10'
                 }`}>
-                  <FileDigit className="h-4 w-4 group-hover:animate-pulse" />
-                  Folio de Baja: {folioBaja}
-                </h3>
-                <button
-                  onClick={() => onGroupSelection(folioBaja, articulos)}
-                  className={`px-2 py-1 text-xs rounded-lg transition-all duration-300 border ${
-                    isDarkMode
-                      ? 'bg-red-900/20 text-red-400 hover:bg-red-900/30 border-red-900/50 hover:text-white'
-                      : 'bg-red-50 text-red-700 hover:bg-red-100 border-red-300 hover:text-red-800'
-                  }`}
-                >
-                  {articulos.every(art => selectedItems[art.id]) ? 'Deseleccionar Grupo' : 'Seleccionar Grupo'}
-                </button>
-              </div>
-
-              <div className="space-y-2">
-                {articulos.map((articulo, index) => (
-                  <div
-                    key={`${folioBaja}-${index}`}
-                    className={`rounded-lg p-4 border-2 transition-all duration-300 hover:shadow-md ${
-                      selectedItems[articulo.id]
-                        ? (isDarkMode
-                          ? 'bg-gradient-to-b from-red-900/20 to-red-900/10 border-red-500 shadow-[0_0_15px_-3px_rgba(239,68,68,0.2)]'
-                          : 'bg-gradient-to-b from-red-100 to-red-50 border-red-400 shadow-[0_0_15px_-3px_rgba(239,68,68,0.1)]'
-                        )
-                        : (isDarkMode
-                          ? 'bg-gradient-to-b from-black/40 to-black/30 border-gray-800/50 hover:border-gray-700/50'
-                          : 'bg-gradient-to-b from-gray-50 to-white border-gray-200 hover:border-gray-300'
-                        )
+                  <div className="flex items-center gap-2">
+                    <FileDigit className="h-4 w-4" />
+                    <span className={`font-medium text-sm ${
+                      isDarkMode ? 'text-white' : 'text-black'
+                    }`}>
+                      Folio de Baja: {folioBaja}
+                    </span>
+                    <span className={`ml-2 text-xs ${
+                      isDarkMode ? 'text-white/60' : 'text-black/60'
+                    }`}>
+                      {articulos.length} artículo{articulos.length !== 1 ? 's' : ''}
+                    </span>
+                  </div>
+                  <button
+                    onClick={() => onGroupSelection(folioBaja, articulos)}
+                    className={`px-2 py-1 text-xs rounded-lg border transition-colors ${
+                      isDarkMode
+                        ? 'border-white/10 hover:bg-white/5 text-white'
+                        : 'border-black/10 hover:bg-black/5 text-black'
                     }`}
                   >
-                    <div className="flex items-start justify-between gap-4">
+                    {articulos.every(art => selectedItems[art.id]) ? 'Deseleccionar' : 'Seleccionar'}
+                  </button>
+                </div>
+
+                <ul className={`divide-y ${
+                  isDarkMode
+                    ? 'divide-white/5'
+                    : 'divide-black/5'
+                }`}>
+                  {articulos.map((articulo, index) => (
+                    <li
+                      key={`${folioBaja}-${index}`}
+                      className={`flex items-start gap-4 px-6 py-3 transition-colors ${
+                        selectedItems[articulo.id]
+                          ? (isDarkMode ? 'bg-white/[0.02]' : 'bg-black/[0.02]')
+                          : (isDarkMode ? 'hover:bg-white/[0.02]' : 'hover:bg-black/[0.02]')
+                      }`}
+                    >
                       <div
                         onClick={() => onItemSelection(articulo.id)}
-                        className="flex-1 cursor-pointer group"
+                        className={`flex items-center justify-center w-5 h-5 rounded border cursor-pointer transition-all mt-1 mr-2 ${
+                          selectedItems[articulo.id]
+                            ? (isDarkMode ? 'bg-white/20 border-white/40' : 'bg-black/20 border-black/40')
+                            : (isDarkMode ? 'border-white/20 hover:bg-white/10' : 'border-black/20 hover:bg-black/10')
+                        }`}
+                        title="Seleccionar artículo"
                       >
-                        <div className="flex items-center gap-2 mb-1">
-                          <div className={`text-sm font-medium transition-colors ${
-                            isDarkMode
-                              ? 'text-white group-hover:text-red-400'
-                              : 'text-gray-900 group-hover:text-red-600'
+                        {selectedItems[articulo.id] && (
+                          <div className={`w-2 h-2 rounded-full ${
+                            isDarkMode ? 'bg-white' : 'bg-black'
+                          }`}></div>
+                        )}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <span className={`text-sm font-medium truncate ${
+                            isDarkMode ? 'text-white' : 'text-black'
                           }`}>
                             {articulo.num_inventario}
-                          </div>
-                          <span className={`text-xs px-2 py-0.5 rounded ${
-                            isDarkMode
-                              ? 'bg-gray-800/70 text-gray-400'
-                              : 'bg-gray-200 text-gray-600'
-                          }`}>
-                            {articulo.rubro}
                           </span>
-                          <span className={`text-xs px-2 py-0.5 rounded-full border ${
-                            articulo.origen?.startsWith('INEA') || articulo.num_inventario.startsWith('INEA')
-                              ? (isDarkMode
-                                ? 'bg-blue-900/70 text-blue-200 border-blue-700/50'
-                                : 'bg-blue-100 text-blue-800 border-blue-300'
-                              )
-                              : (isDarkMode
-                                ? 'bg-purple-900/70 text-purple-200 border-purple-700/50'
-                                : 'bg-purple-100 text-purple-800 border-purple-300'
-                              )
+                          <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium border ${
+                            articulo.condicion === 'B' ? (isDarkMode ? 'bg-green-500/10 text-green-300 border-green-500/30' : 'bg-green-100 text-green-700 border-green-300') :
+                            articulo.condicion === 'R' ? (isDarkMode ? 'bg-yellow-500/10 text-yellow-300 border-yellow-500/30' : 'bg-yellow-100 text-yellow-700 border-yellow-300') :
+                            articulo.condicion === 'M' ? (isDarkMode ? 'bg-red-500/10 text-red-300 border-red-500/30' : 'bg-red-100 text-red-700 border-red-300') :
+                            (isDarkMode ? 'bg-white/5 text-white/60 border-white/20' : 'bg-black/5 text-black/60 border-black/20')
+                          }`}>
+                            {articulo.condicion}
+                          </span>
+                          <span className={`ml-2 px-2 py-0.5 rounded-full text-xs font-medium border ${
+                            articulo.origen === 'INEA' || articulo.num_inventario.startsWith('INEA') ? (isDarkMode ? 'bg-blue-500/10 text-blue-300 border-blue-500/30' : 'bg-blue-100 text-blue-700 border-blue-300') :
+                            articulo.origen === 'ITEA' || articulo.num_inventario.startsWith('ITEA') ? (isDarkMode ? 'bg-pink-500/10 text-pink-300 border-pink-500/30' : 'bg-pink-100 text-pink-700 border-pink-300') :
+                            (isDarkMode ? 'bg-white/5 text-white/60 border-white/20' : 'bg-black/5 text-black/60 border-black/20')
                           }`}>
                             {articulo.origen?.startsWith('INEA') || articulo.num_inventario.startsWith('INEA') ? 'INEA' : 'ITEA'}
                           </span>
                         </div>
-                        <p className={`text-sm transition-colors ${
-                          isDarkMode
-                            ? 'text-gray-300 group-hover:text-white'
-                            : 'text-gray-700 group-hover:text-gray-900'
+                        <div className={`text-xs mt-1 ${
+                          isDarkMode ? 'text-white/80' : 'text-black/80'
                         }`}>
                           {articulo.descripcion}
-                        </p>
-                        <div className={`flex items-center gap-2 text-xs mt-1 transition-colors ${
-                          isDarkMode
-                            ? 'text-gray-500 group-hover:text-gray-400'
-                            : 'text-gray-600 group-hover:text-gray-700'
+                        </div>
+                        <div className={`text-xs mt-1 flex items-center gap-1 ${
+                          isDarkMode ? 'text-white/60' : 'text-black/60'
                         }`}>
-                          <span>Condición: {articulo.condicion}</span>
-                          <span className={isDarkMode ? 'text-gray-600' : 'text-gray-500'}>•</span>
-                          <span className="flex items-center gap-1">
-                            <Calendar className="h-3 w-3" />
-                            {selectedBaja?.f_resguardo.slice(0, 10).split('-').reverse().join('/')}
-                          </span>
+                          <Briefcase className="h-3 w-3" />
+                          {articulo.rubro}
+                        </div>
+                        <div className={`mt-3 text-xs flex items-center gap-2 ${
+                          isDarkMode ? 'text-blue-400' : 'text-blue-600'
+                        }`}>
+                          <User className="h-3.5 w-3.5" />
+                          {articulo.usufinal || <span className={`italic ${
+                            isDarkMode ? 'text-white/60' : 'text-black/60'
+                          }`}>Sin asignar</span>}
                         </div>
                       </div>
                       <RoleGuard roles={["admin", "superadmin"]} userRole={userRole ?? undefined}>
                         <button
+                          title="Eliminar artículo"
                           onClick={(e) => {
                             e.stopPropagation();
                             onDeleteSingle(articulo);
                           }}
-                          className={`p-2 rounded-lg transition-all duration-300 border shadow-lg ${
+                          className={`p-1 rounded-full self-center ml-auto transition-colors ${
                             isDarkMode
-                              ? 'bg-gradient-to-b from-red-900/20 to-red-900/10 text-red-400 hover:from-red-900/30 hover:to-red-900/20 border-red-900/50 hover:text-white hover:shadow-red-500/20'
-                              : 'bg-gradient-to-b from-red-100 to-red-50 text-red-700 hover:from-red-200 hover:to-red-100 border-red-300 hover:text-red-800'
+                              ? 'text-white/40 hover:text-red-400 hover:bg-white/5'
+                              : 'text-black/40 hover:text-red-600 hover:bg-black/5'
                           }`}
-                          title="Eliminar artículo"
                         >
-                          <X className="h-4 w-4" />
+                          <CircleX className="h-4 w-4" />
                         </button>
                       </RoleGuard>
-                    </div>
-                  </div>
-                ))}
+                    </li>
+                  ))}
+                </ul>
               </div>
-            </div>
-          ))}
-        </div>
-      ) : (
-        <div className={`flex flex-col items-center justify-center h-full min-h-[200px] ${
-          isDarkMode ? 'text-gray-500' : 'text-gray-600'
-        }`}>
-          <ListChecks className={`h-12 w-12 mb-2 animate-pulse ${
-            isDarkMode ? 'text-gray-600' : 'text-gray-400'
-          }`} />
-          <p className="text-sm">No hay artículos para mostrar</p>
-          <p className="text-xs mt-1">Seleccione una baja para ver sus artículos</p>
-        </div>
-      )}
+            ))}
+          </>
+        ) : (
+          <div className={`flex flex-col items-center justify-center h-full min-h-[200px] ${
+            isDarkMode ? 'text-white/60' : 'text-black/60'
+          }`}>
+            <ListChecks className={`h-12 w-12 mb-2 ${
+              isDarkMode ? 'text-white/20' : 'text-black/20'
+            }`} />
+            <p className="text-sm">No hay artículos para mostrar</p>
+            <p className="text-xs mt-1">Seleccione una baja para ver sus artículos</p>
+          </div>
+        )}
+      </div>
     </div>
   );
 };

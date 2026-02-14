@@ -18,26 +18,30 @@ export const ErrorAlert: React.FC<ErrorAlertProps> = ({
   if (!error) return null;
 
   return (
-    <div className={`fixed bottom-4 left-4 right-4 md:left-auto md:right-4 md:w-96 px-4 py-3 rounded-lg shadow-lg border z-50 backdrop-blur-sm animate-fade-in ${
-      isDarkMode
-        ? 'bg-red-900/80 text-red-100 border-red-800'
-        : 'bg-red-50 text-red-900 border-red-200'
+    <div className={`fixed bottom-4 left-4 right-4 md:left-auto md:right-4 md:w-96 rounded-lg border z-50 backdrop-blur-xl ${
+      isDarkMode 
+        ? 'bg-red-500/10 border-red-500/30' 
+        : 'bg-red-50 border-red-200'
     }`}>
-      <div className="flex items-center">
-        <AlertCircle className="h-5 w-5 text-red-400 mr-3 flex-shrink-0 animate-pulse" />
+      <div className="p-4 flex items-start gap-3">
+        <div className={`p-1.5 rounded-lg flex-shrink-0 ${
+          isDarkMode ? 'bg-red-500/10' : 'bg-red-100'
+        }`}>
+          <AlertCircle size={16} className={isDarkMode ? 'text-red-400' : 'text-red-600'} />
+        </div>
         <div className="flex-1 min-w-0">
-          <p className="text-sm font-medium">{error}</p>
+          <p className={`text-sm ${isDarkMode ? 'text-white' : 'text-black'}`}>{error}</p>
         </div>
         <button
           title='Cerrar alerta'
           onClick={onClose}
-          className={`ml-4 flex-shrink-0 p-1 rounded-full transition-colors ${
+          className={`p-1.5 rounded-lg transition-colors flex-shrink-0 ${
             isDarkMode
-              ? 'text-red-200 hover:text-white hover:bg-red-800'
-              : 'text-red-600 hover:text-red-800 hover:bg-red-100'
+              ? 'hover:bg-white/10 text-white'
+              : 'hover:bg-black/10 text-black'
           }`}
         >
-          <X className="h-4 w-4" />
+          <X size={14} />
         </button>
       </div>
     </div>

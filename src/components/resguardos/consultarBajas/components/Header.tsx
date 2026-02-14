@@ -17,33 +17,35 @@ export const Header: React.FC<HeaderProps> = ({
   isDarkMode
 }) => {
   return (
-    <div className={`p-4 sm:p-6 flex flex-col sm:flex-row justify-between items-start sm:items-center border-b gap-2 sm:gap-0 ${
-      isDarkMode
-        ? 'bg-gray-900/30 border-gray-800'
-        : 'bg-gray-50/50 border-gray-200'
+    <div className={`flex justify-between items-center mb-8 pb-6 border-b ${
+      isDarkMode ? 'border-white/10' : 'border-black/10'
     }`}>
       <div>
-        <h1 className="text-xl sm:text-2xl md:text-3xl font-bold flex items-center">
-          <span className={`mr-2 sm:mr-3 p-1 sm:p-2 rounded-lg border text-sm sm:text-base shadow-lg ${
-            isDarkMode
-              ? 'bg-red-800 text-white border-red-700/50'
-              : 'bg-red-600 text-white border-red-600'
-          }`}>
-            BAJ
-          </span>
-          <span className={isDarkMode ? 'text-red-500' : 'text-gray-900'}>
-            Consulta de Resguardos Dados de Baja
-          </span>
+        <h1 className="text-3xl font-light tracking-tight mb-1">
+          Consulta de Resguardos Dados de Baja
         </h1>
-        <div className={`flex items-center gap-2 text-sm px-3 py-1.5 rounded-full border ${
-          isDarkMode
-            ? 'text-gray-400 bg-gray-900/50 border-gray-800/50'
-            : 'text-gray-600 bg-gray-100 border-gray-300'
-        }`}>
-          <ListChecks className={`h-4 w-4 ${
-            isDarkMode ? 'text-red-400' : 'text-red-600'
-          }`} />
-          <span>{totalCount} resguardos dados de baja</span>
+        <div className="flex items-center gap-3">
+          <p className={`text-sm ${isDarkMode ? 'text-white/40' : 'text-black/60'}`}>
+            Visualiza resguardos dados de baja
+          </p>
+          {totalCount > 0 && (
+            <>
+              <span className={`text-sm ${isDarkMode ? 'text-white/20' : 'text-black/30'}`}>
+                •
+              </span>
+              <div className="flex items-center gap-1.5">
+                <ListChecks 
+                  size={14} 
+                  className={isDarkMode ? 'text-red-400' : 'text-red-600'} 
+                />
+                <span className={`text-sm font-medium ${
+                  isDarkMode ? 'text-white' : 'text-black'
+                }`}>
+                  {totalCount} {totalCount === 1 ? 'resguardo' : 'resguardos'}
+                </span>
+              </div>
+            </>
+          )}
         </div>
       </div>
       <SectionRealtimeToggle 

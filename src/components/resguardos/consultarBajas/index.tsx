@@ -303,37 +303,38 @@ const ConsultarBajasResguardos = () => {
   }, [pdfBajaData]);
 
   return (
-    <div className={`min-h-screen p-2 sm:p-4 md:p-6 lg:p-8 transition-colors duration-500 ${
-      isDarkMode
-        ? 'bg-black text-white'
-        : 'bg-gradient-to-br from-gray-50 via-white to-gray-100 text-gray-900'
+    <div className={`h-[calc(100vh-4rem)] overflow-hidden transition-colors duration-300 ${
+      isDarkMode ? 'bg-black text-white' : 'bg-white text-black'
     }`}>
       {/* Loading overlay for URL parameter */}
       {folioParamLoading && (
-        <div className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center">
-          <div className="flex flex-col items-center gap-2">
-            <span className="text-white animate-pulse text-lg font-bold">Cargando folio...</span>
-            <div className="h-10 w-10 border-4 border-white border-t-transparent rounded-full animate-spin"></div>
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50">
+          <div className={`p-6 rounded-lg ${
+            isDarkMode ? 'bg-gray-900' : 'bg-white'
+          }`}>
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto"></div>
+            <p className={`mt-4 ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>Cargando folio...</p>
           </div>
         </div>
       )}
 
-      <div className={`w-full mx-auto rounded-lg sm:rounded-xl shadow-2xl overflow-hidden transition-all duration-500 transform border ${
-        isDarkMode
-          ? 'bg-black border-gray-800'
-          : 'bg-white border-gray-200'
+      <div className={`h-full overflow-y-auto p-4 md:p-8 ${
+        isDarkMode 
+          ? 'scrollbar-thin scrollbar-track-white/5 scrollbar-thumb-white/20 hover:scrollbar-thumb-white/30'
+          : 'scrollbar-thin scrollbar-track-black/5 scrollbar-thumb-black/20 hover:scrollbar-thumb-black/30'
       }`}>
-        {/* Header */}
-        <Header 
-          totalCount={totalCount}
-          realtimeConnected={realtimeConnected}
-          isDarkMode={isDarkMode}
-        />
+        <div className="w-full max-w-7xl mx-auto pb-8">
+          {/* Header */}
+          <Header 
+            totalCount={totalCount}
+            realtimeConnected={realtimeConnected}
+            isDarkMode={isDarkMode}
+          />
 
-        {/* Main container */}
-        <div className="grid grid-cols-1 lg:grid-cols-5 h-full flex-1">
+          {/* Main container */}
+          <div className="grid grid-cols-1 lg:grid-cols-5 gap-6 mt-8">
           {/* Left panel - Bajas table */}
-          <div className="flex-1 min-w-0 flex flex-col p-4 lg:col-span-3">
+          <div className="lg:col-span-3 space-y-6">
             {/* Search and Filters */}
             <SearchAndFilters
               searchTerm={searchTerm}
@@ -385,11 +386,7 @@ const ConsultarBajasResguardos = () => {
           </div>
 
           {/* Right panel - Details */}
-          <div ref={detailRef} className={`flex-1 p-4 border-t lg:border-t-0 lg:border-l flex flex-col lg:col-span-2 ${
-            isDarkMode
-              ? 'bg-black border-gray-800'
-              : 'bg-gray-50/30 border-gray-200'
-          }`}>
+          <div ref={detailRef} className="lg:col-span-2 space-y-6">
             {/* Details Panel */}
             <BajaDetailsPanel
               selectedBaja={selectedBaja}
@@ -417,8 +414,34 @@ const ConsultarBajasResguardos = () => {
               isDarkMode={isDarkMode}
             />
           </div>
+          </div>
         </div>
       </div>
+
+      {/* Scrollbar styles */}
+      <style jsx>{`
+        .scrollbar-thin {
+          scrollbar-width: thin;
+        }
+        
+        .scrollbar-thin::-webkit-scrollbar {
+          width: 6px;
+        }
+        
+        .scrollbar-thin::-webkit-scrollbar-track {
+          background: ${isDarkMode ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.05)'};
+          border-radius: 3px;
+        }
+        
+        .scrollbar-thin::-webkit-scrollbar-thumb {
+          background: ${isDarkMode ? 'rgba(255, 255, 255, 0.2)' : 'rgba(0, 0, 0, 0.2)'};
+          border-radius: 3px;
+        }
+        
+        .scrollbar-thin::-webkit-scrollbar-thumb:hover {
+          background: ${isDarkMode ? 'rgba(255, 255, 255, 0.3)' : 'rgba(0, 0, 0, 0.3)'};
+        }
+      `}</style>
 
       {/* Modals */}
       <PDFDownloadModal
