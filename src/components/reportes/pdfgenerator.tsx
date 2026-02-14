@@ -57,6 +57,15 @@ export const generatePDF = async ({ data, columns, title, fileName, firmas = [] 
         if (!text) return '';
         // Reemplazar caracteres especiales comunes que no están en WinAnsi
         return text
+            // Primero remover caracteres de control problemáticos (newlines, carriage returns, tabs)
+            .replace(/\r\n/g, ' ')  // Windows line endings
+            .replace(/\r/g, ' ')    // Mac line endings
+            .replace(/\n/g, ' ')    // Unix line endings
+            .replace(/\t/g, ' ')    // Tabs
+            .replace(/\v/g, ' ')    // Vertical tabs
+            .replace(/\f/g, ' ')    // Form feeds
+            // Reemplazar múltiples espacios con uno solo
+            .replace(/\s+/g, ' ')
             .replace(/Ω/g, 'Ohm')
             .replace(/μ/g, 'u')
             .replace(/α/g, 'alpha')
@@ -100,7 +109,9 @@ export const generatePDF = async ({ data, columns, title, fileName, firmas = [] 
             .replace(/⊆/g, 'subconjunto o igual')
             .replace(/⊇/g, 'superconjunto o igual')
             // Remover cualquier otro carácter no ASCII que pueda causar problemas
-            .replace(/[^\x00-\xFF]/g, '?');
+            .replace(/[^\x00-\xFF]/g, '?')
+            // Trim espacios al inicio y final
+            .trim();
     };
 
     // Función para dividir texto en líneas, incluyendo palabras largas

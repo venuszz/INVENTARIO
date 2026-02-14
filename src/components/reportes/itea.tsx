@@ -198,8 +198,8 @@ export default function ReportesIneaDashboard() {
         { header: 'Ubicación NO', key: 'ubicacion_no', width: 12 },
         { header: 'Estado', key: 'estado', width: 14 },
         { header: 'Estatus', key: 'estatus', width: 14 },
-        { header: 'Área', key: 'area', width: 18 },
-        { header: 'Usuario Final', key: 'usufinal', width: 20 },
+        { header: 'Área', key: 'area_nombre', width: 18 },
+        { header: 'Director/Responsable', key: 'director_nombre', width: 20 },
         { header: 'Fecha Baja', key: 'fechabaja', width: 16 },
         { header: 'Causa de Baja', key: 'causadebaja', width: 24 },
         { header: 'Resguardante', key: 'resguardante', width: 18 },
@@ -218,7 +218,11 @@ export default function ReportesIneaDashboard() {
             // Encontrar el reporte seleccionado para obtener su estatus
             const selectedReporte = reportes.find(r => r.title === selectedReport);
             
-            let query = supabase.from('mueblesitea').select('*', { count: 'exact', head: false });
+            let query = supabase.from('mueblesitea').select(`
+                *,
+                area:area(id_area, nombre),
+                directorio:directorio(id_directorio, nombre, puesto)
+            `, { count: 'exact', head: false });
             
             // Aplicar filtro según el modo de vista
             if (selectedReporte?.estatus) {
@@ -270,12 +274,47 @@ export default function ReportesIneaDashboard() {
             if (!worksheetName) worksheetName = 'Reporte';
             const fileName = `reporte_itea_${selectedReport.toLowerCase().replace(/ /g, '_')}_${new Date().toISOString().slice(0,10)}`;
 
-            const exportData: Record<string, unknown>[] = allData.map(item => ({
-                ...item,
-                valor: item.valor?.toString() || '',
-                f_adq: item.f_adq || '',
-                fechabaja: item.fechabaja || ''
-            }));
+            const exportData: Record<string, unknown>[] = allData.map(item => {
+                const itemAny = item as any;
+                
+                // Extract area name - handle both relational and legacy formats
+                let areaNombre = '';
+                if (typeof itemAny.area === 'object' && itemAny.area !== null) {
+                    areaNombre = itemAny.area.nombre || '';
+                } else if (typeof itemAny.area === 'string') {
+                    areaNombre = itemAny.area;
+                }
+                
+                // Extract director name - handle both relational and legacy formats
+                let directorNombre = '';
+                if (typeof itemAny.directorio === 'object' && itemAny.directorio !== null) {
+                    directorNombre = itemAny.directorio.nombre || '';
+                } else if (typeof item.usufinal === 'string') {
+                    directorNombre = item.usufinal;
+                }
+                
+                const mapped: Record<string, unknown> = {
+                    id_inv: item.id_inv,
+                    rubro: item.rubro,
+                    descripcion: item.descripcion,
+                    valor: item.valor?.toString() || '',
+                    f_adq: item.f_adq || '',
+                    formadq: item.formadq,
+                    proveedor: item.proveedor,
+                    factura: item.factura,
+                    ubicacion_es: item.ubicacion_es,
+                    ubicacion_mu: item.ubicacion_mu,
+                    ubicacion_no: item.ubicacion_no,
+                    estado: item.estado,
+                    estatus: item.estatus,
+                    area_nombre: areaNombre,
+                    director_nombre: directorNombre,
+                    fechabaja: item.fechabaja || '',
+                    causadebaja: item.causadebaja,
+                    resguardante: item.resguardante,
+                };
+                return mapped;
+            });
 
             if (format === 'Excel') {
                 await generateExcel({ data: exportData, fileName, worksheetName });
@@ -301,8 +340,8 @@ export default function ReportesIneaDashboard() {
                     { header: 'FECHA ADQ.', key: 'f_adq', width: 40 },
                     { header: 'FORMA ADQ.', key: 'formadq', width: 40 },
                     { header: 'UBICACIÓN', key: 'ubicacion_es', width: 66 },
-                    { header: 'AREA', key: 'area', width: 65 },
-                    { header: 'USUARIO FINAL', key: 'usufinal', width: 80 }
+                    { header: 'AREA', key: 'area_nombre', width: 65 },
+                    { header: 'DIRECTOR/RESPONSABLE', key: 'director_nombre', width: 80 }
                 ];
 
                 await generatePDF({ 
