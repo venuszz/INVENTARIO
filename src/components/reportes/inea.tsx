@@ -232,19 +232,6 @@ export default function ReportesIneaDashboard() {
                     directorNombre = itemAny.id_directorio.nombre || '';
                 }
                 
-                // Debug first item
-                if (allData.indexOf(item) === 0) {
-                    console.log('🔍 First item debug:', {
-                        area: itemAny.area,
-                        id_area: itemAny.id_area,
-                        directorio: itemAny.directorio,
-                        id_directorio: itemAny.id_directorio,
-                        usufinal: item.usufinal,
-                        areaNombre,
-                        directorNombre
-                    });
-                }
-                
                 const mapped: Record<string, unknown> = {
                     id_inv: item.id_inv,
                     rubro: item.rubro,
@@ -267,8 +254,6 @@ export default function ReportesIneaDashboard() {
                 };
                 return mapped;
             });
-            
-            console.log('📊 Export data sample:', exportData[0]);
 
             if (format === 'Excel') {
                 await generateExcel({ data: exportData, fileName, worksheetName });
