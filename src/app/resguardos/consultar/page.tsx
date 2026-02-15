@@ -2,6 +2,7 @@
 import { Metadata } from "next";
 import { Suspense } from "react";
 import ConsultarClient from "./client";
+import ConsultarSkeletonWrapper from "@/components/resguardos/consultar/components/ConsultarSkeletonWrapper";
 
 export const metadata: Metadata = {
     title: "INVENTARIO | RESGUARDOS",
@@ -10,7 +11,7 @@ export const metadata: Metadata = {
 
 export default function Page() {
     return (
-        <Suspense fallback={<div className="w-full h-full flex items-center justify-center">Cargando...</div>}>
+        <Suspense fallback={<ConsultarSkeletonWrapper />}>
             <ConsultarClient />
         </Suspense>
     );
