@@ -533,7 +533,8 @@ export default function Step2LocationStatus({
   onDirectorSelect,
   onAreaWarningClick,
   isFieldValid,
-  isDarkMode
+  isDarkMode,
+  isTlaxcala = false
 }: Step2Props) {
   const [showErrors, setShowErrors] = useState(false);
   
@@ -713,7 +714,7 @@ export default function Step2LocationStatus({
 
             <div>
               <label className={getLabelClasses()}>
-                Estatus <span className="text-red-500">*</span>
+                Estatus {!isTlaxcala && <span className="text-red-500">*</span>}
               </label>
               <CustomSelect
                 value={formData.estatus}
@@ -751,7 +752,7 @@ export default function Step2LocationStatus({
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
               <label className={getLabelClasses()}>
-                Director/Jefe de Área <span className="text-red-500">*</span>
+                Director/Jefe de Área {!isTlaxcala && <span className="text-red-500">*</span>}
               </label>
               <CustomSelect
                 value={formData.usufinal}
@@ -776,7 +777,7 @@ export default function Step2LocationStatus({
 
             <div>
               <label className={getLabelClasses()}>
-                Área <span className="text-red-500">*</span>
+                Área {!isTlaxcala && <span className="text-red-500">*</span>}
               </label>
               <div className="relative">
                 <input
@@ -904,7 +905,12 @@ export default function Step2LocationStatus({
         animate={{ opacity: 1 }}
         transition={{ delay: 0.5 }}
       >
-        Los campos marcados con <span className="text-red-500">*</span> son obligatorios
+        {!isTlaxcala && (
+          <>Los campos marcados con <span className="text-red-500">*</span> son obligatorios</>
+        )}
+        {isTlaxcala && (
+          <>Todos los campos son opcionales para bienes de Tlaxcala</>
+        )}
       </motion.div>
     </motion.div>
   );

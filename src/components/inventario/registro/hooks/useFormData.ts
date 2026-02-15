@@ -14,6 +14,7 @@ interface UseFormDataReturn {
   isStepComplete: (step: number) => boolean;
   formatCurrency: (value: string) => string;
   setIsTlaxcala: (isTlaxcala: boolean) => void;
+  isTlaxcala: boolean;
 }
 
 const initialFormData: FormData = {
@@ -118,11 +119,30 @@ export function useFormData(defaultEstado: string = '', defaultEstatus: string =
   }, [formData, touched, isTlaxcala]);
 
   const isStepComplete = useCallback((step: number): boolean => {
-    // If Tlaxcala is selected, all steps are complete
-    if (isTlaxcala) return true;
+    // Step 0 (institution selection) is always complete
+    if (step === 0) return true;
     
+    // For Tlaxcala, only require at least one field to be filled in each step
+    if (isTlaxcala) {
+      const fields = requiredFields[step as keyof typeof requiredFields];
+      if (!fields || fields.length === 0) return true;
+      
+      // At least one field should have a value
+      return fields.some(field => {
+        const value = formData[field as keyof FormData];
+        if (typeof value === 'string') {
+          return value.trim() !== '';
+        }
+        if (typeof value === 'number') {
+          return value !== null && value !== undefined;
+        }
+        return value !== null && value !== undefined && value !== '';
+      });
+    }
+    
+    // For INEA/ITEA, all required fields must be filled
     const fields = requiredFields[step as keyof typeof requiredFields];
-    if (!fields) return true; // If step doesn't exist, consider it complete
+    if (!fields) return true;
     return fields.every(field => {
       const value = formData[field as keyof FormData];
       // Handle string fields
@@ -158,6 +178,7 @@ export function useFormData(defaultEstado: string = '', defaultEstatus: string =
     isFieldValid,
     isStepComplete,
     formatCurrency,
-    setIsTlaxcala
+    setIsTlaxcala,
+    isTlaxcala
   };
 }

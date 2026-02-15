@@ -12,7 +12,8 @@ export default function Step3AdditionalDetails({
   onImageChange,
   onImageRemove,
   isFieldValid,
-  isDarkMode
+  isDarkMode,
+  isTlaxcala = false
 }: Step3Props) {
   const [showErrors, setShowErrors] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
@@ -94,7 +95,7 @@ export default function Step3AdditionalDetails({
           transition={{ delay: 0.1 }}
         >
           <label className={getLabelClasses()}>
-            Descripción <span className="text-red-500">*</span>
+            Descripción {!isTlaxcala && <span className="text-red-500">*</span>}
           </label>
           <textarea
             name="descripcion"
@@ -240,7 +241,12 @@ export default function Step3AdditionalDetails({
         animate={{ opacity: 1 }}
         transition={{ delay: 0.5 }}
       >
-        Los campos marcados con <span className="text-red-500">*</span> son obligatorios
+        {!isTlaxcala && (
+          <>Los campos marcados con <span className="text-red-500">*</span> son obligatorios</>
+        )}
+        {isTlaxcala && (
+          <>Todos los campos son opcionales para bienes de Tlaxcala</>
+        )}
       </motion.div>
     </motion.div>
   );

@@ -316,7 +316,8 @@ export default function Step1BasicInfo({
   onBlur,
   onCurrencyChange,
   isFieldValid,
-  isDarkMode
+  isDarkMode,
+  isTlaxcala = false
 }: Step1Props) {
   const [showErrors, setShowErrors] = useState(false);
 
@@ -389,7 +390,7 @@ export default function Step1BasicInfo({
           transition={{ delay: 0.1 }}
         >
           <label className={getLabelClasses()}>
-            ID Inventario <span className="text-red-500">*</span>
+            ID Inventario {!isTlaxcala && <span className="text-red-500">*</span>}
           </label>
           <input
             type="text"
@@ -419,7 +420,7 @@ export default function Step1BasicInfo({
             transition={{ delay: 0.15 }}
           >
             <label className={getLabelClasses()}>
-              Rubro <span className="text-red-500">*</span>
+              Rubro {!isTlaxcala && <span className="text-red-500">*</span>}
             </label>
             <CustomSelect
               value={formData.rubro}
@@ -447,7 +448,7 @@ export default function Step1BasicInfo({
             transition={{ delay: 0.2 }}
           >
             <label className={getLabelClasses()}>
-              Valor <span className="text-red-500">*</span>
+              Valor {!isTlaxcala && <span className="text-red-500">*</span>}
             </label>
             <div className="relative">
               <input
@@ -489,7 +490,7 @@ export default function Step1BasicInfo({
             transition={{ delay: 0.25 }}
           >
             <label className={getLabelClasses()}>
-              Forma de Adquisición <span className="text-red-500">*</span>
+              Forma de Adquisición {!isTlaxcala && <span className="text-red-500">*</span>}
             </label>
             <CustomSelect
               value={formData.formadq}
@@ -517,7 +518,7 @@ export default function Step1BasicInfo({
             transition={{ delay: 0.3 }}
           >
             <label className={getLabelClasses()}>
-              Fecha de Adquisición <span className="text-red-500">*</span>
+              Fecha de Adquisición {!isTlaxcala && <span className="text-red-500">*</span>}
             </label>
             <CustomDateInput
               value={formData.f_adq}
@@ -587,7 +588,12 @@ export default function Step1BasicInfo({
         animate={{ opacity: 1 }}
         transition={{ delay: 0.5 }}
       >
-        Los campos marcados con <span className="text-red-500">*</span> son obligatorios
+        {!isTlaxcala && (
+          <>Los campos marcados con <span className="text-red-500">*</span> son obligatorios</>
+        )}
+        {isTlaxcala && (
+          <>Todos los campos son opcionales para bienes de Tlaxcala</>
+        )}
       </motion.div>
     </motion.div>
   );

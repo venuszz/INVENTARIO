@@ -93,6 +93,7 @@ export interface Step1Props {
   onCurrencyChange: (e: ChangeEvent<HTMLInputElement>) => void;
   isFieldValid: (fieldName: string) => boolean;
   isDarkMode: boolean;
+  isTlaxcala?: boolean;
 }
 
 export interface Step2Props {
@@ -106,6 +107,7 @@ export interface Step2Props {
   onAreaWarningClick?: () => void;
   isFieldValid: (fieldName: string) => boolean;
   isDarkMode: boolean;
+  isTlaxcala?: boolean;
 }
 
 export interface Step3Props {
@@ -118,6 +120,7 @@ export interface Step3Props {
   onImageRemove: () => void;
   isFieldValid: (fieldName: string) => boolean;
   isDarkMode: boolean;
+  isTlaxcala?: boolean;
 }
 
 export interface DirectorInfoModalProps {

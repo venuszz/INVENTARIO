@@ -51,7 +51,8 @@ export default function RegistroBienesForm() {
     resetForm,
     isFieldValid,
     isStepComplete,
-    setIsTlaxcala
+    setIsTlaxcala,
+    isTlaxcala
   } = useFormData(
     filterOptions.estados.includes('BUENO') ? 'BUENO' : filterOptions.estados[0] || '',
     filterOptions.estatus.includes('ACTIVO') ? 'ACTIVO' : filterOptions.estatus[0] || ''
@@ -563,6 +564,7 @@ export default function RegistroBienesForm() {
                     onCurrencyChange={handleCurrencyChange}
                     isFieldValid={isFieldValid}
                     isDarkMode={isDarkMode}
+                    isTlaxcala={isTlaxcala}
                   />
                 )}
 
@@ -585,6 +587,7 @@ export default function RegistroBienesForm() {
                     }}
                     isFieldValid={isFieldValid}
                     isDarkMode={isDarkMode}
+                    isTlaxcala={isTlaxcala}
                   />
                 )}
 
@@ -600,6 +603,7 @@ export default function RegistroBienesForm() {
                     onImageRemove={handleImageRemove}
                     isFieldValid={isFieldValid}
                     isDarkMode={isDarkMode}
+                    isTlaxcala={isTlaxcala}
                   />
                 )}
               </motion.div>
