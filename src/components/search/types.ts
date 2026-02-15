@@ -21,6 +21,7 @@ export interface SearchResult {
     num_inventario?: string | null;
     condicion?: string | null;
     motivo_baja?: string | null;
+    created_by_nombre?: string | null;
 }
 
 export interface SearchResultsByOrigin {

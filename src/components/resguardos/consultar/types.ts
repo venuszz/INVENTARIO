@@ -9,7 +9,9 @@ export interface Resguardo {
   folio: string;
   fecha: string;
   director: string;
+  area: string;
   resguardantes: string; // Comma-separated resguardantes
+  articulosCount: number;
 }
 
 /**

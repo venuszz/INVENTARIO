@@ -267,6 +267,8 @@ export interface Resguardo {
   created_at?: string;
   // Relational fields (populated by indexation)
   director_nombre?: string;
+  area_nombre?: string;
+  created_by_nombre?: string;
   [key: string]: unknown;
 }
 

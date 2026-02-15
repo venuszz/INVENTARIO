@@ -398,13 +398,15 @@ export default function ConsultarResguardos({ folioParam }: ConsultarResguardosP
                   folio: r.folio,
                   f_resguardo: r.fecha,
                   dir_area: r.director,
-                  area_resguardo: ''
+                  area_resguardo: r.area,
+                  articulos_count: r.articulosCount
                 }))}
                 allResguardos={resguardosData.resguardos.map(r => ({
                   folio: r.folio,
                   f_resguardo: r.fecha,
                   dir_area: r.director,
-                  area_resguardo: ''
+                  area_resguardo: r.area,
+                  articulos_count: r.articulosCount
                 }))}
                 selectedFolio={resguardoDetails.selectedFolio}
                 onFolioClick={resguardoDetails.selectFolio}

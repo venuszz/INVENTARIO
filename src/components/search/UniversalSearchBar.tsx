@@ -179,17 +179,31 @@ export default function UniversalSearchBar({ isDarkMode, userRoles, onExpandChan
             origen: 'ITEA_OBS' as const
         }));
 
-        const resguardosData: SearchResult[] = (resguardosContext.resguardos || []).map(item => ({
+        // Agrupar resguardos por folio único para evitar duplicados
+        const resguardosByFolio = new Map<string, any>();
+        (resguardosContext.resguardos || []).forEach(item => {
+            if (!resguardosByFolio.has(item.folio)) {
+                resguardosByFolio.set(item.folio, item);
+            }
+        });
+        
+        const resguardosData: SearchResult[] = Array.from(resguardosByFolio.values()).map(item => ({
             id: item.id.toString(),
-            id_inv: (item.num_inventario as string) || null,
-            descripcion: (item.descripcion as string) || null,
-            rubro: (item.rubro as string) || null,
+            id_inv: null, // No mostrar num_inventario individual, solo folio
+            descripcion: `Resguardo ${item.folio}`,
+            rubro: null,
             valor: null,
-            area: null,
-            estado: (item.condicion as string) || null,
+            area: item.area_nombre || null,
+            estado: null,
             estatus: null,
             resguardante: item.resguardante || null,
-            origen: 'RESGUARDO' as const
+            origen: 'RESGUARDO' as const,
+            folio: item.folio,
+            folio_resguardo: item.folio,
+            f_resguardo: item.f_resguardo,
+            dir_area: item.director_nombre || null,
+            area_resguardo: item.area_nombre || null,
+            created_by_nombre: item.created_by_nombre || null
         }));
 
         const resguardosBajasData: SearchResult[] = (resguardosBajasContext.resguardos || []).map(item => ({
@@ -215,7 +229,8 @@ export default function UniversalSearchBar({ isDarkMode, userRoles, onExpandChan
             motivo_baja: (item.motivo as string | null) ?? null
         }));
 
-        return [...ineaData, ...iteaData, ...noListadoData, ...ineaObsData, ...iteaObsData, ...resguardosData, ...resguardosBajasData];
+        // Priorizar resguardos sobre artículos en los resultados
+        return [...resguardosData, ...resguardosBajasData, ...ineaData, ...iteaData, ...noListadoData, ...ineaObsData, ...iteaObsData];
     }, [ineaMuebles, iteaMuebles, noListadoMuebles, ineaObsMuebles, iteaObsMuebles, resguardosContext.resguardos, resguardosBajasContext.resguardos]);
 
     // Búsqueda en tiempo real
@@ -588,6 +603,34 @@ export default function UniversalSearchBar({ isDarkMode, userRoles, onExpandChan
                                         let currentIndex = 0;
                                         return (
                                             <>
+                                                {resguardosResults.length > 0 && (
+                                                    <>
+                                                        <SearchResultGroup 
+                                                            title="Resguardos" 
+                                                            results={resguardosResults} 
+                                                            onResultClick={handleResultClick} 
+                                                            isDarkMode={isDarkMode}
+                                                            startIndex={currentIndex}
+                                                            selectedIndex={selectedIndex}
+                                                            onMouseEnter={setSelectedIndex}
+                                                        />
+                                                        {(() => { currentIndex += resguardosResults.length; return null; })()}
+                                                    </>
+                                                )}
+                                                {resguardosBajasResults.length > 0 && (
+                                                    <>
+                                                        <SearchResultGroup 
+                                                            title="Resguardos de Bajas" 
+                                                            results={resguardosBajasResults} 
+                                                            onResultClick={handleResultClick} 
+                                                            isDarkMode={isDarkMode}
+                                                            startIndex={currentIndex}
+                                                            selectedIndex={selectedIndex}
+                                                            onMouseEnter={setSelectedIndex}
+                                                        />
+                                                        {(() => { currentIndex += resguardosBajasResults.length; return null; })()}
+                                                    </>
+                                                )}
                                                 {ineaResults.length > 0 && (
                                                     <>
                                                         <SearchResultGroup 
@@ -657,31 +700,6 @@ export default function UniversalSearchBar({ isDarkMode, userRoles, onExpandChan
                                                         />
                                                         {(() => { currentIndex += iteaObsResults.length; return null; })()}
                                                     </>
-                                                )}
-                                                {resguardosResults.length > 0 && (
-                                                    <>
-                                                        <SearchResultGroup 
-                                                            title="Resguardos" 
-                                                            results={resguardosResults} 
-                                                            onResultClick={handleResultClick} 
-                                                            isDarkMode={isDarkMode}
-                                                            startIndex={currentIndex}
-                                                            selectedIndex={selectedIndex}
-                                                            onMouseEnter={setSelectedIndex}
-                                                        />
-                                                        {(() => { currentIndex += resguardosResults.length; return null; })()}
-                                                    </>
-                                                )}
-                                                {resguardosBajasResults.length > 0 && (
-                                                    <SearchResultGroup 
-                                                        title="Resguardos de Bajas" 
-                                                        results={resguardosBajasResults} 
-                                                        onResultClick={handleResultClick} 
-                                                        isDarkMode={isDarkMode}
-                                                        startIndex={currentIndex}
-                                                        selectedIndex={selectedIndex}
-                                                        onMouseEnter={setSelectedIndex}
-                                                    />
                                                 )}
                                             </>
                                         );

@@ -5,6 +5,10 @@
 
 import { useState, useCallback } from 'react';
 import supabase from '@/app/lib/supabase/client';
+import { useIneaStore } from '@/stores/ineaStore';
+import { useIteaStore } from '@/stores/iteaStore';
+import { useNoListadoStore } from '@/stores/noListadoStore';
+import { useAdminStore } from '@/stores/adminStore';
 import { PdfData, PdfDataBaja, PdfFirma } from '../types';
 
 interface UsePDFGenerationReturn {
@@ -32,6 +36,14 @@ interface UsePDFGenerationReturn {
 export function usePDFGeneration(): UsePDFGenerationReturn {
   const [generating, setGenerating] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  
+  // Get muebles stores for area lookup
+  const ineaMuebles = useIneaStore(state => state.muebles);
+  const iteaMuebles = useIteaStore(state => state.muebles);
+  const noListadoMuebles = useNoListadoStore(state => state.muebles);
+  
+  // Get areas store for area name lookup
+  const areas = useAdminStore(state => state.areas);
 
   /**
    * Get firmas from database
@@ -108,13 +120,35 @@ export function usePDFGeneration(): UsePDFGenerationReturn {
       const [year, month, day] = firstItem.f_resguardo.slice(0, 10).split('-').map(Number);
       const fechaLocal = new Date(year, month - 1, day);
 
+      // Get area from first mueble (same logic as useResguardosData)
+      let areaNombre = 'Sin área';
+      let idArea: number | null = null;
+      
+      // Find the mueble to get id_area
+      if (firstItem.origen === 'INEA') {
+        const mueble = ineaMuebles.find(m => m.id === firstItem.id_mueble);
+        idArea = mueble?.id_area ?? null;
+      } else if (firstItem.origen === 'ITEA') {
+        const mueble = iteaMuebles.find(m => m.id === firstItem.id_mueble);
+        idArea = mueble?.id_area ?? null;
+      } else if (firstItem.origen === 'NO_LISTADO') {
+        const mueble = noListadoMuebles.find(m => m.id === firstItem.id_mueble);
+        idArea = mueble?.id_area ?? null;
+      }
+      
+      // Get area name from areas store
+      if (idArea !== null) {
+        const area = areas.find(a => a.id_area === idArea);
+        areaNombre = area?.nombre ?? 'Sin área';
+      }
+
       // Fetch mueble details for each item
       const articulosWithDetails = await Promise.all(
         data.map(async (item) => {
           // Determine which table to query based on origen
-          const tableName = item.origen === 'ITEA' ? 'itea' : 
-                          item.origen === 'NO_LISTADO' ? 'no_listado' : 
-                          'inea';
+          const tableName = item.origen === 'ITEA' ? 'mueblesitea' : 
+                          item.origen === 'NO_LISTADO' ? 'mueblestlaxcala' : 
+                          'muebles';
           
           // Fetch mueble details
           const { data: muebleData, error: muebleError } = await supabase
@@ -130,7 +164,7 @@ export function usePDFGeneration(): UsePDFGenerationReturn {
               descripcion: 'Error al cargar',
               rubro: '',
               estado: '',
-              origen: item.origen,
+              origen: item.origen === 'NO_LISTADO' ? 'TLAXCALA' : item.origen, // Map back to TLAXCALA for display
               resguardante: item.resguardante
             };
           }
@@ -140,7 +174,7 @@ export function usePDFGeneration(): UsePDFGenerationReturn {
             descripcion: muebleData.descripcion || '',
             rubro: muebleData.rubro || '',
             estado: muebleData.estado || '',
-            origen: item.origen,
+            origen: item.origen === 'NO_LISTADO' ? 'TLAXCALA' : item.origen, // Map back to TLAXCALA for display
             resguardante: item.resguardante
           };
         })
@@ -151,7 +185,7 @@ export function usePDFGeneration(): UsePDFGenerationReturn {
         folio: firstItem.folio,
         fecha: fechaLocal.toLocaleDateString(),
         director: (firstItem.directorio as any)?.nombre || '',
-        area: '', // Area is not stored in new structure, could be fetched from directorio_areas
+        area: areaNombre,
         puesto: firstItem.puesto_resguardo || (firstItem.directorio as any)?.puesto || '',
         resguardante: resguardante || firstItem.resguardante || '',
         articulos: articulosWithDetails,
@@ -224,17 +258,40 @@ export function usePDFGeneration(): UsePDFGenerationReturn {
       // Get firmas
       const firmas = await getFirmas();
 
+      // Get area from first mueble (same logic as useResguardosData)
+      let areaNombre = 'Sin área';
+      let idArea: number | null = null;
+      
+      // Find the mueble to get id_area
+      if (firstItem.origen === 'INEA') {
+        const mueble = ineaMuebles.find(m => m.id === firstItem.id_mueble);
+        idArea = mueble?.id_area ?? null;
+      } else if (firstItem.origen === 'ITEA') {
+        const mueble = iteaMuebles.find(m => m.id === firstItem.id_mueble);
+        idArea = mueble?.id_area ?? null;
+      } else if (firstItem.origen === 'NO_LISTADO') {
+        const mueble = noListadoMuebles.find(m => m.id === firstItem.id_mueble);
+        idArea = mueble?.id_area ?? null;
+      }
+      
+      // Get area name from areas store
+      if (idArea !== null) {
+        const area = areas.find(a => a.id_area === idArea);
+        areaNombre = area?.nombre ?? 'Sin área';
+      }
+
       // Create PdfDataBaja structure
       const pdfDataBaja: PdfDataBaja = {
         folioBaja: folioBaja,
         folioOriginal: folioResguardo,
         fecha: new Date().toLocaleDateString(),
         director: (firstItem.directorio as any)?.nombre || '',
-        area: '', // Area is not stored in new structure
+        area: areaNombre,
         puesto: firstItem.puesto_resguardo || (firstItem.directorio as any)?.puesto || '',
         resguardante: firstItem.resguardante || '',
         articulos: articulos.map(art => ({
-          ...art
+          ...art,
+          origen: art.origen === 'NO_LISTADO' ? 'TLAXCALA' : art.origen // Map back to TLAXCALA for display
         })),
         firmas: firmas
       };

@@ -382,9 +382,15 @@ export async function generateResguardoPDF(data: PdfData) {
             `PUESTO:  ${data.puesto}`,
             `FECHA:  ${data.fecha}`
         ];
-        if (!data.articulos.some(a => a.resguardante)) {
-            infoLines.push(`RESGUARDANTE: ${data.resguardante || ''}`);
+        
+        // Only add RESGUARDANTE line if:
+        // 1. No articles have individual resguardantes, AND
+        // 2. There is a resguardante value to show
+        const hasIndividualResguardantes = data.articulos.some(a => a.resguardante);
+        if (!hasIndividualResguardantes && data.resguardante) {
+            infoLines.push(`RESGUARDANTE: ${data.resguardante}`);
         }
+        
         infoLines.forEach((line, index) => {
             page.drawText(normalizeText(line), {
                 x: margin,
@@ -441,7 +447,7 @@ export async function generateResguardoPDF(data: PdfData) {
             });
         }
 
-        // Última firma (RESGUARDANTE) igual que antes
+        // Última firma (RESGUARDANTE)
         const xPos = margin + (signatureCount) * signatureBoxWidth;
         page.drawText('RESGUARDANTE', {
             x: xPos + (signatureBoxWidth / 2) - (regularFont.widthOfTextAtSize('RESGUARDANTE', signatureFontSize) / 2),
@@ -463,10 +469,22 @@ export async function generateResguardoPDF(data: PdfData) {
             font: regularFont,
             color: rgb(0, 0, 0)
         });
-        const puestoArea = `${data.puesto?.toUpperCase() || ''} DE ${data.area?.toUpperCase() || ''}`;
-        page.drawText(normalizeText(puestoArea), {
-            x: xPos + (signatureBoxWidth / 2) - (regularFont.widthOfTextAtSize(puestoArea, signatureFontSize) / 2),
+        
+        // Puesto and Area on separate lines
+        const puestoText = data.puesto?.toUpperCase() || '';
+        const areaText = data.area?.toUpperCase() || '';
+        
+        page.drawText(normalizeText(puestoText), {
+            x: xPos + (signatureBoxWidth / 2) - (regularFont.widthOfTextAtSize(puestoText, signatureFontSize) / 2),
             y: lineY - 30,
+            size: signatureFontSize,
+            font: regularFont,
+            color: rgb(0, 0, 0)
+        });
+        
+        page.drawText(normalizeText(areaText), {
+            x: xPos + (signatureBoxWidth / 2) - (regularFont.widthOfTextAtSize(areaText, signatureFontSize) / 2),
+            y: lineY - 42,
             size: signatureFontSize,
             font: regularFont,
             color: rgb(0, 0, 0)

@@ -3,8 +3,12 @@
  * Handles search, filtering, sorting, and pagination
  */
 
-import { useState, useEffect, useCallback, useDeferredValue, useMemo } from 'react';
+import { useState, useEffect, useCallback, useDeferredValue } from 'react';
 import { useResguardosStore } from '@/stores/resguardosStore';
+import { useIneaStore } from '@/stores/ineaStore';
+import { useIteaStore } from '@/stores/iteaStore';
+import { useNoListadoStore } from '@/stores/noListadoStore';
+import { useAdminStore } from '@/stores/adminStore';
 import { Resguardo, ActiveFilter } from '../types';
 
 export interface UseResguardosDataReturn {
@@ -40,6 +44,14 @@ export function useResguardosData(): UseResguardosDataReturn {
   // Get resguardos from store
   const resguardosFromStore = useResguardosStore(state => state.resguardos);
   
+  // Get muebles stores for area lookup
+  const ineaMuebles = useIneaStore(state => state.muebles);
+  const iteaMuebles = useIteaStore(state => state.muebles);
+  const noListadoMuebles = useNoListadoStore(state => state.muebles);
+  
+  // Get areas store for area name lookup
+  const areas = useAdminStore(state => state.areas);
+  
   const [resguardos, setResguardos] = useState<Resguardo[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -62,8 +74,6 @@ export function useResguardosData(): UseResguardosDataReturn {
 
   // Debounced active filters (100ms delay)
   const deferredActiveFilters = useDeferredValue(activeFilters);
-
-  console.log('📦 [RESGUARDOS DATA] Store has', resguardosFromStore.length, 'resguardos');
 
   /**
    * Clear all filters
@@ -91,27 +101,54 @@ export function useResguardosData(): UseResguardosDataReturn {
   const processResguardos = useCallback(async () => {
     setLoading(true);
     try {
-      // 1. Group by unique folio and aggregate resguardantes
+      // 1. Group by unique folio and aggregate resguardantes, area, and count
       const foliosMap = new Map<string, {
         folio: string;
         fecha: string;
         director: string;
+        area: string;
         resguardantes: Set<string>;
+        articulosCount: number;
       }>();
 
       resguardosFromStore.forEach(record => {
         if (!foliosMap.has(record.folio)) {
+          // Get area from mueble based on origen and id_mueble
+          let areaNombre = 'Sin área';
+          let idArea: number | null = null;
+          
+          // Find the mueble to get id_area
+          if (record.origen === 'INEA') {
+            const mueble = ineaMuebles.find(m => m.id === record.id_mueble);
+            idArea = mueble?.id_area ?? null;
+          } else if (record.origen === 'ITEA') {
+            const mueble = iteaMuebles.find(m => m.id === record.id_mueble);
+            idArea = mueble?.id_area ?? null;
+          } else if (record.origen === 'NO_LISTADO') {
+            const mueble = noListadoMuebles.find(m => m.id === record.id_mueble);
+            idArea = mueble?.id_area ?? null;
+          }
+          
+          // Get area name from areas store
+          if (idArea !== null) {
+            const area = areas.find(a => a.id_area === idArea);
+            areaNombre = area?.nombre ?? 'Sin área';
+          }
+
           foliosMap.set(record.folio, {
             folio: record.folio,
             fecha: record.f_resguardo,
-            director: record.director_nombre || '',
-            resguardantes: new Set()
+            director: record.director_nombre || 'Sin director',
+            area: areaNombre,
+            resguardantes: new Set(),
+            articulosCount: 0
           });
         }
         const folioData = foliosMap.get(record.folio)!;
         if (record.resguardante) {
           folioData.resguardantes.add(record.resguardante);
         }
+        folioData.articulosCount++;
       });
 
       // Convert to array and format
@@ -119,7 +156,9 @@ export function useResguardosData(): UseResguardosDataReturn {
         folio: item.folio,
         fecha: item.fecha,
         director: item.director,
-        resguardantes: Array.from(item.resguardantes).join(', ')
+        area: item.area,
+        resguardantes: Array.from(item.resguardantes).join(', '),
+        articulosCount: item.articulosCount
       }));
 
       // 2. Apply filters
@@ -168,12 +207,6 @@ export function useResguardosData(): UseResguardosDataReturn {
       const to = from + rowsPerPage;
       const paginated = sorted.slice(from, to);
 
-      console.log('📊 [RESGUARDOS DATA] Processed:', {
-        total: uniqueResguardos.length,
-        paginated: paginated.length,
-        page: currentPage
-      });
-
       setResguardos(paginated);
       setError(null);
     } catch (err) {
@@ -184,6 +217,10 @@ export function useResguardosData(): UseResguardosDataReturn {
     }
   }, [
     resguardosFromStore,
+    ineaMuebles,
+    iteaMuebles,
+    noListadoMuebles,
+    areas,
     deferredActiveFilters,
     sortField,
     sortDirection,

@@ -14,6 +14,7 @@ interface Resguardo {
   f_resguardo: string;
   dir_area: string;
   area_resguardo: string;
+  articulos_count: number;
 }
 
 interface ResguardosTableProps {
@@ -54,15 +55,21 @@ export default function ResguardosTable({
 }: ResguardosTableProps) {
   const { isDarkMode } = useTheme();
 
+  console.log('📋 [RESGUARDOS TABLE] Received data:', {
+    count: resguardos.length,
+    sample: resguardos.slice(0, 2),
+    firstItem: resguardos[0]
+  });
+
   // Get unique folios
   const foliosUnicos = Array.from(
     new Map(resguardos.map(r => [r.folio, r])).values()
   );
 
-  // Function to count articles by folio
-  const getArticuloCount = (folio: string) => {
-    return allResguardos.filter(r => r.folio === folio).length;
-  };
+  console.log('📋 [FOLIOS UNICOS]', {
+    count: foliosUnicos.length,
+    sample: foliosUnicos.slice(0, 2)
+  });
 
   // Calculate skeleton rows needed
   const skeletonRowsCount = Math.max(0, rowsPerPage - foliosUnicos.length);
@@ -213,8 +220,6 @@ export default function ResguardosTable({
               </tr>
             ) : (
               foliosUnicos.map((resguardo) => {
-                const itemCount = getArticuloCount(resguardo.folio);
-                
                 return (
                   <tr
                     key={resguardo.folio}
@@ -285,7 +290,7 @@ export default function ResguardosTable({
                           ? 'bg-white/5 text-white/80 border-white/10' 
                           : 'bg-black/5 text-black/80 border-black/10'
                       }`}>
-                        {itemCount}
+                        {resguardo.articulos_count}
                       </span>
                     </td>
                   </tr>

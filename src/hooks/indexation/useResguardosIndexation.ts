@@ -53,7 +53,7 @@ export function useResguardosIndexation() {
                   .from(TABLE)
                   .select(`
                     *,
-                    directorio!inner (
+                    directorio:id_directorio (
                       nombre
                     )
                   `)
@@ -63,7 +63,8 @@ export function useResguardosIndexation() {
                   const { directorio, ...rest } = data as any;
                   const resguardoWithDirector = {
                     ...rest,
-                    director_nombre: directorio?.nombre || ''
+                    director_nombre: directorio?.nombre || '',
+                    created_by_nombre: ''
                   };
                   addResguardo(resguardoWithDirector);
                   resguardosEmitter.emit({ type: 'INSERT', data: resguardoWithDirector, timestamp: new Date().toISOString() });
@@ -75,7 +76,7 @@ export function useResguardosIndexation() {
                   .from(TABLE)
                   .select(`
                     *,
-                    directorio!inner (
+                    directorio:id_directorio (
                       nombre
                     )
                   `)
@@ -85,7 +86,8 @@ export function useResguardosIndexation() {
                   const { directorio, ...rest } = data as any;
                   const resguardoWithDirector = {
                     ...rest,
-                    director_nombre: directorio?.nombre || ''
+                    director_nombre: directorio?.nombre || '',
+                    created_by_nombre: ''
                   };
                   updateResguardo(resguardoWithDirector.id, resguardoWithDirector);
                   resguardosEmitter.emit({ type: 'UPDATE', data: resguardoWithDirector, timestamp: new Date().toISOString() });
@@ -147,7 +149,7 @@ export function useResguardosIndexation() {
               .from(TABLE)
               .select(`
                 *,
-                directorio!inner (
+                directorio:id_directorio (
                   nombre
                 )
               `)
@@ -159,7 +161,8 @@ export function useResguardosIndexation() {
               const { directorio, ...rest } = record;
               return {
                 ...rest,
-                director_nombre: directorio?.nombre || ''
+                director_nombre: directorio?.nombre || '',
+                created_by_nombre: '' // Will be populated from processing
               };
             }) as Resguardo[];
           },
