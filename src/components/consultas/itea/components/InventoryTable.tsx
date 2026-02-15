@@ -149,7 +149,7 @@ export default function InventoryTable({
                             <SortableHeader field="descripcion" label="Descripción" />
                             <SortableHeader field="area" label="Área" />
                             <SortableHeader field="directorio" label="Director/Jefe" />
-                            <SortableHeader field="estatus" label="Estado" />
+                            <SortableHeader field="estatus" label="Estatus" />
                             <th className={`px-4 py-3 text-left text-xs font-medium uppercase tracking-wider ${
                                 isDarkMode ? 'text-white/60' : 'text-black/60'
                             }`}>
