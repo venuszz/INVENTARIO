@@ -20,6 +20,7 @@ interface ArticulosListPanelProps {
   onGeneratePDFByResguardante: (resguardante: string, articulos: ResguardoArticulo[]) => void;
   onClearSelection: () => void;
   userRole: string | null;
+  disableDelete?: boolean;
 }
 
 /**
@@ -33,7 +34,8 @@ export default function ArticulosListPanel({
   onDeleteSingle,
   onGeneratePDFByResguardante,
   onClearSelection,
-  userRole
+  userRole,
+  disableDelete = false
 }: ArticulosListPanelProps) {
   const { isDarkMode } = useTheme();
 
@@ -76,10 +78,15 @@ export default function ArticulosListPanel({
           <div className="flex items-center gap-2">
             <button
               onClick={onClearSelection}
+              disabled={disableDelete}
               className={`px-2 py-1 rounded border transition-colors flex items-center gap-1 text-xs ${
-                isDarkMode
-                  ? 'border-white/10 hover:bg-white/5 text-white'
-                  : 'border-black/10 hover:bg-black/5 text-black'
+                disableDelete
+                  ? (isDarkMode
+                    ? 'border-white/10 text-white/30 cursor-not-allowed opacity-50'
+                    : 'border-black/10 text-black/30 cursor-not-allowed opacity-50')
+                  : (isDarkMode
+                    ? 'border-white/10 hover:bg-white/5 text-white'
+                    : 'border-black/10 hover:bg-black/5 text-black')
               }`}
             >
               <X className="h-3 w-3" />
@@ -88,10 +95,15 @@ export default function ArticulosListPanel({
             <RoleGuard roles={["admin", "superadmin"]} userRole={userRole || undefined}>
               <button
                 onClick={onDeleteSelected}
+                disabled={disableDelete}
                 className={`px-2 py-1 rounded border transition-colors flex items-center gap-1 text-xs ${
-                  isDarkMode
-                    ? 'border-white/10 hover:bg-white/5 text-white'
-                    : 'border-black/10 hover:bg-black/5 text-black'
+                  disableDelete
+                    ? (isDarkMode
+                      ? 'border-white/10 text-white/30 cursor-not-allowed opacity-50'
+                      : 'border-black/10 text-black/30 cursor-not-allowed opacity-50')
+                    : (isDarkMode
+                      ? 'border-white/10 hover:bg-white/5 text-white'
+                      : 'border-black/10 hover:bg-black/5 text-black')
                 }`}
               >
                 <XOctagon className="h-3 w-3" />
@@ -216,10 +228,15 @@ export default function ArticulosListPanel({
                     <RoleGuard roles={["admin", "superadmin"]} userRole={userRole || undefined}>
                       <button
                         onClick={() => onDeleteSingle(articulo)}
+                        disabled={disableDelete}
                         className={`p-1 rounded transition-colors flex-shrink-0 ${
-                          isDarkMode
-                            ? 'text-white/40 hover:text-white hover:bg-white/5'
-                            : 'text-black/40 hover:text-black hover:bg-black/5'
+                          disableDelete
+                            ? (isDarkMode
+                              ? 'text-white/20 cursor-not-allowed opacity-50'
+                              : 'text-black/20 cursor-not-allowed opacity-50')
+                            : (isDarkMode
+                              ? 'text-white/40 hover:text-white hover:bg-white/5'
+                              : 'text-black/40 hover:text-black hover:bg-black/5')
                         }`}
                       >
                         <CircleX className="h-3.5 w-3.5" />

@@ -134,7 +134,31 @@ export function useIneaIndexation() {
         }
         
         if (affectedMuebles && affectedMuebles.length > 0) {
-          allFetchedMuebles.push(...affectedMuebles);
+          // Fetch resguardos for these muebles
+          const muebleIds = affectedMuebles.map(m => m.id);
+          const { data: resguardos } = await supabase
+            .from('resguardos')
+            .select('id_mueble, resguardante, f_resguardo')
+            .in('id_mueble', muebleIds)
+            .eq('origen', 'INEA')
+            .order('f_resguardo', { ascending: false });
+          
+          // Create map of most recent resguardo per mueble
+          const resguardoMap = new Map<string, string | null>();
+          if (resguardos) {
+            resguardos.forEach(r => {
+              if (!resguardoMap.has(r.id_mueble)) {
+                resguardoMap.set(r.id_mueble, r.resguardante || null);
+              }
+            });
+          }
+          
+          // Transform data to extract resguardante
+          const transformed = affectedMuebles.map(item => ({
+            ...item,
+            resguardante: resguardoMap.get(item.id) || null
+          }));
+          allFetchedMuebles.push(...transformed);
           
           // Set syncing IDs for skeleton display - THIS TRIGGERS RE-RENDER
           const ids = affectedMuebles.map(m => m.id);
@@ -225,7 +249,20 @@ export function useIneaIndexation() {
                   }
 
                   if (insertedData && insertedData.estatus !== 'BAJA') {
-                    addMueble(insertedData);
+                    // Fetch resguardo separately
+                    const { data: resguardos } = await supabase
+                      .from('resguardos')
+                      .select('resguardante, f_resguardo')
+                      .eq('id_mueble', insertedData.id)
+                      .eq('origen', 'INEA')
+                      .order('f_resguardo', { ascending: false })
+                      .limit(1);
+                    
+                    const transformed = {
+                      ...insertedData,
+                      resguardante: resguardos?.[0]?.resguardante || null
+                    };
+                    addMueble(transformed);
                     ineaEmitter.emit({ type: 'INSERT', data: insertedData, timestamp: new Date().toISOString() });
                     addRealtimeChange({
                       moduleKey: MODULE_KEY,
@@ -261,8 +298,21 @@ export function useIneaIndexation() {
                       // Si cambió a BAJA, remover
                       removeMueble(updatedData.id);
                     } else {
+                      // Fetch resguardo separately
+                      const { data: resguardos } = await supabase
+                        .from('resguardos')
+                        .select('resguardante, f_resguardo')
+                        .eq('id_mueble', updatedData.id)
+                        .eq('origen', 'INEA')
+                        .order('f_resguardo', { ascending: false })
+                        .limit(1);
+                      
                       // Actualizar registro
-                      updateMueble(updatedData);
+                      const transformed = {
+                        ...updatedData,
+                        resguardante: resguardos?.[0]?.resguardante || null
+                      };
+                      updateMueble(transformed);
                       addRealtimeChange({
                         moduleKey: MODULE_KEY,
                         moduleName: 'INEA',
@@ -339,6 +389,49 @@ export function useIneaIndexation() {
               processBatchUpdates([], 'directorio', updatedDirector.id_directorio);
             } catch (error) {
               console.error('Error handling director update:', error);
+            }
+          }
+        )
+        // Listen to resguardos table changes
+        .on('postgres_changes', 
+          { event: '*', schema: 'public', table: 'resguardos', filter: 'origen=eq.INEA' },
+          async (payload: any) => {
+            const { eventType, new: newRecord, old: oldRecord } = payload;
+            updateLastEventReceived(MODULE_KEY);
+            
+            try {
+              const affectedMuebleId = newRecord?.id_mueble || oldRecord?.id_mueble;
+              if (!affectedMuebleId) return;
+              
+              // Refetch the affected mueble with its updated resguardante
+              const { data: updatedMueble, error } = await supabase
+                .from(TABLE)
+                .select(`
+                  *,
+                  area:id_area(id_area, nombre),
+                  directorio:id_directorio(id_directorio, nombre, puesto)
+                `)
+                .eq('id', affectedMuebleId)
+                .single();
+              
+              if (!error && updatedMueble && updatedMueble.estatus !== 'BAJA') {
+                // Fetch resguardo separately
+                const { data: resguardos } = await supabase
+                  .from('resguardos')
+                  .select('resguardante, f_resguardo')
+                  .eq('id_mueble', affectedMuebleId)
+                  .eq('origen', 'INEA')
+                  .order('f_resguardo', { ascending: false })
+                  .limit(1);
+                
+                const transformed = {
+                  ...updatedMueble,
+                  resguardante: resguardos?.[0]?.resguardante || null
+                };
+                updateMueble(transformed);
+              }
+            } catch (error) {
+              console.error('Error handling resguardo change:', error);
             }
           }
         )
@@ -419,6 +512,7 @@ export function useIneaIndexation() {
       while (hasMore) {
         const batch = await withExponentialBackoff(
           async () => {
+            // Step 1: Fetch muebles without resguardo JOIN
             const { data, error } = await supabase
               .from(TABLE)
               .select(`
@@ -430,7 +524,44 @@ export function useIneaIndexation() {
               .range(offset, offset + BATCH_SIZE - 1);
             
             if (error) throw error;
-            return data as MuebleINEA[];
+            if (!data || data.length === 0) return [];
+            
+            // Step 2: Fetch resguardos for these muebles (in batches to avoid URL length limits)
+            const muebleIds = data.map(m => m.id);
+            let allResguardos: any[] = [];
+            const RESGUARDO_BATCH_SIZE = 100;
+            
+            for (let i = 0; i < muebleIds.length; i += RESGUARDO_BATCH_SIZE) {
+              const batchIds = muebleIds.slice(i, i + RESGUARDO_BATCH_SIZE);
+              const { data: resguardosBatch, error: resguardosError } = await supabase
+                .from('resguardos')
+                .select('id_mueble, resguardante, f_resguardo')
+                .in('id_mueble', batchIds)
+                .eq('origen', 'INEA')
+                .order('f_resguardo', { ascending: false });
+              
+              if (!resguardosError && resguardosBatch) {
+                allResguardos.push(...resguardosBatch);
+              }
+            }
+            
+            const resguardos = allResguardos;
+            
+            // Step 3: Create a map of most recent resguardo per mueble
+            const resguardoMap = new Map<string, string | null>();
+            if (resguardos) {
+              resguardos.forEach(r => {
+                if (!resguardoMap.has(r.id_mueble)) {
+                  resguardoMap.set(r.id_mueble, r.resguardante || null);
+                }
+              });
+            }
+            
+            // Step 4: Combine data
+            return data.map(item => ({
+              ...item,
+              resguardante: resguardoMap.get(item.id) || null
+            })) as MuebleINEA[];
           },
           FETCH_RETRY_CONFIG
         );

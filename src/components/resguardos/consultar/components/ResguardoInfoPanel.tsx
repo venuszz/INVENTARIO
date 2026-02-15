@@ -20,6 +20,7 @@ interface ResguardoInfoPanelProps {
   onGeneratePDF: () => void;
   onDeleteAll: () => void;
   userRole: string | null;
+  disableDelete?: boolean;
 }
 
 /**
@@ -34,7 +35,8 @@ export default function ResguardoInfoPanel({
   resguardantes,
   onGeneratePDF,
   onDeleteAll,
-  userRole
+  userRole,
+  disableDelete = false
 }: ResguardoInfoPanelProps) {
   const { isDarkMode } = useTheme();
 
@@ -142,7 +144,7 @@ export default function ResguardoInfoPanel({
             <span className={`text-xs uppercase font-medium ${
               isDarkMode ? 'text-white/40' : 'text-black/40'
             }`}>
-              Director de Área
+              Responsable
             </span>
           </div>
           <div className={`text-sm font-medium leading-relaxed ${
@@ -228,10 +230,15 @@ export default function ResguardoInfoPanel({
           <RoleGuard roles={["admin", "superadmin"]} userRole={userRole || undefined}>
             <button
               onClick={onDeleteAll}
+              disabled={disableDelete}
               className={`py-2 px-3 border rounded-lg transition-colors flex items-center justify-center gap-1.5 text-sm font-medium ${
-                isDarkMode
-                  ? 'bg-white/5 hover:bg-white/10 text-white border-white/10'
-                  : 'bg-black/5 hover:bg-black/10 text-black border-black/10'
+                disableDelete
+                  ? (isDarkMode
+                    ? 'bg-white/5 text-white/30 border-white/10 cursor-not-allowed opacity-50'
+                    : 'bg-black/5 text-black/30 border-black/10 cursor-not-allowed opacity-50')
+                  : (isDarkMode
+                    ? 'bg-white/5 hover:bg-white/10 text-white border-white/10'
+                    : 'bg-black/5 hover:bg-black/10 text-black border-black/10')
               }`}
             >
               <XOctagon className="h-3.5 w-3.5" />

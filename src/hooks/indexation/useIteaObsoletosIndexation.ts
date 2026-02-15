@@ -51,13 +51,54 @@ export function useIteaObsoletosIndexation() {
       while (hasMore) {
         const batch = await withExponentialBackoff(
           async () => {
+            // Step 1: Fetch muebles without resguardo JOIN
             const { data, error } = await supabase
               .from(TABLE)
-              .select('*')
+              .select(`
+                *
+              `)
               .eq('estatus', 'BAJA')
               .range(offset, offset + BATCH_SIZE - 1);
+            
             if (error) throw error;
-            return data as MuebleITEA[];
+            if (!data || data.length === 0) return [];
+            
+            // Step 2: Fetch resguardos for these muebles (in batches to avoid URL length limits)
+            const muebleIds = data.map(m => m.id);
+            let allResguardos: any[] = [];
+            const RESGUARDO_BATCH_SIZE = 100;
+            
+            for (let i = 0; i < muebleIds.length; i += RESGUARDO_BATCH_SIZE) {
+              const batchIds = muebleIds.slice(i, i + RESGUARDO_BATCH_SIZE);
+              const { data: resguardosBatch, error: resguardosError } = await supabase
+                .from('resguardos')
+                .select('id_mueble, resguardante, f_resguardo')
+                .in('id_mueble', batchIds)
+                .eq('origen', 'ITEA')
+                .order('f_resguardo', { ascending: false });
+              
+              if (!resguardosError && resguardosBatch) {
+                allResguardos.push(...resguardosBatch);
+              }
+            }
+            
+            const resguardos = allResguardos;
+            
+            // Step 3: Create a map of most recent resguardo per mueble
+            const resguardoMap = new Map<string, string | null>();
+            if (resguardos) {
+              resguardos.forEach(r => {
+                if (!resguardoMap.has(r.id_mueble)) {
+                  resguardoMap.set(r.id_mueble, r.resguardante || null);
+                }
+              });
+            }
+            
+            // Step 4: Combine data
+            return data.map(item => ({
+              ...item,
+              resguardante: resguardoMap.get(item.id) || null
+            })) as MuebleITEA[];
           },
           FETCH_RETRY_CONFIG
         );
@@ -107,19 +148,60 @@ export function useIteaObsoletosIndexation() {
             switch (eventType) {
               case 'INSERT': {
                 await new Promise(resolve => setTimeout(resolve, 300));
-                const { data, error } = await supabase.from(TABLE).select('*').eq('id', newRecord.id).single();
+                const { data, error } = await supabase
+                  .from(TABLE)
+                  .select(`
+                    *
+                  `)
+                  .eq('id', newRecord.id)
+                  .single();
+                
                 if (!error && data && data.estatus === 'BAJA') {
-                  addMueble(data);
+                  // Fetch resguardo separately
+                  const { data: resguardos } = await supabase
+                    .from('resguardos')
+                    .select('resguardante, f_resguardo')
+                    .eq('id_mueble', data.id)
+                    .eq('origen', 'ITEA')
+                    .order('f_resguardo', { ascending: false })
+                    .limit(1);
+                  
+                  const transformed = {
+                    ...data,
+                    resguardante: resguardos?.[0]?.resguardante || null
+                  };
+                  addMueble(transformed);
                 }
                 break;
               }
               case 'UPDATE': {
-                const { data, error } = await supabase.from(TABLE).select('*').eq('id', newRecord.id).single();
+                const { data, error } = await supabase
+                  .from(TABLE)
+                  .select(`
+                    *
+                  `)
+                  .eq('id', newRecord.id)
+                  .single();
+                
                 if (!error && data) {
-                  if (data.estatus === 'BAJA') {
-                    updateMueble(data.id, data);
+                  // Fetch resguardo separately
+                  const { data: resguardos } = await supabase
+                    .from('resguardos')
+                    .select('resguardante, f_resguardo')
+                    .eq('id_mueble', data.id)
+                    .eq('origen', 'ITEA')
+                    .order('f_resguardo', { ascending: false })
+                    .limit(1);
+                  
+                  const transformed = {
+                    ...data,
+                    resguardante: resguardos?.[0]?.resguardante || null
+                  };
+                  
+                  if (transformed.estatus === 'BAJA') {
+                    updateMueble(transformed.id, transformed);
                   } else {
-                    removeMueble(data.id);
+                    removeMueble(transformed.id);
                   }
                 }
                 break;
@@ -151,6 +233,46 @@ export function useIteaObsoletosIndexation() {
           handleReconciliation();
         }
       })
+      // Listen to resguardos table changes
+      .on('postgres_changes', 
+        { event: '*', schema: 'public', table: 'resguardos', filter: 'origen=eq.ITEA' },
+        async (payload: any) => {
+          updateLastEventReceived(MODULE_KEY);
+          
+          try {
+            const affectedMuebleId = payload.new?.id_mueble || payload.old?.id_mueble;
+            if (!affectedMuebleId) return;
+            
+            // Refetch the affected mueble with its updated resguardante
+            const { data: updatedMueble, error } = await supabase
+              .from(TABLE)
+              .select(`
+                *
+              `)
+              .eq('id', affectedMuebleId)
+              .single();
+            
+            if (!error && updatedMueble && updatedMueble.estatus === 'BAJA') {
+              // Fetch resguardo separately
+              const { data: resguardos } = await supabase
+                .from('resguardos')
+                .select('resguardante, f_resguardo')
+                .eq('id_mueble', affectedMuebleId)
+                .eq('origen', 'ITEA')
+                .order('f_resguardo', { ascending: false })
+                .limit(1);
+              
+              const transformed = {
+                ...updatedMueble,
+                resguardante: resguardos?.[0]?.resguardante || null
+              };
+              updateMueble(transformed.id, transformed);
+            }
+          } catch (error) {
+            console.error('Error handling resguardo change:', error);
+          }
+        }
+      )
       .subscribe();
     
     channelRef.current = channel;

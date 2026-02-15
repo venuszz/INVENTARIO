@@ -465,6 +465,7 @@ export default function ConsultarResguardos({ folioParam }: ConsultarResguardosP
                   onGeneratePDF={handleGeneratePDF}
                   onDeleteAll={() => setShowDeleteAllModal(true)}
                   userRole={userRole}
+                  disableDelete={true}
                 />
               ) : (
                 <div className={`rounded-lg border p-4 h-[45vh] flex flex-col ${
@@ -496,6 +497,7 @@ export default function ConsultarResguardos({ folioParam }: ConsultarResguardosP
                   onGeneratePDFByResguardante={handleGeneratePDFByResguardante}
                   onClearSelection={clearSelection}
                   userRole={userRole}
+                  disableDelete={true}
                 />
               ) : (
                 <div className={`rounded-lg border h-[45vh] flex flex-col overflow-hidden ${

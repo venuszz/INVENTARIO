@@ -79,10 +79,34 @@ export function useNoListadoIndexation() {
         }
         
         if (affectedMuebles && affectedMuebles.length > 0) {
-          allFetchedMuebles.push(...affectedMuebles);
+          // Fetch resguardos for these muebles
+          const muebleIds = affectedMuebles.map(m => m.id);
+          const { data: resguardos } = await supabase
+            .from('resguardos')
+            .select('id_mueble, resguardante, f_resguardo')
+            .in('id_mueble', muebleIds)
+            .eq('origen', 'NO_LISTADO')
+            .order('f_resguardo', { ascending: false });
+          
+          // Create map of most recent resguardo per mueble
+          const resguardoMap = new Map<string, string | null>();
+          if (resguardos) {
+            resguardos.forEach(r => {
+              if (!resguardoMap.has(r.id_mueble)) {
+                resguardoMap.set(r.id_mueble, r.resguardante || null);
+              }
+            });
+          }
+          
+          // Transform data to extract resguardante
+          const transformed = affectedMuebles.map(item => ({
+            ...item,
+            resguardante: resguardoMap.get(item.id) || null
+          }));
+          allFetchedMuebles.push(...transformed);
           
           // Set syncing IDs for skeleton display
-          const ids = affectedMuebles.map(m => m.id);
+          const ids = transformed.map(m => m.id);
           setSyncingIds(ids);
           
           hasMore = affectedMuebles.length === BATCH_SIZE;
@@ -145,6 +169,7 @@ export function useNoListadoIndexation() {
       while (hasMore) {
         const batch = await withExponentialBackoff(
           async () => {
+            // Step 1: Fetch muebles without resguardo JOIN
             const { data, error } = await supabase
               .from(TABLE)
               .select(`
@@ -154,8 +179,46 @@ export function useNoListadoIndexation() {
               `)
               .neq('estatus', 'BAJA')
               .range(offset, offset + BATCH_SIZE - 1);
+            
             if (error) throw error;
-            return data as MuebleNoListado[];
+            if (!data || data.length === 0) return [];
+            
+            // Step 2: Fetch resguardos for these muebles (in batches to avoid URL length limits)
+            const muebleIds = data.map(m => m.id);
+            let allResguardos: any[] = [];
+            const RESGUARDO_BATCH_SIZE = 100;
+            
+            for (let i = 0; i < muebleIds.length; i += RESGUARDO_BATCH_SIZE) {
+              const batchIds = muebleIds.slice(i, i + RESGUARDO_BATCH_SIZE);
+              const { data: resguardosBatch, error: resguardosError } = await supabase
+                .from('resguardos')
+                .select('id_mueble, resguardante, f_resguardo')
+                .in('id_mueble', batchIds)
+                .eq('origen', 'NO_LISTADO')
+                .order('f_resguardo', { ascending: false });
+              
+              if (!resguardosError && resguardosBatch) {
+                allResguardos.push(...resguardosBatch);
+              }
+            }
+            
+            const resguardos = allResguardos;
+            
+            // Step 3: Create a map of most recent resguardo per mueble
+            const resguardoMap = new Map<string, string | null>();
+            if (resguardos) {
+              resguardos.forEach(r => {
+                if (!resguardoMap.has(r.id_mueble)) {
+                  resguardoMap.set(r.id_mueble, r.resguardante || null);
+                }
+              });
+            }
+            
+            // Step 4: Combine data
+            return data.map(item => ({
+              ...item,
+              resguardante: resguardoMap.get(item.id) || null
+            })) as MuebleNoListado[];
           },
           FETCH_RETRY_CONFIG
         );
@@ -214,16 +277,30 @@ export function useNoListadoIndexation() {
                   `)
                   .eq('id', newRecord.id)
                   .single();
+                
                 if (!error && data && data.estatus !== 'BAJA') {
-                  addMueble(data);
-                  noListadoEmitter.emit({ type: 'INSERT', data, timestamp: new Date().toISOString() });
+                  // Fetch resguardo separately
+                  const { data: resguardos } = await supabase
+                    .from('resguardos')
+                    .select('resguardante, f_resguardo')
+                    .eq('id_mueble', data.id)
+                    .eq('origen', 'NO_LISTADO')
+                    .order('f_resguardo', { ascending: false })
+                    .limit(1);
+                  
+                  const transformed = {
+                    ...data,
+                    resguardante: resguardos?.[0]?.resguardante || null
+                  };
+                  addMueble(transformed);
+                  noListadoEmitter.emit({ type: 'INSERT', data: transformed, timestamp: new Date().toISOString() });
                   addRealtimeChange({
                     moduleKey: MODULE_KEY,
                     moduleName: 'TLAXCALA',
                     table: TABLE,
                     eventType: 'INSERT',
-                    recordId: data.id,
-                    recordName: data.id_inv,
+                    recordId: transformed.id,
+                    recordName: transformed.id_inv,
                   });
                 }
                 break;
@@ -238,21 +315,36 @@ export function useNoListadoIndexation() {
                   `)
                   .eq('id', newRecord.id)
                   .single();
+                
                 if (!error && data) {
-                  if (data.estatus === 'BAJA') {
-                    removeMueble(data.id);
+                  // Fetch resguardo separately
+                  const { data: resguardos } = await supabase
+                    .from('resguardos')
+                    .select('resguardante, f_resguardo')
+                    .eq('id_mueble', data.id)
+                    .eq('origen', 'NO_LISTADO')
+                    .order('f_resguardo', { ascending: false })
+                    .limit(1);
+                  
+                  const transformed = {
+                    ...data,
+                    resguardante: resguardos?.[0]?.resguardante || null
+                  };
+                  
+                  if (transformed.estatus === 'BAJA') {
+                    removeMueble(transformed.id);
                   } else {
-                    updateMueble(data.id, data);
+                    updateMueble(transformed.id, transformed);
                     addRealtimeChange({
                       moduleKey: MODULE_KEY,
                       moduleName: 'TLAXCALA',
                       table: TABLE,
                       eventType: 'UPDATE',
-                      recordId: data.id,
-                      recordName: data.id_inv,
+                      recordId: transformed.id,
+                      recordName: transformed.id_inv,
                     });
                   }
-                  noListadoEmitter.emit({ type: 'UPDATE', data, timestamp: new Date().toISOString() });
+                  noListadoEmitter.emit({ type: 'UPDATE', data: transformed, timestamp: new Date().toISOString() });
                 }
                 break;
               }
@@ -316,6 +408,48 @@ export function useNoListadoIndexation() {
           handleReconciliation();
         }
       })
+      // Listen to resguardos table changes
+      .on('postgres_changes', 
+        { event: '*', schema: 'public', table: 'resguardos', filter: 'origen=eq.NO_LISTADO' },
+        async (payload: any) => {
+          updateLastEventReceived(MODULE_KEY);
+          
+          try {
+            const affectedMuebleId = payload.new?.id_mueble || payload.old?.id_mueble;
+            if (!affectedMuebleId) return;
+            
+            // Refetch the affected mueble with its updated resguardante
+            const { data: updatedMueble, error } = await supabase
+              .from(TABLE)
+              .select(`
+                *,
+                area:area(id_area, nombre),
+                directorio:directorio(id_directorio, nombre, puesto)
+              `)
+              .eq('id', affectedMuebleId)
+              .single();
+            
+            if (!error && updatedMueble && updatedMueble.estatus !== 'BAJA') {
+              // Fetch resguardo separately
+              const { data: resguardos } = await supabase
+                .from('resguardos')
+                .select('resguardante, f_resguardo')
+                .eq('id_mueble', affectedMuebleId)
+                .eq('origen', 'NO_LISTADO')
+                .order('f_resguardo', { ascending: false })
+                .limit(1);
+              
+              const transformed = {
+                ...updatedMueble,
+                resguardante: resguardos?.[0]?.resguardante || null
+              };
+              updateMueble(transformed.id, transformed);
+            }
+          } catch (error) {
+            console.error('Error handling resguardo change:', error);
+          }
+        }
+      )
       .subscribe();
     
     channelRef.current = channel;

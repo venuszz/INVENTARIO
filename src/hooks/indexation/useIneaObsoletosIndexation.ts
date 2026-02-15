@@ -71,6 +71,7 @@ export function useIneaObsoletosIndexation() {
       while (hasMore) {
         const batch = await withExponentialBackoff(
           async () => {
+            // Step 1: Fetch muebles without resguardo JOIN
             const { data, error } = await supabase
               .from(TABLE)
               .select(`
@@ -82,7 +83,44 @@ export function useIneaObsoletosIndexation() {
               .range(offset, offset + BATCH_SIZE - 1);
             
             if (error) throw error;
-            return data as MuebleINEA[];
+            if (!data || data.length === 0) return [];
+            
+            // Step 2: Fetch resguardos for these muebles (in batches to avoid URL length limits)
+            const muebleIds = data.map(m => m.id);
+            let allResguardos: any[] = [];
+            const RESGUARDO_BATCH_SIZE = 100;
+            
+            for (let i = 0; i < muebleIds.length; i += RESGUARDO_BATCH_SIZE) {
+              const batchIds = muebleIds.slice(i, i + RESGUARDO_BATCH_SIZE);
+              const { data: resguardosBatch, error: resguardosError } = await supabase
+                .from('resguardos')
+                .select('id_mueble, resguardante, f_resguardo')
+                .in('id_mueble', batchIds)
+                .eq('origen', 'INEA')
+                .order('f_resguardo', { ascending: false });
+              
+              if (!resguardosError && resguardosBatch) {
+                allResguardos.push(...resguardosBatch);
+              }
+            }
+            
+            const resguardos = allResguardos;
+            
+            // Step 3: Create a map of most recent resguardo per mueble
+            const resguardoMap = new Map<string, string | null>();
+            if (resguardos) {
+              resguardos.forEach(r => {
+                if (!resguardoMap.has(r.id_mueble)) {
+                  resguardoMap.set(r.id_mueble, r.resguardante || null);
+                }
+              });
+            }
+            
+            // Step 4: Combine data
+            return data.map(item => ({
+              ...item,
+              resguardante: resguardoMap.get(item.id) || null
+            })) as MuebleINEA[];
           },
           FETCH_RETRY_CONFIG
         );
@@ -159,7 +197,20 @@ export function useIneaObsoletosIndexation() {
                 }
                 
                 if (insertedData && insertedData.estatus === 'BAJA') {
-                  addMueble(insertedData);
+                  // Fetch resguardo separately
+                  const { data: resguardos } = await supabase
+                    .from('resguardos')
+                    .select('resguardante, f_resguardo')
+                    .eq('id_mueble', insertedData.id)
+                    .eq('origen', 'INEA')
+                    .order('f_resguardo', { ascending: false })
+                    .limit(1);
+                  
+                  const transformed = {
+                    ...insertedData,
+                    resguardante: resguardos?.[0]?.resguardante || null
+                  };
+                  addMueble(transformed);
                 }
                 break;
               }
@@ -181,10 +232,24 @@ export function useIneaObsoletosIndexation() {
                 }
                 
                 if (updatedData) {
-                  if (updatedData.estatus === 'BAJA') {
-                    updateMueble(updatedData.id, updatedData);
+                  // Fetch resguardo separately
+                  const { data: resguardos } = await supabase
+                    .from('resguardos')
+                    .select('resguardante, f_resguardo')
+                    .eq('id_mueble', updatedData.id)
+                    .eq('origen', 'INEA')
+                    .order('f_resguardo', { ascending: false })
+                    .limit(1);
+                  
+                  const transformed = {
+                    ...updatedData,
+                    resguardante: resguardos?.[0]?.resguardante || null
+                  };
+                  
+                  if (transformed.estatus === 'BAJA') {
+                    updateMueble(transformed.id, transformed);
                   } else {
-                    removeMueble(updatedData.id);
+                    removeMueble(transformed.id);
                   }
                 }
                 break;
@@ -218,6 +283,48 @@ export function useIneaObsoletosIndexation() {
           handleReconciliation();
         }
       })
+      // Listen to resguardos table changes
+      .on('postgres_changes', 
+        { event: '*', schema: 'public', table: 'resguardos', filter: 'origen=eq.INEA' },
+        async (payload: any) => {
+          updateLastEventReceived(MODULE_KEY);
+          
+          try {
+            const affectedMuebleId = payload.new?.id_mueble || payload.old?.id_mueble;
+            if (!affectedMuebleId) return;
+            
+            // Refetch the affected mueble with its updated resguardante
+            const { data: updatedMueble, error } = await supabase
+              .from(TABLE)
+              .select(`
+                *,
+                area:id_area(id_area, nombre),
+                directorio:id_directorio(id_directorio, nombre, puesto)
+              `)
+              .eq('id', affectedMuebleId)
+              .single();
+            
+            if (!error && updatedMueble && updatedMueble.estatus === 'BAJA') {
+              // Fetch resguardo separately
+              const { data: resguardos } = await supabase
+                .from('resguardos')
+                .select('resguardante, f_resguardo')
+                .eq('id_mueble', affectedMuebleId)
+                .eq('origen', 'INEA')
+                .order('f_resguardo', { ascending: false })
+                .limit(1);
+              
+              const transformed = {
+                ...updatedMueble,
+                resguardante: resguardos?.[0]?.resguardante || null
+              };
+              updateMueble(transformed.id, transformed);
+            }
+          } catch (error) {
+            console.error('Error handling resguardo change:', error);
+          }
+        }
+      )
       .subscribe();
     
     channelRef.current = channel;

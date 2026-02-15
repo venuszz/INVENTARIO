@@ -125,12 +125,35 @@ export function useIteaIndexation() {
         }
         
         if (affectedMuebles && affectedMuebles.length > 0) {
-          // Attach color data
-          const mueblesWithColors = attachColorData(affectedMuebles, colorsMap);
-          allFetchedMuebles.push(...mueblesWithColors);
+          // Fetch resguardos for these muebles
+          const muebleIds = affectedMuebles.map(m => m.id);
+          const { data: resguardos } = await supabase
+            .from('resguardos')
+            .select('id_mueble, resguardante, f_resguardo')
+            .in('id_mueble', muebleIds)
+            .eq('origen', 'ITEA')
+            .order('f_resguardo', { ascending: false });
+          
+          // Create map of most recent resguardo per mueble
+          const resguardoMap = new Map<string, string | null>();
+          if (resguardos) {
+            resguardos.forEach(r => {
+              if (!resguardoMap.has(r.id_mueble)) {
+                resguardoMap.set(r.id_mueble, r.resguardante || null);
+              }
+            });
+          }
+          
+          // Attach color data and extract resguardante
+          const mueblesWithColorsAndResguardante = affectedMuebles.map(item => ({
+            ...item,
+            resguardante: resguardoMap.get(item.id) || null,
+            colores: item.color ? colorsMap[item.color] || null : null
+          }));
+          allFetchedMuebles.push(...mueblesWithColorsAndResguardante);
           
           // Set syncing IDs for skeleton display
-          const ids = mueblesWithColors.map(m => m.id);
+          const ids = mueblesWithColorsAndResguardante.map(m => m.id);
           setSyncingIds(ids);
           
           hasMore = affectedMuebles.length === BATCH_SIZE;
@@ -216,6 +239,7 @@ export function useIteaIndexation() {
       while (hasMore) {
         const batch = await withExponentialBackoff(
           async () => {
+            // Step 1: Fetch muebles without resguardo JOIN
             const { data, error } = await supabase
               .from(TABLE)
               .select(`
@@ -231,18 +255,52 @@ export function useIteaIndexation() {
               throw error;
             }
             
-            // Manually attach color data
-            const dataWithColors = (data || []).map((item: any) => ({
+            if (!data || data.length === 0) return [];
+            
+            // Step 2: Fetch resguardos for these muebles (in batches to avoid URL length limits)
+            const muebleIds = data.map(m => m.id);
+            let allResguardos: any[] = [];
+            const RESGUARDO_BATCH_SIZE = 100;
+            
+            for (let i = 0; i < muebleIds.length; i += RESGUARDO_BATCH_SIZE) {
+              const batchIds = muebleIds.slice(i, i + RESGUARDO_BATCH_SIZE);
+              const { data: resguardosBatch, error: resguardosError } = await supabase
+                .from('resguardos')
+                .select('id_mueble, resguardante, f_resguardo')
+                .in('id_mueble', batchIds)
+                .eq('origen', 'ITEA')
+                .order('f_resguardo', { ascending: false });
+              
+              if (!resguardosError && resguardosBatch) {
+                allResguardos.push(...resguardosBatch);
+              }
+            }
+            
+            const resguardos = allResguardos;
+            
+            // Step 3: Create a map of most recent resguardo per mueble
+            const resguardoMap = new Map<string, string | null>();
+            if (resguardos) {
+              resguardos.forEach(r => {
+                if (!resguardoMap.has(r.id_mueble)) {
+                  resguardoMap.set(r.id_mueble, r.resguardante || null);
+                }
+              });
+            }
+            
+            // Step 4: Combine data with resguardante and colors
+            const dataWithColorsAndResguardante = data.map((item: any) => ({
               ...item,
+              resguardante: resguardoMap.get(item.id) || null,
               colores: item.color ? coloresMap[item.color] || null : null
             }));
             
             console.log('✅ [ITEA Indexation] Batch fetched:', {
-              records: dataWithColors.length,
-              with_colors: dataWithColors.filter((i: any) => i.colores).length
+              records: dataWithColorsAndResguardante.length,
+              with_colors: dataWithColorsAndResguardante.filter((i: any) => i.colores).length
             });
             
-            return dataWithColors as MuebleITEA[];
+            return dataWithColorsAndResguardante as MuebleITEA[];
           },
           FETCH_RETRY_CONFIG
         );
@@ -305,18 +363,31 @@ export function useIteaIndexation() {
                   .single();
                 
                 if (!error && data) {
-                  const dataWithColor = attachColorData([data], colorsMap)[0];
-                  
-                  if (dataWithColor.estatus !== 'BAJA') {
-                    addMueble(dataWithColor);
-                    iteaEmitter.emit({ type: 'INSERT', data: dataWithColor, timestamp: new Date().toISOString() });
+                  if (data.estatus !== 'BAJA') {
+                    // Fetch resguardo separately
+                    const { data: resguardos } = await supabase
+                      .from('resguardos')
+                      .select('resguardante, f_resguardo')
+                      .eq('id_mueble', data.id)
+                      .eq('origen', 'ITEA')
+                      .order('f_resguardo', { ascending: false })
+                      .limit(1);
+                    
+                    const dataWithColorAndResguardante = {
+                      ...data,
+                      resguardante: resguardos?.[0]?.resguardante || null,
+                      colores: data.color ? colorsMap[data.color] || null : null
+                    };
+                    
+                    addMueble(dataWithColorAndResguardante);
+                    iteaEmitter.emit({ type: 'INSERT', data: dataWithColorAndResguardante, timestamp: new Date().toISOString() });
                     addRealtimeChange({
                       moduleKey: MODULE_KEY,
                       moduleName: 'ITEA',
                       table: TABLE,
                       eventType: 'INSERT',
-                      recordId: dataWithColor.id,
-                      recordName: dataWithColor.id_inv,
+                      recordId: dataWithColorAndResguardante.id,
+                      recordName: dataWithColorAndResguardante.id_inv,
                     });
                   }
                 }
@@ -336,22 +407,35 @@ export function useIteaIndexation() {
                   .single();
                   
                 if (!error && data) {
-                  const dataWithColor = attachColorData([data], colorsMap)[0];
+                  // Fetch resguardo separately
+                  const { data: resguardos } = await supabase
+                    .from('resguardos')
+                    .select('resguardante, f_resguardo')
+                    .eq('id_mueble', data.id)
+                    .eq('origen', 'ITEA')
+                    .order('f_resguardo', { ascending: false })
+                    .limit(1);
                   
-                  if (dataWithColor.estatus === 'BAJA') {
-                    removeMueble(dataWithColor.id);
+                  const dataWithColorAndResguardante = {
+                    ...data,
+                    resguardante: resguardos?.[0]?.resguardante || null,
+                    colores: data.color ? colorsMap[data.color] || null : null
+                  };
+                  
+                  if (dataWithColorAndResguardante.estatus === 'BAJA') {
+                    removeMueble(dataWithColorAndResguardante.id);
                   } else {
-                    updateMueble(dataWithColor.id, dataWithColor);
+                    updateMueble(dataWithColorAndResguardante.id, dataWithColorAndResguardante);
                     addRealtimeChange({
                       moduleKey: MODULE_KEY,
                       moduleName: 'ITEA',
                       table: TABLE,
                       eventType: 'UPDATE',
-                      recordId: dataWithColor.id,
-                      recordName: dataWithColor.id_inv,
+                      recordId: dataWithColorAndResguardante.id,
+                      recordName: dataWithColorAndResguardante.id_inv,
                     });
                   }
-                  iteaEmitter.emit({ type: 'UPDATE', data: dataWithColor, timestamp: new Date().toISOString() });
+                  iteaEmitter.emit({ type: 'UPDATE', data: dataWithColorAndResguardante, timestamp: new Date().toISOString() });
                 }
                 break;
               }
@@ -415,6 +499,51 @@ export function useIteaIndexation() {
           handleReconciliation();
         }
       })
+      // Listen to resguardos table changes
+      .on('postgres_changes', 
+        { event: '*', schema: 'public', table: 'resguardos', filter: 'origen=eq.ITEA' },
+        async (payload: any) => {
+          updateLastEventReceived(MODULE_KEY);
+          
+          try {
+            const affectedMuebleId = payload.new?.id_mueble || payload.old?.id_mueble;
+            if (!affectedMuebleId) return;
+            
+            const colorsMap = await fetchColorsMap();
+            
+            // Refetch the affected mueble with its updated resguardante
+            const { data: updatedMueble, error } = await supabase
+              .from(TABLE)
+              .select(`
+                *,
+                area:area(id_area, nombre),
+                directorio:directorio(id_directorio, nombre, puesto)
+              `)
+              .eq('id', affectedMuebleId)
+              .single();
+            
+            if (!error && updatedMueble && updatedMueble.estatus !== 'BAJA') {
+              // Fetch resguardo separately
+              const { data: resguardos } = await supabase
+                .from('resguardos')
+                .select('resguardante, f_resguardo')
+                .eq('id_mueble', affectedMuebleId)
+                .eq('origen', 'ITEA')
+                .order('f_resguardo', { ascending: false })
+                .limit(1);
+              
+              const transformed = {
+                ...updatedMueble,
+                resguardante: resguardos?.[0]?.resguardante || null,
+                colores: updatedMueble.color ? colorsMap[updatedMueble.color] || null : null
+              };
+              updateMueble(transformed.id, transformed);
+            }
+          } catch (error) {
+            console.error('Error handling resguardo change:', error);
+          }
+        }
+      )
       .subscribe();
     
     channelRef.current = channel;
