@@ -8,6 +8,7 @@ import { useDirectorioStats } from './hooks/useDirectorioStats';
 import { useIneaStore } from '@/stores/ineaStore';
 import { useIteaStore } from '@/stores/iteaStore';
 import { useNoListadoStore } from '@/stores/noListadoStore';
+import { useResguardosStore } from '@/stores/resguardosStore';
 import { motion, AnimatePresence } from 'framer-motion';
 
 interface Directorio {
@@ -62,6 +63,40 @@ export function DirectorioManager() {
         ).length;
         
         return count;
+    };
+    
+    // Función para contar resguardos por área para un director específico
+    const countResguardosByArea = (id_directorio: number, id_area: number): number => {
+        // Get resguardos for this director
+        const directorResguardos = useResguardosStore.getState().resguardos.filter(
+            r => r.id_directorio === id_directorio
+        );
+        
+        // Count unique folios where the mueble belongs to the specified area
+        const uniqueFolios = new Set<string>();
+        
+        directorResguardos.forEach(resguardo => {
+            let muebleIdArea: number | null = null;
+            
+            // Find the mueble to get id_area based on origen
+            if (resguardo.origen === 'INEA') {
+                const mueble = ineaMuebles.find(m => m.id === resguardo.id_mueble);
+                muebleIdArea = mueble?.id_area ?? null;
+            } else if (resguardo.origen === 'ITEA') {
+                const mueble = iteaMuebles.find(m => m.id === resguardo.id_mueble);
+                muebleIdArea = mueble?.id_area ?? null;
+            } else if (resguardo.origen === 'NO_LISTADO') {
+                const mueble = noListadoMuebles.find(m => m.id === resguardo.id_mueble);
+                muebleIdArea = mueble?.id_area ?? null;
+            }
+            
+            // If this mueble belongs to the target area, add the folio
+            if (muebleIdArea === id_area) {
+                uniqueFolios.add(resguardo.folio);
+            }
+        });
+        
+        return uniqueFolios.size;
     };
     
     // Estados locales
@@ -653,7 +688,9 @@ export function DirectorioManager() {
                                                         {Array.from(new Set(editSelectedAreas)).map(id_area => {
                                                             const areaObj = areasFromStore.find(a => a.id_area === id_area);
                                                             const bienesCount = countBienesByArea(editEmployee.id_directorio, id_area);
+                                                            const resguardosCount = countResguardosByArea(editEmployee.id_directorio, id_area);
                                                             const hasGoods = bienesCount > 0;
+                                                            const hasResguardos = resguardosCount > 0;
                                                             
                                                             return areaObj ? (
                                                                 <motion.span 
@@ -679,11 +716,21 @@ export function DirectorioManager() {
                                                                                 {bienesCount}
                                                                             </span>
                                                                         )}
+                                                                        {resguardosCount > 0 && (
+                                                                            <span className={`flex items-center gap-0.5 ml-1 px-1.5 py-0.5 rounded-full text-[10px] ${
+                                                                                isDarkMode 
+                                                                                    ? 'bg-blue-500/20 text-blue-400' 
+                                                                                    : 'bg-blue-100 text-blue-700'
+                                                                            }`}>
+                                                                                <FileText size={10} />
+                                                                                {resguardosCount}
+                                                                            </span>
+                                                                        )}
                                                                     </span>
-                                                                    {hasGoods ? (
+                                                                    {hasGoods || hasResguardos ? (
                                                                         <span 
                                                                             className={`opacity-30 cursor-not-allowed`}
-                                                                            title={`No se puede eliminar: ${bienesCount} bien(es) asignado(s) en esta área`}
+                                                                            title={`No se puede eliminar: ${bienesCount} bien(es) y ${resguardosCount} resguardo(s) en esta área`}
                                                                         >
                                                                             <X size={12} />
                                                                         </span>

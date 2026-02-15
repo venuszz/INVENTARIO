@@ -48,7 +48,7 @@ export default function ArticulosListPanel({
   }, {});
 
   return (
-    <div className={`rounded-lg border h-[70vh] flex flex-col ${
+    <div className={`rounded-lg border h-[45vh] flex flex-col ${
       isDarkMode
         ? 'bg-white/[0.02] border-white/10'
         : 'bg-black/[0.02] border-black/10'
@@ -142,28 +142,28 @@ export default function ArticulosListPanel({
             </div>
 
             {/* Articles List */}
-            <div className="space-y-2.5">
+            <div className="space-y-1.5">
               {articulosGrupo.map((articulo) => (
                 <div
                   key={articulo.id}
-                  className={`rounded-lg border p-4 transition-colors ${
+                  className={`rounded-lg border p-2.5 transition-colors ${
                     selectedArticulos.includes(articulo.num_inventario)
                       ? (isDarkMode ? 'bg-white/[0.04] border-white/20' : 'bg-black/[0.04] border-black/20')
                       : (isDarkMode ? 'bg-white/[0.02] border-white/10 hover:bg-white/[0.03]' : 'bg-black/[0.02] border-black/10 hover:bg-black/[0.03]')
                   }`}
                 >
-                  <div className="flex items-start gap-3">
+                  <div className="flex items-start gap-2">
                     {/* Checkbox */}
                     <div
                       onClick={() => onToggleSelection(articulo.num_inventario)}
-                      className={`flex items-center justify-center w-5 h-5 rounded border cursor-pointer transition-all mt-0.5 flex-shrink-0 ${
+                      className={`flex items-center justify-center w-4 h-4 rounded border cursor-pointer transition-all mt-0.5 flex-shrink-0 ${
                         selectedArticulos.includes(articulo.num_inventario)
                           ? (isDarkMode ? 'bg-white/20 border-white/40' : 'bg-black/20 border-black/40')
                           : (isDarkMode ? 'border-white/20 hover:bg-white/10' : 'border-black/20 hover:bg-black/10')
                       }`}
                     >
                       {selectedArticulos.includes(articulo.num_inventario) && (
-                        <div className={`w-2 h-2 rounded-full ${
+                        <div className={`w-1.5 h-1.5 rounded-full ${
                           isDarkMode ? 'bg-white' : 'bg-black'
                         }`}></div>
                       )}
@@ -172,13 +172,13 @@ export default function ArticulosListPanel({
                     {/* Content */}
                     <div className="flex-1 min-w-0">
                       {/* ID and Badges */}
-                      <div className="flex flex-wrap items-center gap-2 mb-2">
-                        <span className={`text-base font-semibold ${
+                      <div className="flex flex-wrap items-center gap-1.5 mb-1">
+                        <span className={`text-sm font-semibold ${
                           isDarkMode ? 'text-white' : 'text-black'
                         }`}>
                           {articulo.num_inventario}
                         </span>
-                        <span className={`px-2 py-0.5 rounded text-xs font-medium border ${
+                        <span className={`px-1.5 py-0.5 rounded text-xs font-medium border ${
                           articulo.condicion === 'B' ? (isDarkMode ? 'bg-green-500/10 text-green-300 border-green-500/30' : 'bg-green-100 text-green-700 border-green-300') :
                           articulo.condicion === 'R' ? (isDarkMode ? 'bg-yellow-500/10 text-yellow-300 border-yellow-500/30' : 'bg-yellow-100 text-yellow-700 border-yellow-300') :
                           articulo.condicion === 'M' ? (isDarkMode ? 'bg-red-500/10 text-red-300 border-red-500/30' : 'bg-red-100 text-red-700 border-red-300') :
@@ -186,7 +186,7 @@ export default function ArticulosListPanel({
                         }`}>
                           {articulo.condicion}
                         </span>
-                        <span className={`px-2 py-0.5 rounded text-xs font-medium border ${
+                        <span className={`px-1.5 py-0.5 rounded text-xs font-medium border ${
                           articulo.origen === 'INEA' ? (isDarkMode ? 'bg-blue-500/10 text-blue-300 border-blue-500/30' : 'bg-blue-100 text-blue-700 border-blue-300') :
                           articulo.origen === 'ITEA' ? (isDarkMode ? 'bg-pink-500/10 text-pink-300 border-pink-500/30' : 'bg-pink-100 text-pink-700 border-pink-300') :
                           (articulo.origen === 'NO_LISTADO' || articulo.origen === 'TLAXCALA') ? (isDarkMode ? 'bg-purple-500/10 text-purple-300 border-purple-500/30' : 'bg-purple-100 text-purple-700 border-purple-300') :
@@ -197,17 +197,17 @@ export default function ArticulosListPanel({
                       </div>
 
                       {/* Description */}
-                      <div className={`text-sm mb-2 line-clamp-2 leading-relaxed ${
+                      <div className={`text-xs mb-1 line-clamp-2 leading-relaxed ${
                         isDarkMode ? 'text-white/70' : 'text-black/70'
                       }`}>
                         {articulo.descripcion}
                       </div>
 
                       {/* Rubro */}
-                      <div className={`text-xs flex items-center gap-1.5 ${
+                      <div className={`text-xs flex items-center gap-1 ${
                         isDarkMode ? 'text-white/40' : 'text-black/40'
                       }`}>
-                        <Briefcase className="h-3 w-3" />
+                        <Briefcase className="h-2.5 w-2.5" />
                         {articulo.rubro}
                       </div>
                     </div>
@@ -222,7 +222,7 @@ export default function ArticulosListPanel({
                             : 'text-black/40 hover:text-black hover:bg-black/5'
                         }`}
                       >
-                        <CircleX className="h-4 w-4" />
+                        <CircleX className="h-3.5 w-3.5" />
                       </button>
                     </RoleGuard>
                   </div>

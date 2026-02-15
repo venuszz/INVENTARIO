@@ -75,12 +75,12 @@ export default function ResguardosTable({
   const skeletonRowsCount = Math.max(0, rowsPerPage - foliosUnicos.length);
 
   return (
-    <div className={`rounded-lg border overflow-hidden mb-4 flex flex-col h-[calc(131vh)] ${
+    <div className={`rounded-lg border overflow-hidden mb-4 flex flex-col h-[calc(90vh)] ${
       isDarkMode
         ? 'bg-white/[0.02] border-white/10'
         : 'bg-black/[0.02] border-black/10'
     }`}>
-      <div className="flex-grow overflow-y-auto overflow-x-hidden">
+      <div className="flex-grow overflow-y-auto overflow-x-hidden scrollbar-hide">
         <table className="w-full table-fixed">
           <thead className={`sticky top-0 z-10 backdrop-blur-xl ${
             isDarkMode ? 'bg-black/95 border-b border-white/10' : 'bg-white/95 border-b border-black/10'
@@ -336,6 +336,18 @@ export default function ResguardosTable({
           </tbody>
         </table>
       </div>
+
+      {/* Scrollbar hide styles */}
+      <style jsx>{`
+        .scrollbar-hide {
+          -ms-overflow-style: none;
+          scrollbar-width: none;
+        }
+        
+        .scrollbar-hide::-webkit-scrollbar {
+          display: none;
+        }
+      `}</style>
     </div>
   );
 }

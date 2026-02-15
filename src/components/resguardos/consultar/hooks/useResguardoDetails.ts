@@ -89,7 +89,7 @@ export function useResguardoDetails(): UseResguardoDetailsReturn {
           if (!mueble) {
             console.warn(`⚠️ [RESGUARDO DETAILS] Mueble not found in store:`, item.id_mueble, item.origen);
             return {
-              id: parseInt(item.id),
+              id: item.id, // Keep as string (UUID)
               num_inventario: 'N/A',
               descripcion: 'Artículo no encontrado',
               rubro: '',
@@ -100,7 +100,7 @@ export function useResguardoDetails(): UseResguardoDetailsReturn {
           }
 
           return {
-            id: parseInt(item.id),
+            id: item.id, // Keep as string (UUID)
             num_inventario: mueble.id_inv || '',
             descripcion: mueble.descripcion || '',
             rubro: mueble.rubro || '',

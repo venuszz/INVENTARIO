@@ -85,10 +85,26 @@ export function useDirectorioStats(
       });
       
       // Count unique resguardo folios per director
-      // Note: resguardos table uses text field 'usufinal' for resguardante name, not id_directorio FK
-      // We need to match by name, but we don't have director names here
-      // For now, we'll count resguardos by folio uniqueness
-      // This is a limitation - ideally resguardos should have id_directorio FK
+      // Resguardos table now uses id_directorio FK
+      const resguardosByDirector = new Map<number, Set<string>>();
+      
+      resguardos.forEach(resguardo => {
+        if (resguardo.id_directorio && memoizedIds.includes(resguardo.id_directorio)) {
+          if (!resguardosByDirector.has(resguardo.id_directorio)) {
+            resguardosByDirector.set(resguardo.id_directorio, new Set());
+          }
+          // Add folio to the set (automatically handles uniqueness)
+          resguardosByDirector.get(resguardo.id_directorio)!.add(resguardo.folio);
+        }
+      });
+      
+      // Update stats with unique folio counts
+      resguardosByDirector.forEach((folios, id_directorio) => {
+        const current = statsMap.get(id_directorio);
+        if (current) {
+          current.resguardos = folios.size;
+        }
+      });
       
       setStats(statsMap);
     } catch (err) {

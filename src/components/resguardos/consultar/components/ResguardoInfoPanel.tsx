@@ -39,7 +39,7 @@ export default function ResguardoInfoPanel({
   const { isDarkMode } = useTheme();
 
   return (
-    <div className={`rounded-lg border h-[70vh] flex flex-col ${
+    <div className={`rounded-lg border h-[60vh] flex flex-col ${
       isDarkMode
         ? 'bg-white/[0.02] border-white/10'
         : 'bg-black/[0.02] border-black/10'

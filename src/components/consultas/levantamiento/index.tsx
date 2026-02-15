@@ -604,20 +604,31 @@ export default function LevantamientoUnificado() {
     setShowSuggestions(false);
   };
 
-  // Fetch folio resguardo data
+  // Fetch folio resguardo data using resguardos store
   useEffect(() => {
     async function fetchFolios() {
       if (!muebles.length) return;
       
+      // Fetch resguardos with id_mueble (UUID)
       const { data, error } = await supabase
         .from('resguardos')
-        .select('num_inventario, folio');
+        .select('id_mueble, folio');
       
       if (!error && data) {
+        // Create a map of mueble UUID to id_inv
+        const muebleIdToIdInv: Record<string, string> = {};
+        muebles.forEach(m => {
+          muebleIdToIdInv[m.id] = m.id_inv;
+        });
+        
+        // Map resguardos to id_inv
         const map: Record<string, string> = {};
         data.forEach(r => {
-          if (r.num_inventario && r.folio) {
-            map[r.num_inventario] = r.folio;
+          if (r.id_mueble && r.folio) {
+            const idInv = muebleIdToIdInv[r.id_mueble];
+            if (idInv) {
+              map[idInv] = r.folio;
+            }
           }
         });
         setFoliosResguardo(map);

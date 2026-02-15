@@ -64,9 +64,9 @@ export function useResguardosData(): UseResguardosDataReturn {
   const [sortField, setSortField] = useState<'folio' | 'fecha' | 'director' | 'resguardantes'>('folio');
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
 
-  // Pagination
+  // Pagination - default to 10 rows per page
   const [currentPage, setCurrentPage] = useState(1);
-  const [rowsPerPage, setRowsPerPage] = useState(25);
+  const [rowsPerPage, setRowsPerPage] = useState(10);
 
   // Unique values for filter dropdowns
   const [directores, setDirectores] = useState<string[]>([]);

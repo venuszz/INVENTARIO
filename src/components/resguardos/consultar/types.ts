@@ -27,7 +27,7 @@ export interface ResguardoDetalle {
  * ResguardoArticulo - Article within a resguardo
  */
 export interface ResguardoArticulo {
-  id: number; // ID from resguardos table
+  id: string; // UUID from resguardos table
   num_inventario: string;
   descripcion: string;
   rubro: string;

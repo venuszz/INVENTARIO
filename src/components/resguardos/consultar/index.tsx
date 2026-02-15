@@ -459,7 +459,7 @@ export default function ConsultarResguardos({ folioParam }: ConsultarResguardosP
                   userRole={userRole}
                 />
               ) : (
-                <div className={`rounded-lg border p-4 h-[70vh] flex flex-col ${
+                <div className={`rounded-lg border p-4 h-[45vh] flex flex-col ${
                   isDarkMode ? 'bg-white/[0.02] border-white/10' : 'bg-black/[0.02] border-black/10'
                 }`}>
                   <h2 className={`text-sm font-medium mb-4 ${
@@ -490,7 +490,7 @@ export default function ConsultarResguardos({ folioParam }: ConsultarResguardosP
                   userRole={userRole}
                 />
               ) : (
-                <div className={`rounded-lg border h-[70vh] flex flex-col overflow-hidden ${
+                <div className={`rounded-lg border h-[45vh] flex flex-col overflow-hidden ${
                   isDarkMode ? 'bg-white/[0.02] border-white/10' : 'bg-black/[0.02] border-black/10'
                 }`}>
                   <div className={`px-4 py-3 border-b flex-shrink-0 ${

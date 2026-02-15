@@ -1,7 +1,7 @@
 import React, { RefObject } from 'react';
 import { 
   Archive, X, Edit, Plus, Calendar, DollarSign, Store, Receipt, 
-  Building2, Shield, XCircle, AlertTriangle, Info 
+  Building2, Shield, XCircle, AlertTriangle, Info, FileText, MapPin, User
 } from 'lucide-react';
 import ImagePreview from './ImagePreview';
 import CustomSelect from './CustomSelect';
@@ -632,22 +632,91 @@ function ViewMode({
       </div>
 
       {folio && detalleResguardo ? (
-        <div className={`flex flex-wrap items-center gap-2 rounded-lg px-4 py-3 mb-4 text-xs font-light border ${
-          isDarkMode
-            ? 'bg-white/[0.04] border-white/20 text-white'
-            : 'bg-black/[0.04] border-black/20 text-black'
-        }`}>
-          <span className="font-medium">Folio:</span>
-          <span className="truncate">{detalleResguardo.folio}</span>
-          <span className={isDarkMode ? 'text-white/40' : 'text-black/40'}>•</span>
-          <span className="font-medium">Fecha:</span>
-          <span className="truncate">{formatDate(detalleResguardo.f_resguardo)}</span>
-          <span className={isDarkMode ? 'text-white/40' : 'text-black/40'}>•</span>
-          <span className="font-medium">Área:</span>
-          <span className="truncate">{detalleResguardo.area_resguardo}</span>
-          <span className={isDarkMode ? 'text-white/40' : 'text-black/40'}>•</span>
-          <span className="font-medium">Director:</span>
-          <span className="truncate">{detalleResguardo.dir_area}</span>
+        <div className="mb-4">
+          <div className={`text-xs font-medium mb-2 ${
+            isDarkMode ? 'text-white/60' : 'text-black/60'
+          }`}>
+            Resguardo
+          </div>
+          <div className={`rounded-lg border ${
+            isDarkMode
+              ? 'bg-white/[0.02] border-white/10'
+              : 'bg-black/[0.02] border-black/10'
+          }`}>
+            <div className="grid grid-cols-2 gap-3 p-3">
+              <div className="flex items-start gap-2">
+                <FileText className={`h-3.5 w-3.5 mt-0.5 flex-shrink-0 ${
+                  isDarkMode ? 'text-white/40' : 'text-black/40'
+                }`} />
+                <div className="min-w-0 flex-1">
+                  <div className={`text-[10px] font-medium mb-0.5 ${
+                    isDarkMode ? 'text-white/60' : 'text-black/60'
+                  }`}>
+                    Folio
+                  </div>
+                  <div className={`text-xs truncate ${
+                    isDarkMode ? 'text-white' : 'text-black'
+                  }`}>
+                    {detalleResguardo.folio}
+                  </div>
+                </div>
+              </div>
+              
+              <div className="flex items-start gap-2">
+                <Calendar className={`h-3.5 w-3.5 mt-0.5 flex-shrink-0 ${
+                  isDarkMode ? 'text-white/40' : 'text-black/40'
+                }`} />
+                <div className="min-w-0 flex-1">
+                  <div className={`text-[10px] font-medium mb-0.5 ${
+                    isDarkMode ? 'text-white/60' : 'text-black/60'
+                  }`}>
+                    Fecha
+                  </div>
+                  <div className={`text-xs truncate ${
+                    isDarkMode ? 'text-white' : 'text-black'
+                  }`}>
+                    {formatDate(detalleResguardo.f_resguardo)}
+                  </div>
+                </div>
+              </div>
+              
+              <div className="flex items-start gap-2">
+                <MapPin className={`h-3.5 w-3.5 mt-0.5 flex-shrink-0 ${
+                  isDarkMode ? 'text-white/40' : 'text-black/40'
+                }`} />
+                <div className="min-w-0 flex-1">
+                  <div className={`text-[10px] font-medium mb-0.5 ${
+                    isDarkMode ? 'text-white/60' : 'text-black/60'
+                  }`}>
+                    Área
+                  </div>
+                  <div className={`text-xs truncate ${
+                    isDarkMode ? 'text-white' : 'text-black'
+                  }`}>
+                    {detalleResguardo.area_resguardo || 'Sin área'}
+                  </div>
+                </div>
+              </div>
+              
+              <div className="flex items-start gap-2">
+                <User className={`h-3.5 w-3.5 mt-0.5 flex-shrink-0 ${
+                  isDarkMode ? 'text-white/40' : 'text-black/40'
+                }`} />
+                <div className="min-w-0 flex-1">
+                  <div className={`text-[10px] font-medium mb-0.5 ${
+                    isDarkMode ? 'text-white/60' : 'text-black/60'
+                  }`}>
+                    Director
+                  </div>
+                  <div className={`text-xs truncate ${
+                    isDarkMode ? 'text-white' : 'text-black'
+                  }`}>
+                    {detalleResguardo.dir_area}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
       ) : (
         <div
