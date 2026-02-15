@@ -13,6 +13,7 @@ interface UseFormDataReturn {
   isFieldValid: (fieldName: string) => boolean;
   isStepComplete: (step: number) => boolean;
   formatCurrency: (value: string) => string;
+  setIsTlaxcala: (isTlaxcala: boolean) => void;
 }
 
 const initialFormData: FormData = {
@@ -51,6 +52,7 @@ export function useFormData(defaultEstado: string = '', defaultEstatus: string =
     estatus: defaultEstatus
   });
   const [touched, setTouched] = useState<Record<string, boolean>>({});
+  const [isTlaxcala, setIsTlaxcala] = useState<boolean>(false);
 
   const formatCurrency = useCallback((value: string): string => {
     const num = parseFloat(value.replace(/[^\d.-]/g, ''));
@@ -96,17 +98,23 @@ export function useFormData(defaultEstado: string = '', defaultEstatus: string =
   const isFieldValid = useCallback((fieldName: string): boolean => {
     if (!touched[fieldName]) return true;
     
+    // If Tlaxcala is selected, all fields are optional
+    if (isTlaxcala) return true;
+    
     const allRequiredFields = Object.values(requiredFields).flat();
     if (!allRequiredFields.includes(fieldName)) return true;
     
     return formData[fieldName as keyof FormData]?.trim() !== '';
-  }, [formData, touched]);
+  }, [formData, touched, isTlaxcala]);
 
   const isStepComplete = useCallback((step: number): boolean => {
+    // If Tlaxcala is selected, all steps are complete
+    if (isTlaxcala) return true;
+    
     const fields = requiredFields[step as keyof typeof requiredFields];
     if (!fields) return true; // If step doesn't exist, consider it complete
     return fields.every(field => formData[field as keyof FormData]?.trim() !== '');
-  }, [formData]);
+  }, [formData, isTlaxcala]);
 
   const resetForm = useCallback((defaultEstado: string, defaultEstatus: string) => {
     setFormData({
@@ -128,6 +136,7 @@ export function useFormData(defaultEstado: string = '', defaultEstatus: string =
     resetForm,
     isFieldValid,
     isStepComplete,
-    formatCurrency
+    formatCurrency,
+    setIsTlaxcala
   };
 }

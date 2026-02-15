@@ -102,7 +102,7 @@ export default function ConsultasNoListadoGeneral() {
     handleSuggestionClick,
     handleInputKeyDown,
     handleInputBlur
-  } = useSearchAndFilters(muebles);
+  } = useSearchAndFilters(muebles, foliosResguardo);
 
   // Initialize item edit hook
   const {
@@ -593,13 +593,13 @@ export default function ConsultasNoListadoGeneral() {
                             </motion.button>
                             <motion.button
                               onClick={markAsBaja}
-                              className={`flex items-center gap-2 px-4 py-2 rounded-lg border text-sm font-light tracking-tight transition-all ${
+                              disabled={true}
+                              className={`flex items-center gap-2 px-4 py-2 rounded-lg border text-sm font-light tracking-tight transition-all cursor-not-allowed opacity-50 ${
                                 isDarkMode
-                                  ? 'bg-white/[0.02] border-white/10 text-white/60 hover:bg-white/5 hover:text-white'
-                                  : 'bg-black/[0.02] border-black/10 text-black/60 hover:bg-black/5 hover:text-black'
+                                  ? 'bg-white/[0.02] border-white/10 text-white/40'
+                                  : 'bg-black/[0.02] border-black/10 text-black/40'
                               }`}
-                              whileHover={{ scale: 1.02 }}
-                              whileTap={{ scale: 0.98 }}
+                              title="Función deshabilitada"
                             >
                               <Trash2 className="h-3.5 w-3.5" />
                               Dar de Baja

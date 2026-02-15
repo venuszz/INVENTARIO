@@ -8,7 +8,7 @@ interface SearchBarProps {
   setSearchTerm: (term: string) => void;
   searchMatchType: ActiveFilter['type'];
   showSuggestions: boolean;
-  suggestions: { value: string; type: ActiveFilter['type'] }[];
+  suggestions: { value: string; type: ActiveFilter['type']; isConcept?: boolean }[];
   highlightedIndex: number;
   onSuggestionClick: (index: number) => void;
   onKeyDown: (e: React.KeyboardEvent<HTMLInputElement>) => void;
@@ -89,19 +89,28 @@ export default function SearchBar({
             }`}>
               {suggestions.map((suggestion, index) => {
                 const isSelected = index === highlightedIndex;
+                const isConcept = suggestion.isConcept;
                 return (
                   <button
                     key={`${suggestion.type}-${suggestion.value}-${index}`}
                     type="button"
                     onClick={() => onSuggestionClick(index)}
                     className={`w-full flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-left transition-all duration-150 ${
-                      isSelected
-                        ? isDarkMode 
-                          ? 'bg-white/10 text-white' 
-                          : 'bg-black/10 text-black'
-                        : isDarkMode
-                          ? 'hover:bg-white/[0.04] text-white/90'
-                          : 'hover:bg-black/[0.03] text-black/90'
+                      isConcept
+                        ? isSelected
+                          ? isDarkMode 
+                            ? 'bg-blue-500/20 text-white border border-blue-500/30' 
+                            : 'bg-blue-50 text-black border border-blue-200'
+                          : isDarkMode
+                            ? 'hover:bg-blue-500/10 text-white/90 border border-blue-500/20'
+                            : 'hover:bg-blue-50/50 text-black/90 border border-blue-100'
+                        : isSelected
+                          ? isDarkMode 
+                            ? 'bg-white/10 text-white' 
+                            : 'bg-black/10 text-black'
+                          : isDarkMode
+                            ? 'hover:bg-white/[0.04] text-white/90'
+                            : 'hover:bg-black/[0.03] text-black/90'
                     }`}
                   >
                     {/* Icon based on type */}
@@ -128,7 +137,8 @@ export default function SearchBar({
                           ? (isDarkMode ? 'text-white/60' : 'text-black/60')
                           : (isDarkMode ? 'text-white/40' : 'text-black/40')
                       }`}>
-                        {suggestion.type === 'id' ? 'ID de Inventario' :
+                        {isConcept ? 'Búsqueda por Concepto' :
+                         suggestion.type === 'id' ? 'ID de Inventario' :
                          suggestion.type === 'area' ? 'Área' :
                          suggestion.type === 'usufinal' ? 'Director' :
                          suggestion.type === 'descripcion' ? 'Descripción' :
@@ -136,6 +146,7 @@ export default function SearchBar({
                          suggestion.type === 'rubro' ? 'Rubro' :
                          suggestion.type === 'estado' ? 'Estado' :
                          suggestion.type === 'estatus' ? 'Estatus' :
+                         suggestion.type === 'folio' ? 'Folio de Resguardo' :
                          suggestion.type || 'Búsqueda'}
                       </div>
                     </div>

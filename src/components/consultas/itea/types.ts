@@ -55,5 +55,5 @@ export interface ResguardoDetalle {
 // Filtro activo
 export interface ActiveFilter {
   term: string;
-  type: 'id' | 'descripcion' | 'rubro' | 'estado' | 'estatus' | 'area' | 'usufinal' | 'resguardante' | 'color' | null;
+  type: 'id' | 'descripcion' | 'rubro' | 'estado' | 'estatus' | 'area' | 'usufinal' | 'resguardante' | 'color' | 'folio' | 'sin_id' | 'con_resguardo' | 'sin_resguardo' | null;
 }

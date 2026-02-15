@@ -114,7 +114,7 @@ export default function ConsultasIteaGeneral() {
     handleSuggestionClick,
     handleInputKeyDown,
     handleInputBlur
-  } = useSearchAndFilters(muebles);
+  } = useSearchAndFilters(muebles, foliosResguardo);
 
   // Initialize item edit hook
   const {

@@ -28,15 +28,15 @@ export const INEA_CONFIG: ModuleConfig = {
 };
 
 /**
- * Configuración de módulo ITEA
+ * Configuración de módulo ITEJPA
  * Tabla: mueblesitea (sin estatus BAJA)
  */
 export const ITEA_CONFIG: ModuleConfig = {
   key: 'itea',
-  name: 'ITEA',
+  name: 'ITEJPA',
   table: 'mueblesitea',
   stages: [
-    { key: 'fetch_muebles', label: 'Cargando muebles ITEA', weight: 90 },
+    { key: 'fetch_muebles', label: 'Cargando muebles ITEJPA', weight: 90 },
     { key: 'setup_realtime', label: 'Configurando tiempo real', weight: 10 },
   ],
   glowColor: '#10b981', // emerald-500
@@ -60,15 +60,15 @@ export const INEA_OBSOLETOS_CONFIG: ModuleConfig = {
 };
 
 /**
- * Configuración de módulo ITEA Obsoletos
+ * Configuración de módulo ITEJPA Obsoletos
  * Tabla: mueblesitea (solo estatus BAJA)
  */
 export const ITEA_OBSOLETOS_CONFIG: ModuleConfig = {
   key: 'iteaObsoletos',
-  name: 'ITEA Obsoletos',
+  name: 'ITEJPA Obsoletos',
   table: 'mueblesitea',
   stages: [
-    { key: 'fetch_obsoletos', label: 'Cargando muebles obsoletos ITEA', weight: 90 },
+    { key: 'fetch_obsoletos', label: 'Cargando muebles obsoletos ITEJPA', weight: 90 },
     { key: 'setup_realtime', label: 'Configurando tiempo real', weight: 10 },
   ],
   glowColor: '#f97316', // orange-500

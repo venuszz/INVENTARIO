@@ -17,7 +17,7 @@ const mockNotifications = [
         id: '2',
         type: 'info' as const,
         title: 'Nuevo bien registrado',
-        message: 'Se agregó el bien "Laptop HP EliteBook 840" con ID INV-2026-0234 al inventario ITEA',
+        message: 'Se agregó el bien "Laptop HP EliteBook 840" con ID INV-2026-0234 al inventario ITEJPA',
         time: 'Hace 15 minutos',
         isDemo: true,
         icon: Package

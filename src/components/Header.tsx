@@ -451,7 +451,7 @@ export default function NavigationBar() {
                     ]
                 },
                 {
-                    title: 'Inventario ITEA',
+                    title: 'Inventario ITEJPA',
                     path: '/consultas/itea',
                     children: [
                         { title: 'Vista general', path: '/consultas/itea/general' },
@@ -480,7 +480,7 @@ export default function NavigationBar() {
                     path: '/reportes/inea',
                 },
                 {
-                    title: 'Reportes ITEA',
+                    title: 'Reportes ITEJPA',
                     path: '/reportes/itea',
                 },
                 {
@@ -518,7 +518,7 @@ export default function NavigationBar() {
                                 <Link href="/" onClick={closeAll} className="hover:opacity-80 transition-opacity duration-300">
                                     <Image
                                         src={isDarkMode ? "/images/ITEA_logo.png" : "/images/ITEA_logo_negro.svg"}
-                                        alt="Logo ITEA"
+                                        alt="Logo ITEJPA"
                                         width={150}
                                         height={60}
                                         className="h-14 w-auto"

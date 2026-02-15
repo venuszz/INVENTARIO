@@ -38,6 +38,7 @@ export default function ConsultasIneaGeneral() {
   const { isDarkMode } = useTheme();
   const { user } = useSession();
   const userRole = useUserRole();
+  const inputRef = useRef<HTMLInputElement | null>(null);
   const detailRef = useRef<HTMLDivElement | null>(null);
 
   // Initialize indexation hook
@@ -93,13 +94,17 @@ export default function ConsultasIneaGeneral() {
     setSearchTerm,
     searchMatchType,
     activeFilters,
+    suggestions,
+    highlightedIndex,
+    showSuggestions,
     filteredMueblesOmni,
     saveCurrentFilter,
     removeFilter,
     clearAllFilters,
+    handleSuggestionClick,
     handleInputKeyDown,
     handleInputBlur
-  } = useSearchAndFilters(muebles);
+  } = useSearchAndFilters(muebles, foliosResguardo);
 
   // Initialize item edit hook
   const {
@@ -424,9 +429,14 @@ export default function ConsultasIneaGeneral() {
                     searchTerm={searchTerm}
                     setSearchTerm={setSearchTerm}
                     searchMatchType={searchMatchType}
-                    handleInputKeyDown={handleInputKeyDown}
-                    handleInputBlur={handleInputBlur}
+                    showSuggestions={showSuggestions}
+                    suggestions={suggestions}
+                    highlightedIndex={highlightedIndex}
+                    onSuggestionClick={handleSuggestionClick}
+                    onKeyDown={handleInputKeyDown}
+                    onBlur={handleInputBlur}
                     isDarkMode={isDarkMode}
+                    inputRef={inputRef}
                   />
                 </div>
                 <motion.button

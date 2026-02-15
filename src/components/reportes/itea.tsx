@@ -400,7 +400,7 @@ export default function ReportesIneaDashboard() {
                 <div className={`flex justify-between items-center mb-8 pb-6 border-b ${isDarkMode ? 'border-white/10' : 'border-black/10'}`}>
                     <div>
                         <h1 className="text-3xl font-light tracking-tight mb-1">
-                            Reportes ITEA
+                            Reportes ITEJPA
                         </h1>
                         <p className={`text-sm ${isDarkMode ? 'text-white/40' : 'text-black/40'}`}>
                             Exporta reportes en diferentes formatos

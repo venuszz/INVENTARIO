@@ -76,7 +76,7 @@ type InventoryData = {
         categories: InventoryCategory;
         cards: InventoryCard[];
     };
-    ITEA: {
+    ITEJPA: {
         title: string;
         categories: InventoryCategory;
         cards: InventoryCard[];
@@ -146,8 +146,8 @@ export default function InventoryDashboard() {
             },
             cards: []
         },
-        ITEA: {
-            title: "Inventario ITEA",
+        ITEJPA: {
+            title: "Inventario ITEJPA",
             categories: {
                 estatus: [],
                 rubros: []
@@ -273,7 +273,7 @@ export default function InventoryDashboard() {
             sumaValores: editableRubros.reduce((acc, rubro) => acc + rubro.sum, 0),
             rubros: rubrosWithFlags,
             fileName: `dashboard_${activeWarehouse.toLowerCase()}`,
-            warehouse: activeWarehouse as 'INEA' | 'ITEA',
+            warehouse: activeWarehouse as 'INEA' | 'ITEJPA',
             date: formatDate(exportDate)
         });
         setShowExportModal(false);
@@ -336,7 +336,7 @@ export default function InventoryDashboard() {
 
     // Función para procesar datos de inventario desde indexación
     const processInventoryData = (
-        origin: 'INEA' | 'ITEA', 
+        origin: 'INEA' | 'ITEJPA', 
         data: Array<{ estatus?: string | null; rubro?: string | null; valor?: string | number | null }>, 
         estatusList: string[],
         obsoletosData: Array<{ estatus?: string | null; rubro?: string | null; valor?: string | number | null }>
@@ -585,7 +585,7 @@ export default function InventoryDashboard() {
     useEffect(() => {
         if (!loading && ineaData.length > 0 && iteaData.length > 0) {
             const ineaCards = processInventoryData('INEA', ineaData, ineaCategories.estatus, ineaObsoletosData);
-            const iteaCards = processInventoryData('ITEA', iteaData, iteaCategories.estatus, iteaObsoletosData);
+            const iteaCards = processInventoryData('ITEJPA', iteaData, iteaCategories.estatus, iteaObsoletosData);
             
             setInventoryData({
                 INEA: {
@@ -593,8 +593,8 @@ export default function InventoryDashboard() {
                     categories: ineaCategories,
                     cards: ineaCards
                 },
-                ITEA: {
-                    title: "Inventario ITEA",
+                ITEJPA: {
+                    title: "Inventario ITEJPA",
                     categories: iteaCategories,
                     cards: iteaCards
                 }
@@ -603,7 +603,7 @@ export default function InventoryDashboard() {
     }, [ineaData, iteaData, ineaObsoletosData, iteaObsoletosData, ineaCategories, iteaCategories, loading]);
 
     const toggleWarehouse = () => {
-        setActiveWarehouse(prev => prev === 'INEA' ? 'ITEA' : 'INEA');
+        setActiveWarehouse(prev => prev === 'INEA' ? 'ITEJPA' : 'INEA');
     };
 
     const openModal = (card: InventoryCard) => {
@@ -679,12 +679,12 @@ export default function InventoryDashboard() {
                                 INEA
                             </motion.button>
                             <motion.button
-                                onClick={() => setActiveWarehouse('ITEA')}
+                                onClick={() => setActiveWarehouse('ITEJPA')}
                                 disabled={loading}
                                 whileHover={{ scale: loading ? 1 : 1.02 }}
                                 whileTap={{ scale: loading ? 1 : 0.98 }}
                                 className={`px-5 py-2.5 text-sm font-medium transition-all ${
-                                    activeWarehouse === 'ITEA'
+                                    activeWarehouse === 'ITEJPA'
                                         ? (isDarkMode
                                             ? 'bg-white text-black'
                                             : 'bg-black text-white'
@@ -695,7 +695,7 @@ export default function InventoryDashboard() {
                                         )
                                 } ${loading ? 'cursor-not-allowed opacity-50' : ''}`}
                             >
-                                ITEA
+                                ITEJPA
                             </motion.button>
                         </div>
                         

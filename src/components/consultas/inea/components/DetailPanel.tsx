@@ -99,6 +99,7 @@ export default function DetailPanel({
             uploading={uploading}
             filterOptions={filterOptions}
             directorio={directorio}
+            foliosResguardo={foliosResguardo}
             isDarkMode={isDarkMode}
             onImageChange={onImageChange}
             onFormChange={onFormChange}
@@ -124,6 +125,7 @@ interface EditModeProps {
   uploading: boolean;
   filterOptions: FilterOptions;
   directorio: Directorio[];
+  foliosResguardo: Record<string, string>;
   isDarkMode: boolean;
   onImageChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
   onFormChange: (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>, field: keyof Mueble) => void;
@@ -136,12 +138,16 @@ function EditMode({
   uploading,
   filterOptions,
   directorio,
+  foliosResguardo,
   isDarkMode,
   onImageChange,
   onFormChange,
   onSelectDirector
 }: EditModeProps) {
   if (!editFormData) return null;
+
+  // Check if item has an active resguardo
+  const hasActiveResguardo = !!(editFormData.id_inv && foliosResguardo[editFormData.id_inv]);
 
   return (
     <div className="space-y-6">
@@ -562,6 +568,7 @@ function EditMode({
             ]}
             placeholder="Seleccionar Director/Jefe"
             isDarkMode={isDarkMode}
+            disabled={hasActiveResguardo}
           />
         </div>
 
@@ -578,11 +585,17 @@ function EditMode({
             type="text"
             value={editFormData?.resguardante || ''}
             onChange={(e) => onFormChange(e, 'resguardante')}
+            disabled={hasActiveResguardo}
             className={`w-full border rounded-lg px-3 py-2 text-sm font-light focus:outline-none transition-all ${
-              isDarkMode
-                ? 'bg-white/[0.02] border-white/10 text-white placeholder:text-white/30 focus:border-white/20 focus:bg-white/[0.04]'
-                : 'bg-black/[0.02] border-black/10 text-black placeholder:text-black/30 focus:border-black/20 focus:bg-black/[0.04]'
+              hasActiveResguardo
+                ? isDarkMode
+                  ? 'bg-white/[0.01] border-white/10 text-white/50 cursor-not-allowed'
+                  : 'bg-black/[0.01] border-black/10 text-black/50 cursor-not-allowed'
+                : isDarkMode
+                  ? 'bg-white/[0.02] border-white/10 text-white placeholder:text-white/30 focus:border-white/20 focus:bg-white/[0.04]'
+                  : 'bg-black/[0.02] border-black/10 text-black placeholder:text-black/30 focus:border-black/20 focus:bg-black/[0.04]'
             }`}
+            title={hasActiveResguardo ? "No se puede editar mientras tenga un resguardo activo" : "Ingrese el Usuario Final"}
             placeholder="Ingrese el Usuario Final"
           />
         </div>

@@ -30,6 +30,7 @@ import ResguardosTable from './components/ResguardosTable';
 import { Pagination } from './components/Pagination';
 import ResguardoInfoPanel from './components/ResguardoInfoPanel';
 import ArticulosListPanel from './components/ArticulosListPanel';
+import ConsultarSkeleton from './components/ConsultarSkeleton';
 import { FileText, ListChecks } from 'lucide-react';
 
 // Modals
@@ -299,7 +300,9 @@ export default function ConsultarResguardos({ folioParam }: ConsultarResguardosP
   // Effects - URL parameter loading
   useEffect(() => {
     const folio = folioParam || searchParams.get('folio');
-    if (folio) {
+    
+    // Only attempt to load folio if we have data in the store
+    if (folio && resguardosData.resguardos.length > 0 && !resguardosData.loading) {
       setFolioParamLoading(true);
       resguardoDetails.selectFolio(folio).finally(() => {
         setFolioParamLoading(false);
@@ -312,7 +315,7 @@ export default function ConsultarResguardos({ folioParam }: ConsultarResguardosP
         }
       });
     }
-  }, [folioParam, searchParams]);
+  }, [folioParam, searchParams, resguardosData.resguardos.length, resguardosData.loading]);
 
   // Effects - Clear selection when resguardo changes
   useEffect(() => {
@@ -335,6 +338,11 @@ export default function ConsultarResguardos({ folioParam }: ConsultarResguardosP
     resguardantesEdit.clearMessages();
     resguardoDelete.clearMessages();
   }, [resguardantesEdit, resguardoDelete]);
+
+  // Show skeleton while initial data is loading
+  if (resguardosData.loading && resguardosData.resguardos.length === 0) {
+    return <ConsultarSkeleton isDarkMode={isDarkMode} />;
+  }
 
   return (
     <div className={`h-[calc(100vh-4rem)] overflow-hidden transition-colors duration-300 ${

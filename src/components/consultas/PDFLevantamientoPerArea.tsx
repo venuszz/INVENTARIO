@@ -383,7 +383,7 @@ export const generatePDF = async ({ data, columns, title, fileName, firmas = [] 
                         currentPage.drawImage(ineaImage, { x: margin, y: currentYPos - ineaHeight, width: ineaWidth, height: ineaHeight });
                         currentPage.drawImage(iteaImage, { x: pageWidth - margin - iteaWidth, y: currentYPos - iteaHeight, width: iteaWidth, height: iteaHeight });
                         const titles = [
-                            'INSTITUTO TLAXCALTECA PARA LA EDUCACIÓN DE LOS ADULTOS',
+                            'INSTITUTO TLAXCALTECA PARA LA EDUCACIÓN DE JÓVENES Y PERSONAS ADULTAS',
                             'DIRECCIÓN DE ADMINISTRACIÓN Y FINANZAS',
                             'OFICINA DE RECURSOS MATERIALES',
                             title.toUpperCase()

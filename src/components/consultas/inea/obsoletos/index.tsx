@@ -17,7 +17,7 @@ import { useBajaInfo } from './hooks/useBajaInfo';
 // Import components
 import { Header } from './components/Header';
 import { ValueStatsPanel } from './components/ValueStatsPanel';
-import SearchBar from '@/components/consultas/inea/components/SearchBar';
+import { SearchBar } from './components/SearchBar';
 import FilterChips from '@/components/consultas/inea/components/FilterChips';
 import SuggestionDropdown from '@/components/consultas/inea/components/SuggestionDropdown';
 import { InventoryTable } from './components/InventoryTable';
@@ -80,7 +80,7 @@ export default function ConsultasIneaObsoletos() {
     handleSuggestionClick,
     handleInputKeyDown,
     handleInputBlur
-  } = useSearchAndFilters(muebles);
+  } = useSearchAndFilters(muebles, {});
 
   // Initialize item edit hook
   const {
@@ -316,9 +316,6 @@ export default function ConsultasIneaObsoletos() {
                   <SearchBar
                     searchTerm={searchTerm}
                     setSearchTerm={setSearchTerm}
-                    searchMatchType={searchMatchType}
-                    handleInputKeyDown={handleInputKeyDown}
-                    handleInputBlur={handleInputBlur}
                     isDarkMode={isDarkMode}
                   />
                   {/* Suggestion Dropdown */}

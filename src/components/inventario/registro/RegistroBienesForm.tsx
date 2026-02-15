@@ -50,7 +50,8 @@ export default function RegistroBienesForm() {
     setTouched,
     resetForm,
     isFieldValid,
-    isStepComplete
+    isStepComplete,
+    setIsTlaxcala
   } = useFormData(
     filterOptions.estados.includes('BUENO') ? 'BUENO' : filterOptions.estados[0] || '',
     filterOptions.estatus.includes('ACTIVO') ? 'ACTIVO' : filterOptions.estatus[0] || ''
@@ -435,7 +436,10 @@ export default function RegistroBienesForm() {
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4 max-w-4xl mx-auto">
                       <motion.button
                         type="button"
-                        onClick={() => setInstitucion('INEA')}
+                        onClick={() => {
+                          setInstitucion('INEA');
+                          setIsTlaxcala(false);
+                        }}
                         className={`p-8 rounded-xl border-2 transition-all ${
                           institucion === 'INEA'
                             ? isDarkMode
@@ -458,7 +462,10 @@ export default function RegistroBienesForm() {
 
                       <motion.button
                         type="button"
-                        onClick={() => setInstitucion('ITEA')}
+                        onClick={() => {
+                          setInstitucion('ITEA');
+                          setIsTlaxcala(false);
+                        }}
                         className={`p-8 rounded-xl border-2 transition-all ${
                           institucion === 'ITEA'
                             ? isDarkMode
@@ -472,16 +479,19 @@ export default function RegistroBienesForm() {
                         whileTap={{ scale: 0.98 }}
                       >
                         <div className="text-center">
-                          <div className="text-3xl font-light mb-2">ITEA</div>
+                          <div className="text-3xl font-light mb-2">ITEJPA</div>
                           <div className={`text-sm ${isDarkMode ? 'text-white/60' : 'text-black/60'}`}>
-                            Instituto Tlaxcalteca para la Educación de los Adultos
+                            Instituto Tlaxcalteca para la Educación de Jóvenes y Personas Adultas
                           </div>
                         </div>
                       </motion.button>
 
                       <motion.button
                         type="button"
-                        onClick={() => setInstitucion('TLAXCALA')}
+                        onClick={() => {
+                          setInstitucion('TLAXCALA');
+                          setIsTlaxcala(true);
+                        }}
                         className={`p-8 rounded-xl border-2 transition-all ${
                           institucion === 'TLAXCALA'
                             ? isDarkMode

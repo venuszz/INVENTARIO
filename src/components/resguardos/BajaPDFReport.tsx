@@ -376,7 +376,7 @@ export async function generateBajaPDF({
         });
 
         const titles = [
-            'INSTITUTO TLAXCALTECA PARA LA EDUCACIÓN DE LOS ADULTOS',
+            'INSTITUTO TLAXCALTECA PARA LA EDUCACIÓN DE JÓVENES Y PERSONAS ADULTAS',
             'DIRECCIÓN DE ADMINISTRACIÓN Y FINANZAS',
             'OFICINA DE RECURSOS MATERIALES',
             title.toUpperCase()

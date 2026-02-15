@@ -26,6 +26,7 @@ export interface Mueble {
     causadebaja: string | null;
     resguardante?: string | null;
     image_path?: string | null;
+    folio_resguardo?: string | null; // Added for folio search
 }
 
 export interface FilterOptions {
@@ -61,7 +62,7 @@ export interface Message {
 
 export interface ActiveFilter {
     term: string;
-    type: 'id' | 'descripcion' | 'rubro' | 'estado' | 'estatus' | 'area' | 'usufinal' | 'resguardante' | null;
+    type: 'id' | 'descripcion' | 'rubro' | 'estado' | 'estatus' | 'area' | 'usufinal' | 'resguardante' | 'folio' | 'sin_id' | 'con_resguardo' | 'sin_resguardo' | null;
 }
 
 export interface ResguardoDetalle {

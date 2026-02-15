@@ -23,7 +23,7 @@ export interface DashboardPDFOptions {
     sumaValores: number;
     rubros: DashboardRubrosRow[];
     fileName?: string;
-    warehouse?: 'INEA' | 'ITEA';
+    warehouse?: 'INEA' | 'ITEJPA';
     date?: string;
 }
 
@@ -133,7 +133,7 @@ export async function generateDashboardPDF({
         'DEPARTAMENTO DE CONTROL PATRIMONIAL',
         'CONCENTRADO GENERAL DE BIENES MUEBLES',
         '',
-        'INSTITUTO TLAXCALTECA PARA LA EDUCACIÓN DE LOS ADULTOS',
+        'INSTITUTO TLAXCALTECA PARA LA EDUCACIÓN DE JÓVENES Y PERSONAS ADULTAS',
         '','',
     ];
     y -= 5;

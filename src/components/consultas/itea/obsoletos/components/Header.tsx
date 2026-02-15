@@ -12,7 +12,7 @@ export function Header({ isDarkMode, realtimeConnected }: HeaderProps) {
     }`}>
       <div>
         <h1 className="text-3xl font-light tracking-tight mb-1">
-          Inventario ITEA - Bajas
+          Inventario ITEJPA - Bajas
         </h1>
         <p className={`text-sm ${isDarkMode ? 'text-white/40' : 'text-black/40'}`}>
           Consulta de bienes dados de baja del ITEA

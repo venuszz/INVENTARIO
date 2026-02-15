@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo, useDeferredValue } from 'react';
 import { Mueble, ActiveFilter } from '../types';
 
-export function useSearchAndFilters(muebles: Mueble[]) {
+export function useSearchAndFilters(muebles: Mueble[], foliosResguardo: Record<string, string>) {
     const [searchTerm, setSearchTerm] = useState('');
     const [searchMatchType, setSearchMatchType] = useState<ActiveFilter['type']>(null);
     const [activeFilters, setActiveFilters] = useState<ActiveFilter[]>([]);
@@ -16,6 +16,10 @@ export function useSearchAndFilters(muebles: Mueble[]) {
     // Pre-calculate searchable vectors
     const searchableData = useMemo(() => {
         if (!muebles || muebles.length === 0) return null;
+        
+        // Extract unique folio resguardo values from the map
+        const folios = new Set<string>(Object.values(foliosResguardo));
+        
         return {
             id: muebles.map(m => m.id_inv || '').filter(Boolean),
             area: muebles.map(m => m.area?.nombre || '').filter(Boolean),
@@ -25,8 +29,9 @@ export function useSearchAndFilters(muebles: Mueble[]) {
             rubro: muebles.map(m => m.rubro || '').filter(Boolean),
             estado: muebles.map(m => m.estado || '').filter(Boolean),
             estatus: muebles.map(m => m.estatus || '').filter(Boolean),
+            folio: Array.from(folios),
         };
-    }, [muebles]);
+    }, [muebles, foliosResguardo]);
 
     // Match type detection
     useEffect(() => {
@@ -35,10 +40,48 @@ export function useSearchAndFilters(muebles: Mueble[]) {
             return;
         }
         const term = deferredSearchTerm.toLowerCase().trim();
+        
+        // Check for special concepts
+        if (term === 'sin id' || term === 'sin inventario' || term === 'sin número') {
+            setSearchMatchType('sin_id');
+            return;
+        }
+        if (term === 'con resguardo' || term === 'resguardado' || term === 'con folio') {
+            setSearchMatchType('con_resguardo');
+            return;
+        }
+        if (term === 'sin resguardo' || term === 'sin folio') {
+            setSearchMatchType('sin_resguardo');
+            return;
+        }
+        
         let bestMatch = { type: null, value: '', score: 0 } as { type: ActiveFilter['type'], value: string, score: number };
 
         for (const item of muebles) {
-            if ((item.directorio?.nombre && (item.directorio.nombre.toLowerCase().includes(term))) || (item.resguardante && item.resguardante.toLowerCase().includes(term))) {
+            // Check folio resguardo from foliosResguardo map
+            const itemFolio = foliosResguardo[item.id_inv];
+            if (itemFolio && itemFolio.toLowerCase().includes(term)) {
+                const exact = itemFolio.toLowerCase() === term;
+                const score = exact ? 12 : 11;
+                if (score > bestMatch.score) bestMatch = { type: 'folio', value: itemFolio, score };
+            }
+            // Check estado with expanded terms
+            else if (item.estado) {
+                const estado = item.estado.toUpperCase();
+                const matchesEstado = 
+                    (estado === 'P' && (term === 'p' || term === 'pendiente')) ||
+                    (estado === 'B' && (term === 'b' || term === 'bueno')) ||
+                    (estado === 'M' && (term === 'm' || term === 'malo')) ||
+                    (estado === 'R' && (term === 'r' || term === 'regular'));
+                
+                if (matchesEstado) {
+                    const score = term.length === 1 ? 10 : 11;
+                    // Store the short form (P, B, M, R) for filtering
+                    if (score > bestMatch.score) bestMatch = { type: 'estado', value: estado, score };
+                }
+            }
+            // Check director/resguardante
+            else if ((item.directorio?.nombre && (item.directorio.nombre.toLowerCase().includes(term))) || (item.resguardante && item.resguardante.toLowerCase().includes(term))) {
                 const exact = (item.directorio?.nombre?.toLowerCase() === term) || (item.resguardante?.toLowerCase() === term);
                 const score = exact ? 10 : 9;
                 if (score > bestMatch.score) bestMatch = { type: 'usufinal', value: item.directorio?.nombre || item.resguardante || '', score };
@@ -59,10 +102,10 @@ export function useSearchAndFilters(muebles: Mueble[]) {
                 if (score > bestMatch.score) bestMatch = { type: 'descripcion', value: item.descripcion, score };
             }
 
-            if (bestMatch.score >= 10) break;
+            if (bestMatch.score >= 12) break;
         }
         setSearchMatchType(bestMatch.type);
-    }, [deferredSearchTerm, muebles]);
+    }, [deferredSearchTerm, muebles, foliosResguardo]);
 
     // Generate suggestions
     useEffect(() => {
@@ -81,6 +124,7 @@ export function useSearchAndFilters(muebles: Mueble[]) {
 
         const seen = new Set<string>();
         const fields = [
+            { type: 'folio' as ActiveFilter['type'], label: 'Folio', data: searchableData.folio },
             { type: 'id' as ActiveFilter['type'], label: 'ID', data: searchableData.id },
             { type: 'area' as ActiveFilter['type'], label: 'Área', data: searchableData.area },
             { type: 'usufinal' as ActiveFilter['type'], label: 'Director', data: searchableData.usufinal },
@@ -91,8 +135,23 @@ export function useSearchAndFilters(muebles: Mueble[]) {
             { type: 'estatus' as ActiveFilter['type'], label: 'Estatus', data: searchableData.estatus },
         ];
 
-        let allSuggestions: { value: string; type: ActiveFilter['type'] }[] = [];
-        let count = 0;
+        // Add special concepts
+        const specialConcepts = [
+            { value: 'Sin ID', type: 'sin_id' as ActiveFilter['type'], isConcept: true },
+            { value: 'Con Resguardo', type: 'con_resguardo' as ActiveFilter['type'], isConcept: true },
+            { value: 'Sin Resguardo', type: 'sin_resguardo' as ActiveFilter['type'], isConcept: true },
+        ];
+
+        let allSuggestions: { value: string; type: ActiveFilter['type']; isConcept?: boolean }[] = [];
+        
+        // Check special concepts first
+        for (const concept of specialConcepts) {
+            if (concept.value.toLowerCase().includes(term)) {
+                allSuggestions.push(concept);
+            }
+        }
+
+        let count = allSuggestions.length;
         const maxSuggestions = 10;
 
         for (const f of fields) {
@@ -138,10 +197,28 @@ export function useSearchAndFilters(muebles: Mueble[]) {
                 if (!filterTerm) return true;
 
                 switch (filter.type) {
+                    case 'sin_id': return !item.id_inv || item.id_inv.trim() === '';
+                    case 'con_resguardo': return !!foliosResguardo[item.id_inv];
+                    case 'sin_resguardo': return !foliosResguardo[item.id_inv];
+                    case 'folio': {
+                        const itemFolio = foliosResguardo[item.id_inv];
+                        return itemFolio && itemFolio.toLowerCase().includes(filterTerm);
+                    }
                     case 'id': return (item.id_inv?.toLowerCase() || '').includes(filterTerm);
                     case 'descripcion': return (item.descripcion?.toLowerCase() || '').includes(filterTerm);
                     case 'rubro': return (item.rubro?.toLowerCase() || '').includes(filterTerm);
-                    case 'estado': return (item.estado?.toLowerCase() || '').includes(filterTerm);
+                    case 'estado': {
+                        const estado = item.estado?.toUpperCase() || '';
+                        const filterUpper = filterTerm.toUpperCase();
+                        // Convert long form to short form if needed
+                        let shortForm = filterUpper;
+                        if (filterUpper === 'PENDIENTE') shortForm = 'P';
+                        else if (filterUpper === 'BUENO') shortForm = 'B';
+                        else if (filterUpper === 'MALO') shortForm = 'M';
+                        else if (filterUpper === 'REGULAR') shortForm = 'R';
+                        // Match the short form
+                        return estado === shortForm;
+                    }
                     case 'estatus': return (item.estatus?.toLowerCase() || '').includes(filterTerm);
                     case 'area': return (item.area?.nombre?.toLowerCase() || '').includes(filterTerm);
                     case 'usufinal': return (item.directorio?.nombre?.toLowerCase() || '').includes(filterTerm);
@@ -154,18 +231,39 @@ export function useSearchAndFilters(muebles: Mueble[]) {
 
             if (!term) return true;
 
+            // Check for special concepts
+            if (term === 'sin id' || term === 'sin inventario' || term === 'sin número') {
+                return !item.id_inv || item.id_inv.trim() === '';
+            }
+            if (term === 'con resguardo' || term === 'resguardado' || term === 'con folio') {
+                return !!foliosResguardo[item.id_inv];
+            }
+            if (term === 'sin resguardo' || term === 'sin folio') {
+                return !foliosResguardo[item.id_inv];
+            }
+
+            // Check estado with conversion from long to short form
+            const estado = item.estado?.toUpperCase() || '';
+            const matchesEstado = 
+                (estado === 'P' && (term === 'p' || term === 'pendiente')) ||
+                (estado === 'B' && (term === 'b' || term === 'bueno')) ||
+                (estado === 'M' && (term === 'm' || term === 'malo')) ||
+                (estado === 'R' && (term === 'r' || term === 'regular'));
+
+            const itemFolio = foliosResguardo[item.id_inv];
             return (
+                matchesEstado ||
+                (itemFolio && itemFolio.toLowerCase().includes(term)) ||
                 (item.id_inv?.toLowerCase() || '').includes(term) ||
                 (item.descripcion?.toLowerCase() || '').includes(term) ||
                 (item.rubro?.toLowerCase() || '').includes(term) ||
-                (item.estado?.toLowerCase() || '').includes(term) ||
                 (item.estatus?.toLowerCase() || '').includes(term) ||
                 (item.area?.nombre?.toLowerCase() || '').includes(term) ||
                 (item.directorio?.nombre?.toLowerCase() || '').includes(term) ||
                 (item.resguardante?.toLowerCase() || '').includes(term)
             );
         });
-    }, [muebles, activeFilters, deferredSearchTerm]);
+    }, [muebles, activeFilters, deferredSearchTerm, foliosResguardo]);
 
     const handleSort = (field: keyof Mueble) => {
         if (sortField === field) {

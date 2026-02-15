@@ -13,14 +13,14 @@ export default function Header({ isDarkMode, realtimeConnected, onReindex }: Hea
     }`}>
       <div>
         <h1 className="text-3xl font-light tracking-tight mb-1">
-          Inventario ITEA
+          Inventario ITEJPA
         </h1>
         <p className={`text-sm ${isDarkMode ? 'text-white/40' : 'text-black/40'}`}>
-          Consulta y gestión de bienes muebles del ITEA
+          Consulta y gestión de bienes muebles del ITEJPA
         </p>
       </div>
       <SectionRealtimeToggle 
-        sectionName="ITEA" 
+        sectionName="ITEJPA" 
         isConnected={realtimeConnected}
         onReindexClick={onReindex}
       />

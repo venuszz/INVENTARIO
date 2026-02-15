@@ -67,5 +67,5 @@ export interface ResguardoDetalle {
  */
 export interface ActiveFilter {
   term: string;
-  type: 'id' | 'descripcion' | 'rubro' | 'estado' | 'estatus' | 'area' | 'usufinal' | 'resguardante' | null;
+  type: 'id' | 'descripcion' | 'rubro' | 'estado' | 'estatus' | 'area' | 'usufinal' | 'resguardante' | 'folio' | 'sin_id' | 'con_resguardo' | 'sin_resguardo' | null;
 }

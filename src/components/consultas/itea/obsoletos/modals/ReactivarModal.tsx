@@ -146,7 +146,7 @@ export const ReactivarModal: React.FC<ReactivarModalProps> = ({
               }`}>
                 <Info className="h-3.5 w-3.5 flex-shrink-0 mt-0.5" />
                 <p>
-                  Una vez reactivado, el artículo aparecerá nuevamente en el inventario activo de ITEA.
+                  Una vez reactivado, el artículo aparecerá nuevamente en el inventario activo de ITEJPA.
                 </p>
               </div>
             </div>
