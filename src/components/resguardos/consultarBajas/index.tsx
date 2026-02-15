@@ -40,21 +40,13 @@ const ConsultarBajasResguardos = () => {
   // Refs
   const detailRef = useRef<HTMLDivElement>(null);
   
-  // Search and filters state
-  const {
-    searchTerm,
-    filterDate,
-    filterDirector,
-    filterResguardante,
-    setSearchTerm,
-    setFilterDate,
-    setFilterDirector,
-    setFilterResguardante,
-    resetSearch,
-    clearFilters
-  } = useSearchAndFilters();
+  // Refs
+  const searchInputRef = useRef<HTMLInputElement>(null);
 
-  // Initialize hooks
+  // Initialize hooks - order matters!
+  // First, initialize search hook with empty data (will be populated after first fetch)
+  const searchAndFilters = useSearchAndFilters([]);
+
   const {
     bajas,
     allBajas,
@@ -73,7 +65,9 @@ const ConsultarBajasResguardos = () => {
     setSort,
     refetch: refetchBajas,
     setAllBajas
-  } = useBajasData({ filterDate, filterDirector, filterResguardante });
+  } = useBajasData({ 
+    activeFilters: searchAndFilters.activeFilters
+  });
 
   const {
     selectedBaja,
@@ -152,33 +146,16 @@ const ConsultarBajasResguardos = () => {
     }
   }, [searchParams, fetchBajaDetails]);
 
+  // Effect: Update search hook data when allBajas changes
+  useEffect(() => {
+    searchAndFilters.updateData(allBajas);
+  }, [allBajas, searchAndFilters]);
+
   // Effect: Fetch bajas when filters change
+  // Note: fetchBajas already handles activeFilters internally, so we only need to call it once
   useEffect(() => {
     fetchBajas();
   }, [fetchBajas]);
-
-  // Effect: Fetch all bajas for counts and tooltips
-  useEffect(() => {
-    const fetchAllBajasData = async () => {
-      try {
-        let dataQuery = supabase.from('resguardos_bajas').select('*');
-        if (filterDate) {
-          dataQuery = dataQuery.eq('f_resguardo::date', filterDate);
-        }
-        if (filterDirector) {
-          dataQuery = dataQuery.ilike('dir_area', `%${filterDirector.trim().toUpperCase()}%`);
-        }
-        if (filterResguardante) {
-          dataQuery = dataQuery.ilike('usufinal', `%${filterResguardante.trim().toUpperCase()}%`);
-        }
-        const { data, error } = await dataQuery;
-        if (!error) setAllBajas(data || []);
-      } catch {
-        setAllBajas([]);
-      }
-    };
-    fetchAllBajasData();
-  }, [filterDate, filterDirector, filterResguardante, setAllBajas]);
 
   // Event handlers
   const handleFolioClick = useCallback((folioResguardo: string) => {
@@ -337,20 +314,29 @@ const ConsultarBajasResguardos = () => {
           <div className="lg:col-span-3 space-y-6">
             {/* Search and Filters */}
             <SearchAndFilters
-              searchTerm={searchTerm}
-              filterDate={filterDate}
-              filterDirector={filterDirector}
-              filterResguardante={filterResguardante}
-              setSearchTerm={setSearchTerm}
-              setFilterDate={setFilterDate}
-              setFilterDirector={setFilterDirector}
-              setFilterResguardante={setFilterResguardante}
-              resetSearch={resetSearch}
-              clearFilters={clearFilters}
-              onRefresh={handleRefresh}
-              loading={loading}
+              searchTerm={searchAndFilters.searchTerm}
+              onSearchChange={searchAndFilters.setSearchTerm}
+              suggestions={searchAndFilters.suggestions}
+              showSuggestions={searchAndFilters.showSuggestions}
+              highlightedIndex={searchAndFilters.highlightedIndex}
+              onSuggestionClick={(index: number) => {
+                const suggestion = searchAndFilters.suggestions[index];
+                if (suggestion) {
+                  searchAndFilters.addFilter({ term: suggestion.value, type: suggestion.type });
+                  searchAndFilters.setSearchTerm('');
+                  searchAndFilters.setShowSuggestions(false);
+                }
+              }}
+              onKeyDown={searchAndFilters.handleKeyDown}
+              onBlur={searchAndFilters.handleBlur}
+              searchMatchType={searchAndFilters.searchMatchType}
+              inputRef={searchInputRef}
+              onShowSuggestionsChange={searchAndFilters.setShowSuggestions}
+              onHighlightChange={searchAndFilters.setHighlightedIndex}
+              totalRecords={totalCount}
+              activeFilters={searchAndFilters.activeFilters}
+              onRemoveFilter={searchAndFilters.removeFilter}
               isDarkMode={isDarkMode}
-              setCurrentPage={setCurrentPage}
             />
 
             {/* Table */}
@@ -362,12 +348,9 @@ const ConsultarBajasResguardos = () => {
               sortDirection={sortDirection}
               selectedFolioResguardo={selectedBaja?.folio_resguardo ?? null}
               allBajas={allBajas}
-              filterResguardante={filterResguardante}
-              searchTerm={searchTerm}
               onSort={handleSort}
               onRowClick={handleFolioClick}
               onRetry={fetchBajas}
-              resetSearch={resetSearch}
               getArticuloCount={getArticuloCount}
               isDarkMode={isDarkMode}
             />

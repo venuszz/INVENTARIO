@@ -3,8 +3,8 @@
  * Handles search, filtering, sorting, and pagination
  */
 
-import { useState, useEffect, useCallback, useDeferredValue } from 'react';
-import supabase from '@/app/lib/supabase/client';
+import { useState, useEffect, useCallback, useDeferredValue, useMemo } from 'react';
+import { useResguardosStore } from '@/stores/resguardosStore';
 import { Resguardo, ActiveFilter } from '../types';
 
 export interface UseResguardosDataReturn {
@@ -37,6 +37,9 @@ export interface UseResguardosDataReturn {
  * Custom hook for managing resguardos data with filters and pagination
  */
 export function useResguardosData(): UseResguardosDataReturn {
+  // Get resguardos from store
+  const resguardosFromStore = useResguardosStore(state => state.resguardos);
+  
   const [resguardos, setResguardos] = useState<Resguardo[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -51,7 +54,7 @@ export function useResguardosData(): UseResguardosDataReturn {
 
   // Pagination
   const [currentPage, setCurrentPage] = useState(1);
-  const [rowsPerPage, setRowsPerPage] = useState(10);
+  const [rowsPerPage, setRowsPerPage] = useState(25);
 
   // Unique values for filter dropdowns
   const [directores, setDirectores] = useState<string[]>([]);
@@ -59,6 +62,8 @@ export function useResguardosData(): UseResguardosDataReturn {
 
   // Debounced active filters (100ms delay)
   const deferredActiveFilters = useDeferredValue(activeFilters);
+
+  console.log('📦 [RESGUARDOS DATA] Store has', resguardosFromStore.length, 'resguardos');
 
   /**
    * Clear all filters
@@ -81,60 +86,12 @@ export function useResguardosData(): UseResguardosDataReturn {
   }, [sortField]);
 
   /**
-   * Fetch resguardos with filters, sorting, and pagination
+   * Process resguardos from store with filters, sorting, and pagination
    */
-  const fetchResguardos = useCallback(async () => {
+  const processResguardos = useCallback(async () => {
     setLoading(true);
     try {
-      // 1. Build query with filters and relational data
-      let query = supabase
-        .from('resguardos')
-        .select(`
-          folio, 
-          f_resguardo, 
-          id_directorio,
-          directorio!inner (
-            nombre,
-            puesto
-          ),
-          id_mueble,
-          origen,
-          puesto_resguardo,
-          resguardante,
-          created_by
-        `, { count: 'exact' });
-
-      // Apply filters from activeFilters array
-      for (const filter of deferredActiveFilters) {
-        if (!filter.term) continue;
-        
-        switch (filter.type) {
-          case 'folio':
-            query = query.ilike('folio', `%${filter.term}%`);
-            break;
-          case 'director':
-            query = query.or(`directorio.nombre.ilike.%${filter.term.trim().toUpperCase()}%`);
-            break;
-          case 'resguardante':
-            query = query.ilike('resguardante', `%${filter.term.trim().toUpperCase()}%`);
-            break;
-          case 'fecha':
-            query = query.eq('f_resguardo::date', filter.term);
-            break;
-          default:
-            // If type is null, try to match any field
-            if (filter.type === null) {
-              query = query.or(`folio.ilike.%${filter.term}%,resguardante.ilike.%${filter.term}%,directorio.nombre.ilike.%${filter.term}%`);
-            }
-            break;
-        }
-      }
-
-      // Fetch all matching records
-      const { data: allData, error: queryError } = await query;
-      if (queryError) throw queryError;
-
-      // 2. Group by unique folio and aggregate resguardantes
+      // 1. Group by unique folio and aggregate resguardantes
       const foliosMap = new Map<string, {
         folio: string;
         fecha: string;
@@ -142,15 +99,12 @@ export function useResguardosData(): UseResguardosDataReturn {
         resguardantes: Set<string>;
       }>();
 
-      (allData || []).forEach(record => {
+      resguardosFromStore.forEach(record => {
         if (!foliosMap.has(record.folio)) {
-          // Get director name from relational data
-          const directorNombre = (record.directorio as any)?.nombre || '';
-          
           foliosMap.set(record.folio, {
             folio: record.folio,
             fecha: record.f_resguardo,
-            director: directorNombre,
+            director: record.director_nombre || '',
             resguardantes: new Set()
           });
         }
@@ -161,12 +115,41 @@ export function useResguardosData(): UseResguardosDataReturn {
       });
 
       // Convert to array and format
-      const uniqueResguardos = Array.from(foliosMap.values()).map(item => ({
+      let uniqueResguardos = Array.from(foliosMap.values()).map(item => ({
         folio: item.folio,
         fecha: item.fecha,
         director: item.director,
         resguardantes: Array.from(item.resguardantes).join(', ')
       }));
+
+      // 2. Apply filters
+      if (deferredActiveFilters.length > 0) {
+        uniqueResguardos = uniqueResguardos.filter(resguardo => {
+          return deferredActiveFilters.every(filter => {
+            if (!filter.term) return true;
+            
+            const term = filter.term.toLowerCase();
+            
+            switch (filter.type) {
+              case 'folio':
+                return resguardo.folio.toLowerCase().includes(term);
+              case 'director':
+                return resguardo.director.toLowerCase().includes(term);
+              case 'resguardante':
+                return resguardo.resguardantes.toLowerCase().includes(term);
+              case 'fecha':
+                return resguardo.fecha === filter.term;
+              default:
+                // If type is null, try to match any field
+                return (
+                  resguardo.folio.toLowerCase().includes(term) ||
+                  resguardo.director.toLowerCase().includes(term) ||
+                  resguardo.resguardantes.toLowerCase().includes(term)
+                );
+            }
+          });
+        });
+      }
 
       setTotalCount(uniqueResguardos.length);
 
@@ -185,15 +168,22 @@ export function useResguardosData(): UseResguardosDataReturn {
       const to = from + rowsPerPage;
       const paginated = sorted.slice(from, to);
 
+      console.log('📊 [RESGUARDOS DATA] Processed:', {
+        total: uniqueResguardos.length,
+        paginated: paginated.length,
+        page: currentPage
+      });
+
       setResguardos(paginated);
       setError(null);
     } catch (err) {
-      setError('Error al cargar los resguardos');
-      console.error('Error fetching resguardos:', err);
+      setError('Error al procesar los resguardos');
+      console.error('Error processing resguardos:', err);
     } finally {
       setLoading(false);
     }
   }, [
+    resguardosFromStore,
     deferredActiveFilters,
     sortField,
     sortDirection,
@@ -202,46 +192,34 @@ export function useResguardosData(): UseResguardosDataReturn {
   ]);
 
   /**
-   * Fetch unique directores and resguardantes for filter dropdowns
+   * Extract unique directores and resguardantes from store
    */
-  const fetchUniqueValues = useCallback(async () => {
-    try {
-      const { data, error } = await supabase
-        .from('resguardos')
-        .select(`
-          directorio!inner (
-            nombre
-          ),
-          resguardante
-        `);
+  const extractUniqueValues = useCallback(() => {
+    const uniqueDirectores = new Set<string>();
+    const uniqueResguardantes = new Set<string>();
 
-      if (error) throw error;
+    resguardosFromStore.forEach(record => {
+      if (record.director_nombre) {
+        uniqueDirectores.add(record.director_nombre);
+      }
+      if (record.resguardante) {
+        uniqueResguardantes.add(record.resguardante);
+      }
+    });
 
-      const uniqueDirectores = new Set<string>();
-      const uniqueResguardantes = new Set<string>();
+    setDirectores(Array.from(uniqueDirectores).sort());
+    setResguardantes(Array.from(uniqueResguardantes).sort());
+  }, [resguardosFromStore]);
 
-      (data || []).forEach(record => {
-        const directorNombre = (record.directorio as any)?.nombre;
-        if (directorNombre) uniqueDirectores.add(directorNombre);
-        if (record.resguardante) uniqueResguardantes.add(record.resguardante);
-      });
-
-      setDirectores(Array.from(uniqueDirectores).sort());
-      setResguardantes(Array.from(uniqueResguardantes).sort());
-    } catch (err) {
-      console.error('Error fetching unique values:', err);
-    }
-  }, []);
-
-  // Fetch data when dependencies change
+  // Process data when dependencies change
   useEffect(() => {
-    fetchResguardos();
-  }, [fetchResguardos]);
+    processResguardos();
+  }, [processResguardos]);
 
-  // Fetch unique values on mount
+  // Extract unique values when store changes
   useEffect(() => {
-    fetchUniqueValues();
-  }, [fetchUniqueValues]);
+    extractUniqueValues();
+  }, [extractUniqueValues]);
 
   // Reset to page 1 when filters change
   useEffect(() => {
@@ -274,6 +252,6 @@ export function useResguardosData(): UseResguardosDataReturn {
     directores,
     resguardantes,
     // Refetch
-    refetch: fetchResguardos
+    refetch: async () => { await processResguardos(); }
   };
 }

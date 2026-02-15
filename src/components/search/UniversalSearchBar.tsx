@@ -180,23 +180,16 @@ export default function UniversalSearchBar({ isDarkMode, userRoles, onExpandChan
         }));
 
         const resguardosData: SearchResult[] = (resguardosContext.resguardos || []).map(item => ({
-            id: item.id,
-            id_inv: item.num_inventario,
-            descripcion: item.descripcion,
-            rubro: item.rubro,
+            id: item.id.toString(),
+            id_inv: (item.num_inventario as string) || null,
+            descripcion: (item.descripcion as string) || null,
+            rubro: (item.rubro as string) || null,
             valor: null,
-            area: item.area_resguardo,
-            estado: item.condicion,
+            area: null,
+            estado: (item.condicion as string) || null,
             estatus: null,
-            resguardante: item.usufinal,
-            origen: 'RESGUARDO' as const,
-            folio: item.folio,
-            f_resguardo: item.f_resguardo,
-            dir_area: item.dir_area,
-            area_resguardo: item.area_resguardo,
-            usufinal: item.usufinal,
-            num_inventario: item.num_inventario,
-            condicion: item.condicion
+            resguardante: item.resguardante || null,
+            origen: 'RESGUARDO' as const
         }));
 
         const resguardosBajasData: SearchResult[] = (resguardosBajasContext.resguardos || []).map(item => ({

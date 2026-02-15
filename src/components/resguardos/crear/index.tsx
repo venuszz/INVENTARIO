@@ -186,6 +186,7 @@ export default function CrearResguardos() {
           case 'estatus': return (item.estatus?.toLowerCase() || '').includes(filterTerm);
           case 'area': return getAreaValue(item.area).includes(filterTerm);
           case 'director': return getDirectorValue(item.directorio).includes(filterTerm);
+          case 'origen': return (item.origen?.toLowerCase() || '').includes(filterTerm);
           default: return true;
         }
       });
@@ -211,6 +212,7 @@ export default function CrearResguardos() {
         (item.rubro?.toLowerCase() || '').includes(term) ||
         (item.estado?.toLowerCase() || '').includes(term) ||
         (item.estatus?.toLowerCase() || '').includes(term) ||
+        (item.origen?.toLowerCase() || '').includes(term) ||
         getAreaValue(item.area).includes(term) ||
         getDirectorValue(item.directorio).includes(term)
       );

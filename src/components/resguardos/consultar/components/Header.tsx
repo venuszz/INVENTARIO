@@ -5,6 +5,8 @@
 
 import { ListChecks } from 'lucide-react';
 import { useTheme } from '@/context/ThemeContext';
+import SectionRealtimeToggle from '@/components/SectionRealtimeToggle';
+import { useResguardosIndexation } from '@/hooks/indexation/useResguardosIndexation';
 
 interface HeaderProps {
   totalResguardos: number;
@@ -16,6 +18,7 @@ interface HeaderProps {
  */
 export function Header({ totalResguardos }: HeaderProps) {
   const { isDarkMode } = useTheme();
+  const { realtimeConnected } = useResguardosIndexation();
 
   return (
     <div className={`flex justify-between items-center mb-8 pb-6 border-b ${
@@ -49,6 +52,12 @@ export function Header({ totalResguardos }: HeaderProps) {
           )}
         </div>
       </div>
+      
+      <SectionRealtimeToggle
+        moduleKey="resguardos"
+        sectionName="Resguardos"
+        isConnected={realtimeConnected}
+      />
     </div>
   );
 }

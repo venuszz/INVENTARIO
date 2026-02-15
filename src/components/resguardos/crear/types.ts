@@ -80,10 +80,11 @@ export interface PdfData {
  */
 export interface ActiveFilter {
   term: string;
-  type: 'id' | 'descripcion' | 'rubro' | 'estado' | 'estatus' | 'area' | 'director' | null;
+  type: 'id' | 'descripcion' | 'rubro' | 'estado' | 'estatus' | 'area' | 'director' | 'origen' | null;
+  displayTerm?: string; // For displaying "Bueno" instead of "B"
 }
 
 /**
  * Type for search field matching
  */
-export type SearchMatchType = 'id' | 'descripcion' | 'rubro' | 'estado' | 'estatus' | 'area' | 'director' | null;
+export type SearchMatchType = 'id' | 'descripcion' | 'rubro' | 'estado' | 'estatus' | 'area' | 'director' | 'origen' | null;

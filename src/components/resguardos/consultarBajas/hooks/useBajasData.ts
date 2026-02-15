@@ -1,14 +1,12 @@
-import { useState, useCallback, useMemo } from 'react';
+import { useState, useCallback, useMemo, useEffect } from 'react';
 import supabase from '@/app/lib/supabase/client';
-import type { ResguardoBaja, SortField, SortDirection } from '../types';
+import type { ResguardoBaja, SortField, SortDirection, ActiveFilter } from '../types';
 
 interface UseBajasDataProps {
-  filterDate: string;
-  filterDirector: string;
-  filterResguardante: string;
+  activeFilters?: ActiveFilter[];
 }
 
-export function useBajasData({ filterDate, filterDirector, filterResguardante }: UseBajasDataProps) {
+export function useBajasData({ activeFilters = [] }: UseBajasDataProps) {
   const [bajas, setBajas] = useState<ResguardoBaja[]>([]);
   const [allBajas, setAllBajas] = useState<ResguardoBaja[]>([]);
   const [loading, setLoading] = useState(false);
@@ -26,21 +24,34 @@ export function useBajasData({ filterDate, filterDirector, filterResguardante }:
         .from('resguardos_bajas')
         .select('*');
 
-      if (filterDate) {
-        baseQuery = baseQuery.eq('f_resguardo::date', filterDate);
-      }
-
-      if (filterDirector) {
-        baseQuery = baseQuery.ilike('dir_area', `%${filterDirector?.trim().toUpperCase() || ''}%`);
-      }
-
-      if (filterResguardante) {
-        baseQuery = baseQuery.ilike('usufinal', `%${filterResguardante?.trim().toUpperCase() || ''}%`);
-      }
+      // Apply filters from activeFilters
+      activeFilters.forEach(filter => {
+        const term = filter.term.trim().toUpperCase();
+        switch (filter.type) {
+          case 'folioResguardo':
+            baseQuery = baseQuery.ilike('folio_resguardo', `%${term}%`);
+            break;
+          case 'folioBaja':
+            baseQuery = baseQuery.ilike('folio_baja', `%${term}%`);
+            break;
+          case 'director':
+            baseQuery = baseQuery.ilike('dir_area', `%${term}%`);
+            break;
+          case 'resguardante':
+            baseQuery = baseQuery.ilike('usufinal', `%${term}%`);
+            break;
+          case 'fecha':
+            baseQuery = baseQuery.eq('f_resguardo::date', term);
+            break;
+        }
+      });
 
       const { data: allData, error: queryError } = await baseQuery;
 
       if (queryError) throw queryError;
+
+      // Set allBajas for search suggestions
+      setAllBajas(allData || []);
 
       const uniqueFolios = Array.from(
         new Map(
@@ -88,7 +99,7 @@ export function useBajasData({ filterDate, filterDirector, filterResguardante }:
     } finally {
       setLoading(false);
     }
-  }, [currentPage, rowsPerPage, sortField, sortDirection, filterDate, filterDirector, filterResguardante]);
+  }, [currentPage, rowsPerPage, sortField, sortDirection, activeFilters]);
 
   const setSort = useCallback((field: SortField) => {
     if (sortField === field) {

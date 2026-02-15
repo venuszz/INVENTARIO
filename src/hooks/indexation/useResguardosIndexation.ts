@@ -32,64 +32,6 @@ export function useResguardosIndexation() {
   const reconnectionTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const isInitializedRef = useRef(false);
   
-  const indexData = useCallback(async () => {
-    if (isIndexingRef.current) return;
-    isIndexingRef.current = true;
-    
-    try {
-      startIndexation(MODULE_KEY);
-      let accumulatedProgress = 0;
-      
-      const stage1 = STAGES[0];
-      updateProgress(MODULE_KEY, accumulatedProgress, stage1.label);
-      
-      // Fetch data in batches of 1000
-      const fetchedResguardos: Resguardo[] = [];
-      let hasMore = true;
-      let offset = 0;
-      const BATCH_SIZE = 1000;
-      
-      while (hasMore) {
-        const batch = await withExponentialBackoff(
-          async () => {
-            const { data, error } = await supabase
-              .from(TABLE)
-              .select('*')
-              .range(offset, offset + BATCH_SIZE - 1);
-            if (error) throw error;
-            return data as Resguardo[];
-          },
-          FETCH_RETRY_CONFIG
-        );
-        
-        fetchedResguardos.push(...batch);
-        hasMore = batch.length === BATCH_SIZE;
-        offset += BATCH_SIZE;
-        
-        // Update progress during fetch
-        const fetchProgress = Math.min(stage1.weight * 0.9, (offset / 10000) * stage1.weight);
-        updateProgress(MODULE_KEY, accumulatedProgress + fetchProgress, `${stage1.label} (${fetchedResguardos.length} registros)`);
-      }
-      
-      setResguardos(fetchedResguardos);
-      accumulatedProgress += stage1.weight;
-      updateProgress(MODULE_KEY, accumulatedProgress, stage1.label);
-      
-      const stage2 = STAGES[1];
-      updateProgress(MODULE_KEY, accumulatedProgress, stage2.label);
-      await setupRealtimeSubscription();
-      accumulatedProgress += stage2.weight;
-      updateProgress(MODULE_KEY, accumulatedProgress, stage2.label);
-      
-      completeIndexation(MODULE_KEY);
-    } catch (error) {
-      console.error('Error indexing Resguardos:', error);
-      setError(MODULE_KEY, error instanceof Error ? error.message : 'Error al indexar datos');
-    } finally {
-      isIndexingRef.current = false;
-    }
-  }, [startIndexation, updateProgress, completeIndexation, setError, setResguardos]);
-  
   const setupRealtimeSubscription = useCallback(async () => {
     if (channelRef.current) {
       await supabase.removeChannel(channelRef.current);
@@ -107,18 +49,46 @@ export function useResguardosIndexation() {
             switch (eventType) {
               case 'INSERT': {
                 await new Promise(resolve => setTimeout(resolve, 300));
-                const { data, error } = await supabase.from(TABLE).select('*').eq('id', newRecord.id).single();
+                const { data, error } = await supabase
+                  .from(TABLE)
+                  .select(`
+                    *,
+                    directorio!inner (
+                      nombre
+                    )
+                  `)
+                  .eq('id', newRecord.id)
+                  .single();
                 if (!error && data) {
-                  addResguardo(data);
-                  resguardosEmitter.emit({ type: 'INSERT', data, timestamp: new Date().toISOString() });
+                  const { directorio, ...rest } = data as any;
+                  const resguardoWithDirector = {
+                    ...rest,
+                    director_nombre: directorio?.nombre || ''
+                  };
+                  addResguardo(resguardoWithDirector);
+                  resguardosEmitter.emit({ type: 'INSERT', data: resguardoWithDirector, timestamp: new Date().toISOString() });
                 }
                 break;
               }
               case 'UPDATE': {
-                const { data, error } = await supabase.from(TABLE).select('*').eq('id', newRecord.id).single();
+                const { data, error } = await supabase
+                  .from(TABLE)
+                  .select(`
+                    *,
+                    directorio!inner (
+                      nombre
+                    )
+                  `)
+                  .eq('id', newRecord.id)
+                  .single();
                 if (!error && data) {
-                  updateResguardo(data.id, data);
-                  resguardosEmitter.emit({ type: 'UPDATE', data, timestamp: new Date().toISOString() });
+                  const { directorio, ...rest } = data as any;
+                  const resguardoWithDirector = {
+                    ...rest,
+                    director_nombre: directorio?.nombre || ''
+                  };
+                  updateResguardo(resguardoWithDirector.id, resguardoWithDirector);
+                  resguardosEmitter.emit({ type: 'UPDATE', data: resguardoWithDirector, timestamp: new Date().toISOString() });
                 }
                 break;
               }
@@ -152,6 +122,77 @@ export function useResguardosIndexation() {
     
     channelRef.current = channel;
   }, [indexationState?.realtimeConnected, updateRealtimeConnection, updateLastEventReceived, setDisconnectedAt, addResguardo, updateResguardo, removeResguardo]);
+  
+  const indexData = useCallback(async () => {
+    if (isIndexingRef.current) return;
+    isIndexingRef.current = true;
+    
+    try {
+      startIndexation(MODULE_KEY);
+      let accumulatedProgress = 0;
+      
+      const stage1 = STAGES[0];
+      updateProgress(MODULE_KEY, accumulatedProgress, stage1.label);
+      
+      // Fetch data in batches of 1000
+      const fetchedResguardos: Resguardo[] = [];
+      let hasMore = true;
+      let offset = 0;
+      const BATCH_SIZE = 1000;
+      
+      while (hasMore) {
+        const batch = await withExponentialBackoff(
+          async () => {
+            const { data, error } = await supabase
+              .from(TABLE)
+              .select(`
+                *,
+                directorio!inner (
+                  nombre
+                )
+              `)
+              .range(offset, offset + BATCH_SIZE - 1);
+            if (error) throw error;
+            
+            // Map the data to include director_nombre
+            return (data || []).map((record: any) => {
+              const { directorio, ...rest } = record;
+              return {
+                ...rest,
+                director_nombre: directorio?.nombre || ''
+              };
+            }) as Resguardo[];
+          },
+          FETCH_RETRY_CONFIG
+        );
+        
+        fetchedResguardos.push(...batch);
+        hasMore = batch.length === BATCH_SIZE;
+        offset += BATCH_SIZE;
+        
+        // Update progress during fetch
+        const fetchProgress = Math.min(stage1.weight * 0.9, (offset / 10000) * stage1.weight);
+        updateProgress(MODULE_KEY, accumulatedProgress + fetchProgress, `${stage1.label} (${fetchedResguardos.length} registros)`);
+      }
+      
+      setResguardos(fetchedResguardos);
+      accumulatedProgress += stage1.weight;
+      updateProgress(MODULE_KEY, accumulatedProgress, stage1.label);
+      
+      const stage2 = STAGES[1];
+      updateProgress(MODULE_KEY, accumulatedProgress, stage2.label);
+      await setupRealtimeSubscription();
+      accumulatedProgress += stage2.weight;
+      updateProgress(MODULE_KEY, accumulatedProgress, stage2.label);
+      
+      completeIndexation(MODULE_KEY);
+    } catch (error) {
+      console.error('Error indexing Resguardos:', error);
+      setError(MODULE_KEY, error instanceof Error ? error.message : 'Error al indexar datos');
+    } finally {
+      isIndexingRef.current = false;
+    }
+  }, [startIndexation, updateProgress, completeIndexation, setError, setResguardos, setupRealtimeSubscription]);
   
   const handleReconnection = useCallback(async () => {
     const state = indexationState;
@@ -194,12 +235,14 @@ export function useResguardosIndexation() {
   
   useEffect(() => {
     if (isInitializedRef.current || !isStoreHydrated) return;
-    
-    // Solo ejecutar en el cliente (navegador)
     if (typeof window === 'undefined') return;
     
     const initialize = async () => {
+      if (isInitializedRef.current) return;
+      isInitializedRef.current = true;
+      
       initializeModule(MODULE_KEY);
+      
       try {
         const response = await fetch('/api/auth/session', { credentials: 'include' });
         if (!response.ok) return;
@@ -210,13 +253,10 @@ export function useResguardosIndexation() {
         return;
       }
       
-      // Verificar si ya hay datos en IndexedDB (después de hidratación)
       const currentState = useIndexationStore.getState().modules[MODULE_KEY];
       const currentResguardos = useResguardosStore.getState().resguardos;
-      
-      // Si el módulo ya fue indexado (incluso con 0 registros), no reindexar
-      // Esto previene loops infinitos en módulos vacíos
-      const isAlreadyIndexed = currentState?.isIndexed && currentState?.lastIndexedAt;
+      const hasDataInIndexedDB = currentResguardos.length > 0;
+      const isAlreadyIndexed = currentState?.isIndexed && hasDataInIndexedDB;
       
       if (isAlreadyIndexed) {
         completeIndexation(MODULE_KEY);
@@ -224,13 +264,12 @@ export function useResguardosIndexation() {
       } else {
         await indexData();
       }
-      isInitializedRef.current = true;
     };
     initialize();
     return () => {
       if (reconnectionTimeoutRef.current) clearTimeout(reconnectionTimeoutRef.current);
     };
-  }, [initializeModule, indexData, setupRealtimeSubscription, isStoreHydrated]);
+  }, [initializeModule, indexData, setupRealtimeSubscription, isStoreHydrated, completeIndexation]);
   
   return {
     isIndexing: indexationState?.isIndexing ?? false,

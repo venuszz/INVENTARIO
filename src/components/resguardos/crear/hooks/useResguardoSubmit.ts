@@ -3,8 +3,8 @@
  */
 
 import { useState, useCallback } from 'react';
-import supabase from '@/app/lib/supabase/client';
 import { useSession } from '@/hooks/useSession';
+import { useResguardosStore } from '@/stores/resguardosStore';
 import type { ResguardoForm, Mueble, Directorio, PdfData } from '../types';
 
 export interface UseResguardoSubmitReturn {
@@ -44,6 +44,8 @@ export function useResguardoSubmit(
   const [generatingPDF, setGeneratingPDF] = useState(false);
   
   const { user } = useSession();
+  const addResguardoBatch = useResguardosStore(state => state.addResguardoBatch);
+  
   const handleSubmit = useCallback(async () => {
     console.log('🚀 [RESGUARDO] Iniciando handleSubmit');
     console.log('📋 [RESGUARDO] Validación de formulario:', { formData, selectedMueblesCount: selectedMuebles.length });
@@ -68,15 +70,18 @@ export function useResguardoSubmit(
       console.log('✅ [RESGUARDO] Usuario de sesión:', { id: user.id, email: user.email, provider: user.oauthProvider });
 
       console.log('📝 [RESGUARDO] Consultando firmas...');
-      const { data: firmasData, error: firmasError } = await supabase
-        .from('firmas')
-        .select('*')
-        .order('id', { ascending: true });
+      const firmasResponse = await fetch('/api/supabase-proxy?target=' + encodeURIComponent('/rest/v1/firmas?select=*&order=id.asc'), {
+        method: 'GET',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' }
+      });
 
-      if (firmasError) {
-        console.error('❌ [RESGUARDO] Error al consultar firmas:', firmasError);
-        throw firmasError;
+      if (!firmasResponse.ok) {
+        console.error('❌ [RESGUARDO] Error al consultar firmas');
+        throw new Error('Error al consultar firmas');
       }
+
+      const firmasData = await firmasResponse.json();
       console.log('✅ [RESGUARDO] Firmas obtenidas:', firmasData?.length || 0);
 
       setShowPDFButton(true);
@@ -106,73 +111,74 @@ export function useResguardoSubmit(
       setPdfData(pdfDataToSet);
 
       console.log('💾 [RESGUARDO] Iniciando guardado de artículos...');
-      const resguardoPromises = selectedMuebles.map(async (mueble, index) => {
-        // Determinar tabla de origen según el campo origen del mueble
-        const tableName = mueble.origen === 'ITEA' ? 'itea' : mueble.origen === 'NO_LISTADO' ? 'no_listado' : 'inea';
+      
+      // Prepare all resguardos data
+      const resguardosData = selectedMuebles.map((mueble, index) => {
         const resguardanteToUse = mueble.resguardanteAsignado || formData.resguardante;
 
         console.log(`📦 [RESGUARDO] Artículo ${index + 1}/${selectedMuebles.length}:`, {
           id: mueble.id,
           id_inv: mueble.id_inv,
-          tableName,
           resguardante: resguardanteToUse,
           director: directorNombre,
           area: formData.area,
           origen: mueble.origen
         });
 
-        // UPDATE del mueble - actualizar resguardante
-        console.log(`🔄 [RESGUARDO] Actualizando ${tableName} id=${mueble.id}...`);
-        const { error: updateError } = await supabase
-          .from(tableName)
-          .update({
-            resguardante: resguardanteToUse
-          })
-          .eq('id', mueble.id);
+        // Map origen: TLAXCALA -> NO_LISTADO for database constraint
+        const origenMapped = mueble.origen === 'TLAXCALA' ? 'NO_LISTADO' : (mueble.origen || 'INEA');
 
-        if (updateError) {
-          console.error(`❌ [RESGUARDO] Error UPDATE ${tableName}:`, updateError);
-          throw updateError;
-        }
-        console.log(`✅ [RESGUARDO] UPDATE exitoso en ${tableName}`);
-
-        // INSERT en resguardos con nueva estructura normalizada
-        const resguardoData = {
+        return {
           folio: actualFolio,
           f_resguardo: new Date(new Date().getFullYear(), new Date().getMonth(), new Date().getDate()).toISOString(),
           id_directorio: parseInt(formData.directorId),
           id_mueble: mueble.id,
-          origen: mueble.origen || 'INEA',
+          origen: origenMapped,
           puesto_resguardo: formData.puesto.trim().toUpperCase(),
           resguardante: resguardanteToUse,
-          created_by: user.id,
         };
-        console.log(`➕ [RESGUARDO] Insertando en resguardos:`, resguardoData);
-
-        const { error: insertError } = await supabase.from('resguardos').insert(resguardoData);
-
-        if (insertError) {
-          console.error(`❌ [RESGUARDO] Error INSERT resguardos:`, insertError);
-          throw insertError;
-        }
-        console.log(`✅ [RESGUARDO] INSERT exitoso en resguardos`);
       });
 
-      console.log('⏳ [RESGUARDO] Esperando todas las promesas...');
-      await Promise.all(resguardoPromises);
-      console.log('✅ [RESGUARDO] Todos los artículos guardados exitosamente');
+      console.log(`➕ [RESGUARDO] Insertando ${resguardosData.length} resguardos via API...`);
+
+      // Call API route to insert resguardos securely
+      const response = await fetch('/api/resguardos/create', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          resguardos: resguardosData,
+          userId: user.id
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        console.error('❌ [RESGUARDO] Error API response:', errorData);
+        throw new Error(errorData.error || 'Failed to create resguardos');
+      }
+
+      const result = await response.json();
+      console.log('✅ [RESGUARDO] Todos los artículos guardados exitosamente:', result);
+
+      // Update store immediately with optimistic update
+      try {
+        if (result.data && Array.isArray(result.data)) {
+          console.log('📦 [RESGUARDO] Actualizando store con', result.data.length, 'resguardos');
+          addResguardoBatch(result.data);
+        } else {
+          console.warn('⚠️ [RESGUARDO] API did not return expected data format');
+        }
+      } catch (storeError) {
+        console.error('⚠️ [RESGUARDO] Error updating store:', storeError);
+        // Don't fail the operation, realtime will sync
+      }
 
       sessionStorage.setItem('pdfDownloaded', 'false');
       console.log('💾 [RESGUARDO] SessionStorage actualizado');
 
-      try {
-        console.log('🔔 [RESGUARDO] Creando notificación...');
-        const notificationDescription = `Se ha creado un nuevo resguardo para el área "${formData.area}" bajo la dirección de "${directorNombre}" con ${selectedMuebles.length} artículo(s).`;
-            // Notification removed
-        console.log('✅ [RESGUARDO] Notificación creada');
-      } catch (notifErr) {
-        console.warn('⚠️ [RESGUARDO] Error en notificación (no crítico):', notifErr);
-      }
+      // Notification system removed - no longer needed
 
       console.log('🧹 [RESGUARDO] Limpiando formulario...');
       setSuccessMessage(`Resguardo ${actualFolio} creado correctamente con ${selectedMuebles.length} artículo(s)`);

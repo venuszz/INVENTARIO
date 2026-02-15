@@ -5,6 +5,25 @@
 import { useState, useEffect, useMemo, useDeferredValue, useCallback, useRef } from 'react';
 import type { Mueble, ActiveFilter, SearchMatchType } from '../types';
 
+// Helper functions for estado conversion
+const estadoToDisplay = (estado: string | null | undefined): string => {
+  if (!estado) return '';
+  switch (estado.toUpperCase()) {
+    case 'B': return 'Bueno';
+    case 'M': return 'Malo';
+    case 'R': return 'Regular';
+    default: return estado;
+  }
+};
+
+const displayToEstado = (display: string): string => {
+  const lower = display.toLowerCase();
+  if (lower.includes('bueno')) return 'B';
+  if (lower.includes('malo')) return 'M';
+  if (lower.includes('regular')) return 'R';
+  return display;
+};
+
 export interface UseSearchAndFiltersReturn {
   searchTerm: string;
   setSearchTerm: (value: string) => void;
@@ -13,7 +32,7 @@ export interface UseSearchAndFiltersReturn {
   activeFilters: ActiveFilter[];
   addFilter: (filter: ActiveFilter) => void;
   removeFilter: (index: number) => void;
-  suggestions: Array<{ value: string; type: SearchMatchType }>;
+  suggestions: Array<{ value: string; type: SearchMatchType; displayValue?: string }>;
   showSuggestions: boolean;
   setShowSuggestions: (show: boolean) => void;
   highlightedIndex: number;
@@ -33,7 +52,7 @@ export function useSearchAndFilters(
   const deferredSearchTerm = useDeferredValue(searchTerm);
   const [searchMatchType, setSearchMatchType] = useState<SearchMatchType | null>(null);
   const [activeFilters, setActiveFilters] = useState<ActiveFilter[]>([]);
-  const [suggestions, setSuggestions] = useState<Array<{ value: string; type: SearchMatchType }>>([]);
+  const [suggestions, setSuggestions] = useState<Array<{ value: string; type: SearchMatchType; displayValue?: string }>>([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [highlightedIndex, setHighlightedIndex] = useState(-1);
 
@@ -84,6 +103,7 @@ export function useSearchAndFilters(
       rubro: muebles.map((m: Mueble) => m.rubro || '').filter(Boolean),
       estado: muebles.map((m: Mueble) => m.estado || '').filter(Boolean),
       estatus: muebles.map((m: Mueble) => m.estatus || '').filter(Boolean),
+      origen: muebles.map((m: Mueble) => m.origen || '').filter(Boolean),
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [allMueblesVersion.current]);
@@ -119,8 +139,13 @@ export function useSearchAndFilters(
       
       if (isMatch(directorValue)) {
         const exact = isExact(directorValue);
-        const score = exact ? 6 : 5;
+        const score = exact ? 7 : 6;
         if (score > bestMatch.score) bestMatch = { type: 'director', value: directorValue, score };
+      }
+      else if (isMatch(item.origen)) {
+        const exact = isExact(item.origen);
+        const score = exact ? 6 : 5;
+        if (score > bestMatch.score) bestMatch = { type: 'origen', value: item.origen!, score };
       }
       else if (isMatch(areaValue)) {
         const exact = isExact(areaValue);
@@ -161,26 +186,39 @@ export function useSearchAndFilters(
     const seen = new Set<string>();
     const fields = [
       { type: 'id' as SearchMatchType, data: searchableData.id },
+      { type: 'origen' as SearchMatchType, data: searchableData.origen },
       { type: 'area' as SearchMatchType, data: searchableData.area },
       { type: 'director' as SearchMatchType, data: searchableData.director },
       { type: 'descripcion' as SearchMatchType, data: searchableData.descripcion },
       { type: 'rubro' as SearchMatchType, data: searchableData.rubro },
-      { type: 'estado' as SearchMatchType, data: searchableData.estado },
+      { 
+        type: 'estado' as SearchMatchType, 
+        data: searchableData.estado.map(e => estadoToDisplay(e)),
+        rawData: searchableData.estado
+      },
       { type: 'estatus' as SearchMatchType, data: searchableData.estatus },
     ];
 
-    let allSuggestions: { value: string; type: SearchMatchType }[] = [];
+    let allSuggestions: { value: string; type: SearchMatchType; displayValue?: string }[] = [];
     let count = 0;
     const maxSuggestions = 10;
 
     for (const f of fields) {
       if (count >= maxSuggestions) break;
-      for (const v of f.data) {
+      for (let i = 0; i < f.data.length; i++) {
+        const v = f.data[i];
         const vLower = v.toLowerCase();
         if (vLower.includes(term)) {
           const key = f.type + ':' + vLower;
           if (!seen.has(key)) {
-            allSuggestions.push({ value: v, type: f.type });
+            const suggestion: { value: string; type: SearchMatchType; displayValue?: string } = {
+              value: f.type === 'estado' && 'rawData' in f ? f.rawData![i] : v,
+              type: f.type
+            };
+            if (f.type === 'estado') {
+              suggestion.displayValue = v;
+            }
+            allSuggestions.push(suggestion);
             seen.add(key);
             count++;
             if (count >= maxSuggestions) break;
@@ -190,8 +228,10 @@ export function useSearchAndFilters(
     }
 
     allSuggestions.sort((a, b) => {
-      const aStarts = a.value.toLowerCase().startsWith(term);
-      const bStarts = b.value.toLowerCase().startsWith(term);
+      const aDisplay = a.displayValue || a.value;
+      const bDisplay = b.displayValue || b.value;
+      const aStarts = aDisplay.toLowerCase().startsWith(term);
+      const bStarts = bDisplay.toLowerCase().startsWith(term);
       if (aStarts && !bStarts) return -1;
       if (!aStarts && bStarts) return 1;
       return 0;
@@ -212,7 +252,11 @@ export function useSearchAndFilters(
 
   const saveCurrentFilter = useCallback(() => {
     if (searchTerm && searchMatchType) {
-      setActiveFilters(prev => [...prev, { term: searchTerm, type: searchMatchType }]);
+      const filter: ActiveFilter = { term: searchTerm, type: searchMatchType };
+      if (searchMatchType === 'estado') {
+        filter.displayTerm = estadoToDisplay(searchTerm);
+      }
+      setActiveFilters(prev => [...prev, filter]);
       setSearchTerm('');
       setSearchMatchType(null);
     }
@@ -221,7 +265,11 @@ export function useSearchAndFilters(
   const handleSuggestionClick = useCallback((index: number) => {
     const s = suggestions[index];
     if (!s) return;
-    setActiveFilters(prev => [...prev, { term: s.value, type: s.type }]);
+    const filter: ActiveFilter = { term: s.value, type: s.type };
+    if (s.type === 'estado' && s.displayValue) {
+      filter.displayTerm = s.displayValue;
+    }
+    setActiveFilters(prev => [...prev, filter]);
     setSearchTerm('');
     setSearchMatchType(null);
     setShowSuggestions(false);

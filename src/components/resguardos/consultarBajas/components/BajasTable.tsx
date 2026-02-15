@@ -9,12 +9,9 @@ interface BajasTableProps {
   sortDirection: 'asc' | 'desc';
   selectedFolioResguardo: string | null;
   allBajas: ResguardoBaja[];
-  filterResguardante: string;
-  searchTerm: string;
   onSort: (field: SortField) => void;
   onRowClick: (folioResguardo: string) => void;
   onRetry: () => void;
-  resetSearch: () => void;
   getArticuloCount: (folioResguardo: string) => number;
   isDarkMode: boolean;
 }
@@ -30,12 +27,9 @@ export const BajasTable: React.FC<BajasTableProps> = ({
   sortDirection,
   selectedFolioResguardo,
   allBajas,
-  filterResguardante,
-  searchTerm,
   onSort,
   onRowClick,
   onRetry,
-  resetSearch,
   getArticuloCount,
   isDarkMode
 }) => {
@@ -174,19 +168,6 @@ export const BajasTable: React.FC<BajasTableProps> = ({
                     }`}>
                       No se encontraron resguardos dados de baja
                     </p>
-                    {searchTerm && (
-                      <button
-                        onClick={resetSearch}
-                        className={`px-3 py-1.5 rounded text-xs border transition-colors flex items-center gap-1.5 ${
-                          isDarkMode
-                            ? 'bg-white/5 text-white border-white/20 hover:bg-white/10'
-                            : 'bg-black/5 text-black border-black/20 hover:bg-black/10'
-                        }`}
-                      >
-                        <X size={12} />
-                        Limpiar búsqueda
-                      </button>
-                    )}
                   </div>
                 </td>
               </tr>
@@ -232,26 +213,6 @@ export const BajasTable: React.FC<BajasTableProps> = ({
                       }`}>
                         {baja.area_resguardo}
                       </div>
-
-                      {filterResguardante && (
-                        <div className="mt-1">
-                          {Array.from(new Set(allBajas
-                            .filter(r => r.folio_resguardo === baja.folio_resguardo && r.usufinal?.toLowerCase().includes(filterResguardante.toLowerCase()))
-                            .map(r => r.usufinal)))
-                            .map((matchedResguardante, idx) => (
-                              <div
-                                key={idx}
-                                className={`inline-flex items-center px-2 py-0.5 rounded text-xs mr-1 mb-1 border ${
-                                  isDarkMode
-                                    ? 'bg-white/10 text-white border-white/20'
-                                    : 'bg-black/10 text-black border-black/20'
-                                }`}
-                              >
-                                {matchedResguardante}
-                              </div>
-                            ))}
-                        </div>
-                      )}
                     </td>
                     <td className="px-4 py-3">
                       <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium border ${

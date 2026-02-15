@@ -6,7 +6,7 @@
 
 'use client';
 
-import { ArrowUpDown, FileDigit, User, RefreshCw, AlertCircle, Search, X } from 'lucide-react';
+import { ArrowUpDown, FileDigit, RefreshCw, AlertCircle, Search, X } from 'lucide-react';
 import { useTheme } from '@/context/ThemeContext';
 
 interface Resguardo {
@@ -30,6 +30,7 @@ interface ResguardosTableProps {
   filterResguardante: string;
   onRetry: () => void;
   onResetSearch: () => void;
+  rowsPerPage: number;
 }
 
 /**
@@ -48,7 +49,8 @@ export default function ResguardosTable({
   searchTerm,
   filterResguardante,
   onRetry,
-  onResetSearch
+  onResetSearch,
+  rowsPerPage
 }: ResguardosTableProps) {
   const { isDarkMode } = useTheme();
 
@@ -62,21 +64,24 @@ export default function ResguardosTable({
     return allResguardos.filter(r => r.folio === folio).length;
   };
 
+  // Calculate skeleton rows needed
+  const skeletonRowsCount = Math.max(0, rowsPerPage - foliosUnicos.length);
+
   return (
-    <div className={`rounded-lg border overflow-hidden mb-4 flex flex-col flex-grow max-h-[78vh] ${
+    <div className={`rounded-lg border overflow-hidden mb-4 flex flex-col h-[calc(131vh)] ${
       isDarkMode
         ? 'bg-white/[0.02] border-white/10'
         : 'bg-black/[0.02] border-black/10'
     }`}>
-      <div className="flex-grow min-w-[800px] overflow-x-auto overflow-y-auto">
-        <table className="min-w-full">
+      <div className="flex-grow overflow-y-auto overflow-x-hidden">
+        <table className="w-full table-fixed">
           <thead className={`sticky top-0 z-10 backdrop-blur-xl ${
             isDarkMode ? 'bg-black/95 border-b border-white/10' : 'bg-white/95 border-b border-black/10'
           }`}>
             <tr>
               <th
                 onClick={() => onSort('folio')}
-                className={`px-4 py-3 text-left text-xs font-medium uppercase tracking-wider cursor-pointer transition-all ${
+                className={`w-[20%] px-4 py-3 text-left text-xs font-medium uppercase tracking-wider cursor-pointer transition-all ${
                   sortField === 'folio'
                     ? isDarkMode 
                       ? 'text-white bg-white/[0.02]' 
@@ -93,7 +98,7 @@ export default function ResguardosTable({
               </th>
               <th
                 onClick={() => onSort('f_resguardo')}
-                className={`px-4 py-3 text-left text-xs font-medium uppercase tracking-wider cursor-pointer transition-all ${
+                className={`w-[15%] px-4 py-3 text-left text-xs font-medium uppercase tracking-wider cursor-pointer transition-all ${
                   sortField === 'f_resguardo'
                     ? isDarkMode 
                       ? 'text-white bg-white/[0.02]' 
@@ -110,7 +115,7 @@ export default function ResguardosTable({
               </th>
               <th
                 onClick={() => onSort('dir_area')}
-                className={`px-4 py-3 text-left text-xs font-medium uppercase tracking-wider cursor-pointer transition-all ${
+                className={`w-[50%] px-4 py-3 text-left text-xs font-medium uppercase tracking-wider cursor-pointer transition-all ${
                   sortField === 'dir_area'
                     ? isDarkMode 
                       ? 'text-white bg-white/[0.02]' 
@@ -121,11 +126,11 @@ export default function ResguardosTable({
                 }`}
               >
                 <div className="flex items-center gap-1.5">
-                  Director
+                  Responsable
                   <ArrowUpDown size={12} className={sortField === 'dir_area' ? 'opacity-100' : 'opacity-40'} />
                 </div>
               </th>
-              <th className={`px-4 py-3 text-left text-xs font-medium uppercase tracking-wider ${
+              <th className={`w-[15%] px-4 py-3 text-left text-xs font-medium uppercase tracking-wider ${
                 isDarkMode ? 'text-white/60' : 'text-black/60'
               }`}>
                 Artículos
@@ -213,7 +218,14 @@ export default function ResguardosTable({
                 return (
                   <tr
                     key={resguardo.folio}
-                    onClick={() => onFolioClick(resguardo.folio)}
+                    onClick={() => {
+                      // Toggle selection: deselect if already selected
+                      if (selectedFolio === resguardo.folio) {
+                        onFolioClick('');
+                      } else {
+                        onFolioClick(resguardo.folio);
+                      }
+                    }}
                     className={`border-b transition-colors cursor-pointer ${
                       isDarkMode 
                         ? 'border-white/5 hover:bg-white/[0.02]' 
@@ -224,8 +236,8 @@ export default function ResguardosTable({
                       <div className={`text-sm font-medium flex items-center gap-2 ${
                         isDarkMode ? 'text-white' : 'text-black'
                       }`}>
-                        <FileDigit className="h-4 w-4" />
-                        {resguardo.folio}
+                        <FileDigit className="h-4 w-4 flex-shrink-0" />
+                        <span className="truncate">{resguardo.folio}</span>
                       </div>
                     </td>
                     <td className={`px-4 py-3 text-sm ${
@@ -233,17 +245,19 @@ export default function ResguardosTable({
                     }`}>
                       {resguardo.f_resguardo.slice(0, 10).split('-').reverse().join('/')}
                     </td>
-                    <td className="px-4 py-3 group relative">
-                      <div className={`text-sm ${
+                    <td className="px-4 py-3">
+                      <div className={`text-sm truncate ${
                         isDarkMode ? 'text-white/80' : 'text-black/80'
                       }`}>
                         {resguardo.dir_area}
                       </div>
-                      <div className={`text-xs ${
-                        isDarkMode ? 'text-white/60' : 'text-black/60'
-                      }`}>
-                        {resguardo.area_resguardo}
-                      </div>
+                      {resguardo.area_resguardo && (
+                        <div className={`text-xs truncate ${
+                          isDarkMode ? 'text-white/60' : 'text-black/60'
+                        }`}>
+                          {resguardo.area_resguardo}
+                        </div>
+                      )}
 
                       {filterResguardante && (
                         <div className="mt-1">
@@ -264,44 +278,6 @@ export default function ResguardosTable({
                             ))}
                         </div>
                       )}
-
-                      <div className="absolute left-1/2 -translate-x-1/2 top-full mt-2 w-max max-w-sm opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-[9999]">
-                        <div className={`absolute left-1/2 -top-2 -translate-x-1/2 border-8 border-transparent ${
-                          isDarkMode ? 'border-b-black' : 'border-b-white'
-                        }`}></div>
-                        <div className={`rounded-lg shadow-xl p-4 border ${
-                          isDarkMode
-                            ? 'bg-black border-white/10'
-                            : 'bg-white border-black/10'
-                        }`}>
-                          <h4 className={`text-sm font-medium mb-2 flex items-center gap-2 ${
-                            isDarkMode ? 'text-white/80' : 'text-black/80'
-                          }`}>
-                            <User className="h-4 w-4" />
-                            Resguardantes
-                          </h4>
-                          <div className="flex flex-col gap-2">
-                            {Array.from(new Set(allResguardos
-                              .filter(r => r.folio === resguardo.folio)
-                              .map(r => (r as any).usufinal || 'Sin asignar')))
-                              .map((resguardante, idx) => (
-                                <div
-                                  key={idx}
-                                  className={`flex items-center gap-2 text-sm px-2 py-1 rounded-lg ${
-                                    isDarkMode
-                                      ? 'text-white/60 bg-white/5'
-                                      : 'text-black/60 bg-black/5'
-                                  }`}
-                                >
-                                  <div className={`h-2 w-2 rounded-full ${
-                                    isDarkMode ? 'bg-white' : 'bg-black'
-                                  }`}></div>
-                                  {resguardante}
-                                </div>
-                              ))}
-                          </div>
-                        </div>
-                      </div>
                     </td>
                     <td className="px-4 py-3">
                       <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium border ${
@@ -309,13 +285,49 @@ export default function ResguardosTable({
                           ? 'bg-white/5 text-white/80 border-white/10' 
                           : 'bg-black/5 text-black/80 border-black/10'
                       }`}>
-                        {itemCount} artículo{itemCount !== 1 ? 's' : ''}
+                        {itemCount}
                       </span>
                     </td>
                   </tr>
                 );
               })
             )}
+            
+            {/* Skeleton rows to fill the page */}
+            {!loading && !error && skeletonRowsCount > 0 && Array.from({ length: skeletonRowsCount }).map((_, idx) => (
+              <tr
+                key={`skeleton-${idx}`}
+                className={`border-b ${
+                  isDarkMode ? 'border-white/5' : 'border-black/5'
+                }`}
+              >
+                <td className="px-4 py-3">
+                  <div className={`h-4 w-24 rounded ${
+                    isDarkMode ? 'bg-white/5' : 'bg-black/5'
+                  }`} />
+                </td>
+                <td className="px-4 py-3">
+                  <div className={`h-4 w-20 rounded ${
+                    isDarkMode ? 'bg-white/5' : 'bg-black/5'
+                  }`} />
+                </td>
+                <td className="px-4 py-3">
+                  <div className="space-y-1">
+                    <div className={`h-4 w-full rounded ${
+                      isDarkMode ? 'bg-white/5' : 'bg-black/5'
+                    }`} />
+                    <div className={`h-3 w-32 rounded ${
+                      isDarkMode ? 'bg-white/5' : 'bg-black/5'
+                    }`} />
+                  </div>
+                </td>
+                <td className="px-4 py-3">
+                  <div className={`h-6 w-8 rounded-full ${
+                    isDarkMode ? 'bg-white/5' : 'bg-black/5'
+                  }`} />
+                </td>
+              </tr>
+            ))}
           </tbody>
         </table>
       </div>

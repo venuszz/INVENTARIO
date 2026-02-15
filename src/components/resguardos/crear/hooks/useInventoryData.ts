@@ -12,6 +12,7 @@ import { useIneaObsoletosIndexation } from '@/hooks/indexation/useIneaObsoletosI
 import { useIteaIndexation } from '@/hooks/indexation/useIteaIndexation';
 import { useNoListadoIndexation } from '@/hooks/indexation/useNoListadoIndexation';
 import { useResguardosCrearStore } from '@/stores/resguardosCrearStore';
+import { useResguardosStore } from '@/stores/resguardosStore';
 import type { Mueble } from '../types';
 import type { RealtimeChannel } from '@supabase/supabase-js';
 
@@ -51,6 +52,9 @@ export function useInventoryData(
   const { muebles: ineaObsoletosData } = useIneaObsoletosIndexation();
   const { muebles: iteaData } = useIteaIndexation();
   const { muebles: noListadoData } = useNoListadoIndexation();
+  
+  // Get resguardos from store instead of fetching directly
+  const resguardos = useResguardosStore(state => state.resguardos);
   
   const { setSyncingIds, removeSyncingIds, setIsSyncing } = useResguardosCrearStore();
 
@@ -92,14 +96,12 @@ export function useInventoryData(
       // TLAXCALA count
       const tlaxcalaTotal = noListadoData.length;
 
-      // Fetch already resguarded items
-      const { data: resguardados } = await supabase
-        .from('resguardos')
-        .select('num_inventario, descripcion, rubro, condicion, area_resguardo');
-
+      // Use resguardos from store instead of fetching
+      console.log('📦 [INVENTORY DATA] Using resguardos from store:', resguardos.length);
+      
       const resguardadosSet = new Set(
-        (resguardados || []).map(r => 
-          `${r.num_inventario}-${r.descripcion}-${r.rubro}-${r.condicion}-${r.area_resguardo}`.toLowerCase()
+        resguardos.map(r => 
+          `${r.id_mueble}`.toLowerCase()
         )
       );
 
@@ -115,13 +117,19 @@ export function useInventoryData(
 
       const totalAfterStatusFilter = combinedData.length;
 
-      // Filter out resguarded items
+      // Filter out resguarded items by matching id_mueble (UUID)
       combinedData = combinedData.filter(item => {
-        const itemKey = `${item.id_inv}-${item.descripcion}-${item.rubro}-${item.estado}-${item.area}`.toLowerCase();
-        return !resguardadosSet.has(itemKey);
+        const isResguarded = resguardadosSet.has(item.id.toLowerCase());
+        return !isResguarded;
       });
 
       const excludedByResguardo = totalAfterStatusFilter - combinedData.length;
+      
+      console.log('📊 [INVENTORY DATA] Filtered:', {
+        total: totalAfterStatusFilter,
+        excluded: excludedByResguardo,
+        available: combinedData.length
+      });
 
       // Sort data
       combinedData.sort((a, b) => {
@@ -153,7 +161,7 @@ export function useInventoryData(
     } finally {
       setLoading(false);
     }
-  }, [ineaData, ineaObsoletosData, iteaData, noListadoData, sortField, sortDirection]);
+  }, [ineaData, ineaObsoletosData, iteaData, noListadoData, resguardos, sortField, sortDirection]);
 
   useEffect(() => {
     fetchData();

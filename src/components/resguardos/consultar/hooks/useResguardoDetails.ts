@@ -5,6 +5,10 @@
 
 import { useState, useCallback, useRef } from 'react';
 import supabase from '@/app/lib/supabase/client';
+import { useResguardosStore } from '@/stores/resguardosStore';
+import { useIneaIndexation } from '@/hooks/indexation/useIneaIndexation';
+import { useIteaIndexation } from '@/hooks/indexation/useIteaIndexation';
+import { useNoListadoIndexation } from '@/hooks/indexation/useNoListadoIndexation';
 import { ResguardoDetalle, ResguardoArticulo } from '../types';
 
 export interface UseResguardoDetailsReturn {
@@ -22,6 +26,12 @@ export interface UseResguardoDetailsReturn {
  * Custom hook for managing resguardo details
  */
 export function useResguardoDetails(): UseResguardoDetailsReturn {
+  // Get data from stores
+  const resguardosFromStore = useResguardosStore(state => state.resguardos);
+  const { muebles: ineaMuebles } = useIneaIndexation();
+  const { muebles: iteaMuebles } = useIteaIndexation();
+  const { muebles: noListadoMuebles } = useNoListadoIndexation();
+  
   const [selectedFolio, setSelectedFolio] = useState<string | null>(null);
   const [resguardoDetails, setResguardoDetails] = useState<ResguardoDetalle | null>(null);
   const [articulos, setArticulos] = useState<ResguardoArticulo[]>([]);
@@ -30,83 +40,77 @@ export function useResguardoDetails(): UseResguardoDetailsReturn {
   const detailRef = useRef<HTMLDivElement>(null);
 
   /**
-   * Fetch resguardo details by folio
+   * Clear selection
+   */
+  const clearSelection = useCallback(() => {
+    setSelectedFolio(null);
+    setResguardoDetails(null);
+    setArticulos([]);
+    setError(null);
+  }, []);
+
+  /**
+   * Fetch resguardo details by folio from store
    */
   const fetchDetails = useCallback(async (folio: string) => {
     setLoading(true);
     try {
-      // Fetch all records for this folio with relational data
-      const { data, error: queryError } = await supabase
-        .from('resguardos')
-        .select(`
-          id,
-          folio,
-          f_resguardo,
-          id_directorio,
-          directorio!inner (
-            nombre,
-            puesto
-          ),
-          id_mueble,
-          origen,
-          puesto_resguardo,
-          resguardante,
-          created_by
-        `)
-        .eq('folio', folio);
+      console.log('📦 [RESGUARDO DETAILS] Fetching folio:', folio);
+      console.log('📦 [RESGUARDO DETAILS] Store has', resguardosFromStore.length, 'resguardos');
+      
+      // Filter resguardos from store by folio
+      const resguardosForFolio = resguardosFromStore.filter(r => r.folio === folio);
+      
+      console.log('📦 [RESGUARDO DETAILS] Found', resguardosForFolio.length, 'records for folio');
 
-      if (queryError) throw queryError;
-
-      if (data && data.length > 0) {
-        const firstItem = data[0];
+      if (resguardosForFolio.length > 0) {
+        const firstItem = resguardosForFolio[0];
 
         // Create details object
         const details: ResguardoDetalle = {
           folio: firstItem.folio,
           fecha: firstItem.f_resguardo,
-          director: (firstItem.directorio as any)?.nombre || ''
+          director: firstItem.director_nombre || ''
         };
 
-        // Map articles - need to fetch mueble details based on id_mueble and origen
-        const articlesList: ResguardoArticulo[] = await Promise.all(
-          data.map(async (item) => {
-            // Determine which table to query based on origen
-            const tableName = item.origen === 'ITEA' ? 'itea' : 
-                            item.origen === 'NO_LISTADO' ? 'no_listado' : 
-                            'inea';
-            
-            // Fetch mueble details
-            const { data: muebleData, error: muebleError } = await supabase
-              .from(tableName)
-              .select('id, id_inv, descripcion, rubro, estado')
-              .eq('id', item.id_mueble)
-              .single();
+        // Map articles - get mueble details from inventory stores
+        const articlesList: ResguardoArticulo[] = resguardosForFolio.map((item) => {
+          // Find mueble in appropriate store based on origen
+          let mueble: any = null;
+          
+          if (item.origen === 'ITEA') {
+            mueble = iteaMuebles.find(m => m.id === item.id_mueble);
+          } else if (item.origen === 'NO_LISTADO' || item.origen === 'TLAXCALA') {
+            mueble = noListadoMuebles.find(m => m.id === item.id_mueble);
+          } else {
+            mueble = ineaMuebles.find(m => m.id === item.id_mueble);
+          }
 
-            if (muebleError) {
-              console.error(`Error fetching mueble from ${tableName}:`, muebleError);
-              // Return basic info if mueble fetch fails
-              return {
-                id: item.id,
-                num_inventario: 'N/A',
-                descripcion: 'Error al cargar',
-                rubro: '',
-                condicion: '',
-                resguardante: item.resguardante || '',
-                origen: item.origen
-              };
-            }
-
+          if (!mueble) {
+            console.warn(`⚠️ [RESGUARDO DETAILS] Mueble not found in store:`, item.id_mueble, item.origen);
             return {
-              id: item.id,
-              num_inventario: muebleData.id_inv || '',
-              descripcion: muebleData.descripcion || '',
-              rubro: muebleData.rubro || '',
-              condicion: muebleData.estado || '',
+              id: parseInt(item.id),
+              num_inventario: 'N/A',
+              descripcion: 'Artículo no encontrado',
+              rubro: '',
+              condicion: '',
               resguardante: item.resguardante || '',
               origen: item.origen
             };
-          })
-        );
+          }
+
+          return {
+            id: parseInt(item.id),
+            num_inventario: mueble.id_inv || '',
+            descripcion: mueble.descripcion || '',
+            rubro: mueble.rubro || '',
+            condicion: mueble.estado || '',
+            resguardante: item.resguardante || '',
+            origen: item.origen
+          };
+        });
+
+        console.log('✅ [RESGUARDO DETAILS] Loaded', articlesList.length, 'articles');
 
         setResguardoDetails(details);
         setArticulos(articlesList);
@@ -120,6 +124,7 @@ export function useResguardoDetails(): UseResguardoDetailsReturn {
           }, 100);
         }
       } else {
+        console.error('❌ [RESGUARDO DETAILS] No resguardos found for folio:', folio);
         setError(`No se encontraron resguardos para el folio: ${folio}`);
         setResguardoDetails(null);
         setArticulos([]);
@@ -133,24 +138,19 @@ export function useResguardoDetails(): UseResguardoDetailsReturn {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [resguardosFromStore, ineaMuebles, iteaMuebles, noListadoMuebles]);
 
   /**
    * Select a folio and load its details
    */
   const selectFolio = useCallback(async (folio: string) => {
+    // If empty string, clear selection
+    if (!folio) {
+      clearSelection();
+      return;
+    }
     await fetchDetails(folio);
-  }, [fetchDetails]);
-
-  /**
-   * Clear selection
-   */
-  const clearSelection = useCallback(() => {
-    setSelectedFolio(null);
-    setResguardoDetails(null);
-    setArticulos([]);
-    setError(null);
-  }, []);
+  }, [fetchDetails, clearSelection]);
 
   /**
    * Refetch current folio details

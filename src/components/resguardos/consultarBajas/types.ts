@@ -93,3 +93,29 @@ export interface ItemToDelete {
   articulos?: ResguardoBajaArticulo[];
   singleArticulo?: ResguardoBajaArticulo;
 }
+
+/**
+ * Search match types for unified search
+ */
+export type SearchMatchType = 'folioResguardo' | 'folioBaja' | 'director' | 'resguardante' | 'fecha' | null;
+
+/**
+ * Active filter structure
+ */
+export interface ActiveFilter {
+  term: string;
+  type: SearchMatchType;
+}
+
+/**
+ * Suggestion structure for autocomplete
+ */
+export interface Suggestion {
+  value: string;
+  type: SearchMatchType;
+}
+
+/**
+ * Baja resguardo structure (alias for compatibility)
+ */
+export type BajaResguardo = ResguardoBaja;

@@ -15,6 +15,7 @@ interface ResguardosStore {
   lastFetchedAt: string | null;
   setResguardos: (resguardos: Resguardo[]) => void;
   addResguardo: (resguardo: Resguardo) => void;
+  addResguardoBatch: (resguardos: Resguardo[]) => void;
   updateResguardo: (id: string, updates: Partial<Resguardo>) => void; // UUID
   removeResguardo: (id: string) => void; // UUID
   isCacheValid: (maxAgeMinutes?: number) => boolean;
@@ -35,10 +36,35 @@ export const useResguardosStore = create<ResguardosStore>()(
     lastFetchedAt: new Date().toISOString(),
   }),
   
-  addResguardo: (resguardo) => set((state) => ({
-    resguardos: [...state.resguardos, resguardo],
-    lastFetchedAt: new Date().toISOString(),
-  })),
+  addResguardo: (resguardo) => set((state) => {
+    const exists = state.resguardos.some(r => r.id === resguardo.id);
+    if (exists) {
+      console.log('[ResguardosStore] Resguardo already exists, skipping:', resguardo.id);
+      return state;
+    }
+    
+    console.log('[ResguardosStore] Adding resguardo:', resguardo.id);
+    return {
+      resguardos: [...state.resguardos, resguardo],
+      lastFetchedAt: new Date().toISOString(),
+    };
+  }),
+  
+  addResguardoBatch: (resguardos) => set((state) => {
+    const existingIds = new Set(state.resguardos.map(r => r.id));
+    const newResguardos = resguardos.filter(r => !existingIds.has(r.id));
+    
+    if (newResguardos.length === 0) {
+      console.log('[ResguardosStore] All resguardos already exist, skipping batch');
+      return state;
+    }
+    
+    console.log('[ResguardosStore] Adding batch:', newResguardos.length, 'new resguardos');
+    return {
+      resguardos: [...state.resguardos, ...newResguardos],
+      lastFetchedAt: new Date().toISOString(),
+    };
+  }),
   
   updateResguardo: (id, updates) => set((state) => ({
     resguardos: state.resguardos.map(r => r.id === id ? { ...r, ...updates } : r),
@@ -65,9 +91,6 @@ export const useResguardosStore = create<ResguardosStore>()(
       name: 'resguardos-storage',
       storage: createJSONStorage(() => indexedDBStorage),
       onRehydrateStorage: () => (state) => {
-        console.log('🔄 [RESGUARDOS Store] Hydration complete:', {
-          resguardosCount: state?.resguardos.length ?? 0,
-        });
         useHydrationStore.getState().markAsHydrated('resguardos');
       },
     }

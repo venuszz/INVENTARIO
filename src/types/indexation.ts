@@ -255,16 +255,18 @@ export interface MuebleNoListado {
  * Resguardo (tabla: resguardos)
  */
 export interface Resguardo {
-  id: string; // UUID
+  id: string; // Serial ID as string
   folio: string;
   f_resguardo: string;
-  dir_area: string | null;
-  area_resguardo: string | null;
-  usufinal: string | null;
-  num_inventario: string | null;
-  descripcion: string | null;
-  rubro: string | null;
-  condicion: string | null;
+  id_directorio: number;
+  id_mueble: string; // UUID
+  origen: string;
+  puesto_resguardo: string;
+  resguardante: string;
+  created_by: string; // UUID
+  created_at?: string;
+  // Relational fields (populated by indexation)
+  director_nombre?: string;
   [key: string]: unknown;
 }
 

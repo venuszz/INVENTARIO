@@ -28,8 +28,9 @@ import { Header } from './components/Header';
 import { SearchAndFilters } from './components/SearchAndFilters';
 import ResguardosTable from './components/ResguardosTable';
 import { Pagination } from './components/Pagination';
-import ResguardoDetailsPanel from './components/ResguardoDetailsPanel';
+import ResguardoInfoPanel from './components/ResguardoInfoPanel';
 import ArticulosListPanel from './components/ArticulosListPanel';
+import { FileText, ListChecks } from 'lucide-react';
 
 // Modals
 import ErrorAlert from './modals/ErrorAlert';
@@ -422,6 +423,7 @@ export default function ConsultarResguardos({ folioParam }: ConsultarResguardosP
                   searchAndFilters.setSearchTerm('');
                   resguardosData.clearFilters();
                 }}
+                rowsPerPage={resguardosData.rowsPerPage}
               />
 
               {/* Pagination */}
@@ -438,9 +440,10 @@ export default function ConsultarResguardos({ folioParam }: ConsultarResguardosP
             </div>
 
             {/* Right panel - Details */}
-            <div ref={detailRef} className="lg:col-span-2 space-y-6">
+            <div ref={detailRef} className="lg:col-span-2 flex flex-col gap-6">
+              {/* Resguardo Info Panel - Always visible */}
               {resguardoDetails.resguardoDetails && resguardoDetails.articulos.length > 0 ? (
-                <ResguardoDetailsPanel
+                <ResguardoInfoPanel
                   folio={resguardoDetails.resguardoDetails.folio}
                   fecha={resguardoDetails.resguardoDetails.fecha}
                   director={resguardoDetails.resguardoDetails.director}
@@ -452,53 +455,57 @@ export default function ConsultarResguardos({ folioParam }: ConsultarResguardosP
                   onGeneratePDF={handleGeneratePDF}
                   onDeleteAll={() => setShowDeleteAllModal(true)}
                   userRole={userRole}
-                >
-                  <ArticulosListPanel
-                    articulos={resguardoDetails.articulos}
-                    editResguardanteMode={Object.keys(resguardantesEdit.editingResguardante).some(
-                      id => resguardantesEdit.editingResguardante[Number(id)]
-                    )}
-                    editedResguardantes={resguardantesEdit.editedResguardantes}
-                    selectedArticulos={selectedArticulos}
-                    onToggleEditMode={() => {
-                      const firstArticulo = resguardoDetails.articulos[0];
-                      if (firstArticulo) {
-                        resguardantesEdit.toggleEdit(firstArticulo.id, firstArticulo.resguardante || '');
-                      }
-                    }}
-                    onResguardanteChange={resguardantesEdit.updateResguardante}
-                    onSaveResguardantes={async () => {
-                      const firstArticulo = resguardoDetails.articulos[0];
-                      if (firstArticulo) {
-                        await resguardantesEdit.saveResguardante(
-                          firstArticulo.id,
-                          firstArticulo.num_inventario,
-                          firstArticulo.origen
-                        );
-                      }
-                    }}
-                    onCancelEdit={() => {
-                      const firstArticulo = resguardoDetails.articulos[0];
-                      if (firstArticulo) {
-                        resguardantesEdit.cancelEdit(firstArticulo.id, firstArticulo.resguardante || '');
-                      }
-                    }}
-                    onToggleSelection={toggleArticuloSelection}
-                    onDeleteSelected={() => setShowDeleteSelectedModal(true)}
-                    onDeleteSingle={(articulo) => setShowDeleteItemModal({ articulo })}
-                    onGeneratePDFByResguardante={handleGeneratePDFByResguardante}
-                    onClearSelection={clearSelection}
-                    savingResguardantes={resguardantesEdit.saving}
-                    userRole={userRole}
-                  />
-                </ResguardoDetailsPanel>
+                />
               ) : (
-                <div className={`rounded-lg border p-4 flex flex-col items-center justify-center min-h-[400px] ${
+                <div className={`rounded-lg border p-4 h-[70vh] flex flex-col ${
                   isDarkMode ? 'bg-white/[0.02] border-white/10' : 'bg-black/[0.02] border-black/10'
                 }`}>
-                  <div className={`text-center ${isDarkMode ? 'text-white/60' : 'text-black/60'}`}>
-                    <p className="text-lg font-medium">Seleccione un resguardo</p>
-                    <p className="text-sm mt-2">Haga clic en un folio para ver los detalles</p>
+                  <h2 className={`text-sm font-medium mb-4 ${
+                    isDarkMode ? 'text-white/60' : 'text-black/60'
+                  }`}>
+                    Información del Resguardo
+                  </h2>
+                  <div className={`flex flex-col items-center justify-center flex-1 ${
+                    isDarkMode ? 'text-white/40' : 'text-black/40'
+                  }`}>
+                    <FileText className="h-12 w-12 mb-3" />
+                    <p className="text-sm">Seleccione un resguardo</p>
+                    <p className="text-xs mt-1">Haga clic en un folio para ver los detalles</p>
+                  </div>
+                </div>
+              )}
+
+              {/* Articulos List Panel - Always visible */}
+              {resguardoDetails.articulos.length > 0 ? (
+                <ArticulosListPanel
+                  articulos={resguardoDetails.articulos}
+                  selectedArticulos={selectedArticulos}
+                  onToggleSelection={toggleArticuloSelection}
+                  onDeleteSelected={() => setShowDeleteSelectedModal(true)}
+                  onDeleteSingle={(articulo) => setShowDeleteItemModal({ articulo })}
+                  onGeneratePDFByResguardante={handleGeneratePDFByResguardante}
+                  onClearSelection={clearSelection}
+                  userRole={userRole}
+                />
+              ) : (
+                <div className={`rounded-lg border h-[70vh] flex flex-col overflow-hidden ${
+                  isDarkMode ? 'bg-white/[0.02] border-white/10' : 'bg-black/[0.02] border-black/10'
+                }`}>
+                  <div className={`px-4 py-3 border-b flex-shrink-0 ${
+                    isDarkMode ? 'border-white/10' : 'border-black/10'
+                  }`}>
+                    <h2 className={`text-sm font-medium ${
+                      isDarkMode ? 'text-white/60' : 'text-black/60'
+                    }`}>
+                      Artículos del Resguardo
+                    </h2>
+                  </div>
+                  <div className={`flex-1 flex flex-col items-center justify-center p-8 ${
+                    isDarkMode ? 'text-white/40' : 'text-black/40'
+                  }`}>
+                    <ListChecks className="h-12 w-12 mb-3" />
+                    <p className="text-sm">No hay artículos</p>
+                    <p className="text-xs mt-1">Seleccione un resguardo para ver sus artículos</p>
                   </div>
                 </div>
               )}

@@ -11,7 +11,8 @@ import { RefObject } from 'react';
 
 interface Suggestion {
   value: string;
-  type: 'id' | 'descripcion' | 'rubro' | 'estado' | 'estatus' | 'area' | 'usufinal' | 'resguardante' | 'director' | null;
+  type: 'id' | 'descripcion' | 'rubro' | 'estado' | 'estatus' | 'area' | 'usufinal' | 'resguardante' | 'director' | 'origen' | null;
+  displayValue?: string;
 }
 
 interface SearchAndFiltersProps {
@@ -29,7 +30,7 @@ interface SearchAndFiltersProps {
   onShowSuggestionsChange: (show: boolean) => void;
   onHighlightChange: (index: number) => void;
   totalRecords?: number;
-  activeFilters?: Array<{ term: string; type: string | null }>;
+  activeFilters?: Array<{ term: string; type: string | null; displayTerm?: string }>;
   onRemoveFilter?: (index: number) => void;
 }
 
@@ -66,6 +67,7 @@ export function SearchAndFilters({
       case 'usufinal': return 'Director';
       case 'director': return 'Director';
       case 'resguardante': return 'Resguardante';
+      case 'origen': return 'Origen';
       default: return type || 'Filtro';
     }
   };
@@ -94,7 +96,50 @@ export function SearchAndFilters({
       case 'rubro': return 'Rubro';
       case 'estado': return 'Estado';
       case 'estatus': return 'Estatus';
+      case 'origen': return 'Origen';
       default: return 'Búsqueda';
+    }
+  };
+
+  const getOrigenChipStyles = (origen: string) => {
+    switch (origen) {
+      case 'INEA':
+        return isDarkMode 
+          ? 'bg-blue-500/10 text-blue-300 border-blue-500/30' 
+          : 'bg-blue-100 text-blue-700 border-blue-300';
+      case 'ITEA':
+        return isDarkMode 
+          ? 'bg-pink-500/10 text-pink-300 border-pink-500/30' 
+          : 'bg-pink-100 text-pink-700 border-pink-300';
+      case 'TLAXCALA':
+        return isDarkMode 
+          ? 'bg-purple-500/10 text-purple-300 border-purple-500/30' 
+          : 'bg-purple-100 text-purple-700 border-purple-300';
+      default:
+        return isDarkMode 
+          ? 'bg-white/10 text-white border-white/20' 
+          : 'bg-black/10 text-black border-black/20';
+    }
+  };
+
+  const getEstadoChipStyles = (estado: string) => {
+    switch (estado.toUpperCase()) {
+      case 'B':
+        return isDarkMode 
+          ? 'bg-green-500/10 text-green-300 border-green-500/30' 
+          : 'bg-green-100 text-green-700 border-green-300';
+      case 'R':
+        return isDarkMode 
+          ? 'bg-yellow-500/10 text-yellow-300 border-yellow-500/30' 
+          : 'bg-yellow-100 text-yellow-700 border-yellow-300';
+      case 'M':
+        return isDarkMode 
+          ? 'bg-red-500/10 text-red-300 border-red-500/30' 
+          : 'bg-red-100 text-red-700 border-red-300';
+      default:
+        return isDarkMode 
+          ? 'bg-white/10 text-white border-white/20' 
+          : 'bg-black/10 text-black border-black/20';
     }
   };
 
@@ -110,7 +155,7 @@ export function SearchAndFilters({
         <input
           ref={inputRef}
           type="text"
-          placeholder="Buscar por ID, descripción, área, director..."
+          placeholder="Buscar por ID, descripción, área, director, origen, estado..."
           value={searchTerm}
           onChange={(e) => onSearchChange(e.target.value)}
           onKeyDown={onKeyDown}
@@ -141,51 +186,62 @@ export function SearchAndFilters({
       {activeFilters.length > 0 && onRemoveFilter && (
         <div className="flex flex-wrap gap-1.5 mt-2">
           <AnimatePresence mode="popLayout">
-            {activeFilters.map((filter, index) => (
-              <motion.div
-                key={`${filter.type}-${filter.term}-${index}`}
-                layout
-                initial={{ opacity: 0, scale: 0.8 }}
-                animate={{ opacity: 1, scale: 1 }}
-                exit={{ opacity: 0, scale: 0.8 }}
-                transition={{ 
-                  layout: { type: 'spring', stiffness: 350, damping: 30 },
-                  opacity: { duration: 0.2 }
-                }}
-                className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-medium border transition-all ${
-                  isDarkMode
+            {activeFilters.map((filter, index) => {
+              const displayValue = filter.displayTerm || filter.term;
+              const chipStyles = filter.type === 'origen' 
+                ? getOrigenChipStyles(filter.term)
+                : filter.type === 'estado'
+                  ? getEstadoChipStyles(filter.term)
+                  : isDarkMode
                     ? 'bg-white/10 text-white border-white/20'
-                    : 'bg-black/10 text-black border-black/20'
-                }`}
-              >
-                {/* Filter type label */}
-                <span className={`text-[9px] font-semibold uppercase ${
-                  isDarkMode ? 'text-white/60' : 'text-black/60'
-                }`}>
-                  {getFilterTypeLabel(filter.type)}
-                </span>
-
-                {/* Filter value */}
-                <span className="whitespace-nowrap">
-                  {filter.term}
-                </span>
-
-                {/* Remove button */}
-                <motion.button
-                  onClick={() => onRemoveFilter(index)}
-                  className={`p-0.5 rounded-full transition-colors ${
-                    isDarkMode
-                      ? 'hover:bg-white/10 text-white/60 hover:text-white'
-                      : 'hover:bg-black/10 text-black/60 hover:text-black'
-                  }`}
-                  title="Eliminar filtro"
-                  whileHover={{ scale: 1.2 }}
-                  whileTap={{ scale: 0.9 }}
+                    : 'bg-black/10 text-black border-black/20';
+              
+              return (
+                <motion.div
+                  key={`${filter.type}-${filter.term}-${index}`}
+                  layout
+                  initial={{ opacity: 0, scale: 0.8 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  exit={{ opacity: 0, scale: 0.8 }}
+                  transition={{ 
+                    layout: { type: 'spring', stiffness: 350, damping: 30 },
+                    opacity: { duration: 0.2 }
+                  }}
+                  className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-medium border transition-all ${chipStyles}`}
                 >
-                  <X size={10} />
-                </motion.button>
-              </motion.div>
-            ))}
+                  {/* Filter type label */}
+                  <span className={`text-[9px] font-semibold uppercase ${
+                    filter.type === 'origen' || filter.type === 'estado'
+                      ? 'opacity-70'
+                      : isDarkMode ? 'text-white/60' : 'text-black/60'
+                  }`}>
+                    {getFilterTypeLabel(filter.type)}
+                  </span>
+
+                  {/* Filter value */}
+                  <span className="whitespace-nowrap">
+                    {displayValue}
+                  </span>
+
+                  {/* Remove button */}
+                  <motion.button
+                    onClick={() => onRemoveFilter(index)}
+                    className={`p-0.5 rounded-full transition-colors ${
+                      filter.type === 'origen' || filter.type === 'estado'
+                        ? 'hover:bg-black/10 opacity-60 hover:opacity-100'
+                        : isDarkMode
+                          ? 'hover:bg-white/10 text-white/60 hover:text-white'
+                          : 'hover:bg-black/10 text-black/60 hover:text-black'
+                    }`}
+                    title="Eliminar filtro"
+                    whileHover={{ scale: 1.2 }}
+                    whileTap={{ scale: 0.9 }}
+                  >
+                    <X size={10} />
+                  </motion.button>
+                </motion.div>
+              );
+            })}
           </AnimatePresence>
         </div>
       )}
@@ -224,6 +280,7 @@ export function SearchAndFilters({
             }`}>
               {suggestions.map((suggestion, index) => {
                 const isSelected = index === highlightedIndex;
+                const displayValue = suggestion.displayValue || suggestion.value;
                 return (
                   <button
                     key={`${suggestion.type}-${suggestion.value}-${index}`}
@@ -254,7 +311,7 @@ export function SearchAndFilters({
                     {/* Content */}
                     <div className="flex-1 min-w-0">
                       <div className="text-sm truncate font-medium">
-                        {suggestion.value}
+                        {displayValue}
                       </div>
                       <div className={`text-xs truncate ${
                         isSelected

@@ -33,7 +33,7 @@ export function Pagination({
   onRowsPerPageChange
 }: PaginationProps) {
   const { isDarkMode } = useTheme();
-  const rowsOptions = [10, 25, 50, 100];
+  const rowsOptions = [25, 50, 100];
 
   const handleRowsRotate = () => {
     const currentIndex = rowsOptions.indexOf(rowsPerPage);
