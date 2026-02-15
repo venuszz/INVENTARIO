@@ -4,7 +4,7 @@ import supabase from '@/app/lib/supabase/client';
 import { Directorio, Area } from '../types';
 
 interface UseDirectorManagementParams {
-  onAreaAssigned: (directorName: string, areaName: string) => void;
+  onAreaAssigned: (directorName: string, areaName: string, directorId: number, areaId: number) => void;
   onCancel?: (directorName: string, areaName: string) => void;
 }
 
@@ -65,15 +65,24 @@ export function useDirectorManagement({ onAreaAssigned, onCancel }: UseDirectorM
 
   // Handle director selection
   const handleSelectDirector = useCallback((nombre: string) => {
+    console.log('🔍 [Director Selection] Starting selection for:', nombre);
     const selected = directorio.find(d => d.nombre === nombre);
-    if (!selected) return;
+    if (!selected) {
+      console.error('❌ [Director Selection] Director not found:', nombre);
+      return;
+    }
+    console.log('✅ [Director Selection] Found director:', selected);
 
     // Get areas assigned to this director
     const areaIds = directorAreasMap[selected.id_directorio] || [];
+    console.log('📋 [Director Selection] Area IDs for director:', areaIds);
+    
     const areasForDirector = areas.filter(a => areaIds.includes(a.id_area));
+    console.log('🏢 [Director Selection] Areas for director:', areasForDirector);
 
     // If no areas, show modal to complete info
     if (areasForDirector.length === 0) {
+      console.log('⚠️ [Director Selection] No areas found, showing modal');
       setIncompleteDirector(selected);
       setDirectorFormData({ area: '' });
       setShowDirectorModal(true);
@@ -82,6 +91,7 @@ export function useDirectorManagement({ onAreaAssigned, onCancel }: UseDirectorM
 
     // If multiple areas, show selection modal
     if (areasForDirector.length > 1) {
+      console.log('🔀 [Director Selection] Multiple areas, showing selection modal');
       setAreaOptionsForDirector(areasForDirector);
       setIncompleteDirector(selected);
       setShowAreaSelectModal(true);
@@ -89,7 +99,13 @@ export function useDirectorManagement({ onAreaAssigned, onCancel }: UseDirectorM
     }
 
     // If exactly one area, assign directly
-    onAreaAssigned(nombre, areasForDirector[0].nombre);
+    console.log('✨ [Director Selection] Single area, assigning directly:', {
+      directorName: nombre,
+      areaName: areasForDirector[0].nombre,
+      directorId: selected.id_directorio,
+      areaId: areasForDirector[0].id_area
+    });
+    onAreaAssigned(nombre, areasForDirector[0].nombre, selected.id_directorio, areasForDirector[0].id_area);
   }, [directorio, directorAreasMap, areas, onAreaAssigned]);
 
   // Save director info
@@ -107,8 +123,12 @@ export function useDirectorManagement({ onAreaAssigned, onCancel }: UseDirectorM
 
       if (updateError) throw updateError;
 
+      // Find the area ID
+      const selectedArea = areas.find(a => a.nombre === directorFormData.area);
+      if (!selectedArea) throw new Error('Area not found');
+
       // Call the callback with updated info
-      onAreaAssigned(incompleteDirector.nombre, directorFormData.area);
+      onAreaAssigned(incompleteDirector.nombre, directorFormData.area, incompleteDirector.id_directorio, selectedArea.id_area);
 
       setShowDirectorModal(false);
     } catch (err) {
@@ -117,7 +137,7 @@ export function useDirectorManagement({ onAreaAssigned, onCancel }: UseDirectorM
     } finally {
       setSavingDirector(false);
     }
-  }, [incompleteDirector, directorFormData, onAreaAssigned]);
+  }, [incompleteDirector, directorFormData, areas, onAreaAssigned]);
 
   // Handle cancel director modal - keep director name but clear area
   const handleCancelDirectorModal = useCallback(() => {

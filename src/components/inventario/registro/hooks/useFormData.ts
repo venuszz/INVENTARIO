@@ -32,9 +32,10 @@ const initialFormData: FormData = {
   estatus: '',
   area: '',
   usufinal: '',
+  id_area: null,
+  id_directorio: null,
   fechabaja: '',
   causadebaja: '',
-  resguardante: '',
   image_path: '',
 };
 
@@ -104,7 +105,16 @@ export function useFormData(defaultEstado: string = '', defaultEstatus: string =
     const allRequiredFields = Object.values(requiredFields).flat();
     if (!allRequiredFields.includes(fieldName)) return true;
     
-    return formData[fieldName as keyof FormData]?.trim() !== '';
+    const value = formData[fieldName as keyof FormData];
+    // Handle string fields
+    if (typeof value === 'string') {
+      return value.trim() !== '';
+    }
+    // Handle number fields (id_area, id_directorio)
+    if (typeof value === 'number') {
+      return value !== null && value !== undefined;
+    }
+    return value !== null && value !== undefined && value !== '';
   }, [formData, touched, isTlaxcala]);
 
   const isStepComplete = useCallback((step: number): boolean => {
@@ -113,7 +123,18 @@ export function useFormData(defaultEstado: string = '', defaultEstatus: string =
     
     const fields = requiredFields[step as keyof typeof requiredFields];
     if (!fields) return true; // If step doesn't exist, consider it complete
-    return fields.every(field => formData[field as keyof FormData]?.trim() !== '');
+    return fields.every(field => {
+      const value = formData[field as keyof FormData];
+      // Handle string fields
+      if (typeof value === 'string') {
+        return value.trim() !== '';
+      }
+      // Handle number fields
+      if (typeof value === 'number') {
+        return value !== null && value !== undefined;
+      }
+      return value !== null && value !== undefined && value !== '';
+    });
   }, [formData, isTlaxcala]);
 
   const resetForm = useCallback((defaultEstado: string, defaultEstatus: string) => {

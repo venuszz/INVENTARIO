@@ -20,11 +20,12 @@ export interface FormData {
   ubicacion_no: string;
   estado: Estado;
   estatus: Estatus;
-  area: string;
-  usufinal: string;
+  area: string; // Display name for UI
+  usufinal: string; // Display name for UI
+  id_area: number | null; // Actual ID to save
+  id_directorio: number | null; // Actual ID to save
   fechabaja: string;
   causadebaja: string;
-  resguardante: string;
   image_path: string;
 }
 
@@ -134,7 +135,7 @@ export interface AreaSelectionModalProps {
   isOpen: boolean;
   director: Directorio | null;
   areas: Area[];
-  onSelect: (areaName: string) => void;
+  onSelect: (areaName: string, areaId: number) => void;
   onCancel: () => void;
   isDarkMode: boolean;
 }

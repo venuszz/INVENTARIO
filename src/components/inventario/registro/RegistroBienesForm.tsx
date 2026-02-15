@@ -72,20 +72,40 @@ export default function RegistroBienesForm() {
     setShowAreaSelectModal,
     setDirectorFormData
   } = useDirectorManagement({
-    onAreaAssigned: (directorName: string, areaName: string) => {
-      setFormData(prev => ({
-        ...prev,
-        usufinal: directorName,
-        area: areaName
-      }));
+    onAreaAssigned: (directorName: string, areaName: string, directorId: number, areaId: number) => {
+      console.log('📝 [Form Update] Updating form with:', {
+        directorName,
+        areaName,
+        directorId,
+        areaId
+      });
+      setFormData(prev => {
+        const updated = {
+          ...prev,
+          usufinal: directorName,
+          area: areaName,
+          id_directorio: directorId,
+          id_area: areaId
+        };
+        console.log('✅ [Form Update] Form data updated:', {
+          usufinal: updated.usufinal,
+          area: updated.area,
+          id_directorio: updated.id_directorio,
+          id_area: updated.id_area
+        });
+        return updated;
+      });
       setShowAreaWarning(false);
     },
     onCancel: (directorName: string, areaName: string) => {
+      console.log('❌ [Form Update] Cancelled, clearing IDs');
       // Keep director name but clear area and show warning
       setFormData(prev => ({
         ...prev,
         usufinal: directorName,
-        area: areaName
+        area: areaName,
+        id_directorio: null,
+        id_area: null
       }));
       setShowAreaWarning(true);
     }
@@ -211,9 +231,26 @@ export default function RegistroBienesForm() {
         imagePath = await uploadImage(formData.id_inv);
       }
 
+      // Validate that both IDs are present
+      console.log('🔍 [Save Validation] Checking IDs:', {
+        id_area: formData.id_area,
+        id_directorio: formData.id_directorio,
+        area: formData.area,
+        usufinal: formData.usufinal
+      });
+      
+      if (!formData.id_area || !formData.id_directorio) {
+        console.error('❌ [Save Validation] Missing IDs:', {
+          id_area: formData.id_area,
+          id_directorio: formData.id_directorio
+        });
+        throw new Error('Debe seleccionar un área y un director válidos');
+      }
+      
+      console.log('✅ [Save Validation] IDs are valid, proceeding with save');
+
       // Prepare data for saving (convert to uppercase and clean valor)
       const dataToSave = {
-        ...formData,
         id_inv: formData.id_inv.toUpperCase(),
         rubro: formData.rubro.toUpperCase(),
         descripcion: formData.descripcion.toUpperCase(),
@@ -226,13 +263,13 @@ export default function RegistroBienesForm() {
         ubicacion_no: formData.ubicacion_no.toUpperCase(),
         estado: formData.estado.toUpperCase(),
         estatus: formData.estatus.toUpperCase(),
-        area: formData.area.toUpperCase(),
-        usufinal: formData.usufinal.toUpperCase(),
         causadebaja: formData.causadebaja.toUpperCase(),
-        resguardante: formData.resguardante.toUpperCase(),
         f_adq: formData.f_adq || null,
         fechabaja: formData.fechabaja || null,
-        image_path: imagePath
+        image_path: imagePath,
+        // Use relational fields directly from formData
+        id_area: formData.id_area,
+        id_directorio: formData.id_directorio
       };
 
       // Insert via API proxy (consistent with admin components)
@@ -599,11 +636,31 @@ export default function RegistroBienesForm() {
         isOpen={showAreaSelectModal}
         director={incompleteDirector}
         areas={areaOptionsForDirector}
-        onSelect={(areaName) => {
-          setFormData(prev => ({
-            ...prev,
-            area: areaName
-          }));
+        onSelect={(areaName, areaId) => {
+          console.log('🏢 [Area Modal] Area selected:', { areaName, areaId });
+          console.log('👤 [Area Modal] Current director:', incompleteDirector);
+          
+          if (!incompleteDirector) {
+            console.error('❌ [Area Modal] No director found!');
+            return;
+          }
+          
+          setFormData(prev => {
+            const updated = {
+              ...prev,
+              area: areaName,
+              id_area: areaId,
+              usufinal: incompleteDirector.nombre,
+              id_directorio: incompleteDirector.id_directorio
+            };
+            console.log('✅ [Area Modal] Form updated with both IDs:', {
+              area: updated.area,
+              id_area: updated.id_area,
+              usufinal: updated.usufinal,
+              id_directorio: updated.id_directorio
+            });
+            return updated;
+          });
           setShowAreaSelectModal(false);
         }}
         onCancel={handleCancelAreaModal}

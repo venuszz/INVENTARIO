@@ -842,18 +842,6 @@ export default function Step2LocationStatus({
                 </motion.p>
               )}
             </div>
-
-            <div>
-              <label className={getLabelClasses()}>Usuario Final</label>
-              <input
-                type="text"
-                name="resguardante"
-                value={formData.resguardante}
-                onChange={onChange}
-                className={getInputClasses('resguardante')}
-                placeholder="Persona que usará el bien..."
-              />
-            </div>
           </div>
         </motion.div>
 
