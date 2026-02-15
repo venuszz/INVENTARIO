@@ -5,6 +5,7 @@
 import { useState, useCallback } from 'react';
 import { useSession } from '@/hooks/useSession';
 import { useResguardosStore } from '@/stores/resguardosStore';
+import { validateResguardoConsistency } from '../utils';
 import type { ResguardoForm, Mueble, Directorio, PdfData } from '../types';
 
 export interface UseResguardoSubmitReturn {
@@ -53,6 +54,22 @@ export function useResguardoSubmit(
     try {
       setLoading(true);
       console.log('⏳ [RESGUARDO] Loading activado');
+
+      // VALIDACIÓN: Verificar consistencia de área y director
+      console.log('🔍 [RESGUARDO] Validando consistencia de área y director...');
+      const validation = validateResguardoConsistency(selectedMuebles);
+      
+      if (!validation.valid) {
+        console.error('❌ [RESGUARDO] Validación fallida:', validation.error);
+        setError(validation.error || 'Error de validación');
+        setLoading(false);
+        return;
+      }
+      
+      console.log('✅ [RESGUARDO] Validación exitosa:', {
+        id_area: validation.id_area,
+        id_directorio: validation.id_directorio
+      });
 
       // Generate actual folio NOW (this increments the counter)
       const actualFolio = await generateFolio();
@@ -122,6 +139,7 @@ export function useResguardoSubmit(
           resguardante: resguardanteToUse,
           director: directorNombre,
           area: formData.area,
+          id_area: validation.id_area,
           origen: mueble.origen
         });
 
@@ -136,6 +154,7 @@ export function useResguardoSubmit(
           origen: origenMapped,
           puesto_resguardo: formData.puesto.trim().toUpperCase(),
           resguardante: resguardanteToUse,
+          id_area: validation.id_area, // NUEVO: Incluir id_area en el payload
         };
       });
 

@@ -36,7 +36,8 @@ export async function POST(request: Request) {
     // Validate all required fields (resguardante is optional)
     for (const resguardo of resguardos) {
       if (!resguardo.folio || !resguardo.f_resguardo || !resguardo.id_directorio || 
-          !resguardo.id_mueble || !resguardo.origen || !resguardo.puesto_resguardo) {
+          !resguardo.id_mueble || !resguardo.origen || !resguardo.puesto_resguardo || 
+          !resguardo.id_area) {
         console.error('Missing required fields:', {
           folio: !!resguardo.folio,
           f_resguardo: !!resguardo.f_resguardo,
@@ -44,10 +45,11 @@ export async function POST(request: Request) {
           id_mueble: !!resguardo.id_mueble,
           origen: !!resguardo.origen,
           puesto_resguardo: !!resguardo.puesto_resguardo,
+          id_area: !!resguardo.id_area,
           resguardante: !!resguardo.resguardante
         });
         return NextResponse.json(
-          { error: 'Missing required fields in resguardo data' },
+          { error: 'Missing required fields in resguardo data (including id_area)' },
           { status: 400 }
         );
       }
@@ -59,13 +61,16 @@ export async function POST(request: Request) {
       created_by: userId
     }));
 
-    // Insert all resguardos and fetch with director relation
+    // Insert all resguardos and fetch with director and area relations
     const { data, error } = await supabase
       .from('resguardos')
       .insert(resguardosWithUser)
       .select(`
         *,
         directorio!inner (
+          nombre
+        ),
+        area!inner (
           nombre
         )
       `);
@@ -78,12 +83,13 @@ export async function POST(request: Request) {
       );
     }
 
-    // Map the data to include director_nombre
+    // Map the data to include director_nombre and area_nombre
     const mappedData = (data || []).map((record: any) => {
-      const { directorio, ...rest } = record;
+      const { directorio, area, ...rest } = record;
       return {
         ...rest,
-        director_nombre: directorio?.nombre || ''
+        director_nombre: directorio?.nombre || '',
+        area_nombre: area?.nombre || ''
       };
     });
 

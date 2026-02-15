@@ -265,9 +265,10 @@ export interface Resguardo {
   resguardante: string;
   created_by: string; // UUID
   created_at?: string;
+  id_area: number; // NUEVO: Foreign key a tabla area
   // Relational fields (populated by indexation)
   director_nombre?: string;
-  area_nombre?: string;
+  area_nombre?: string; // Populated from JOIN with area table
   created_by_nombre?: string;
   [key: string]: unknown;
 }

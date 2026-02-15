@@ -70,7 +70,8 @@ export function useResguardoDetails(): UseResguardoDetailsReturn {
         const details: ResguardoDetalle = {
           folio: firstItem.folio,
           fecha: firstItem.f_resguardo,
-          director: firstItem.director_nombre || ''
+          director: firstItem.director_nombre || '',
+          area_nombre: firstItem.area_nombre || ''
         };
 
         // Map articles - get mueble details from inventory stores

@@ -3,6 +3,7 @@
  * Input fields for puesto and area selection with mismatch warnings
  */
 
+import { useEffect, useRef } from 'react';
 import { AlertTriangle } from 'lucide-react';
 import { useTheme } from '@/context/ThemeContext';
 
@@ -35,8 +36,23 @@ export function AreaPuestoInputs({
   directorSelected
 }: AreaPuestoInputsProps) {
   const { isDarkMode } = useTheme();
+  const puestoRef = useRef<HTMLTextAreaElement>(null);
+  const areaRef = useRef<HTMLTextAreaElement>(null);
 
   const showAreaSuggestion = directorSelected && areaSuggestion && area !== areaSuggestion;
+
+  // Adjust height when values change
+  useEffect(() => {
+    const adjustHeight = (element: HTMLTextAreaElement | null) => {
+      if (element) {
+        element.style.height = 'auto';
+        element.style.height = Math.min(element.scrollHeight, 38 * 3) + 'px';
+      }
+    };
+
+    adjustHeight(puestoRef.current);
+    adjustHeight(areaRef.current);
+  }, [puesto, area]);
 
   return (
     <div className="mb-4 grid grid-cols-2 gap-3">
@@ -47,17 +63,28 @@ export function AreaPuestoInputs({
         }`}>
           Puesto
         </label>
-        <input
-          type="text"
+        <textarea
+          ref={puestoRef}
           value={puesto}
           onChange={(e) => onPuestoChange(e.target.value)}
           placeholder="Puesto del director"
-          className={`w-full border rounded py-2 px-3 text-sm transition-colors focus:outline-none h-[38px] ${
+          rows={1}
+          className={`w-full border rounded py-2 px-3 text-sm transition-colors focus:outline-none resize-none overflow-hidden min-h-[38px] max-h-[calc(38px*3)] ${
             isDarkMode
               ? 'bg-white/5 border-white/10 text-white placeholder-white/40 focus:border-white/30'
               : 'bg-black/5 border-black/10 text-black placeholder-black/40 focus:border-black/30'
           } ${disabled ? 'opacity-50 cursor-not-allowed' : ''}`}
           disabled={disabled}
+          style={{
+            height: 'auto',
+            minHeight: '38px',
+            maxHeight: 'calc(38px * 3)'
+          }}
+          onInput={(e) => {
+            const target = e.target as HTMLTextAreaElement;
+            target.style.height = 'auto';
+            target.style.height = Math.min(target.scrollHeight, 38 * 3) + 'px';
+          }}
         />
       </div>
 
@@ -68,17 +95,28 @@ export function AreaPuestoInputs({
         }`}>
           Área
         </label>
-        <input
-          type="text"
+        <textarea
+          ref={areaRef}
           value={area}
           onChange={(e) => onAreaChange(e.target.value)}
           placeholder="Área del director"
-          className={`w-full border rounded py-2 px-3 text-sm transition-colors focus:outline-none h-[38px] ${
+          rows={1}
+          className={`w-full border rounded py-2 px-3 text-sm transition-colors focus:outline-none resize-none overflow-hidden min-h-[38px] max-h-[calc(38px*3)] ${
             isDarkMode
               ? 'bg-white/5 border-white/10 text-white placeholder-white/40 focus:border-white/30'
               : 'bg-black/5 border-black/10 text-black placeholder-black/40 focus:border-black/30'
           } ${disabled ? 'opacity-50 cursor-not-allowed' : ''}`}
           disabled={disabled}
+          style={{
+            height: 'auto',
+            minHeight: '38px',
+            maxHeight: 'calc(38px * 3)'
+          }}
+          onInput={(e) => {
+            const target = e.target as HTMLTextAreaElement;
+            target.style.height = 'auto';
+            target.style.height = Math.min(target.scrollHeight, 38 * 3) + 'px';
+          }}
         />
 
         {/* Badges container - only shows when needed and not disabled */}

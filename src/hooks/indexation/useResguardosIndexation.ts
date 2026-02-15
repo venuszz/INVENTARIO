@@ -55,19 +55,23 @@ export function useResguardosIndexation() {
                     *,
                     directorio:id_directorio (
                       nombre
+                    ),
+                    area:id_area (
+                      nombre
                     )
                   `)
                   .eq('id', newRecord.id)
                   .single();
                 if (!error && data) {
-                  const { directorio, ...rest } = data as any;
-                  const resguardoWithDirector = {
+                  const { directorio, area, ...rest } = data as any;
+                  const resguardoWithRelations = {
                     ...rest,
                     director_nombre: directorio?.nombre || '',
+                    area_nombre: area?.nombre || '',
                     created_by_nombre: ''
                   };
-                  addResguardo(resguardoWithDirector);
-                  resguardosEmitter.emit({ type: 'INSERT', data: resguardoWithDirector, timestamp: new Date().toISOString() });
+                  addResguardo(resguardoWithRelations);
+                  resguardosEmitter.emit({ type: 'INSERT', data: resguardoWithRelations, timestamp: new Date().toISOString() });
                 }
                 break;
               }
@@ -78,19 +82,23 @@ export function useResguardosIndexation() {
                     *,
                     directorio:id_directorio (
                       nombre
+                    ),
+                    area:id_area (
+                      nombre
                     )
                   `)
                   .eq('id', newRecord.id)
                   .single();
                 if (!error && data) {
-                  const { directorio, ...rest } = data as any;
-                  const resguardoWithDirector = {
+                  const { directorio, area, ...rest } = data as any;
+                  const resguardoWithRelations = {
                     ...rest,
                     director_nombre: directorio?.nombre || '',
+                    area_nombre: area?.nombre || '',
                     created_by_nombre: ''
                   };
-                  updateResguardo(resguardoWithDirector.id, resguardoWithDirector);
-                  resguardosEmitter.emit({ type: 'UPDATE', data: resguardoWithDirector, timestamp: new Date().toISOString() });
+                  updateResguardo(resguardoWithRelations.id, resguardoWithRelations);
+                  resguardosEmitter.emit({ type: 'UPDATE', data: resguardoWithRelations, timestamp: new Date().toISOString() });
                 }
                 break;
               }
@@ -151,17 +159,21 @@ export function useResguardosIndexation() {
                 *,
                 directorio:id_directorio (
                   nombre
+                ),
+                area:id_area (
+                  nombre
                 )
               `)
               .range(offset, offset + BATCH_SIZE - 1);
             if (error) throw error;
             
-            // Map the data to include director_nombre
+            // Map the data to include director_nombre and area_nombre
             return (data || []).map((record: any) => {
-              const { directorio, ...rest } = record;
+              const { directorio, area, ...rest } = record;
               return {
                 ...rest,
                 director_nombre: directorio?.nombre || '',
+                area_nombre: area?.nombre || '',
                 created_by_nombre: '' // Will be populated from processing
               };
             }) as Resguardo[];

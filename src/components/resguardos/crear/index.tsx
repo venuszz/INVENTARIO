@@ -274,6 +274,7 @@ export default function CrearResguardos() {
     // If selecting the first item, try to autocomplete director
     if (selectedMuebles.length === 0) {
       // Get director value from relational field
+      const firstMueble = mueble;
       const directorValue = mueble.directorio?.nombre;
       
       const matchingDirector = directorio.find(dir => 
@@ -303,10 +304,13 @@ export default function CrearResguardos() {
         }
         
         // Director is complete, autocomplete form
+        // Use the area from the selected mueble, not from director's areas
+        const muebleAreaName = firstMueble.area && typeof firstMueble.area === 'object' ? firstMueble.area.nombre : '';
+        
         setFormData(prev => ({
           ...prev,
           directorId: matchingDirector.id_directorio.toString(),
-          area: areasForDirector.length > 0 ? areasForDirector[0].nombre : '',
+          area: muebleAreaName || (areasForDirector.length > 0 ? areasForDirector[0].nombre : ''),
           puesto: matchingDirector.puesto || ''
         }));
         setDirectorInputDisabled(true);

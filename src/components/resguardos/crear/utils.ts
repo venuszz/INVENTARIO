@@ -68,3 +68,83 @@ export function getTypeLabel(type: ActiveFilter['type']): string {
     default: return '';
   }
 }
+
+/**
+ * Validation result for resguardo consistency check
+ */
+export interface ResguardoValidationResult {
+  valid: boolean;
+  error?: string;
+  id_area?: number;
+  id_directorio?: number;
+}
+
+/**
+ * Validates that all selected muebles have the same id_area and id_directorio
+ * This ensures data consistency before creating a resguardo
+ * 
+ * @param muebles - Array of selected muebles
+ * @returns Validation result with id_area and id_directorio if valid
+ */
+export function validateResguardoConsistency(muebles: any[]): ResguardoValidationResult {
+  if (muebles.length === 0) {
+    return { valid: false, error: 'No hay muebles seleccionados' };
+  }
+
+  // Get id_area and id_directorio from first mueble
+  const firstMueble = muebles[0];
+  const firstArea = firstMueble.area;
+  const firstDirectorio = firstMueble.directorio;
+
+  // Validate first mueble has area
+  if (!firstArea || typeof firstArea !== 'object' || !firstArea.id_area) {
+    return { 
+      valid: false, 
+      error: `El mueble ${firstMueble.id_inv || 'sin ID'} no tiene área asignada` 
+    };
+  }
+
+  // Validate first mueble has director
+  if (!firstDirectorio || typeof firstDirectorio !== 'object' || !firstDirectorio.id_directorio) {
+    return { 
+      valid: false, 
+      error: `El mueble ${firstMueble.id_inv || 'sin ID'} no tiene director asignado` 
+    };
+  }
+
+  const expectedAreaId = firstArea.id_area;
+  const expectedDirectorId = firstDirectorio.id_directorio;
+  const expectedAreaName = firstArea.nombre;
+  const expectedDirectorName = firstDirectorio.nombre;
+
+  // Validate all muebles have the same id_area and id_directorio
+  for (let i = 1; i < muebles.length; i++) {
+    const mueble = muebles[i];
+    const area = mueble.area;
+    const directorio = mueble.directorio;
+
+    // Check area consistency
+    if (!area || typeof area !== 'object' || area.id_area !== expectedAreaId) {
+      const currentAreaName = area && typeof area === 'object' ? area.nombre : 'sin área';
+      return {
+        valid: false,
+        error: `El mueble ${mueble.id_inv || 'sin ID'} pertenece a "${currentAreaName}" pero los demás pertenecen a "${expectedAreaName}". Todos los muebles deben pertenecer a la misma área.`
+      };
+    }
+
+    // Check director consistency
+    if (!directorio || typeof directorio !== 'object' || directorio.id_directorio !== expectedDirectorId) {
+      const currentDirectorName = directorio && typeof directorio === 'object' ? directorio.nombre : 'sin director';
+      return {
+        valid: false,
+        error: `El mueble ${mueble.id_inv || 'sin ID'} está asignado a "${currentDirectorName}" pero los demás están asignados a "${expectedDirectorName}". Todos los muebles deben pertenecer al mismo director.`
+      };
+    }
+  }
+
+  return {
+    valid: true,
+    id_area: expectedAreaId,
+    id_directorio: expectedDirectorId
+  };
+}

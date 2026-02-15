@@ -134,7 +134,7 @@ export default function ConsultarResguardos({ folioParam }: ConsultarResguardosP
       resguardoDetails.resguardoDetails.folio,
       resguardoDetails.resguardoDetails.fecha,
       resguardoDetails.resguardoDetails.director,
-      '', // area
+      resguardoDetails.resguardoDetails.area_nombre || '',
       '', // puesto
       firstArticulo.resguardante || ''
     );
@@ -156,7 +156,7 @@ export default function ConsultarResguardos({ folioParam }: ConsultarResguardosP
       resguardoDetails.resguardoDetails.folio,
       resguardoDetails.resguardoDetails.fecha,
       resguardoDetails.resguardoDetails.director,
-      '', // area
+      resguardoDetails.resguardoDetails.area_nombre || '',
       '', // puesto
       articulo.resguardante || ''
     );
@@ -182,7 +182,7 @@ export default function ConsultarResguardos({ folioParam }: ConsultarResguardosP
       resguardoDetails.resguardoDetails.folio,
       resguardoDetails.resguardoDetails.fecha,
       resguardoDetails.resguardoDetails.director,
-      '', // area
+      resguardoDetails.resguardoDetails.area_nombre || '',
       '', // puesto
       firstArticulo.resguardante || ''
     );
@@ -457,7 +457,7 @@ export default function ConsultarResguardos({ folioParam }: ConsultarResguardosP
                   folio={resguardoDetails.resguardoDetails.folio}
                   fecha={resguardoDetails.resguardoDetails.fecha}
                   director={resguardoDetails.resguardoDetails.director}
-                  area=""
+                  area={resguardoDetails.resguardoDetails.area_nombre || ''}
                   articulosCount={resguardoDetails.articulos.length}
                   resguardantes={Array.from(new Set(
                     resguardoDetails.articulos.map(a => a.resguardante || 'Sin asignar')

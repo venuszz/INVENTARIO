@@ -39,7 +39,7 @@ export default function ResguardoInfoPanel({
   const { isDarkMode } = useTheme();
 
   return (
-    <div className={`rounded-lg border h-[60vh] flex flex-col ${
+    <div className={`rounded-lg border h-[70vh] flex flex-col ${
       isDarkMode
         ? 'bg-white/[0.02] border-white/10'
         : 'bg-black/[0.02] border-black/10'
@@ -57,31 +57,32 @@ export default function ResguardoInfoPanel({
 
       {/* Content - Sin scroll, todos los elementos se adaptan proporcionalmente */}
       <div className="flex-1 px-4 py-3 flex flex-col gap-3 overflow-hidden">
-        {/* Folio - Destacado - flex-[2] para más espacio */}
-        <div className={`rounded-lg border p-3 flex-[2] flex flex-col justify-center ${
-          isDarkMode
-            ? 'bg-white/[0.02] border-white/10'
-            : 'bg-black/[0.02] border-black/10'
-        }`}>
-          <div className="flex items-center gap-2 mb-1">
-            <FileDigit className={`h-3.5 w-3.5 ${
-              isDarkMode ? 'text-white/60' : 'text-black/60'
-            }`} />
-            <span className={`text-xs uppercase font-medium ${
-              isDarkMode ? 'text-white/40' : 'text-black/40'
-            }`}>
-              Folio
-            </span>
-          </div>
-          <div className={`text-lg font-semibold ${
-            isDarkMode ? 'text-white' : 'text-black'
+        {/* Folio, Fecha y Artículos - En una sola fila - flex-[2] */}
+        <div className="grid grid-cols-3 gap-2 flex-[2]">
+          {/* Folio */}
+          <div className={`rounded-lg border p-2.5 flex flex-col justify-center ${
+            isDarkMode
+              ? 'bg-white/[0.02] border-white/10'
+              : 'bg-black/[0.02] border-black/10'
           }`}>
-            {folio}
+            <div className="flex items-center gap-1.5 mb-1">
+              <FileDigit className={`h-3 w-3 ${
+                isDarkMode ? 'text-white/40' : 'text-black/40'
+              }`} />
+              <span className={`text-xs uppercase font-medium ${
+                isDarkMode ? 'text-white/40' : 'text-black/40'
+              }`}>
+                Folio
+              </span>
+            </div>
+            <div className={`text-sm font-semibold ${
+              isDarkMode ? 'text-white' : 'text-black'
+            }`}>
+              {folio}
+            </div>
           </div>
-        </div>
 
-        {/* Fecha y Artículos - flex-[1.5] */}
-        <div className="grid grid-cols-2 gap-2 flex-[1.5]">
+          {/* Fecha */}
           <div className={`rounded-lg border p-2.5 flex flex-col justify-center ${
             isDarkMode
               ? 'bg-white/[0.02] border-white/10'
@@ -104,6 +105,7 @@ export default function ResguardoInfoPanel({
             </div>
           </div>
 
+          {/* Artículos */}
           <div className={`rounded-lg border p-2.5 flex flex-col justify-center ${
             isDarkMode
               ? 'bg-white/[0.02] border-white/10'
@@ -149,6 +151,31 @@ export default function ResguardoInfoPanel({
             {director}
           </div>
         </div>
+
+        {/* Área - flex-[1.5] */}
+        {area && (
+          <div className={`rounded-lg border p-2.5 flex-[1.5] flex flex-col justify-center ${
+            isDarkMode
+              ? 'bg-white/[0.02] border-white/10'
+              : 'bg-black/[0.02] border-black/10'
+          }`}>
+            <div className="flex items-center gap-1.5 mb-1">
+              <Building2 className={`h-3 w-3 ${
+                isDarkMode ? 'text-white/40' : 'text-black/40'
+              }`} />
+              <span className={`text-xs uppercase font-medium ${
+                isDarkMode ? 'text-white/40' : 'text-black/40'
+              }`}>
+                Área
+              </span>
+            </div>
+            <div className={`text-sm font-medium ${
+              isDarkMode ? 'text-white' : 'text-black'
+            }`}>
+              {area}
+            </div>
+          </div>
+        )}
 
         {/* Resguardantes - flex-[3] para más espacio con scroll interno */}
         <div className={`rounded-lg border p-2.5 flex-[3] flex flex-col overflow-hidden ${
