@@ -1,5 +1,6 @@
 // src/app/resguardos/consultar/page.tsx
 import { Metadata } from "next";
+import { Suspense } from "react";
 import ConsultarClient from "./client";
 
 export const metadata: Metadata = {
@@ -8,5 +9,9 @@ export const metadata: Metadata = {
 };
 
 export default function Page() {
-    return <ConsultarClient />;
+    return (
+        <Suspense fallback={<div className="w-full h-full flex items-center justify-center">Cargando...</div>}>
+            <ConsultarClient />
+        </Suspense>
+    );
 }
