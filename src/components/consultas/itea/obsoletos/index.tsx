@@ -18,6 +18,7 @@ import type {
 // Hooks
 import { useIteaObsoletosIndexation } from '@/hooks/indexation/useIteaObsoletosIndexation';
 import { useUserRole } from '@/hooks/useUserRole';
+import { useURLParamHandler } from '@/hooks/useURLParamHandler';
 import { 
   useAreaManagement,
   useBajaInfo,
@@ -159,6 +160,15 @@ export default function IteaObsoletosComponent() {
 
   const { bajaInfo, loading: bajaInfoLoading } = useBajaInfo(selectedItem, isEditing);
 
+  // Initialize URL parameter handler
+  const { paramNotFound, foundItem, clearParamNotFound } = useURLParamHandler({
+    paramName: 'id',
+    items: mueblesOmni,
+    isLoading: loadingOmni,
+    getItemKey: (item) => item.id,
+    onItemSelect: handleSelectItem
+  });
+
   // Part 6: Effect hooks for fetching directors and areas on mount
   useEffect(() => {
     fetchDirectorio(setFilterOptions);
@@ -244,6 +254,33 @@ export default function IteaObsoletosComponent() {
       return () => clearTimeout(timer);
     }
   }, [message]);
+
+  // Handle URL parameter not found
+  useEffect(() => {
+    if (paramNotFound) {
+      setMessage({
+        type: 'warning',
+        text: 'El bien buscado no se encontró en los datos actuales'
+      });
+      clearParamNotFound();
+    }
+  }, [paramNotFound, clearParamNotFound]);
+
+  // Navigate to the correct page when item is found via URL parameter
+  useEffect(() => {
+    if (foundItem && sortedMuebles.length > 0) {
+      // Find the index of the item in the sorted and filtered list
+      const itemIndex = sortedMuebles.findIndex(
+        (item) => item.id === foundItem.id
+      );
+      
+      if (itemIndex !== -1) {
+        // Calculate which page the item is on
+        const correctPage = Math.floor(itemIndex / rowsPerPage) + 1;
+        setCurrentPage(correctPage);
+      }
+    }
+  }, [foundItem, sortedMuebles, rowsPerPage]);
 
   // Task 19: URL parameter handling for direct item linking
   useEffect(() => {

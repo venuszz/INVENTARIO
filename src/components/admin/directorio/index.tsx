@@ -1,5 +1,5 @@
 "use client"
-import { useState, useRef, useMemo } from 'react';
+import { useState, useRef, useMemo, useEffect } from 'react';
 import { useTheme } from '@/context/ThemeContext';
 import { Plus, Trash2, Edit, X, Search, FileText, Package } from 'lucide-react';
 import SectionRealtimeToggle from '@/components/SectionRealtimeToggle';
@@ -116,9 +116,44 @@ export function DirectorioManager() {
     const [newEmployeePuesto, setNewEmployeePuesto] = useState('');
     const [newEmployeeAreas, setNewEmployeeAreas] = useState<number[]>([]);
     const [newAreaInputAdd, setNewAreaInputAdd] = useState('');
+    
+    // Estado para highlighting desde URL
+    const [highlightedArea, setHighlightedArea] = useState<string | null>(null);
+    const [highlightedDirector, setHighlightedDirector] = useState<string | null>(null);
 
     const editInputRef = useRef<HTMLInputElement>(null);
     const newEmployeeInputRef = useRef<HTMLInputElement>(null);
+    
+    // Detectar parámetros de URL para highlighting
+    useEffect(() => {
+        if (typeof window === 'undefined') return;
+        
+        const searchParams = new URLSearchParams(window.location.search);
+        const areaParam = searchParams.get('area');
+        const directorParam = searchParams.get('director');
+        
+        if (areaParam) {
+            setHighlightedArea(decodeURIComponent(areaParam));
+            setSearchTerm(decodeURIComponent(areaParam));
+            // Limpiar URL y highlighting después de 5 segundos
+            setTimeout(() => {
+                setHighlightedArea(null);
+                const newUrl = window.location.pathname;
+                window.history.replaceState({}, '', newUrl);
+            }, 5000);
+        }
+        
+        if (directorParam) {
+            setHighlightedDirector(decodeURIComponent(directorParam));
+            setSearchTerm(decodeURIComponent(directorParam));
+            // Limpiar URL y highlighting después de 5 segundos
+            setTimeout(() => {
+                setHighlightedDirector(null);
+                const newUrl = window.location.pathname;
+                window.history.replaceState({}, '', newUrl);
+            }, 5000);
+        }
+    }, []);
 
     // Función para verificar si un área coincide con la búsqueda
     const areaMatchesSearch = (areaName: string) => {
@@ -645,9 +680,13 @@ export function DirectorioManager() {
                                             ? isDarkMode
                                                 ? 'bg-red-500/10 border-red-500/30'
                                                 : 'bg-red-50 border-red-200'
-                                            : isDarkMode
-                                                ? 'bg-black border-white/5 hover:border-white/10 hover:bg-white/[0.02]'
-                                                : 'bg-white border-black/5 hover:border-black/10 hover:bg-black/[0.02]'
+                                            : highlightedDirector && employee.nombre === highlightedDirector
+                                                ? isDarkMode
+                                                    ? 'bg-white/10 border-white/30 ring-2 ring-white/20'
+                                                    : 'bg-black/10 border-black/30 ring-2 ring-black/20'
+                                                : isDarkMode
+                                                    ? 'bg-black border-white/5 hover:border-white/10 hover:bg-white/[0.02]'
+                                                    : 'bg-white border-black/5 hover:border-black/10 hover:bg-black/[0.02]'
                                     }`}
                                 >
                                     {editingId === employee.id_directorio ? (
@@ -931,7 +970,7 @@ export function DirectorioManager() {
                                             <div className="flex flex-wrap gap-1.5">
                                                 {Array.from(new Set(directorAreasMap[employee.id_directorio] || [])).map(id_area => {
                                                     const areaObj = areasFromStore.find(a => a.id_area === id_area);
-                                                    const isHighlighted = areaObj && areaMatchesSearch(areaObj.nombre);
+                                                    const isHighlighted = areaObj && (areaMatchesSearch(areaObj.nombre) || (highlightedArea && areaObj.nombre === highlightedArea));
                                                     return areaObj ? (
                                                         <motion.span 
                                                             key={`view-area-${id_area}`}

@@ -1,4 +1,4 @@
-import { FileText, Package, Archive } from 'lucide-react';
+import { FileText, Package, Archive, MapPin, User } from 'lucide-react';
 import { SearchResult } from './types';
 
 interface SearchResultItemProps {
@@ -38,6 +38,10 @@ function getIcon(origen: SearchResult['origen']) {
             return <FileText className="w-3.5 h-3.5" />;
         case 'RESGUARDO_BAJA':
             return <Archive className="w-3.5 h-3.5" />;
+        case 'AREA':
+            return <MapPin className="w-3.5 h-3.5" />;
+        case 'DIRECTOR':
+            return <User className="w-3.5 h-3.5" />;
         default:
             return <Package className="w-3.5 h-3.5" />;
     }
@@ -53,7 +57,19 @@ export default function SearchResultItem({
 }: SearchResultItemProps) {
     const displayId = result.origen === 'RESGUARDO' ? result.folio :
         result.origen === 'RESGUARDO_BAJA' ? result.folio_baja :
-            result.id_inv;
+            result.origen === 'AREA' ? result.nombre :
+                result.origen === 'DIRECTOR' ? result.nombre :
+                    result.id_inv;
+
+    const displayDescription = result.origen === 'DIRECTOR' 
+        ? result.puesto 
+        : result.origen === 'AREA'
+            ? null
+            : result.descripcion;
+
+    const displayAreas = result.origen === 'DIRECTOR' && result.areas_asignadas && result.areas_asignadas.length > 0
+        ? result.areas_asignadas.join(', ')
+        : null;
 
     return (
         <button
@@ -83,19 +99,26 @@ export default function SearchResultItem({
                 <div className={`text-sm truncate font-medium`}>
                     {displayId}
                 </div>
-                {result.descripcion && (
+                {(displayDescription || displayAreas || (result.area || result.area_resguardo)) && (
                     <div className={`text-xs truncate ${
                         isSelected
                             ? (isDarkMode ? 'text-white/60' : 'text-black/60')
                             : (isDarkMode ? 'text-white/40' : 'text-black/40')
                     }`}>
-                        {(result.area || result.area_resguardo) && (
+                        {displayDescription && (
                             <>
-                                <span className="font-medium">{result.area || result.area_resguardo}</span>
-                                {' · '}
+                                {(result.area || result.area_resguardo) && (
+                                    <>
+                                        <span className="font-medium">{result.area || result.area_resguardo}</span>
+                                        {' · '}
+                                    </>
+                                )}
+                                {displayDescription}
                             </>
                         )}
-                        {result.descripcion}
+                        {displayAreas && (
+                            <span className="font-medium">{displayAreas}</span>
+                        )}
                     </div>
                 )}
             </div>

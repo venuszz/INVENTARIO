@@ -13,6 +13,7 @@ import { useItemEdit } from './hooks/useItemEdit';
 import { useDirectorManagement } from './hooks/useDirectorManagement';
 import { useAreaManagement } from './hooks/useAreaManagement';
 import { useBajaInfo } from './hooks/useBajaInfo';
+import { useURLParamHandler } from '@/hooks/useURLParamHandler';
 
 // Import components
 import { Header } from './components/Header';
@@ -146,6 +147,15 @@ export default function ConsultasIneaObsoletos() {
     isEditing,
   });
 
+  // Initialize URL parameter handler
+  const { paramNotFound, foundItem, clearParamNotFound } = useURLParamHandler({
+    paramName: 'id',
+    items: muebles,
+    isLoading: isIndexing,
+    getItemKey: (item) => item.id,
+    onItemSelect: handleSelectItem
+  });
+
   // Load directorio and filter options on mount
   useEffect(() => {
     const loadData = async () => {
@@ -170,6 +180,17 @@ export default function ConsultasIneaObsoletos() {
       return () => clearTimeout(timer);
     }
   }, [message]);
+
+  // Handle URL parameter not found
+  useEffect(() => {
+    if (paramNotFound) {
+      setMessage({
+        type: 'warning',
+        text: 'El bien buscado no se encontró en los datos actuales'
+      });
+      clearParamNotFound();
+    }
+  }, [paramNotFound, clearParamNotFound]);
 
   // Handle director selection wrapper
   const handleSelectDirector = (nombre: string) => {
@@ -209,6 +230,22 @@ export default function ConsultasIneaObsoletos() {
     (currentPage - 1) * rowsPerPage,
     currentPage * rowsPerPage
   );
+
+  // Navigate to the correct page when item is found via URL parameter
+  useEffect(() => {
+    if (foundItem && sortedMuebles.length > 0) {
+      // Find the index of the item in the sorted and filtered list
+      const itemIndex = sortedMuebles.findIndex(
+        (item) => item.id === foundItem.id
+      );
+      
+      if (itemIndex !== -1) {
+        // Calculate which page the item is on
+        const correctPage = Math.floor(itemIndex / rowsPerPage) + 1;
+        setCurrentPage(correctPage);
+      }
+    }
+  }, [foundItem, sortedMuebles, rowsPerPage]);
 
   // Calculate filtered value
   const filteredValue = sortedMuebles.reduce((sum, m) => 

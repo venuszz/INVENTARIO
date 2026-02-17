@@ -21,6 +21,7 @@ import { useResguardantesEdit } from './hooks/useResguardantesEdit';
 import { useResguardoDelete } from './hooks/useResguardoDelete';
 import { usePDFGeneration } from './hooks/usePDFGeneration';
 import { useSearchAndFilters } from './hooks/useSearchAndFilters';
+import { useURLParamHandler } from '@/hooks/useURLParamHandler';
 
 // UI Components
 import { Header } from './components/Header';
@@ -76,6 +77,7 @@ export default function ConsultarResguardos({ folioParam }: ConsultarResguardosP
   // Local UI state - Loading
   const [folioParamLoading, setFolioParamLoading] = useState(false);
   const [generatingPDF, setGeneratingPDF] = useState(false);
+  const [paramNotFoundMessage, setParamNotFoundMessage] = useState(false);
 
   // Initialize custom hooks
   const resguardosData = useResguardosData();
@@ -107,6 +109,15 @@ export default function ConsultarResguardos({ folioParam }: ConsultarResguardosP
   });
 
   const pdfGeneration = usePDFGeneration();
+
+  // Initialize URL parameter handler
+  const { paramNotFound, foundItem, clearParamNotFound } = useURLParamHandler({
+    paramName: 'folio',
+    items: resguardosData.resguardos,
+    isLoading: resguardosData.loading,
+    getItemKey: (item) => item.folio,
+    onItemSelect: (item) => resguardoDetails.selectFolio(item.folio)
+  });
 
   // Event Handlers - Selection
   const toggleArticuloSelection = useCallback((num_inventario: string) => {
@@ -299,6 +310,37 @@ export default function ConsultarResguardos({ folioParam }: ConsultarResguardosP
     }
   }, [folioParam, searchParams, resguardosData.resguardos.length, resguardosData.loading]);
 
+  // Effects - Handle URL parameter not found
+  useEffect(() => {
+    if (paramNotFound) {
+      setParamNotFoundMessage(true);
+      clearParamNotFound();
+      
+      // Auto-dismiss after 5 seconds
+      const timer = setTimeout(() => {
+        setParamNotFoundMessage(false);
+      }, 5000);
+      
+      return () => clearTimeout(timer);
+    }
+  }, [paramNotFound, clearParamNotFound]);
+
+  // Effects - Navigate to correct page when item is found via URL parameter
+  useEffect(() => {
+    if (foundItem && resguardosData.resguardos.length > 0) {
+      // Find the index of the item in the list
+      const itemIndex = resguardosData.resguardos.findIndex(
+        (item) => item.folio === foundItem.folio
+      );
+      
+      if (itemIndex !== -1) {
+        // Calculate which page the item is on
+        const correctPage = Math.floor(itemIndex / resguardosData.rowsPerPage) + 1;
+        resguardosData.setCurrentPage(correctPage);
+      }
+    }
+  }, [foundItem, resguardosData.resguardos, resguardosData.rowsPerPage]);
+
   // Effects - Clear selection when resguardo changes
   useEffect(() => {
     clearSelection();
@@ -370,6 +412,17 @@ export default function ConsultarResguardos({ folioParam }: ConsultarResguardosP
           <Header 
             totalResguardos={resguardosData.totalCount}
           />
+
+          {/* Warning message for parameter not found */}
+          {paramNotFoundMessage && (
+            <div className={`mt-4 p-3 rounded-lg border ${
+              isDarkMode
+                ? 'bg-yellow-500/10 text-yellow-400 border-yellow-500/20'
+                : 'bg-yellow-50 text-yellow-800 border-yellow-200'
+            }`}>
+              El resguardo buscado no se encontró en los datos actuales
+            </div>
+          )}
 
           {/* Main container */}
           <div className="grid grid-cols-1 lg:grid-cols-5 gap-6 mt-8">

@@ -15,6 +15,7 @@ import { useAreaManagement } from './hooks/useAreaManagement';
 import { useDirectorManagement } from './hooks/useDirectorManagement';
 import { useSearchAndFilters } from './hooks/useSearchAndFilters';
 import { useItemEdit } from './hooks/useItemEdit';
+import { useURLParamHandler } from '@/hooks/useURLParamHandler';
 
 // Import components
 import Header from './components/Header';
@@ -143,6 +144,15 @@ export default function ConsultasIteaGeneral() {
     confirmMarkAsInactive
   } = useItemEdit();
 
+  // Initialize URL parameter handler
+  const { paramNotFound, foundItem, clearParamNotFound } = useURLParamHandler({
+    paramName: 'id',
+    items: muebles,
+    isLoading: isIndexing,
+    getItemKey: (item) => item.id,
+    onItemSelect: handleSelectItem
+  });
+
   // Load filter options and directorio on mount
   useEffect(() => {
     const loadData = async () => {
@@ -171,6 +181,17 @@ export default function ConsultasIteaGeneral() {
       return () => clearTimeout(timer);
     }
   }, [message]);
+
+  // Handle URL parameter not found
+  useEffect(() => {
+    if (paramNotFound) {
+      setMessage({
+        type: 'warning',
+        text: 'El bien buscado no se encontró en los datos actuales'
+      });
+      clearParamNotFound();
+    }
+  }, [paramNotFound, clearParamNotFound]);
 
   // Handle director selection
   const handleSelectDirector = (idDirectorio: number) => {
@@ -370,6 +391,22 @@ export default function ConsultasIteaGeneral() {
     (currentPage - 1) * rowsPerPage,
     currentPage * rowsPerPage
   );
+
+  // Navigate to the correct page when item is found via URL parameter
+  useEffect(() => {
+    if (foundItem && sortedMuebles.length > 0) {
+      // Find the index of the item in the sorted and filtered list
+      const itemIndex = sortedMuebles.findIndex(
+        (item) => item.id === foundItem.id
+      );
+      
+      if (itemIndex !== -1) {
+        // Calculate which page the item is on
+        const correctPage = Math.floor(itemIndex / rowsPerPage) + 1;
+        setCurrentPage(correctPage);
+      }
+    }
+  }, [foundItem, sortedMuebles, rowsPerPage]);
 
   // Handle sorting
   const handleSort = (field: keyof Mueble) => {

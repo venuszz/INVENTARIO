@@ -9,6 +9,7 @@ import { useIneaObsoletosStore } from '@/stores/ineaObsoletosStore';
 import { useIteaObsoletosStore } from '@/stores/iteaObsoletosStore';
 import { useResguardosIndexation } from '@/hooks/indexation/useResguardosIndexation';
 import { useResguardosBajasIndexation } from '@/hooks/indexation/useResguardosBajasIndexation';
+import { useAdminStore } from '@/stores/adminStore';
 import { useRouter } from 'next/navigation';
 import { SearchResult } from './types';
 import SearchLoadingState from './SearchLoadingState';
@@ -41,6 +42,11 @@ export default function UniversalSearchBar({ isDarkMode, userRoles, onExpandChan
     // Use indexation hooks only for resguardos
     const resguardosContext = useResguardosIndexation();
     const resguardosBajasContext = useResguardosBajasIndexation();
+    
+    // Use admin store for areas and directorio
+    const areas = useAdminStore(state => state.areas);
+    const directorio = useAdminStore(state => state.directorio);
+    const directorioAreas = useAdminStore(state => state.directorioAreas);
 
     const [searchTerm, setSearchTerm] = useState('');
     const deferredSearchTerm = useDeferredValue(searchTerm);
@@ -229,9 +235,51 @@ export default function UniversalSearchBar({ isDarkMode, userRoles, onExpandChan
             motivo_baja: (item.motivo as string | null) ?? null
         }));
 
-        // Priorizar resguardos sobre artículos en los resultados
-        return [...resguardosData, ...resguardosBajasData, ...ineaData, ...iteaData, ...noListadoData, ...ineaObsData, ...iteaObsData];
-    }, [ineaMuebles, iteaMuebles, noListadoMuebles, ineaObsMuebles, iteaObsMuebles, resguardosContext.resguardos, resguardosBajasContext.resguardos]);
+        // Mapear áreas
+        const areasData: SearchResult[] = (areas || []).map(item => ({
+            id: item.id_area.toString(),
+            id_inv: null,
+            descripcion: null,
+            rubro: null,
+            valor: null,
+            area: null,
+            estado: null,
+            estatus: null,
+            resguardante: null,
+            origen: 'AREA' as const,
+            nombre: item.nombre
+        }));
+
+        // Mapear directores con sus áreas asignadas
+        const directoresData: SearchResult[] = (directorio || []).map(item => {
+            const areasAsignadas = directorioAreas
+                .filter(da => da.id_directorio === item.id_directorio)
+                .map(da => {
+                    const area = areas.find(a => a.id_area === da.id_area);
+                    return area?.nombre || '';
+                })
+                .filter(Boolean);
+
+            return {
+                id: item.id_directorio.toString(),
+                id_inv: null,
+                descripcion: null,
+                rubro: null,
+                valor: null,
+                area: null,
+                estado: null,
+                estatus: null,
+                resguardante: null,
+                origen: 'DIRECTOR' as const,
+                nombre: item.nombre,
+                puesto: item.puesto,
+                areas_asignadas: areasAsignadas
+            };
+        });
+
+        // Priorizar resguardos, áreas y directores sobre artículos en los resultados
+        return [...resguardosData, ...resguardosBajasData, ...areasData, ...directoresData, ...ineaData, ...iteaData, ...noListadoData, ...ineaObsData, ...iteaObsData];
+    }, [ineaMuebles, iteaMuebles, noListadoMuebles, ineaObsMuebles, iteaObsMuebles, resguardosContext.resguardos, resguardosBajasContext.resguardos, areas, directorio, directorioAreas]);
 
     // Búsqueda en tiempo real
     const searchResults = useMemo(() => {
@@ -256,7 +304,10 @@ export default function UniversalSearchBar({ isDarkMode, userRoles, onExpandChan
                 item.usufinal?.toLowerCase().includes(term) ||
                 item.num_inventario?.toLowerCase().includes(term) ||
                 item.condicion?.toLowerCase().includes(term) ||
-                item.motivo_baja?.toLowerCase().includes(term)
+                item.motivo_baja?.toLowerCase().includes(term) ||
+                item.nombre?.toLowerCase().includes(term) ||
+                item.puesto?.toLowerCase().includes(term) ||
+                item.areas_asignadas?.some(area => area.toLowerCase().includes(term))
             );
         }).slice(0, 50);
     }, [deferredSearchTerm, allData]);
@@ -306,6 +357,8 @@ export default function UniversalSearchBar({ isDarkMode, userRoles, onExpandChan
     const iteaObsResults = searchResults.filter(r => r.origen === 'ITEA_OBS');
     const resguardosResults = searchResults.filter(r => r.origen === 'RESGUARDO');
     const resguardosBajasResults = searchResults.filter(r => r.origen === 'RESGUARDO_BAJA');
+    const areasResults = searchResults.filter(r => r.origen === 'AREA');
+    const directoresResults = searchResults.filter(r => r.origen === 'DIRECTOR');
 
     // Aplanar resultados para navegación por teclado
     const flatResults = useMemo(() => {
@@ -354,41 +407,81 @@ export default function UniversalSearchBar({ isDarkMode, userRoles, onExpandChan
     };
 
     const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-        const totalItems = flatResults.length;
+        // Si hay resultados de búsqueda, navegar por ellos
+        if (deferredSearchTerm.trim().length >= 2) {
+            const totalItems = flatResults.length;
 
-        switch (e.key) {
-            case 'ArrowDown':
-                e.preventDefault();
-                setSelectedIndex(prev => prev < totalItems - 1 ? prev + 1 : 0);
-                break;
-
-            case 'ArrowUp':
-                e.preventDefault();
-                setSelectedIndex(prev => prev > 0 ? prev - 1 : totalItems - 1);
-                break;
-
-            case 'Tab':
-                if (autocompleteSuggestion && autocompleteSuggestion !== searchTerm && !e.shiftKey) {
+            switch (e.key) {
+                case 'ArrowDown':
                     e.preventDefault();
-                    setSearchTerm(autocompleteSuggestion);
-                }
-                break;
+                    setSelectedIndex(prev => prev < totalItems - 1 ? prev + 1 : 0);
+                    break;
 
-            case 'Enter':
-                e.preventDefault();
-                if (selectedIndex >= 0 && flatResults[selectedIndex]) {
-                    handleResultClick(flatResults[selectedIndex]);
-                } else if (flatResults.length > 0) {
-                    handleResultClick(flatResults[0]);
-                }
-                break;
+                case 'ArrowUp':
+                    e.preventDefault();
+                    setSelectedIndex(prev => prev > 0 ? prev - 1 : totalItems - 1);
+                    break;
 
-            case 'Escape':
+                case 'Tab':
+                    if (autocompleteSuggestion && autocompleteSuggestion !== searchTerm && !e.shiftKey) {
+                        e.preventDefault();
+                        setSearchTerm(autocompleteSuggestion);
+                    }
+                    break;
+
+                case 'Enter':
+                    e.preventDefault();
+                    if (selectedIndex >= 0 && flatResults[selectedIndex]) {
+                        handleResultClick(flatResults[selectedIndex]);
+                    } else if (flatResults.length > 0) {
+                        handleResultClick(flatResults[0]);
+                    }
+                    break;
+
+                case 'Escape':
+                    e.preventDefault();
+                    handleClear();
+                    setIsExpanded(false);
+                    inputRef.current?.blur();
+                    break;
+            }
+        } else if (searchHistory.length > 0) {
+            // Si no hay búsqueda pero hay historial, navegar por el historial
+            const totalHistoryItems = searchHistory.length;
+
+            switch (e.key) {
+                case 'ArrowDown':
+                    e.preventDefault();
+                    setSelectedIndex(prev => prev < totalHistoryItems - 1 ? prev + 1 : 0);
+                    break;
+
+                case 'ArrowUp':
+                    e.preventDefault();
+                    setSelectedIndex(prev => prev > 0 ? prev - 1 : totalHistoryItems - 1);
+                    break;
+
+                case 'Enter':
+                    e.preventDefault();
+                    if (selectedIndex >= 0 && searchHistory[selectedIndex]) {
+                        handleHistorySelect(searchHistory[selectedIndex].query);
+                    }
+                    break;
+
+                case 'Escape':
+                    e.preventDefault();
+                    handleClear();
+                    setIsExpanded(false);
+                    inputRef.current?.blur();
+                    break;
+            }
+        } else {
+            // Sin resultados ni historial, solo manejar Escape
+            if (e.key === 'Escape') {
                 e.preventDefault();
                 handleClear();
                 setIsExpanded(false);
                 inputRef.current?.blur();
-                break;
+            }
         }
     };
 
@@ -412,6 +505,10 @@ export default function UniversalSearchBar({ isDarkMode, userRoles, onExpandChan
             router.push(`/resguardos/consultar?folio=${result.folio}`);
         } else if (result.origen === 'RESGUARDO_BAJA') {
             router.push(`/resguardos/consultar/bajas?folio=${result.folio_resguardo}`);
+        } else if (result.origen === 'AREA') {
+            router.push(`/admin/personal?area=${encodeURIComponent(result.nombre || '')}`);
+        } else if (result.origen === 'DIRECTOR') {
+            router.push(`/admin/personal?director=${encodeURIComponent(result.nombre || '')}`);
         }
         setSearchTerm('');
         setAutocompleteSuggestion('');
@@ -603,6 +700,34 @@ export default function UniversalSearchBar({ isDarkMode, userRoles, onExpandChan
                                         let currentIndex = 0;
                                         return (
                                             <>
+                                                {areasResults.length > 0 && (
+                                                    <>
+                                                        <SearchResultGroup 
+                                                            title="Áreas" 
+                                                            results={areasResults} 
+                                                            onResultClick={handleResultClick} 
+                                                            isDarkMode={isDarkMode}
+                                                            startIndex={currentIndex}
+                                                            selectedIndex={selectedIndex}
+                                                            onMouseEnter={setSelectedIndex}
+                                                        />
+                                                        {(() => { currentIndex += areasResults.length; return null; })()}
+                                                    </>
+                                                )}
+                                                {directoresResults.length > 0 && (
+                                                    <>
+                                                        <SearchResultGroup 
+                                                            title="Directorio de Personal" 
+                                                            results={directoresResults} 
+                                                            onResultClick={handleResultClick} 
+                                                            isDarkMode={isDarkMode}
+                                                            startIndex={currentIndex}
+                                                            selectedIndex={selectedIndex}
+                                                            onMouseEnter={setSelectedIndex}
+                                                        />
+                                                        {(() => { currentIndex += directoresResults.length; return null; })()}
+                                                    </>
+                                                )}
                                                 {resguardosResults.length > 0 && (
                                                     <>
                                                         <SearchResultGroup 
@@ -662,7 +787,7 @@ export default function UniversalSearchBar({ isDarkMode, userRoles, onExpandChan
                                                 {noListadoResults.length > 0 && (
                                                     <>
                                                         <SearchResultGroup 
-                                                            title="No Listado" 
+                                                            title="TLAXCALA" 
                                                             results={noListadoResults} 
                                                             onResultClick={handleResultClick} 
                                                             isDarkMode={isDarkMode}
@@ -724,6 +849,8 @@ export default function UniversalSearchBar({ isDarkMode, userRoles, onExpandChan
                                 onRemove={removeFromHistory}
                                 onClear={clearHistory}
                                 isDarkMode={isDarkMode}
+                                selectedIndex={selectedIndex}
+                                onMouseEnter={setSelectedIndex}
                             />
                         )}
                     </motion.div>

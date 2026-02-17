@@ -12,6 +12,8 @@ interface SearchHistoryProps {
     onRemove: (query: string) => void;
     onClear: () => void;
     isDarkMode: boolean;
+    selectedIndex?: number;
+    onMouseEnter?: (index: number) => void;
 }
 
 export default function SearchHistory({
@@ -19,7 +21,9 @@ export default function SearchHistory({
     onSelect,
     onRemove,
     onClear,
-    isDarkMode
+    isDarkMode,
+    selectedIndex = -1,
+    onMouseEnter
 }: SearchHistoryProps) {
     if (history.length === 0) return null;
 
@@ -41,19 +45,31 @@ export default function SearchHistory({
 
             {/* History Items */}
             <div className="space-y-0.5">
-                {history.map((item) => (
+                {history.map((item, index) => (
                     <div
                         key={item.query}
-                        className={`group flex items-center gap-2 px-2.5 py-2 rounded-lg transition-colors ${isDarkMode ? 'hover:bg-white/[0.04]' : 'hover:bg-black/[0.03]'}`}
+                        data-search-index={index}
+                        onMouseEnter={() => onMouseEnter?.(index)}
+                        className={`group flex items-center gap-2 px-2.5 py-2 rounded-lg transition-colors ${
+                            selectedIndex === index
+                                ? isDarkMode 
+                                    ? 'bg-white/10' 
+                                    : 'bg-black/10'
+                                : isDarkMode 
+                                    ? 'hover:bg-white/[0.04]' 
+                                    : 'hover:bg-black/[0.03]'
+                        }`}
                     >
                         <Clock className={`w-3.5 h-3.5 flex-shrink-0 ${isDarkMode ? 'text-white/30' : 'text-black/30'}`} />
                         <button
+                            onMouseDown={(e) => e.preventDefault()} // Prevent blur on input
                             onClick={() => onSelect(item.query)}
                             className={`flex-1 text-left text-sm truncate ${isDarkMode ? 'text-white/70 hover:text-white' : 'text-black/70 hover:text-black'}`}
                         >
                             {item.query}
                         </button>
                         <button
+                            onMouseDown={(e) => e.preventDefault()} // Prevent blur on input
                             onClick={(e) => {
                                 e.stopPropagation();
                                 onRemove(item.query);

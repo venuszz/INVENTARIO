@@ -13,6 +13,7 @@ import { useSearchAndFilters } from './hooks/useSearchAndFilters';
 import { useBajaDelete } from './hooks/useBajaDelete';
 import { usePDFGeneration } from './hooks/usePDFGeneration';
 import { useItemSelection } from './hooks/useItemSelection';
+import { useURLParamHandler } from '@/hooks/useURLParamHandler';
 
 // Components
 import { Header } from './components/Header';
@@ -116,12 +117,22 @@ const ConsultarBajasResguardos = () => {
     getSelectedItemsGroupedByFolio
   } = useItemSelection();
 
+  // Initialize URL parameter handler
+  const { paramNotFound, foundItem, clearParamNotFound } = useURLParamHandler({
+    paramName: 'folio',
+    items: allBajas,
+    isLoading: bajasLoading,
+    getItemKey: (item) => item.folio_resguardo,
+    onItemSelect: (item) => fetchBajaDetails(item.folio_resguardo)
+  });
+
   // Modal states
   const [showPDFModal, setShowPDFModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [deleteType, setDeleteType] = useState<DeleteType | null>(null);
   const [itemToDelete, setItemToDelete] = useState<ItemToDelete | null>(null);
   const [folioParamLoading, setFolioParamLoading] = useState(false);
+  const [paramNotFoundMessage, setParamNotFoundMessage] = useState(false);
 
   // Combined loading and error states
   const loading = bajasLoading || detailsLoading || deleting || generating;
@@ -151,6 +162,37 @@ const ConsultarBajasResguardos = () => {
         });
     }
   }, [searchParams, fetchBajaDetails]);
+
+  // Effect: Handle URL parameter not found
+  useEffect(() => {
+    if (paramNotFound) {
+      setParamNotFoundMessage(true);
+      clearParamNotFound();
+      
+      // Auto-dismiss after 5 seconds
+      const timer = setTimeout(() => {
+        setParamNotFoundMessage(false);
+      }, 5000);
+      
+      return () => clearTimeout(timer);
+    }
+  }, [paramNotFound, clearParamNotFound]);
+
+  // Effect: Navigate to correct page when item is found via URL parameter
+  useEffect(() => {
+    if (foundItem && foliosUnicos.length > 0) {
+      // Find the index of the item in the foliosUnicos list
+      const itemIndex = foliosUnicos.findIndex(
+        (item) => item.folio_resguardo === foundItem.folio_resguardo
+      );
+      
+      if (itemIndex !== -1) {
+        // Calculate which page the item is on
+        const correctPage = Math.floor(itemIndex / rowsPerPage) + 1;
+        setCurrentPage(correctPage);
+      }
+    }
+  }, [foundItem, foliosUnicos, rowsPerPage]);
 
   // Effect: Update search hook data when allBajas changes
   useEffect(() => {
@@ -320,6 +362,17 @@ const ConsultarBajasResguardos = () => {
             realtimeConnected={realtimeConnected}
             isDarkMode={isDarkMode}
           />
+
+          {/* Warning message for parameter not found */}
+          {paramNotFoundMessage && (
+            <div className={`mt-4 p-3 rounded-lg border ${
+              isDarkMode
+                ? 'bg-yellow-500/10 text-yellow-400 border-yellow-500/20'
+                : 'bg-yellow-50 text-yellow-800 border-yellow-200'
+            }`}>
+              El resguardo buscado no se encontró en los datos actuales
+            </div>
+          )}
 
           {/* Main container */}
           <div className="grid grid-cols-1 lg:grid-cols-5 gap-6 mt-8">

@@ -8,7 +8,7 @@ export interface SearchResult {
     estado: string | null;
     estatus: string | null;
     resguardante: string | null;
-    origen: 'INEA' | 'ITEA' | 'NO_LISTADO' | 'INEA_OBS' | 'ITEA_OBS' | 'RESGUARDO' | 'RESGUARDO_BAJA';
+    origen: 'INEA' | 'ITEA' | 'NO_LISTADO' | 'INEA_OBS' | 'ITEA_OBS' | 'RESGUARDO' | 'RESGUARDO_BAJA' | 'AREA' | 'DIRECTOR';
     // Campos específicos para resguardos
     folio?: string | null;
     folio_resguardo?: string | null;
@@ -22,6 +22,10 @@ export interface SearchResult {
     condicion?: string | null;
     motivo_baja?: string | null;
     created_by_nombre?: string | null;
+    // Campos específicos para áreas y directores
+    nombre?: string | null;
+    puesto?: string | null;
+    areas_asignadas?: string[] | null;
 }
 
 export interface SearchResultsByOrigin {
@@ -32,4 +36,6 @@ export interface SearchResultsByOrigin {
     iteaObs: SearchResult[];
     resguardos: SearchResult[];
     resguardosBajas: SearchResult[];
+    areas: SearchResult[];
+    directores: SearchResult[];
 }
