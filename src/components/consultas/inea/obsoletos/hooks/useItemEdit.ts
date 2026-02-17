@@ -11,6 +11,7 @@ interface UseItemEditReturn {
   imageFile: File | null;
   imagePreview: string | null;
   uploading: boolean;
+  isSaving: boolean;
   showReactivarModal: boolean;
   reactivating: boolean;
   detailRef: React.RefObject<HTMLDivElement | null>;
@@ -63,6 +64,7 @@ export function useItemEdit({
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
   const [showReactivarModal, setShowReactivarModal] = useState(false);
   const [reactivating, setReactivating] = useState(false);
   
@@ -231,6 +233,7 @@ export function useItemEdit({
   const saveChanges = async () => {
     if (!editFormData) return;
 
+    setIsSaving(true);
     setLoading(true);
     setUploading(true);
 
@@ -241,9 +244,12 @@ export function useItemEdit({
         if (newPath) imagePath = newPath;
       }
 
+      // Extract only database columns (exclude nested objects and resguardante if present)
+      const { area, directorio, resguardante, ...dbFields } = editFormData as any;
+
       const { error } = await supabase
         .from('muebles')
-        .update({ ...editFormData, image_path: imagePath })
+        .update({ ...dbFields, image_path: imagePath })
         .eq('id', editFormData.id);
 
       if (error) throw error;
@@ -267,6 +273,7 @@ export function useItemEdit({
         text: 'Error al guardar los cambios. Por favor, intente nuevamente.'
       });
     } finally {
+      setIsSaving(false);
       setLoading(false);
       setUploading(false);
     }
@@ -312,7 +319,6 @@ export function useItemEdit({
       case 'usufinal':
       case 'fechabaja':
       case 'causadebaja':
-      case 'resguardante':
       case 'image_path':
         newData[field] = value || null;
         break;
@@ -361,6 +367,7 @@ export function useItemEdit({
     imageFile,
     imagePreview,
     uploading,
+    isSaving,
     showReactivarModal,
     reactivating,
     detailRef,

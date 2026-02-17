@@ -87,7 +87,7 @@ export function useSearchAndFilters({
       id: muebles.map(m => m.id_inv || '').filter(Boolean),
       area: muebles.map(m => m.area?.nombre || '').filter(Boolean),        // FROM area.nombre
       usufinal: muebles.map(m => m.directorio?.nombre || '').filter(Boolean), // FROM directorio.nombre
-      resguardante: muebles.map(m => m.resguardante || '').filter(Boolean),
+      resguardante: muebles.map(m => (m as any).resguardante || '').filter(Boolean),
       descripcion: muebles.map(m => m.descripcion || '').filter(Boolean),
       rubro: muebles.map(m => m.rubro || '').filter(Boolean),
       estado: muebles.map(m => m.estado || '').filter(Boolean),
@@ -172,13 +172,13 @@ export function useSearchAndFilters({
         }
       }
       // Usufinal/Resguardante match (from directorio.nombre)
-      else if (isMatch(item.directorio?.nombre) || isMatch(item.resguardante)) {
-        const exact = isExact(item.directorio?.nombre) || isExact(item.resguardante);
+      else if (isMatch(item.directorio?.nombre) || isMatch((item as any).resguardante)) {
+        const exact = isExact(item.directorio?.nombre) || isExact((item as any).resguardante);
         const score = exact ? 4 : 2;
         if (score > bestMatch.score) {
           bestMatch = { 
             type: 'usufinal', 
-            value: item.directorio?.nombre || item.resguardante || '', 
+            value: item.directorio?.nombre || (item as any).resguardante || '', 
             score 
           };
         }
@@ -366,17 +366,17 @@ export function useSearchAndFilters({
             case 'usufinal':
               return (item.directorio?.nombre?.toLowerCase() || '').includes(filterTerm);
             case 'resguardante':
-              return (item.resguardante?.toLowerCase() || '').includes(filterTerm);
+              return ((item as any).resguardante?.toLowerCase() || '').includes(filterTerm);
             case 'origen':
               return (item.origen?.toLowerCase() || '').includes(filterTerm);
             case 'resguardo':
               // Check for "con resguardo" or "sin resguardo"
               if (filterTerm.includes('con') || filterTerm.includes('si')) {
                 // Has resguardo: check if resguardante exists
-                return !!item.resguardante;
+                return !!(item as any).resguardante;
               } else if (filterTerm.includes('sin') || filterTerm.includes('no')) {
                 // No resguardo: check if resguardante is empty
-                return !item.resguardante;
+                return !(item as any).resguardante;
               }
               return true;
             default:
@@ -394,7 +394,7 @@ export function useSearchAndFilters({
           (item.descripcion?.toLowerCase() || '').includes(term) ||
           (item.area?.nombre?.toLowerCase() || '').includes(term) ||
           (item.directorio?.nombre?.toLowerCase() || '').includes(term) ||
-          (item.resguardante?.toLowerCase() || '').includes(term) ||
+          ((item as any).resguardante?.toLowerCase() || '').includes(term) ||
           (item.rubro?.toLowerCase() || '').includes(term) ||
           (item.estado?.toLowerCase() || '').includes(term) ||
           (item.estatus?.toLowerCase() || '').includes(term) ||

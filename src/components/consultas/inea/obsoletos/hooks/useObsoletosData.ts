@@ -143,7 +143,7 @@ export function useObsoletosData(): UseObsoletosDataReturn {
 
       if (error) throw error;
 
-      const mueblesData = (data as Mueble[]) || [];
+      const mueblesData = (data as any[]) || [];
       setMuebles(mueblesData);
 
       setError(null);

@@ -131,6 +131,7 @@ export default function IteaObsoletosComponent() {
     imageFile,
     imagePreview,
     uploading,
+    isSaving,
     showReactivarModal,
     reactivating,
     detailRef,
@@ -496,6 +497,7 @@ export default function IteaObsoletosComponent() {
                       editFormData={editFormData}
                       imagePreview={imagePreview}
                       uploading={uploading}
+                      isSaving={isSaving}
                       filterOptions={filterOptions}
                       directorio={directorio}
                       bajaInfo={bajaInfo}

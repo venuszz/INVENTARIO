@@ -29,7 +29,7 @@ export function useSearchAndFilters(muebles: Mueble[], foliosResguardo: Record<s
       id: muebles.map(m => m.id_inv || '').filter(Boolean),
       area: muebles.map(m => m.area?.nombre || '').filter(Boolean),
       usufinal: muebles.map(m => m.directorio?.nombre || '').filter(Boolean),
-      resguardante: muebles.map(m => m.resguardante || '').filter(Boolean),
+      resguardante: muebles.map(m => (m as any).resguardante || '').filter(Boolean),
       descripcion: muebles.map(m => m.descripcion || '').filter(Boolean),
       rubro: muebles.map(m => m.rubro || '').filter(Boolean),
       estado: muebles.map(m => m.estado || '').filter(Boolean),
@@ -88,10 +88,10 @@ export function useSearchAndFilters(muebles: Mueble[], foliosResguardo: Record<s
         }
       }
       // Usufinal/Resguardante (using relational field)
-      else if ((item.directorio?.nombre && item.directorio.nombre.toLowerCase().includes(term)) || (item.resguardante && item.resguardante.toLowerCase().includes(term))) {
-        const exact = (item.directorio?.nombre?.toLowerCase() === term) || (item.resguardante?.toLowerCase() === term);
+      else if ((item.directorio?.nombre && item.directorio.nombre.toLowerCase().includes(term)) || ((item as any).resguardante && (item as any).resguardante.toLowerCase().includes(term))) {
+        const exact = (item.directorio?.nombre?.toLowerCase() === term) || ((item as any).resguardante?.toLowerCase() === term);
         const score = exact ? 10 : 9;
-        if (score > bestMatch.score) bestMatch = { type: 'usufinal', value: item.directorio?.nombre || item.resguardante || '', score };
+        if (score > bestMatch.score) bestMatch = { type: 'usufinal', value: item.directorio?.nombre || (item as any).resguardante || '', score };
       }
       // Area (using relational field)
       else if (item.area?.nombre && item.area.nombre.toLowerCase().includes(term)) {
@@ -238,7 +238,7 @@ export function useSearchAndFilters(muebles: Mueble[], foliosResguardo: Record<s
           case 'estatus': return (item.estatus?.toLowerCase() || '').includes(filterTerm);
           case 'area': return (item.area?.nombre?.toLowerCase() || '').includes(filterTerm);
           case 'usufinal': return (item.directorio?.nombre?.toLowerCase() || '').includes(filterTerm);
-          case 'resguardante': return (item.resguardante?.toLowerCase() || '').includes(filterTerm);
+          case 'resguardante': return ((item as any).resguardante?.toLowerCase() || '').includes(filterTerm);
           default: return true;
         }
       });
@@ -276,7 +276,7 @@ export function useSearchAndFilters(muebles: Mueble[], foliosResguardo: Record<s
         (item.estatus?.toLowerCase() || '').includes(term) ||
         (item.area?.nombre?.toLowerCase() || '').includes(term) ||
         (item.directorio?.nombre?.toLowerCase() || '').includes(term) ||
-        (item.resguardante?.toLowerCase() || '').includes(term)
+        ((item as any).resguardante?.toLowerCase() || '').includes(term)
       );
     });
   }, [muebles, activeFilters, deferredSearchTerm, foliosResguardo]);

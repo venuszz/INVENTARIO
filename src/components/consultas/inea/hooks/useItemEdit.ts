@@ -43,6 +43,7 @@ export function useItemEdit() {
     const [imageFile, setImageFile] = useState<File | null>(null);
     const [imagePreview, setImagePreview] = useState<string | null>(null);
     const [uploading, setUploading] = useState(false);
+    const [isSaving, setIsSaving] = useState(false);
     const [message, setMessage] = useState<Message | null>(null);
     const [showBajaModal, setShowBajaModal] = useState(false);
     const [bajaCause, setBajaCause] = useState('');
@@ -162,6 +163,7 @@ export function useItemEdit() {
     const saveChanges = async () => {
         if (!editFormData) return;
 
+        setIsSaving(true);
         setUploading(true);
         
         // Add to syncing IDs
@@ -191,8 +193,8 @@ export function useItemEdit() {
                 if (newPath) imagePath = newPath;
             }
 
-            // Extract only the database columns (exclude nested objects)
-            const { area, directorio, ...dbFields } = editFormData;
+            // Extract only the database columns (exclude nested objects and resguardante if present)
+            const { area, directorio, resguardante, ...dbFields } = editFormData as any;
             
             const response = await fetch(
                 '/api/supabase-proxy?target=' + encodeURIComponent(`/rest/v1/muebles?id=eq.${editFormData.id}`),
@@ -262,6 +264,7 @@ export function useItemEdit() {
             if (editFormData) {
                 removeSyncingId(editFormData.id);
             }
+            setIsSaving(false);
             setUploading(false);
         }
     };
@@ -310,7 +313,6 @@ export function useItemEdit() {
             case 'usufinal':
             case 'fechabaja':
             case 'causadebaja':
-            case 'resguardante':
             case 'image_path':
                 newData[field] = value || null;
                 break;
@@ -451,6 +453,7 @@ export function useItemEdit() {
         imagePreview,
         setImagePreview,
         uploading,
+        isSaving,
         message,
         setMessage,
         showBajaModal,

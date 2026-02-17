@@ -29,7 +29,7 @@ export function useSearchAndFilters(muebles: MuebleITEA[]) {
       id: muebles.map(m => m.id_inv || '').filter(Boolean),
       area: muebles.map(m => m.area?.nombre || '').filter(Boolean),
       usufinal: muebles.map(m => m.directorio?.nombre || '').filter(Boolean),
-      resguardante: muebles.map(m => m.resguardante || '').filter(Boolean),
+      resguardante: muebles.map(m => (m as any).resguardante || '').filter(Boolean),
       descripcion: muebles.map(m => m.descripcion || '').filter(Boolean),
       rubro: muebles.map(m => m.rubro || '').filter(Boolean),
       estado: muebles.map(m => m.estado || '').filter(Boolean),
@@ -51,7 +51,7 @@ export function useSearchAndFilters(muebles: MuebleITEA[]) {
     for (const item of muebles) {
       // Usufinal/Resguardante (using relational field)
       const usufinal = item.directorio?.nombre || '';
-      const resguardante = item.resguardante || '';
+      const resguardante = (item as any).resguardante || '';
       
       if ((usufinal && usufinal.toLowerCase().includes(term)) || (resguardante && resguardante.toLowerCase().includes(term))) {
         const exact = (usufinal.toLowerCase() === term) || (resguardante.toLowerCase() === term);
@@ -170,7 +170,7 @@ export function useSearchAndFilters(muebles: MuebleITEA[]) {
           case 'estatus': return (item.estatus?.toLowerCase() || '').includes(filterTerm);
           case 'area': return (item.area?.nombre?.toLowerCase() || '').includes(filterTerm);
           case 'usufinal': return (item.directorio?.nombre?.toLowerCase() || '').includes(filterTerm);
-          case 'resguardante': return (item.resguardante?.toLowerCase() || '').includes(filterTerm);
+          case 'resguardante': return ((item as any).resguardante?.toLowerCase() || '').includes(filterTerm);
           default: return true;
         }
       });
@@ -188,7 +188,7 @@ export function useSearchAndFilters(muebles: MuebleITEA[]) {
         (item.estatus?.toLowerCase() || '').includes(term) ||
         (item.area?.nombre?.toLowerCase() || '').includes(term) ||
         (item.directorio?.nombre?.toLowerCase() || '').includes(term) ||
-        (item.resguardante?.toLowerCase() || '').includes(term)
+        ((item as any).resguardante?.toLowerCase() || '').includes(term)
       );
     });
   }, [muebles, activeFilters, deferredSearchTerm]);

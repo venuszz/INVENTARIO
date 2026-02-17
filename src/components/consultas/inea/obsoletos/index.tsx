@@ -90,6 +90,7 @@ export default function ConsultasIneaObsoletos() {
     editFormData,
     imagePreview,
     uploading,
+    isSaving,
     showReactivarModal,
     reactivating,
     detailRef,
@@ -456,6 +457,7 @@ export default function ConsultasIneaObsoletos() {
                       editFormData={editFormData}
                       imagePreview={imagePreview}
                       uploading={uploading}
+                      isSaving={isSaving}
                       filterOptions={filterOptions}
                       directorio={directorio}
                       bajaInfo={bajaInfo}
@@ -481,26 +483,45 @@ export default function ConsultasIneaObsoletos() {
                         <>
                           <motion.button
                             onClick={saveChanges}
+                            disabled={isSaving}
                             className={`flex items-center gap-2 px-4 py-2 rounded-lg border text-sm font-light tracking-tight transition-all ${
-                              isDarkMode
-                                ? 'bg-white/5 border-white/10 text-white hover:bg-white/10'
-                                : 'bg-black/5 border-black/10 text-black hover:bg-black/10'
+                              isSaving
+                                ? isDarkMode
+                                  ? 'bg-white/5 border-white/10 text-white/40 cursor-not-allowed'
+                                  : 'bg-black/5 border-black/10 text-black/40 cursor-not-allowed'
+                                : isDarkMode
+                                  ? 'bg-white/5 border-white/10 text-white hover:bg-white/10'
+                                  : 'bg-black/5 border-black/10 text-black hover:bg-black/10'
                             }`}
-                            whileHover={{ scale: 1.02 }}
-                            whileTap={{ scale: 0.98 }}
+                            whileHover={!isSaving ? { scale: 1.02 } : {}}
+                            whileTap={!isSaving ? { scale: 0.98 } : {}}
                           >
-                            <Save className="h-3.5 w-3.5" />
-                            Guardar
+                            {isSaving ? (
+                              <>
+                                <div className="h-3.5 w-3.5 border-2 border-current border-t-transparent rounded-full animate-spin" />
+                                Guardando...
+                              </>
+                            ) : (
+                              <>
+                                <Save className="h-3.5 w-3.5" />
+                                Guardar
+                              </>
+                            )}
                           </motion.button>
                           <motion.button
                             onClick={cancelEdit}
+                            disabled={isSaving}
                             className={`flex items-center gap-2 px-4 py-2 rounded-lg border text-sm font-light tracking-tight transition-all ${
-                              isDarkMode
-                                ? 'bg-white/[0.02] border-white/10 text-white/60 hover:bg-white/5 hover:text-white'
-                                : 'bg-black/[0.02] border-black/10 text-black/60 hover:bg-black/5 hover:text-black'
+                              isSaving
+                                ? isDarkMode
+                                  ? 'bg-white/[0.02] border-white/10 text-white/30 cursor-not-allowed'
+                                  : 'bg-black/[0.02] border-black/10 text-black/30 cursor-not-allowed'
+                                : isDarkMode
+                                  ? 'bg-white/[0.02] border-white/10 text-white/60 hover:bg-white/5 hover:text-white'
+                                  : 'bg-black/[0.02] border-black/10 text-black/60 hover:bg-black/5 hover:text-black'
                             }`}
-                            whileHover={{ scale: 1.02 }}
-                            whileTap={{ scale: 0.98 }}
+                            whileHover={!isSaving ? { scale: 1.02 } : {}}
+                            whileTap={!isSaving ? { scale: 0.98 } : {}}
                           >
                             <X className="h-3.5 w-3.5" />
                             Cancelar

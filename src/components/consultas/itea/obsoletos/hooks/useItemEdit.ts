@@ -11,6 +11,7 @@ interface UseItemEditReturn {
   imageFile: File | null;
   imagePreview: string | null;
   uploading: boolean;
+  isSaving: boolean;
   showReactivarModal: boolean;
   reactivating: boolean;
   detailRef: React.RefObject<HTMLDivElement | null>;
@@ -64,6 +65,7 @@ export function useItemEdit({
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
   const [showReactivarModal, setShowReactivarModal] = useState(false);
   const [reactivating, setReactivating] = useState(false);
   
@@ -236,6 +238,7 @@ export function useItemEdit({
   const saveChanges = async () => {
     if (!editFormData || !editFormData.id) return;
 
+    setIsSaving(true);
     setLoading(true);
     setUploading(true);
 
@@ -246,7 +249,7 @@ export function useItemEdit({
         if (newPath) imagePath = newPath;
       }
 
-      // Prepare update data - only include actual table columns, not joined objects
+      // Prepare update data - only include actual table columns, not joined objects or resguardante
       const updateData: any = {
         id_inv: editFormData.id_inv,
         rubro: editFormData.rubro,
@@ -265,7 +268,6 @@ export function useItemEdit({
         id_directorio: editFormData.id_directorio,
         fechabaja: editFormData.fechabaja,
         causadebaja: editFormData.causadebaja,
-        resguardante: editFormData.resguardante,
         image_path: imagePath,
       };
 
@@ -305,6 +307,7 @@ export function useItemEdit({
         text: 'Error al guardar los cambios. Por favor, intente nuevamente.'
       });
     } finally {
+      setIsSaving(false);
       setLoading(false);
       setUploading(false);
     }
@@ -405,6 +408,7 @@ export function useItemEdit({
     imageFile,
     imagePreview,
     uploading,
+    isSaving,
     showReactivarModal,
     reactivating,
     detailRef,

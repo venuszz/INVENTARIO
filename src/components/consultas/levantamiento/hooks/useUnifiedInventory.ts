@@ -63,6 +63,7 @@ export function useUnifiedInventory(): UseUnifiedInventoryReturn {
     // Map INEA data - PRESERVE relational fields
     const ineaData = ineaContext.muebles.map(item => ({ 
       ...item,
+      resguardante: (item as any).resguardante ?? null,
       // Preserve relational fields
       id_area: item.id_area,
       id_directorio: item.id_directorio,
@@ -74,6 +75,7 @@ export function useUnifiedInventory(): UseUnifiedInventoryReturn {
     // Map ITEA data - PRESERVE relational fields
     const iteaData = iteaContext.muebles.map(item => ({ 
       ...item,
+      resguardante: (item as any).resguardante ?? null,
       // Preserve relational fields
       id_area: item.id_area,
       id_directorio: item.id_directorio,
@@ -85,7 +87,7 @@ export function useUnifiedInventory(): UseUnifiedInventoryReturn {
     // Map TLAXCALA data - PRESERVE relational fields
     const tlaxcalaData = tlaxcalaContext.muebles.map(item => ({ 
       ...item,
-      resguardante: item.resguardante ?? null, // Ensure undefined becomes null
+      resguardante: (item as any).resguardante ?? null, // Ensure undefined becomes null
       image_path: item.image_path ?? null, // Ensure undefined becomes null
       // Preserve relational fields
       id_area: item.id_area,

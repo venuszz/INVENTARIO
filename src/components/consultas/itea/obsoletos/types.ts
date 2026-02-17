@@ -46,8 +46,6 @@ export interface MuebleITEA {
   fechabaja: string | null;
   /** Reason for deprecation */
   causadebaja: string | null;
-  /** Person responsible */
-  resguardante: string | null;
   /** Path to item image */
   image_path: string | null;
 }

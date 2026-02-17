@@ -111,6 +111,7 @@ interface DetailPanelProps {
   editFormData: Mueble | null;
   imagePreview: string | null;
   uploading: boolean;
+  isSaving?: boolean;
   filterOptions: FilterOptions;
   directorio: Directorio[];
   bajaInfo: BajaInfo | null;
@@ -135,6 +136,7 @@ export const DetailPanel: React.FC<DetailPanelProps> = ({
   editFormData,
   imagePreview,
   uploading,
+  isSaving = false,
   filterOptions,
   directorio,
   bajaInfo,
@@ -629,25 +631,7 @@ function EditMode({
           />
         </div>
 
-        <div className="form-group">
-          <label className={`flex items-center gap-2 text-sm font-medium mb-2 ${
-            isDarkMode ? 'text-gray-300' : 'text-gray-700'
-          }`}>
-            <Shield className="h-4 w-4" />
-            Resguardante
-          </label>
-          <input
-            type="text"
-            value={editFormData?.resguardante || ''}
-            onChange={(e) => onFormChange(e, 'resguardante')}
-            className={`w-full border rounded-lg px-4 py-2.5 focus:outline-none focus:ring-2 focus:border-transparent transition-all ${
-              isDarkMode
-                ? 'bg-gray-800 border-gray-700 text-white placeholder-gray-500 focus:ring-white/50'
-                : 'bg-white border-gray-300 text-gray-900 placeholder-gray-400 focus:ring-blue-500'
-            }`}
-            placeholder="Ingrese el resguardante"
-          />
-        </div>
+
       </div>
     </div>
   );
@@ -760,7 +744,6 @@ function ViewMode({
         <DetailCard label="Estatus" value={selectedItem.estatus || 'No especificado'} isDarkMode={isDarkMode} />
         <DetailCard label="Área" value={isSyncing ? null : (selectedItem.area?.nombre || 'No especificado')} isDarkMode={isDarkMode} isSyncing={isSyncing} />
         <DetailCard label="Director/Jefe de Área" value={isSyncing ? null : (selectedItem.directorio?.nombre || selectedItem.usufinal || 'No especificado')} isDarkMode={isDarkMode} isSyncing={isSyncing} />
-        <DetailCard label="Resguardante" value={selectedItem.resguardante || 'No especificado'} isDarkMode={isDarkMode} />
       </div>
     </div>
   );

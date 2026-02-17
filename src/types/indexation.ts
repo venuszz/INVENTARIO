@@ -179,7 +179,6 @@ export interface MuebleINEA {
   
   fechabaja: string | null;
   causadebaja: string | null;
-  resguardante: string | null;
   image_path: string | null;
 }
 
@@ -214,7 +213,6 @@ export interface MuebleITEA {
   
   fechabaja: string | null;
   causadebaja: string | null;
-  resguardante: string | null;
   image_path: string | null;
 }
 
@@ -247,7 +245,6 @@ export interface MuebleNoListado {
   
   fechabaja: string | null;
   causadebaja: string | null;
-  resguardante?: string | null;
   image_path?: string | null;
 }
 

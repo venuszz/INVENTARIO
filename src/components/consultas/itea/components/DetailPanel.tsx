@@ -567,33 +567,7 @@ function EditMode({
           />
         </div>
 
-        <div className="form-group">
-          <label
-            className={`flex items-center gap-2 text-xs font-medium uppercase tracking-wider mb-2 ${
-              isDarkMode ? 'text-white/60' : 'text-black/60'
-            }`}
-          >
-            <Shield className="h-3.5 w-3.5" />
-            Usuario Final
-          </label>
-          <input
-            type="text"
-            value={editFormData?.resguardante || ''}
-            onChange={(e) => onFormChange(e, 'resguardante')}
-            disabled={hasActiveResguardo}
-            className={`w-full border rounded-lg px-3 py-2 text-sm font-light focus:outline-none transition-all ${
-              hasActiveResguardo
-                ? isDarkMode
-                  ? 'bg-white/[0.01] border-white/10 text-white/50 cursor-not-allowed'
-                  : 'bg-black/[0.01] border-black/10 text-black/50 cursor-not-allowed'
-                : isDarkMode
-                  ? 'bg-white/[0.02] border-white/10 text-white placeholder:text-white/30 focus:border-white/20 focus:bg-white/[0.04]'
-                  : 'bg-black/[0.02] border-black/10 text-black placeholder:text-black/30 focus:border-black/20 focus:bg-black/[0.04]'
-            }`}
-            title={hasActiveResguardo ? "No se puede editar mientras tenga un resguardo activo" : "Ingrese el Usuario Final"}
-            placeholder="Ingrese el Usuario Final"
-          />
-        </div>
+
       </div>
     </div>
   );
@@ -826,11 +800,20 @@ function ViewMode({
           isDarkMode={isDarkMode}
           isSyncing={isSyncing}
         />
-        <DetailCard
-          label="Usuario Final"
-          value={selectedItem.resguardante || 'No especificado'}
-          isDarkMode={isDarkMode}
-        />
+        {detalleResguardo?.usufinal && (
+          <DetailCard
+            label="Resguardante"
+            value={detalleResguardo.usufinal}
+            isDarkMode={isDarkMode}
+          />
+        )}
+        {!detalleResguardo?.usufinal && folio && (
+          <DetailCard
+            label="Resguardante"
+            value="Sin Resguardante"
+            isDarkMode={isDarkMode}
+          />
+        )}
         
         {selectedItem.fechabaja && (
           <div className="detail-card bg-red-900/20 border border-red-800/50 rounded-lg p-4 col-span-2">
