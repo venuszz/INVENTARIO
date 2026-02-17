@@ -13,7 +13,6 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { useTheme } from '@/context/ThemeContext';
 import { useUserRole } from '@/hooks/useUserRole';
-import { useResguardosIndexation } from '@/hooks/indexation/useResguardosIndexation';
 
 // Custom hooks
 import { useResguardosData } from './hooks/useResguardosData';
@@ -63,9 +62,6 @@ export default function ConsultarResguardos({ folioParam }: ConsultarResguardosP
   const searchParams = useSearchParams();
   const detailRef = useRef<HTMLDivElement>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
-
-  // External hooks
-  useResguardosIndexation();
 
   // Local UI state - Modals
   const [showDeleteAllModal, setShowDeleteAllModal] = useState(false);

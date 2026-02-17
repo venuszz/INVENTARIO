@@ -101,13 +101,14 @@ export function useResguardosData(): UseResguardosDataReturn {
   const processResguardos = useCallback(async () => {
     setLoading(true);
     try {
-      // 1. Group by unique folio and aggregate resguardantes, area, and count
+      // 1. Group by unique folio and aggregate resguardantes, area, numInventarios, and count
       const foliosMap = new Map<string, {
         folio: string;
         fecha: string;
         director: string;
         area: string;
         resguardantes: Set<string>;
+        numInventarios: Set<string>;
         articulosCount: number;
       }>();
 
@@ -141,6 +142,7 @@ export function useResguardosData(): UseResguardosDataReturn {
             director: record.director_nombre || 'Sin director',
             area: areaNombre,
             resguardantes: new Set(),
+            numInventarios: new Set(),
             articulosCount: 0
           });
         }
@@ -148,6 +150,24 @@ export function useResguardosData(): UseResguardosDataReturn {
         if (record.resguardante) {
           folioData.resguardantes.add(record.resguardante);
         }
+        
+        // Add num_inventario from mueble
+        let numInventario: string | null = null;
+        if (record.origen === 'INEA') {
+          const mueble = ineaMuebles.find(m => m.id === record.id_mueble);
+          numInventario = mueble?.id_inv ?? null;
+        } else if (record.origen === 'ITEA') {
+          const mueble = iteaMuebles.find(m => m.id === record.id_mueble);
+          numInventario = mueble?.id_inv ?? null;
+        } else if (record.origen === 'NO_LISTADO') {
+          const mueble = noListadoMuebles.find(m => m.id === record.id_mueble);
+          numInventario = mueble?.id_inv ?? null;
+        }
+        
+        if (numInventario) {
+          folioData.numInventarios.add(numInventario);
+        }
+        
         folioData.articulosCount++;
       });
 
@@ -158,6 +178,7 @@ export function useResguardosData(): UseResguardosDataReturn {
         director: item.director,
         area: item.area,
         resguardantes: Array.from(item.resguardantes).join(', '),
+        numInventarios: Array.from(item.numInventarios).join(', '),
         articulosCount: item.articulosCount
       }));
 
@@ -178,12 +199,18 @@ export function useResguardosData(): UseResguardosDataReturn {
                 return resguardo.resguardantes.toLowerCase().includes(term);
               case 'fecha':
                 return resguardo.fecha === filter.term;
+              case 'area':
+                return resguardo.area.toLowerCase().includes(term);
+              case 'numInventario':
+                return resguardo.numInventarios.toLowerCase().includes(term);
               default:
                 // If type is null, try to match any field
                 return (
                   resguardo.folio.toLowerCase().includes(term) ||
                   resguardo.director.toLowerCase().includes(term) ||
-                  resguardo.resguardantes.toLowerCase().includes(term)
+                  resguardo.resguardantes.toLowerCase().includes(term) ||
+                  resguardo.area.toLowerCase().includes(term) ||
+                  resguardo.numInventarios.toLowerCase().includes(term)
                 );
             }
           });

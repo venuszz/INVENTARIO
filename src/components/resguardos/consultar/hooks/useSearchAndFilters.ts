@@ -48,7 +48,7 @@ export function useSearchAndFilters(
       allResguardos.some((r, i) => {
         const prev = allResguardosRef.current[i];
         if (!prev) return true;
-        return r.folio !== prev.folio || r.director !== prev.director || r.resguardantes !== prev.resguardantes;
+        return r.folio !== prev.folio || r.director !== prev.director || r.resguardantes !== prev.resguardantes || r.area !== prev.area || r.numInventarios !== prev.numInventarios;
       });
     
     if (hasChanged) {
@@ -67,6 +67,10 @@ export function useSearchAndFilters(
       director: resguardos.map((r: Resguardo) => r.director || '').filter(Boolean),
       resguardante: resguardos.map((r: Resguardo) => r.resguardantes || '').filter(Boolean),
       fecha: resguardos.map((r: Resguardo) => r.fecha || '').filter(Boolean),
+      area: resguardos.map((r: Resguardo) => r.area || '').filter(Boolean),
+      numInventario: resguardos.flatMap((r: Resguardo) => 
+        (r.numInventarios || '').split(',').map(n => n.trim()).filter(Boolean)
+      ),
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [allResguardosVersion.current]);
@@ -86,28 +90,40 @@ export function useSearchAndFilters(
     const isExact = (val: string | null | undefined) => val && val.toLowerCase() === term;
 
     for (const item of resguardos) {
-      // Director has highest priority
-      if (isMatch(item.director)) {
-        const exact = isExact(item.director);
-        const score = exact ? 6 : 5;
-        if (score > bestMatch.score) bestMatch = { type: 'director', value: item.director, score };
-      }
-      // Folio second priority
-      else if (isMatch(item.folio)) {
+      // Folio has highest priority
+      if (isMatch(item.folio)) {
         const exact = isExact(item.folio);
-        const score = exact ? 5 : 4;
+        const score = exact ? 9 : 8;
         if (score > bestMatch.score) bestMatch = { type: 'folio', value: item.folio, score };
       }
-      // Resguardante third priority
+      // Num inventario second priority
+      else if (isMatch(item.numInventarios)) {
+        const exact = isExact(item.numInventarios);
+        const score = exact ? 8 : 7;
+        if (score > bestMatch.score) bestMatch = { type: 'numInventario', value: item.numInventarios, score };
+      }
+      // Director third priority
+      else if (isMatch(item.director)) {
+        const exact = isExact(item.director);
+        const score = exact ? 7 : 6;
+        if (score > bestMatch.score) bestMatch = { type: 'director', value: item.director, score };
+      }
+      // Area fourth priority
+      else if (isMatch(item.area)) {
+        const exact = isExact(item.area);
+        const score = exact ? 6 : 5;
+        if (score > bestMatch.score) bestMatch = { type: 'area', value: item.area, score };
+      }
+      // Resguardante fifth priority
       else if (isMatch(item.resguardantes)) {
         const exact = isExact(item.resguardantes);
-        const score = exact ? 4 : 3;
+        const score = exact ? 5 : 4;
         if (score > bestMatch.score) bestMatch = { type: 'resguardante', value: item.resguardantes, score };
       }
       // Fecha lowest priority
       else if (isMatch(item.fecha)) {
         const exact = isExact(item.fecha);
-        const score = exact ? 3 : 2;
+        const score = exact ? 4 : 3;
         if (score > bestMatch.score) bestMatch = { type: 'fecha', value: item.fecha, score };
       }
     }
@@ -134,7 +150,9 @@ export function useSearchAndFilters(
     const seen = new Set<string>();
     const fields = [
       { type: 'folio' as SearchMatchType, data: searchableData.folio },
+      { type: 'numInventario' as SearchMatchType, data: searchableData.numInventario },
       { type: 'director' as SearchMatchType, data: searchableData.director },
+      { type: 'area' as SearchMatchType, data: searchableData.area },
       { type: 'resguardante' as SearchMatchType, data: searchableData.resguardante },
       { type: 'fecha' as SearchMatchType, data: searchableData.fecha },
     ];

@@ -11,6 +11,7 @@ export interface Resguardo {
   director: string;
   area: string;
   resguardantes: string; // Comma-separated resguardantes
+  numInventarios: string; // Comma-separated num_inventarios
   articulosCount: number;
 }
 
@@ -95,7 +96,7 @@ export interface PdfDataBaja {
 /**
  * SearchMatchType - Field types for unified search
  */
-export type SearchMatchType = 'folio' | 'director' | 'resguardante' | 'fecha' | null;
+export type SearchMatchType = 'folio' | 'director' | 'resguardante' | 'fecha' | 'area' | 'numInventario' | null;
 
 /**
  * ActiveFilter - Represents an active search filter
