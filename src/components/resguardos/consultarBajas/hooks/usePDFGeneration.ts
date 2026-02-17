@@ -6,8 +6,12 @@ export function usePDFGeneration() {
   const [pdfBajaData, setPdfBajaData] = useState<PdfDataBaja | null>(null);
   const [generating, setGenerating] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [firmas, setFirmas] = useState<any[] | null>(null);
 
-  const getFirmas = async () => {
+  // Pre-load firmas on mount
+  const loadFirmas = async () => {
+    if (firmas) return firmas; // Return cached firmas
+    
     const { data, error } = await supabase
       .from('firmas')
       .select('*');
@@ -16,51 +20,45 @@ export function usePDFGeneration() {
       console.error('Error al obtener firmas:', error);
       return null;
     }
+    setFirmas(data);
     return data;
   };
 
-  const preparePDFData = async (
+  const preparePDFData = (
     selectedBaja: ResguardoBajaDetalle,
     selectedItems: { [key: string]: boolean }
   ) => {
+    // Synchronous preparation - no await needed
     setGenerating(true);
     try {
       // Get selected items or use all items
       const selectedArticles = selectedBaja.articulos.filter(art => selectedItems[art.id]);
       const articlesToUse = selectedArticles.length > 0 ? selectedArticles : selectedBaja.articulos;
 
-      // Group by folio_baja
-      const grouped = articlesToUse.reduce((acc, art) => {
-        const found = acc.find(g => g.folio_baja === art.folio_baja);
-        if (found) {
-          found.articulos.push(art);
-        } else {
-          acc.push({
-            folio_baja: art.folio_baja,
-            articulos: [art]
-          });
-        }
-        return acc;
-      }, [] as Array<{ folio_baja: string, articulos: any[] }>);
+      // Get all unique folio_baja values
+      const foliosBaja = Array.from(new Set(articlesToUse.map(art => art.folio_baja)));
+      
+      // Create title that includes all folios if multiple
+      const folioTitle = foliosBaja.length > 1 
+        ? foliosBaja.join(', ')
+        : foliosBaja[0];
 
-      const firstGroup = grouped[0];
-      const firmas = await getFirmas();
-
+      // Include ALL articles with their respective folio_baja
       setPdfBajaData({
         folio_resguardo: selectedBaja.folio_resguardo,
-        folio_baja: firstGroup.folio_baja,
+        folio_baja: folioTitle, // This will show all folios in the title
         fecha: new Date(selectedBaja.f_resguardo).toLocaleDateString(),
         director: selectedBaja.dir_area,
         area: selectedBaja.area_resguardo || '',
         puesto: selectedBaja.puesto,
         resguardante: selectedBaja.usufinal || '',
-        articulos: firstGroup.articulos.map(art => ({
+        articulos: articlesToUse.map(art => ({
           id_inv: art.num_inventario,
           descripcion: art.descripcion,
           rubro: art.rubro,
           estado: art.condicion,
           origen: art.origen,
-          folio_baja: art.folio_baja,
+          folio_baja: art.folio_baja, // Keep individual folio_baja for each article
           resguardante: art.usufinal || selectedBaja.usufinal || ''
         })),
         firmas: firmas || undefined
@@ -91,5 +89,6 @@ export function usePDFGeneration() {
     preparePDFData,
     generatePDF,
     clearPDFData,
+    loadFirmas,
   };
 }

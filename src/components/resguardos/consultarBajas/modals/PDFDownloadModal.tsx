@@ -1,4 +1,4 @@
-import { X, FileDigit, FileText, Download } from 'lucide-react';
+import { X, FileText } from 'lucide-react';
 import type { PdfDataBaja } from '../types';
 
 interface PDFDownloadModalProps {
@@ -12,6 +12,7 @@ interface PDFDownloadModalProps {
 /**
  * PDF download modal
  * Displays PDF information and download button
+ * Follows the same design as consultar
  */
 export const PDFDownloadModal: React.FC<PDFDownloadModalProps> = ({
   show,
@@ -22,20 +23,25 @@ export const PDFDownloadModal: React.FC<PDFDownloadModalProps> = ({
 }) => {
   if (!show || !pdfData) return null;
 
+  // Get unique folio_baja values
+  const foliosBaja = Array.from(new Set(pdfData.articulos.map(a => a.folio_baja)));
+  const multipleFolios = foliosBaja.length > 1;
+
   return (
-    <div className={`fixed inset-0 z-50 flex items-center justify-center px-4 backdrop-blur-sm ${
+    <div className={`fixed inset-0 z-50 flex items-center justify-center px-4 ${
       isDarkMode ? 'bg-black/80' : 'bg-black/50'
     }`}>
-      <div className={`rounded-lg border w-full max-w-md overflow-hidden backdrop-blur-xl ${
+      <div className={`rounded-lg border w-full max-w-md overflow-hidden ${
         isDarkMode ? 'bg-black/95 border-white/10' : 'bg-white/95 border-black/10'
       }`}>
         <div className="p-6">
+          {/* Header */}
           <div className="flex items-start justify-between mb-4">
             <div className="flex items-center gap-3">
               <div className={`p-2 rounded-lg ${
-                isDarkMode ? 'bg-blue-500/10' : 'bg-blue-50'
+                isDarkMode ? 'bg-green-500/10' : 'bg-green-50'
               }`}>
-                <FileDigit size={20} className={isDarkMode ? 'text-blue-400' : 'text-blue-600'} />
+                <FileText size={20} className={isDarkMode ? 'text-green-400' : 'text-green-600'} />
               </div>
               <div>
                 <h3 className={`text-lg font-medium ${isDarkMode ? 'text-white' : 'text-black'}`}>
@@ -44,7 +50,7 @@ export const PDFDownloadModal: React.FC<PDFDownloadModalProps> = ({
                 <p className={`text-sm ${
                   isDarkMode ? 'text-white/60' : 'text-black/60'
                 }`}>
-                  Descarga el PDF de la baja
+                  Listo para descargar
                 </p>
               </div>
             </div>
@@ -60,32 +66,35 @@ export const PDFDownloadModal: React.FC<PDFDownloadModalProps> = ({
             </button>
           </div>
 
+          {/* Folio info */}
           <div className={`rounded-lg border p-3 mb-6 ${
             isDarkMode
               ? 'bg-white/[0.02] border-white/10'
               : 'bg-black/[0.02] border-black/10'
           }`}>
-            <div className="flex items-center gap-3">
-              <FileText className={`h-4 w-4 ${
-                isDarkMode ? 'text-blue-400' : 'text-blue-600'
-              }`} />
-              <span className={`text-sm font-medium ${
-                isDarkMode ? 'text-white' : 'text-black'
-              }`}>
-                Baja {pdfData.folio_baja}
+            <label className={`block text-xs font-medium mb-1.5 ${
+              isDarkMode ? 'text-white/60' : 'text-black/60'
+            }`}>
+              {multipleFolios ? 'Folios de baja' : 'Folio de baja'}
+            </label>
+            <div className="flex items-center gap-2">
+              <FileText size={16} className={isDarkMode ? 'text-white/60' : 'text-black/60'} />
+              <span className={`text-sm font-medium ${isDarkMode ? 'text-white' : 'text-black'}`}>
+                {pdfData.folio_baja}
               </span>
             </div>
           </div>
 
+          {/* Download button */}
           <button
             onClick={onDownload}
-            className={`w-full px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center justify-center gap-2 ${
+            className={`w-full px-4 py-2 rounded-lg border text-sm font-medium flex items-center justify-center gap-2 transition-all ${
               isDarkMode
-                ? 'bg-blue-600 hover:bg-blue-500 text-white'
-                : 'bg-blue-600 hover:bg-blue-700 text-white'
+                ? 'bg-white text-black border-white hover:bg-white/90'
+                : 'bg-black text-white border-black hover:bg-black/90'
             }`}
           >
-            <Download className="h-4 w-4" />
+            <FileText size={14} />
             Descargar PDF
           </button>
         </div>

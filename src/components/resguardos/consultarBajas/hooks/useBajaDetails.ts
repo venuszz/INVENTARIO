@@ -1,5 +1,4 @@
 import { useState } from 'react';
-import supabase from '@/app/lib/supabase/client';
 import type { ResguardoBajaDetalle, ResguardoBajaArticulo } from '../types';
 
 export function useBajaDetails(allBajas: any[]) {
@@ -9,32 +8,20 @@ export function useBajaDetails(allBajas: any[]) {
   const [error, setError] = useState<string | null>(null);
 
   const fetchBajaDetails = async (folioResguardo: string) => {
+    // Si el folio está vacío, limpiar selección sin mostrar error
+    if (!folioResguardo || folioResguardo.trim() === '') {
+      clearSelection();
+      return;
+    }
+
     setLoading(true);
     try {
-      const { data, error: queryError } = await supabase
-        .from('resguardos_bajas')
-        .select(`
-          id,
-          num_inventario,
-          descripcion,
-          rubro,
-          condicion,
-          origen,
-          folio_baja,
-          usufinal,
-          folio_resguardo,
-          f_resguardo,
-          area_resguardo,
-          dir_area,
-          puesto
-        `)
-        .eq('folio_resguardo', folioResguardo);
+      // Usar datos indexados en lugar de query a Supabase
+      const bajasForFolio = allBajas.filter(b => b.folio_resguardo === folioResguardo);
 
-      if (queryError) throw queryError;
-
-      if (data && data.length > 0) {
-        const firstItem = data[0];
-        const articles = data.map(item => ({
+      if (bajasForFolio.length > 0) {
+        const firstItem = bajasForFolio[0];
+        const articles = bajasForFolio.map(item => ({
           id: item.id,
           num_inventario: item.num_inventario,
           descripcion: item.descripcion,

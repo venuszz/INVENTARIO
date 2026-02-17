@@ -152,9 +152,8 @@ export function useResguardoSubmit(
           id_directorio: parseInt(formData.directorId),
           id_mueble: mueble.id,
           origen: origenMapped,
-          puesto_resguardo: formData.puesto.trim().toUpperCase(),
           resguardante: resguardanteToUse,
-          id_area: validation.id_area, // NUEVO: Incluir id_area en el payload
+          id_area: validation.id_area, // Incluir id_area en el payload
         };
       });
 

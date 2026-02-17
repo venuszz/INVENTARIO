@@ -1,4 +1,4 @@
-import { FileText, FileDigit, Calendar, Building2, User, Download, X, Info } from 'lucide-react';
+import { FileText, FileDigit, Calendar, Building2, User, Download, X, Package, Loader2 } from 'lucide-react';
 import RoleGuard from '@/components/roleGuard';
 import type { ResguardoBajaDetalle } from '../types';
 
@@ -7,6 +7,8 @@ interface BajaDetailsPanelProps {
   selectedItemsCount: number;
   onGeneratePDF: () => void;
   onDeleteFolio: () => void;
+  isGeneratingPDF?: boolean;
+  isDeleting?: boolean;
   userRole: string | null;
   isDarkMode: boolean;
 }
@@ -20,185 +22,277 @@ export const BajaDetailsPanel: React.FC<BajaDetailsPanelProps> = ({
   selectedItemsCount,
   onGeneratePDF,
   onDeleteFolio,
+  isGeneratingPDF = false,
+  isDeleting = false,
   userRole,
   isDarkMode
 }) => {
-  // Color palette for resguardantes badges
-  const colorPaletteDark = [
-    'from-pink-500/80 to-pink-400/80 border-pink-400 text-pink-100',
-    'from-blue-500/80 to-blue-400/80 border-blue-400 text-blue-100',
-    'from-green-500/80 to-green-400/80 border-green-400 text-green-100',
-    'from-yellow-500/80 to-yellow-400/80 border-yellow-400 text-yellow-900',
-    'from-purple-500/80 to-purple-400/80 border-purple-400 text-purple-100',
-    'from-fuchsia-500/80 to-fuchsia-400/80 border-fuchsia-400 text-fuchsia-100',
-    'from-cyan-500/80 to-cyan-400/80 border-cyan-400 text-cyan-900',
-    'from-orange-500/80 to-orange-400/80 border-orange-400 text-orange-900',
-    'from-rose-500/80 to-rose-400/80 border-rose-400 text-rose-100',
-    'from-emerald-500/80 to-emerald-400/80 border-emerald-400 text-emerald-100',
-  ];
-  const colorPaletteLight = [
-    'from-pink-400 to-pink-300 border-pink-500 text-pink-900',
-    'from-blue-400 to-blue-300 border-blue-500 text-blue-900',
-    'from-green-400 to-green-300 border-green-500 text-green-900',
-    'from-yellow-400 to-yellow-300 border-yellow-500 text-yellow-900',
-    'from-purple-400 to-purple-300 border-purple-500 text-purple-900',
-    'from-fuchsia-400 to-fuchsia-300 border-fuchsia-500 text-fuchsia-900',
-    'from-cyan-400 to-cyan-300 border-cyan-500 text-cyan-900',
-    'from-orange-400 to-orange-300 border-orange-500 text-orange-900',
-    'from-rose-400 to-rose-300 border-rose-500 text-rose-900',
-    'from-emerald-400 to-emerald-300 border-emerald-500 text-emerald-900',
-  ];
-
   return (
-    <div className={`rounded-lg border p-4 mb-4 ${
+    <div className={`rounded-lg border h-[75vh] flex flex-col ${
       isDarkMode
         ? 'bg-white/[0.02] border-white/10'
         : 'bg-black/[0.02] border-black/10'
     }`}>
-      <h2 className={`text-lg font-medium mb-4 flex items-center gap-2 ${
-        isDarkMode ? 'text-white' : 'text-black'
+      {/* Header */}
+      <div className={`px-4 py-3 border-b flex-shrink-0 ${
+        isDarkMode ? 'border-white/10' : 'border-black/10'
       }`}>
-        <FileText className="h-5 w-5" />
-        Detalles del Resguardo
-      </h2>
+        <h2 className={`text-sm font-medium ${
+          isDarkMode ? 'text-white/60' : 'text-black/60'
+        }`}>
+          Información del Resguardo
+        </h2>
+      </div>
 
       {selectedBaja ? (
         <>
-          <div className="space-y-4">
-            <div>
-              <label className={`block text-xs font-medium mb-2 ${
-                isDarkMode ? 'text-white/60' : 'text-black/60'
+          {/* Content - Sin scroll, todos los elementos se adaptan proporcionalmente */}
+          <div className="flex-1 px-4 py-3 flex flex-col gap-3 overflow-hidden">
+            {/* Folio Resguardo y Folio(s) Baja - En una sola fila - flex-[2] */}
+            <div className="grid grid-cols-2 gap-2 flex-[2]">
+              {/* Folio Resguardo */}
+              <div className={`rounded-lg border p-2.5 flex flex-col justify-center ${
+                isDarkMode
+                  ? 'bg-white/[0.02] border-white/10'
+                  : 'bg-black/[0.02] border-black/10'
               }`}>
-                Folio Resguardo
-              </label>
-              <div className={`text-lg font-medium flex items-center gap-2 ${
-                isDarkMode ? 'text-blue-400' : 'text-blue-600'
+                <div className="flex items-center gap-1.5 mb-1">
+                  <FileDigit className={`h-3 w-3 ${
+                    isDarkMode ? 'text-white/40' : 'text-black/40'
+                  }`} />
+                  <span className={`text-xs uppercase font-medium ${
+                    isDarkMode ? 'text-white/40' : 'text-black/40'
+                  }`}>
+                    Folio Resguardo
+                  </span>
+                </div>
+                <div className={`text-sm font-semibold ${
+                  isDarkMode ? 'text-white' : 'text-black'
+                }`}>
+                  {selectedBaja.folio_resguardo}
+                </div>
+              </div>
+
+              {/* Folio(s) Baja */}
+              <div className={`rounded-lg border p-2.5 flex flex-col justify-center ${
+                isDarkMode
+                  ? 'bg-white/[0.02] border-white/10'
+                  : 'bg-black/[0.02] border-black/10'
               }`}>
-                <FileDigit className="h-5 w-5" />
-                {selectedBaja.folio_resguardo}
+                <div className="flex items-center gap-1.5 mb-1">
+                  <FileText className={`h-3 w-3 ${
+                    isDarkMode ? 'text-white/40' : 'text-black/40'
+                  }`} />
+                  <span className={`text-xs uppercase font-medium ${
+                    isDarkMode ? 'text-white/40' : 'text-black/40'
+                  }`}>
+                    {Array.from(new Set(selectedBaja.articulos.map(a => a.folio_baja))).length > 1 ? 'Folios Baja' : 'Folio Baja'}
+                  </span>
+                </div>
+                <div className={`text-sm font-semibold ${
+                  isDarkMode ? 'text-white' : 'text-black'
+                }`}>
+                  {Array.from(new Set(selectedBaja.articulos.map(a => a.folio_baja))).join(', ')}
+                </div>
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className={`block text-xs font-medium mb-2 ${
-                  isDarkMode ? 'text-white/60' : 'text-black/60'
+            {/* Fecha y Artículos - En una sola fila - flex-[2] */}
+            <div className="grid grid-cols-2 gap-2 flex-[2]">
+
+              {/* Fecha */}
+              <div className={`rounded-lg border p-2.5 flex flex-col justify-center ${
+                isDarkMode
+                  ? 'bg-white/[0.02] border-white/10'
+                  : 'bg-black/[0.02] border-black/10'
+              }`}>
+                <div className="flex items-center gap-1.5 mb-1">
+                  <Calendar className={`h-3 w-3 ${
+                    isDarkMode ? 'text-white/40' : 'text-black/40'
+                  }`} />
+                  <span className={`text-xs uppercase font-medium ${
+                    isDarkMode ? 'text-white/40' : 'text-black/40'
+                  }`}>
+                    Fecha
+                  </span>
+                </div>
+                <div className={`text-sm font-medium ${
+                  isDarkMode ? 'text-white' : 'text-black'
                 }`}>
-                  Fecha
-                </label>
-                <div className={`text-sm flex items-center gap-2 ${
-                  isDarkMode ? 'text-white/80' : 'text-black/80'
-                }`}>
-                  <Calendar className="h-4 w-4" />
                   {selectedBaja.f_resguardo.slice(0, 10).split('-').reverse().join('/')}
                 </div>
               </div>
-              <div>
-                <label className={`block text-xs font-medium mb-2 ${
-                  isDarkMode ? 'text-white/60' : 'text-black/60'
-                }`}>
-                  Artículos
-                </label>
-                <div className={`text-sm ${
-                  isDarkMode ? 'text-white/80' : 'text-black/80'
+
+              {/* Artículos */}
+              <div className={`rounded-lg border p-2.5 flex flex-col justify-center ${
+                isDarkMode
+                  ? 'bg-white/[0.02] border-white/10'
+                  : 'bg-black/[0.02] border-black/10'
+              }`}>
+                <div className="flex items-center gap-1.5 mb-1">
+                  <Package className={`h-3 w-3 ${
+                    isDarkMode ? 'text-white/40' : 'text-black/40'
+                  }`} />
+                  <span className={`text-xs uppercase font-medium ${
+                    isDarkMode ? 'text-white/40' : 'text-black/40'
+                  }`}>
+                    Artículos
+                  </span>
+                </div>
+                <div className={`text-sm font-medium ${
+                  isDarkMode ? 'text-white' : 'text-black'
                 }`}>
                   {selectedBaja.articulos.length}
                 </div>
               </div>
             </div>
 
-            <div>
-              <label className={`block text-xs font-medium mb-2 ${
-                isDarkMode ? 'text-white/60' : 'text-black/60'
+            {/* Director - flex-[2] */}
+            <div className={`rounded-lg border p-2.5 flex-[2] flex flex-col justify-center ${
+              isDarkMode
+                ? 'bg-white/[0.02] border-white/10'
+                : 'bg-black/[0.02] border-black/10'
+            }`}>
+              <div className="flex items-center gap-1.5 mb-1.5">
+                <Building2 className={`h-3 w-3 ${
+                  isDarkMode ? 'text-white/40' : 'text-black/40'
+                }`} />
+                <span className={`text-xs uppercase font-medium ${
+                  isDarkMode ? 'text-white/40' : 'text-black/40'
+                }`}>
+                  Responsable
+                </span>
+              </div>
+              <div className={`text-sm font-medium leading-relaxed ${
+                isDarkMode ? 'text-white' : 'text-black'
               }`}>
-                Director de Área
-              </label>
-              <div className={`text-sm flex items-center gap-2 ${
-                isDarkMode ? 'text-white/80' : 'text-black/80'
-              }`}>
-                <Building2 className="h-4 w-4" />
                 {selectedBaja.dir_area}
               </div>
-              <div className={`text-xs mt-1 ${
-                isDarkMode ? 'text-white/60' : 'text-black/60'
+            </div>
+
+            {/* Área - flex-[1.5] */}
+            {selectedBaja.area_resguardo && (
+              <div className={`rounded-lg border p-2.5 flex-[1.5] flex flex-col justify-center ${
+                isDarkMode
+                  ? 'bg-white/[0.02] border-white/10'
+                  : 'bg-black/[0.02] border-black/10'
               }`}>
-                {selectedBaja.area_resguardo}
+                <div className="flex items-center gap-1.5 mb-1">
+                  <Building2 className={`h-3 w-3 ${
+                    isDarkMode ? 'text-white/40' : 'text-black/40'
+                  }`} />
+                  <span className={`text-xs uppercase font-medium ${
+                    isDarkMode ? 'text-white/40' : 'text-black/40'
+                  }`}>
+                    Área
+                  </span>
+                </div>
+                <div className={`text-sm font-medium ${
+                  isDarkMode ? 'text-white' : 'text-black'
+                }`}>
+                  {selectedBaja.area_resguardo}
+                </div>
+              </div>
+            )}
+
+            {/* Resguardantes - flex-[3] para más espacio con scroll interno */}
+            <div className={`rounded-lg border p-2.5 flex-[3] flex flex-col overflow-hidden ${
+              isDarkMode
+                ? 'bg-white/[0.02] border-white/10'
+                : 'bg-black/[0.02] border-black/10'
+            }`}>
+              <div className="flex items-center gap-1.5 mb-2 flex-shrink-0">
+                <User className={`h-3 w-3 ${
+                  isDarkMode ? 'text-white/40' : 'text-black/40'
+                }`} />
+                <span className={`text-xs uppercase font-medium ${
+                  isDarkMode ? 'text-white/40' : 'text-black/40'
+                }`}>
+                  Resguardantes ({Array.from(new Set(selectedBaja.articulos.map(a => a.usufinal || 'Sin asignar'))).length})
+                </span>
+              </div>
+              <div className="flex flex-col gap-1.5 overflow-y-auto flex-1">
+                {Array.from(new Set(selectedBaja.articulos.map(a => a.usufinal || 'Sin asignar'))).map((resguardante, idx) => (
+                  <div
+                    key={idx}
+                    className={`flex items-center gap-2 px-2.5 py-1.5 rounded border text-sm flex-shrink-0 ${
+                      isDarkMode
+                        ? 'bg-white/5 border-white/10 text-white'
+                        : 'bg-black/5 border-black/10 text-black'
+                    }`}
+                  >
+                    <div className={`h-1.5 w-1.5 rounded-full flex-shrink-0 ${
+                      isDarkMode ? 'bg-white' : 'bg-black'
+                    }`} />
+                    <span className="font-medium">{resguardante}</span>
+                  </div>
+                ))}
               </div>
             </div>
 
-            <div>
-              <label className={`block text-xs font-medium mb-2 ${
-                isDarkMode ? 'text-white/60' : 'text-black/60'
-              }`}>
-                Puesto
-              </label>
-              <div className={`text-sm flex items-center gap-2 ${
-                isDarkMode ? 'text-white/80' : 'text-black/80'
-              }`}>
-                <User className="h-4 w-4" />
-                {selectedBaja.puesto}
-              </div>
-            </div>
-
-            <div>
-              <label className={`block text-xs font-medium mb-2 ${
-                isDarkMode ? 'text-white/60' : 'text-black/60'
-              }`}>
-                Resguardantes
-              </label>
-              <div className="flex flex-wrap gap-2">
-                {Array.from(new Set(selectedBaja.articulos.map(a => a.usufinal || 'Sin asignar'))).map((resguardante, idx) => {
-                  const color = isDarkMode
-                    ? colorPaletteDark[idx % colorPaletteDark.length]
-                    : colorPaletteLight[idx % colorPaletteLight.length];
-                  return (
-                    <span
-                      key={idx}
-                      className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-gradient-to-r ${color} border shadow-md transition-all duration-200 hover:scale-105 tracking-tight`}
-                    >
-                      <User className="h-3.5 w-3.5 mr-1 opacity-80" />
-                      {resguardante}
-                    </span>
-                  );
-                })}
-              </div>
+            {/* Actions - flex-[1] */}
+            <div className="grid grid-cols-2 gap-2 flex-[1]">
+              <button
+                onClick={onGeneratePDF}
+                disabled={isGeneratingPDF}
+                className={`py-2 px-3 border rounded-lg transition-colors flex items-center justify-center gap-1.5 text-sm font-medium ${
+                  isGeneratingPDF
+                    ? isDarkMode
+                      ? 'bg-white/5 text-white/40 border-white/10 cursor-not-allowed'
+                      : 'bg-black/5 text-black/40 border-black/10 cursor-not-allowed'
+                    : isDarkMode
+                      ? 'bg-white/5 hover:bg-white/10 text-white border-white/10'
+                      : 'bg-black/5 hover:bg-black/10 text-black border-black/10'
+                }`}
+              >
+                {isGeneratingPDF ? (
+                  <>
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                    <span>Preparando...</span>
+                  </>
+                ) : (
+                  <>
+                    <Download className="h-3.5 w-3.5" />
+                    <span>{selectedItemsCount > 0 ? `PDF (${selectedItemsCount})` : 'PDF'}</span>
+                  </>
+                )}
+              </button>
+              <RoleGuard roles={["admin", "superadmin"]} userRole={userRole ?? undefined}>
+                <button
+                  onClick={onDeleteFolio}
+                  disabled={isDeleting}
+                  className={`py-2 px-3 border rounded-lg transition-colors flex items-center justify-center gap-1.5 text-sm font-medium ${
+                    isDeleting
+                      ? isDarkMode
+                        ? 'bg-white/5 text-white/40 border-white/10 cursor-not-allowed'
+                        : 'bg-black/5 text-black/40 border-black/10 cursor-not-allowed'
+                      : isDarkMode
+                        ? 'bg-white/5 hover:bg-white/10 text-white border-white/10'
+                        : 'bg-black/5 hover:bg-black/10 text-black border-black/10'
+                  }`}
+                >
+                  {isDeleting ? (
+                    <>
+                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                      <span>Borrando...</span>
+                    </>
+                  ) : (
+                    <>
+                      <X className="h-3.5 w-3.5" />
+                      <span>Borrar</span>
+                    </>
+                  )}
+                </button>
+              </RoleGuard>
             </div>
           </div>
-
-          <button
-            onClick={onGeneratePDF}
-            className={`mt-6 w-full py-2.5 border rounded-lg transition-colors flex items-center justify-center gap-2 ${
-              isDarkMode
-                ? 'bg-blue-600 hover:bg-blue-500 text-white border-blue-600'
-                : 'bg-blue-600 hover:bg-blue-700 text-white border-blue-600'
-            }`}
-          >
-            <Download className="h-4 w-4" />
-            Generar PDF de {selectedItemsCount > 0 ? 'Artículos Seleccionados' : 'Baja Completa'}
-          </button>
-
-          <RoleGuard roles={["admin", "superadmin"]} userRole={userRole ?? undefined}>
-            <button
-              onClick={onDeleteFolio}
-              className={`mt-2 w-full py-2.5 border rounded-lg transition-colors flex items-center justify-center gap-2 ${
-                isDarkMode
-                  ? 'bg-red-600 hover:bg-red-500 text-white border-red-600'
-                  : 'bg-red-600 hover:bg-red-700 text-white border-red-600'
-              }`}
-            >
-              <X className="h-4 w-4" />
-              Eliminar Folio Completo
-            </button>
-          </RoleGuard>
         </>
       ) : (
-        <div className={`flex flex-col items-center justify-center h-full min-h-[200px] ${
-          isDarkMode ? 'text-white/60' : 'text-black/60'
+        <div className={`flex-1 flex flex-col items-center justify-center p-8 ${
+          isDarkMode ? 'text-white/40' : 'text-black/40'
         }`}>
-          <Info className={`h-12 w-12 mb-2 ${
-            isDarkMode ? 'text-white/20' : 'text-black/20'
-          }`} />
-          <p className="text-sm">Seleccione una baja</p>
+          <FileText className="h-12 w-12 mb-3" />
+          <p className="text-sm">Seleccione un resguardo</p>
           <p className="text-xs mt-1">Haga clic en un folio para ver los detalles</p>
         </div>
       )}

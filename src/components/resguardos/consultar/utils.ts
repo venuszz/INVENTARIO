@@ -38,7 +38,7 @@ export async function getExactArticulo(
 
 /**
  * Clear resguardo-related fields in muebles table
- * Sets resguardante to empty string (not null)
+ * Sets id_area and id_directorio to null (clearing assignment)
  * @param id_inv - Inventory number
  * @param origen - Source (INEA, ITEA, or NO_LISTADO)
  */
@@ -46,25 +46,42 @@ export async function limpiarDatosArticulo(
   id_inv: string,
   origen: string
 ): Promise<void> {
+  console.log('🧹 [LIMPIAR] Iniciando limpiarDatosArticulo');
+  console.log('📋 [LIMPIAR] Parámetros:', { id_inv, origen });
+
   try {
     // Determine which table to update based on origen
     const tabla = origen === 'ITEA' ? 'itea' : 
-                 origen === 'NO_LISTADO' ? 'no_listado' : 
+                 origen === 'NO_LISTADO' || origen === 'TLAXCALA' ? 'mueblestlaxcala' : 
                  'inea';
     
-    const { error } = await supabase
+    console.log('📊 [LIMPIAR] Tabla determinada:', tabla);
+    console.log('🔄 [LIMPIAR] Actualizando registro con id_inv:', id_inv);
+    
+    const { data, error } = await supabase
       .from(tabla)
       .update({ 
-        resguardante: '' 
+        id_area: null,
+        id_directorio: null
       })
-      .eq('id_inv', id_inv);
+      .eq('id_inv', id_inv)
+      .select();
 
     if (error) {
-      console.error('Error clearing article data:', error);
+      console.error('❌ [LIMPIAR] Error al actualizar:', error);
+      console.error('📊 [LIMPIAR] Detalles del error:', {
+        code: error.code,
+        message: error.message,
+        details: error.details,
+        hint: error.hint
+      });
       throw error;
     }
+
+    console.log('✅ [LIMPIAR] Registro actualizado exitosamente');
+    console.log('📦 [LIMPIAR] Datos actualizados:', data);
   } catch (error) {
-    console.error('Error in limpiarDatosArticulo:', error);
+    console.error('❌ [LIMPIAR] ERROR CRÍTICO en limpiarDatosArticulo:', error);
     throw error;
   }
 }

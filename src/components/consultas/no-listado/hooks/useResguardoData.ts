@@ -41,7 +41,7 @@ export function useResguardoData(muebles: Mueble[]) {
                     f_resguardo: r.f_resguardo,
                     area_resguardo: areaNombre,
                     dir_area: r.director_nombre || '',
-                    puesto: r.puesto_resguardo || '',
+                    puesto: r.director_puesto || '',
                     origen: r.origen,
                     usufinal: '', // Legacy field, not used in new structure
                     descripcion: '', // Not stored at resguardo level

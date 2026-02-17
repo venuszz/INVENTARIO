@@ -71,7 +71,8 @@ export function useResguardoDetails(): UseResguardoDetailsReturn {
           folio: firstItem.folio,
           fecha: firstItem.f_resguardo,
           director: firstItem.director_nombre || '',
-          area_nombre: firstItem.area_nombre || ''
+          area_nombre: firstItem.area_nombre || '',
+          puesto: firstItem.director_puesto || ''
         };
 
         // Map articles - get mueble details from inventory stores

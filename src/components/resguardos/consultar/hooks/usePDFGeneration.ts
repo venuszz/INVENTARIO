@@ -90,7 +90,6 @@ export function usePDFGeneration(): UsePDFGenerationReturn {
           ),
           id_mueble,
           origen,
-          puesto_resguardo,
           resguardante,
           created_by
         `)
@@ -186,7 +185,7 @@ export function usePDFGeneration(): UsePDFGenerationReturn {
         fecha: fechaLocal.toLocaleDateString(),
         director: (firstItem.directorio as any)?.nombre || '',
         area: areaNombre,
-        puesto: firstItem.puesto_resguardo || (firstItem.directorio as any)?.puesto || '',
+        puesto: (firstItem.directorio as any)?.puesto || '',
         resguardante: resguardante || firstItem.resguardante || '',
         articulos: articulosWithDetails,
         firmas: firmas
@@ -239,7 +238,6 @@ export function usePDFGeneration(): UsePDFGenerationReturn {
           ),
           id_mueble,
           origen,
-          puesto_resguardo,
           resguardante,
           created_by
         `)
@@ -287,7 +285,7 @@ export function usePDFGeneration(): UsePDFGenerationReturn {
         fecha: new Date().toLocaleDateString(),
         director: (firstItem.directorio as any)?.nombre || '',
         area: areaNombre,
-        puesto: firstItem.puesto_resguardo || (firstItem.directorio as any)?.puesto || '',
+        puesto: (firstItem.directorio as any)?.puesto || '',
         resguardante: firstItem.resguardante || '',
         articulos: articulos.map(art => ({
           ...art,

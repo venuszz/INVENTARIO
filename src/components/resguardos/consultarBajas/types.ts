@@ -97,7 +97,7 @@ export interface ItemToDelete {
 /**
  * Search match types for unified search
  */
-export type SearchMatchType = 'folioResguardo' | 'folioBaja' | 'director' | 'resguardante' | 'fecha' | null;
+export type SearchMatchType = 'folioResguardo' | 'folioBaja' | 'numInventario' | 'director' | 'area' | 'resguardante' | 'fecha' | null;
 
 /**
  * Active filter structure

@@ -23,6 +23,7 @@ export function useResguardosIndexation() {
     updateRealtimeConnection, updateReconnectionStatus,
     incrementReconnectionAttempts, resetReconnectionAttempts,
     setDisconnectedAt, updateLastEventReceived, initializeModule,
+    addRealtimeChange,
   } = useIndexationStore();
   
   const { resguardos, setResguardos, addResguardo, updateResguardo, removeResguardo, isCacheValid } = useResguardosStore();
@@ -54,7 +55,8 @@ export function useResguardosIndexation() {
                   .select(`
                     *,
                     directorio:id_directorio (
-                      nombre
+                      nombre,
+                      puesto
                     ),
                     area:id_area (
                       nombre
@@ -67,11 +69,19 @@ export function useResguardosIndexation() {
                   const resguardoWithRelations = {
                     ...rest,
                     director_nombre: directorio?.nombre || '',
+                    director_puesto: directorio?.puesto || '',
                     area_nombre: area?.nombre || '',
                     created_by_nombre: ''
                   };
                   addResguardo(resguardoWithRelations);
                   resguardosEmitter.emit({ type: 'INSERT', data: resguardoWithRelations, timestamp: new Date().toISOString() });
+                  addRealtimeChange({
+                    moduleKey: MODULE_KEY,
+                    moduleName: 'Resguardos',
+                    table: TABLE,
+                    eventType: 'INSERT',
+                    recordId: resguardoWithRelations.id,
+                  });
                 }
                 break;
               }
@@ -81,7 +91,8 @@ export function useResguardosIndexation() {
                   .select(`
                     *,
                     directorio:id_directorio (
-                      nombre
+                      nombre,
+                      puesto
                     ),
                     area:id_area (
                       nombre
@@ -94,11 +105,19 @@ export function useResguardosIndexation() {
                   const resguardoWithRelations = {
                     ...rest,
                     director_nombre: directorio?.nombre || '',
+                    director_puesto: directorio?.puesto || '',
                     area_nombre: area?.nombre || '',
                     created_by_nombre: ''
                   };
                   updateResguardo(resguardoWithRelations.id, resguardoWithRelations);
                   resguardosEmitter.emit({ type: 'UPDATE', data: resguardoWithRelations, timestamp: new Date().toISOString() });
+                  addRealtimeChange({
+                    moduleKey: MODULE_KEY,
+                    moduleName: 'Resguardos',
+                    table: TABLE,
+                    eventType: 'UPDATE',
+                    recordId: resguardoWithRelations.id,
+                  });
                 }
                 break;
               }
@@ -106,6 +125,13 @@ export function useResguardosIndexation() {
                 if (oldRecord?.id) {
                   removeResguardo(oldRecord.id);
                   resguardosEmitter.emit({ type: 'DELETE', data: oldRecord, timestamp: new Date().toISOString() });
+                  addRealtimeChange({
+                    moduleKey: MODULE_KEY,
+                    moduleName: 'Resguardos',
+                    table: TABLE,
+                    eventType: 'DELETE',
+                    recordId: oldRecord.id,
+                  });
                 }
                 break;
               }
@@ -131,7 +157,7 @@ export function useResguardosIndexation() {
       .subscribe();
     
     channelRef.current = channel;
-  }, [indexationState?.realtimeConnected, updateRealtimeConnection, updateLastEventReceived, setDisconnectedAt, addResguardo, updateResguardo, removeResguardo]);
+  }, [indexationState?.realtimeConnected, updateRealtimeConnection, updateLastEventReceived, setDisconnectedAt, addResguardo, updateResguardo, removeResguardo, addRealtimeChange]);
   
   const indexData = useCallback(async () => {
     if (isIndexingRef.current) return;
@@ -158,7 +184,8 @@ export function useResguardosIndexation() {
               .select(`
                 *,
                 directorio:id_directorio (
-                  nombre
+                  nombre,
+                  puesto
                 ),
                 area:id_area (
                   nombre
@@ -167,12 +194,13 @@ export function useResguardosIndexation() {
               .range(offset, offset + BATCH_SIZE - 1);
             if (error) throw error;
             
-            // Map the data to include director_nombre and area_nombre
+            // Map the data to include director_nombre, director_puesto and area_nombre
             return (data || []).map((record: any) => {
               const { directorio, area, ...rest } = record;
               return {
                 ...rest,
                 director_nombre: directorio?.nombre || '',
+                director_puesto: directorio?.puesto || '',
                 area_nombre: area?.nombre || '',
                 created_by_nombre: '' // Will be populated from processing
               };

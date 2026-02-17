@@ -36,7 +36,7 @@ export async function POST(request: Request) {
     // Validate all required fields (resguardante is optional)
     for (const resguardo of resguardos) {
       if (!resguardo.folio || !resguardo.f_resguardo || !resguardo.id_directorio || 
-          !resguardo.id_mueble || !resguardo.origen || !resguardo.puesto_resguardo || 
+          !resguardo.id_mueble || !resguardo.origen || 
           !resguardo.id_area) {
         console.error('Missing required fields:', {
           folio: !!resguardo.folio,
@@ -44,7 +44,6 @@ export async function POST(request: Request) {
           id_directorio: !!resguardo.id_directorio,
           id_mueble: !!resguardo.id_mueble,
           origen: !!resguardo.origen,
-          puesto_resguardo: !!resguardo.puesto_resguardo,
           id_area: !!resguardo.id_area,
           resguardante: !!resguardo.resguardante
         });
@@ -68,7 +67,8 @@ export async function POST(request: Request) {
       .select(`
         *,
         directorio!inner (
-          nombre
+          nombre,
+          puesto
         ),
         area!inner (
           nombre
@@ -83,12 +83,13 @@ export async function POST(request: Request) {
       );
     }
 
-    // Map the data to include director_nombre and area_nombre
+    // Map the data to include director_nombre, director_puesto and area_nombre
     const mappedData = (data || []).map((record: any) => {
       const { directorio, area, ...rest } = record;
       return {
         ...rest,
         director_nombre: directorio?.nombre || '',
+        director_puesto: directorio?.puesto || '',
         area_nombre: area?.nombre || ''
       };
     });

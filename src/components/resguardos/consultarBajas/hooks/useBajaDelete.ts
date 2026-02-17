@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import supabase from '@/app/lib/supabase/client';
+import { useSession } from '@/hooks/useSession';
 import type { ResguardoBajaArticulo, PdfDataBaja } from '../types';
 
 interface UseBajaDeleteProps {
@@ -12,16 +12,28 @@ export function useBajaDelete({ allBajas, selectedBaja, onSuccess }: UseBajaDele
   const [deleting, setDeleting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [pdfBajaData, setPdfBajaData] = useState<PdfDataBaja | null>(null);
+  const { user } = useSession();
 
   const deleteFolio = async (folioResguardo: string) => {
     setDeleting(true);
     try {
-      const result = await supabase
-        .from('resguardos_bajas')
-        .delete()
-        .eq('folio_resguardo', folioResguardo);
+      const response = await fetch('/api/resguardos/bajas/delete', {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          type: 'folio',
+          folioResguardo,
+          userId: user?.id,
+        }),
+      });
 
-      if (result.error) throw result.error;
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Error al eliminar el folio');
+      }
 
       // Generate PDF data after deletion
       const folioBajaArticulos = allBajas.filter(b => b.folio_resguardo === folioResguardo);
@@ -32,7 +44,7 @@ export function useBajaDelete({ allBajas, selectedBaja, onSuccess }: UseBajaDele
       onSuccess();
       setError(null);
     } catch (err) {
-      setError('Error al eliminar el folio');
+      setError(err instanceof Error ? err.message : 'Error al eliminar el folio');
       console.error(err);
     } finally {
       setDeleting(false);
@@ -43,18 +55,29 @@ export function useBajaDelete({ allBajas, selectedBaja, onSuccess }: UseBajaDele
     setDeleting(true);
     try {
       const ids = articulos.map(art => art.id);
-      const result = await supabase
-        .from('resguardos_bajas')
-        .delete()
-        .in('id', ids);
+      
+      const response = await fetch('/api/resguardos/bajas/delete', {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          type: 'selected',
+          ids,
+          userId: user?.id,
+        }),
+      });
 
-      if (result.error) throw result.error;
+      const data = await response.json();
 
-      // Notification removed
+      if (!response.ok) {
+        throw new Error(data.error || 'Error al eliminar los artículos seleccionados');
+      }
+
       onSuccess();
       setError(null);
     } catch (err) {
-      setError('Error al eliminar los artículos seleccionados');
+      setError(err instanceof Error ? err.message : 'Error al eliminar los artículos seleccionados');
       console.error(err);
     } finally {
       setDeleting(false);
@@ -64,18 +87,28 @@ export function useBajaDelete({ allBajas, selectedBaja, onSuccess }: UseBajaDele
   const deleteSingle = async (articulo: ResguardoBajaArticulo) => {
     setDeleting(true);
     try {
-      const result = await supabase
-        .from('resguardos_bajas')
-        .delete()
-        .eq('id', articulo.id);
+      const response = await fetch('/api/resguardos/bajas/delete', {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          type: 'single',
+          ids: [articulo.id],
+          userId: user?.id,
+        }),
+      });
 
-      if (result.error) throw result.error;
+      const data = await response.json();
 
-      // Notification removed
+      if (!response.ok) {
+        throw new Error(data.error || 'Error al eliminar el artículo');
+      }
+
       onSuccess();
       setError(null);
     } catch (err) {
-      setError('Error al eliminar el artículo');
+      setError(err instanceof Error ? err.message : 'Error al eliminar el artículo');
       console.error(err);
     } finally {
       setDeleting(false);

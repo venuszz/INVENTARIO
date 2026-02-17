@@ -394,7 +394,7 @@ export async function generateBajaPDF({
             });
         });
 
-        yPos -= 50;
+        yPos -= 55;
 
         const infoLines = [
             `FOLIO DE RESGUARDO ORIGINAL:  ${encabezado.folio_resguardo}`,
@@ -449,7 +449,7 @@ export async function generateBajaPDF({
                 y: lineY - 15,
                 size: signatureFontSize,
                 font: regularFont,
-                color: rgb(0.2, 0.2, 0.2)
+                color: rgb(0, 0, 0)
             });
 
             page.drawText(normalizeText(firma.puesto?.toUpperCase() || ''), {
@@ -457,7 +457,7 @@ export async function generateBajaPDF({
                 y: lineY - 30,
                 size: signatureFontSize,
                 font: regularFont,
-                color: rgb(0.2, 0.2, 0.2)
+                color: rgb(0, 0, 0)
             });
         }
 
@@ -480,15 +480,27 @@ export async function generateBajaPDF({
             y: lineY - 15,
             size: signatureFontSize,
             font: regularFont,
-            color: rgb(0.2, 0.2, 0.2)
+            color: rgb(0, 0, 0)
         });
-        const puestoArea = `${encabezado.puesto?.toUpperCase() || ''} DE ${encabezado.area?.toUpperCase() || ''}`;
-        page.drawText(normalizeText(puestoArea), {
-            x: xPos + (signatureBoxWidth / 2) - (regularFont.widthOfTextAtSize(puestoArea, signatureFontSize) / 2),
+        
+        // Puesto and Area on separate lines (same as resguardo PDF)
+        const puestoText = encabezado.puesto?.toUpperCase() || '';
+        const areaText = encabezado.area?.toUpperCase() || '';
+        
+        page.drawText(normalizeText(puestoText), {
+            x: xPos + (signatureBoxWidth / 2) - (regularFont.widthOfTextAtSize(puestoText, signatureFontSize) / 2),
             y: lineY - 30,
             size: signatureFontSize,
             font: regularFont,
-            color: rgb(0.2, 0.2, 0.2)
+            color: rgb(0, 0, 0)
+        });
+        
+        page.drawText(normalizeText(areaText), {
+            x: xPos + (signatureBoxWidth / 2) - (regularFont.widthOfTextAtSize(areaText, signatureFontSize) / 2),
+            y: lineY - 42,
+            size: signatureFontSize,
+            font: regularFont,
+            color: rgb(0, 0, 0)
         });
 
         return signatureSectionY;

@@ -91,8 +91,8 @@ const ConsultarBajasResguardos = () => {
     allBajas, 
     selectedBaja, 
     onSuccess: () => {
-      refetchBajas();
       clearSelection();
+      refetchBajas();
     }
   });
 
@@ -102,7 +102,8 @@ const ConsultarBajasResguardos = () => {
     error: pdfError,
     preparePDFData,
     generatePDF: generatePDFHook,
-    clearPDFData
+    clearPDFData,
+    loadFirmas
   } = usePDFGeneration();
 
   const {
@@ -125,6 +126,11 @@ const ConsultarBajasResguardos = () => {
   // Combined loading and error states
   const loading = bajasLoading || detailsLoading || deleting || generating;
   const error = bajasError || detailsError || deleteError || pdfError;
+
+  // Effect: Pre-load firmas on mount
+  useEffect(() => {
+    loadFirmas();
+  }, [loadFirmas]);
 
   // Effect: Load folio from URL parameter
   useEffect(() => {
@@ -173,10 +179,10 @@ const ConsultarBajasResguardos = () => {
     fetchBajas();
   }, [clearSelection, clearPDFData, clearDeletePdfData, fetchBajas]);
 
-  const handleGeneratePDF = useCallback(async () => {
+  const handleGeneratePDF = useCallback(() => {
     if (!selectedBaja) return;
     
-    await preparePDFData(selectedBaja, selectedItems);
+    preparePDFData(selectedBaja, selectedItems);
     setShowPDFModal(true);
   }, [selectedBaja, selectedItems, preparePDFData]);
 
@@ -188,6 +194,7 @@ const ConsultarBajasResguardos = () => {
 
   const handleDeleteSelected = useCallback(() => {
     if (!selectedBaja) return;
+    
     const selectedArticulos = selectedBaja.articulos.filter(art => selectedItems[art.id]);
     setDeleteType('selected');
     setItemToDelete({ articulos: selectedArticulos });
@@ -256,17 +263,23 @@ const ConsultarBajasResguardos = () => {
         columns.splice(1, 0, { header: 'Folio Baja', key: 'folio_baja' });
       }
       const firmas = pdfBajaData.firmas ?? [];
+      
+      // Map NO_LISTADO to TLAXCALA for display (same as resguardo PDF)
       const pdfData = pdfBajaData.articulos.map(a => ({
         id_inv: a.id_inv,
         descripcion: a.descripcion,
         rubro: a.rubro,
         estado: a.estado,
-        origen: a.origen || '',
+        origen: a.origen === 'NO_LISTADO' ? 'TLAXCALA' : (a.origen || ''),
         resguardante: a.resguardante,
         folio_baja: a.folio_baja
       }));
-      const title = `BAJA DE RESGUARDO FOLIO ${pdfBajaData.folio_baja}`;
-      const fileName = `baja_${pdfBajaData.folio_baja}`;
+      
+      const title = foliosBaja.length > 1
+        ? `BAJA DE RESGUARDO FOLIOS ${pdfBajaData.folio_baja}`
+        : `BAJA DE RESGUARDO FOLIO ${pdfBajaData.folio_baja}`;
+      const fileName = `baja_${pdfBajaData.folio_baja.replace(/,\s*/g, '_')}`;
+      
       await generateBajaPDF({
         data: pdfData,
         columns,
@@ -376,6 +389,8 @@ const ConsultarBajasResguardos = () => {
               selectedItemsCount={selectedCount}
               onGeneratePDF={handleGeneratePDF}
               onDeleteFolio={() => selectedBaja && handleDeleteFolio(selectedBaja.folio_resguardo)}
+              isGeneratingPDF={generating}
+              isDeleting={deleting}
               userRole={userRole ?? null}
               isDarkMode={isDarkMode}
             />

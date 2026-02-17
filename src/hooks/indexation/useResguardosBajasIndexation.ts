@@ -22,6 +22,7 @@ export function useResguardosBajasIndexation() {
     updateRealtimeConnection, updateReconnectionStatus,
     incrementReconnectionAttempts, resetReconnectionAttempts,
     setDisconnectedAt, updateLastEventReceived, initializeModule,
+    addRealtimeChange,
   } = useIndexationStore();
   
   const { resguardos, setResguardos, addResguardo, updateResguardo, removeResguardo, isCacheValid } = useResguardosBajasStore();
@@ -109,6 +110,13 @@ export function useResguardosBajasIndexation() {
                 const { data, error } = await supabase.from(TABLE).select('*').eq('id', newRecord.id).single();
                 if (!error && data) {
                   addResguardo(data);
+                  addRealtimeChange({
+                    moduleKey: MODULE_KEY,
+                    moduleName: 'Resguardos Bajas',
+                    table: TABLE,
+                    eventType: 'INSERT',
+                    recordId: data.id,
+                  });
                 }
                 break;
               }
@@ -116,12 +124,26 @@ export function useResguardosBajasIndexation() {
                 const { data, error } = await supabase.from(TABLE).select('*').eq('id', newRecord.id).single();
                 if (!error && data) {
                   updateResguardo(data.id, data);
+                  addRealtimeChange({
+                    moduleKey: MODULE_KEY,
+                    moduleName: 'Resguardos Bajas',
+                    table: TABLE,
+                    eventType: 'UPDATE',
+                    recordId: data.id,
+                  });
                 }
                 break;
               }
               case 'DELETE': {
                 if (oldRecord?.id) {
                   removeResguardo(oldRecord.id);
+                  addRealtimeChange({
+                    moduleKey: MODULE_KEY,
+                    moduleName: 'Resguardos Bajas',
+                    table: TABLE,
+                    eventType: 'DELETE',
+                    recordId: oldRecord.id,
+                  });
                 }
                 break;
               }
@@ -147,7 +169,7 @@ export function useResguardosBajasIndexation() {
       .subscribe();
     
     channelRef.current = channel;
-  }, [indexationState?.realtimeConnected, updateRealtimeConnection, updateLastEventReceived, setDisconnectedAt, addResguardo, updateResguardo, removeResguardo]);
+  }, [indexationState?.realtimeConnected, updateRealtimeConnection, updateLastEventReceived, setDisconnectedAt, addResguardo, updateResguardo, removeResguardo, addRealtimeChange]);
   
   const handleReconnection = useCallback(async () => {
     const state = indexationState;

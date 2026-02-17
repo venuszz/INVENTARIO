@@ -1,14 +1,7 @@
-/**
- * Hook for managing resguardo deletion operations
- * Handles deletion of individual articles, multiple articles, and complete resguardos
- * Generates baja folios and moves records to resguardos_bajas table
- */
-
 import { useState, useCallback } from 'react';
-import supabase from '@/app/lib/supabase/client';
+import { useSession } from '@/hooks/useSession';
 import { useFolioGenerator } from '@/hooks/useFolioGenerator';
 import { ResguardoArticulo, PdfDataBaja, PdfFirma } from '../types';
-import { limpiarDatosArticulo } from '../utils';
 
 interface UseResguardoDeleteReturn {
   deleteArticulo: (
@@ -46,72 +39,95 @@ interface UseResguardoDeleteReturn {
   clearPdfBajaData: () => void;
 }
 
-/**
- * Custom hook for managing resguardo deletion operations
- * @param onSuccess - Callback to execute after successful deletion
- * @returns Object with deletion functions and state
- */
 export function useResguardoDelete(
   onSuccess: () => void
 ): UseResguardoDeleteReturn {
   const { generateFolio } = useFolioGenerator();
+  const { user } = useSession();
   const [deleting, setDeleting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [pdfBajaData, setPdfBajaData] = useState<PdfDataBaja | null>(null);
 
-  /**
-   * Move records to resguardos_bajas table
-   */
-  const moveToResguardosBajas = useCallback(async (
+  const processBajaViaAPI = useCallback(async (
     articulos: ResguardoArticulo[],
     folioResguardo: string,
     folioBaja: string,
     fecha: string,
     director: string,
     area: string,
-    puesto: string
+    puesto: string,
+    resguardante: string,
+    deleteByFolio: boolean = false
   ) => {
-    for (const articulo of articulos) {
-      await supabase
-        .from('resguardos_bajas')
-        .insert({
-          folio_resguardo: folioResguardo,
-          folio_baja: folioBaja,
-          f_resguardo: fecha,
-          area_resguardo: area,
-          dir_area: director,
-          num_inventario: articulo.num_inventario,
-          descripcion: articulo.descripcion,
-          rubro: articulo.rubro,
-          condicion: articulo.condicion,
-          usufinal: articulo.resguardante || '',
-          puesto: puesto,
-          origen: articulo.origen
-        });
+    if (!user || !user.id) {
+      throw new Error('No se pudo obtener el usuario actual. Por favor, inicia sesión nuevamente.');
     }
-  }, []);
 
-  /**
-   * Get firmas from database
-   */
+    const bajasData = articulos.map((articulo) => ({
+      folio_resguardo: folioResguardo,
+      folio_baja: folioBaja,
+      f_resguardo: fecha,
+      area_resguardo: area,
+      dir_area: director,
+      num_inventario: articulo.num_inventario,
+      descripcion: articulo.descripcion,
+      rubro: articulo.rubro,
+      condicion: articulo.condicion,
+      usufinal: resguardante,
+      puesto: puesto,
+      origen: articulo.origen
+    }));
+
+    const resguardosIds = articulos.map(art => art.id);
+    const mueblesData = articulos.map(art => ({
+      id_inv: art.num_inventario,
+      origen: art.origen
+    }));
+    
+    const response = await fetch('/api/resguardos/baja', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      credentials: 'include',
+      body: JSON.stringify({
+        bajasData,
+        resguardosIds: deleteByFolio ? [] : resguardosIds,
+        mueblesData,
+        deleteByFolio,
+        folio: folioResguardo,
+        userId: user.id
+      }),
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.error || 'Error al procesar la baja');
+    }
+
+    return await response.json();
+  }, [user]);
+
   const getFirmas = useCallback(async (): Promise<PdfFirma[] | undefined> => {
-    const { data, error: firmasError } = await supabase
-      .from('firmas')
-      .select('*')
-      .order('id', { ascending: true });
+    try {
+      const response = await fetch('/api/supabase-proxy?target=' + encodeURIComponent('/rest/v1/firmas?select=*&order=id.asc'), {
+        method: 'GET',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' }
+      });
 
-    if (firmasError) {
-      console.error('Error al obtener firmas:', firmasError);
+      if (!response.ok) {
+        return undefined;
+      }
+
+      const data = await response.json();
+      return data || undefined;
+    } catch (error) {
       return undefined;
     }
-
-    return data || undefined;
   }, []);
 
-  /**
-   * Delete a single article from a resguardo
-   */
   const deleteArticulo = useCallback(async (
     articulo: ResguardoArticulo,
     folio: string,
@@ -126,17 +142,22 @@ export function useResguardoDelete(
     setSuccess(null);
 
     try {
-      // Generate baja folio
       const folioBaja = await generateFolio('BAJA');
-
-      // Get firmas
       const firmas = await getFirmas();
 
-      // Move record to resguardos_bajas
-      await moveToResguardosBajas([articulo], folio, folioBaja, fecha, director, area, puesto);
+      await processBajaViaAPI(
+        [articulo], 
+        folio, 
+        folioBaja, 
+        fecha, 
+        director, 
+        area, 
+        puesto, 
+        resguardante,
+        false
+      );
 
-      // Prepare PDF baja data
-      setPdfBajaData({
+      const pdfData = {
         folioBaja: folioBaja,
         folioOriginal: folio,
         fecha: new Date().toLocaleDateString(),
@@ -155,32 +176,18 @@ export function useResguardoDelete(
           }
         ],
         firmas: firmas
-      });
-
-      // Delete record from resguardos by id
-      const { error: deleteError } = await supabase
-        .from('resguardos')
-        .delete()
-        .eq('id', articulo.id);
-
-      if (deleteError) throw deleteError;
-
-      // Clear resguardante in muebles table
-      await limpiarDatosArticulo(articulo.num_inventario || '', articulo.origen);
+      };
+      setPdfBajaData(pdfData);
 
       setSuccess('Artículo eliminado correctamente');
       onSuccess();
     } catch (err) {
-      console.error('Error al eliminar artículo:', err);
       setError('Error al procesar la baja del artículo');
     } finally {
       setDeleting(false);
     }
-  }, [generateFolio, getFirmas, moveToResguardosBajas, onSuccess]);
+  }, [generateFolio, getFirmas, processBajaViaAPI, onSuccess]);
 
-  /**
-   * Delete multiple selected articles from a resguardo
-   */
   const deleteSelected = useCallback(async (
     articulos: ResguardoArticulo[],
     folio: string,
@@ -195,17 +202,22 @@ export function useResguardoDelete(
     setSuccess(null);
 
     try {
-      // Generate baja folio
       const folioBaja = await generateFolio('BAJA');
-
-      // Get firmas
       const firmas = await getFirmas();
 
-      // Move records to resguardos_bajas
-      await moveToResguardosBajas(articulos, folio, folioBaja, fecha, director, area, puesto);
+      await processBajaViaAPI(
+        articulos, 
+        folio, 
+        folioBaja, 
+        fecha, 
+        director, 
+        area, 
+        puesto, 
+        resguardante,
+        false
+      );
 
-      // Prepare PDF baja data
-      setPdfBajaData({
+      const pdfData = {
         folioBaja: folioBaja,
         folioOriginal: folio,
         fecha: new Date().toLocaleDateString(),
@@ -222,34 +234,18 @@ export function useResguardoDelete(
           resguardante: art.resguardante || ''
         })),
         firmas: firmas
-      });
-
-      // Delete records from resguardos by id
-      for (const articulo of articulos) {
-        await supabase
-          .from('resguardos')
-          .delete()
-          .eq('id', articulo.id);
-      }
-
-      // Clear resguardante for each article
-      for (const articulo of articulos) {
-        await limpiarDatosArticulo(articulo.num_inventario || '', articulo.origen);
-      }
+      };
+      setPdfBajaData(pdfData);
 
       setSuccess('Artículos eliminados correctamente');
       onSuccess();
     } catch (err) {
-      console.error('Error al eliminar artículos seleccionados:', err);
       setError('Error al procesar la baja de los artículos seleccionados');
     } finally {
       setDeleting(false);
     }
-  }, [generateFolio, getFirmas, moveToResguardosBajas, onSuccess]);
+  }, [generateFolio, getFirmas, processBajaViaAPI, onSuccess]);
 
-  /**
-   * Delete all articles from a resguardo (complete resguardo deletion)
-   */
   const deleteAll = useCallback(async (
     articulos: ResguardoArticulo[],
     folio: string,
@@ -264,17 +260,22 @@ export function useResguardoDelete(
     setSuccess(null);
 
     try {
-      // Generate baja folio
       const folioBaja = await generateFolio('BAJA');
-
-      // Get firmas
       const firmas = await getFirmas();
 
-      // Move records to resguardos_bajas
-      await moveToResguardosBajas(articulos, folio, folioBaja, fecha, director, area, puesto);
+      await processBajaViaAPI(
+        articulos, 
+        folio, 
+        folioBaja, 
+        fecha, 
+        director, 
+        area, 
+        puesto, 
+        resguardante,
+        true
+      );
 
-      // Prepare PDF baja data
-      setPdfBajaData({
+      const pdfData = {
         folioBaja: folioBaja,
         folioOriginal: folio,
         fecha: new Date().toLocaleDateString(),
@@ -291,42 +292,23 @@ export function useResguardoDelete(
           resguardante: art.resguardante || ''
         })),
         firmas: firmas
-      });
-
-      // Delete all records from resguardos by folio
-      const { error: deleteError } = await supabase
-        .from('resguardos')
-        .delete()
-        .eq('folio', folio);
-
-      if (deleteError) throw deleteError;
-
-      // Clear resguardante for each article
-      for (const articulo of articulos) {
-        await limpiarDatosArticulo(articulo.num_inventario || '', articulo.origen);
-      }
+      };
+      setPdfBajaData(pdfData);
 
       setSuccess('Resguardo eliminado correctamente');
       onSuccess();
     } catch (err) {
-      console.error('Error al eliminar resguardo completo:', err);
       setError('Error al procesar la baja del resguardo');
     } finally {
       setDeleting(false);
     }
-  }, [generateFolio, getFirmas, moveToResguardosBajas, onSuccess]);
+  }, [generateFolio, getFirmas, processBajaViaAPI, onSuccess]);
 
-  /**
-   * Clear error and success messages
-   */
   const clearMessages = useCallback(() => {
     setError(null);
     setSuccess(null);
   }, []);
 
-  /**
-   * Clear PDF baja data
-   */
   const clearPdfBajaData = useCallback(() => {
     setPdfBajaData(null);
   }, []);

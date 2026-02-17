@@ -22,6 +22,7 @@ export interface ResguardoDetalle {
   fecha: string;
   director: string;
   area_nombre?: string; // Area name from JOIN with area table
+  puesto?: string; // Puesto from director (JOIN with directorio table)
 }
 
 /**

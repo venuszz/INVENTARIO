@@ -24,8 +24,16 @@ export function useBajasData({ activeFilters = [] }: UseBajasDataProps) {
         .from('resguardos_bajas')
         .select('*');
 
-      // Apply filters from activeFilters
-      activeFilters.forEach(filter => {
+      // Separate filters into DB-level and memory-level
+      const dbFilters = activeFilters.filter(f => 
+        f.type !== null && !['numInventario', 'area'].includes(f.type)
+      );
+      const memoryFilters = activeFilters.filter(f => 
+        f.type !== null && ['numInventario', 'area'].includes(f.type)
+      );
+
+      // Apply DB-level filters
+      dbFilters.forEach(filter => {
         const term = filter.term.trim().toUpperCase();
         switch (filter.type) {
           case 'folioResguardo':
@@ -50,12 +58,56 @@ export function useBajasData({ activeFilters = [] }: UseBajasDataProps) {
 
       if (queryError) throw queryError;
 
+      let filteredData = allData || [];
+
+      // Apply memory-level filters (numInventario and area)
+      // These need to filter at the folio level - if ANY item in a folio matches, include the folio
+      if (memoryFilters.length > 0) {
+        // Group by folio_resguardo
+        const folioGroups = new Map<string, typeof filteredData>();
+        filteredData.forEach(item => {
+          const folio = item.folio_resguardo;
+          if (!folioGroups.has(folio)) {
+            folioGroups.set(folio, []);
+          }
+          folioGroups.get(folio)!.push(item);
+        });
+
+        // Filter folios based on whether ANY item matches the criteria
+        const matchingFolios = new Set<string>();
+        
+        memoryFilters.forEach(filter => {
+          const term = filter.term.trim().toUpperCase();
+          
+          folioGroups.forEach((items, folio) => {
+            const hasMatch = items.some(item => {
+              if (filter.type === 'numInventario') {
+                return item.num_inventario?.toUpperCase().includes(term);
+              }
+              if (filter.type === 'area') {
+                return item.area_resguardo?.toUpperCase().includes(term);
+              }
+              return false;
+            });
+            
+            if (hasMatch) {
+              matchingFolios.add(folio);
+            }
+          });
+        });
+
+        // Keep only items from matching folios
+        filteredData = filteredData.filter(item => 
+          matchingFolios.has(item.folio_resguardo)
+        );
+      }
+
       // Set allBajas for search suggestions
-      setAllBajas(allData || []);
+      setAllBajas(filteredData);
 
       const uniqueFolios = Array.from(
         new Map(
-          allData?.map(item => [item.folio_resguardo, item])
+          filteredData.map(item => [item.folio_resguardo, item])
         ).values()
       );
 

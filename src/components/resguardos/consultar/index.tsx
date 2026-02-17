@@ -31,7 +31,7 @@ import { Pagination } from './components/Pagination';
 import ResguardoInfoPanel from './components/ResguardoInfoPanel';
 import ArticulosListPanel from './components/ArticulosListPanel';
 import ConsultarSkeleton from './components/ConsultarSkeleton';
-import { FileText, ListChecks } from 'lucide-react';
+import { FileText, ListChecks, X } from 'lucide-react';
 
 // Modals
 import ErrorAlert from './modals/ErrorAlert';
@@ -105,6 +105,7 @@ export default function ConsultarResguardos({ folioParam }: ConsultarResguardosP
     // Refetch list and details after successful deletion
     resguardosData.refetch();
     if (resguardoDetails.selectedFolio) {
+      // Force refetch of details to update article list
       resguardoDetails.refetch();
     }
   });
@@ -135,17 +136,12 @@ export default function ConsultarResguardos({ folioParam }: ConsultarResguardosP
       resguardoDetails.resguardoDetails.fecha,
       resguardoDetails.resguardoDetails.director,
       resguardoDetails.resguardoDetails.area_nombre || '',
-      '', // puesto
+      resguardoDetails.resguardoDetails.puesto || '',
       firstArticulo.resguardante || ''
     );
 
     setShowDeleteAllModal(false);
     resguardoDetails.clearSelection();
-    
-    // Show PDF baja modal if data is available
-    if (resguardoDelete.pdfBajaData) {
-      setShowPDFBajaModal(true);
-    }
   }, [resguardoDetails, resguardoDelete]);
 
   const handleDeleteItem = useCallback(async (articulo: ResguardoArticulo) => {
@@ -157,16 +153,11 @@ export default function ConsultarResguardos({ folioParam }: ConsultarResguardosP
       resguardoDetails.resguardoDetails.fecha,
       resguardoDetails.resguardoDetails.director,
       resguardoDetails.resguardoDetails.area_nombre || '',
-      '', // puesto
+      resguardoDetails.resguardoDetails.puesto || '',
       articulo.resguardante || ''
     );
 
     setShowDeleteItemModal(null);
-    
-    // Show PDF baja modal if data is available
-    if (resguardoDelete.pdfBajaData) {
-      setShowPDFBajaModal(true);
-    }
   }, [resguardoDetails, resguardoDelete]);
 
   const handleDeleteSelected = useCallback(async () => {
@@ -183,17 +174,12 @@ export default function ConsultarResguardos({ folioParam }: ConsultarResguardosP
       resguardoDetails.resguardoDetails.fecha,
       resguardoDetails.resguardoDetails.director,
       resguardoDetails.resguardoDetails.area_nombre || '',
-      '', // puesto
+      resguardoDetails.resguardoDetails.puesto || '',
       firstArticulo.resguardante || ''
     );
 
     setShowDeleteSelectedModal(false);
     clearSelection();
-    
-    // Show PDF baja modal if data is available
-    if (resguardoDelete.pdfBajaData) {
-      setShowPDFBajaModal(true);
-    }
   }, [resguardoDetails, selectedArticulos, resguardoDelete, clearSelection]);
 
   // Event Handlers - PDF
@@ -321,6 +307,24 @@ export default function ConsultarResguardos({ folioParam }: ConsultarResguardosP
   useEffect(() => {
     clearSelection();
   }, [resguardoDetails.selectedFolio, clearSelection]);
+
+  // Effects - Show PDF baja modal when pdfBajaData is available
+  useEffect(() => {
+    if (resguardoDelete.pdfBajaData) {
+      setShowPDFBajaModal(true);
+    }
+  }, [resguardoDelete.pdfBajaData]);
+
+  // Effects - Refetch details when modal closes to ensure panel updates
+  useEffect(() => {
+    if (!showPDFBajaModal && resguardoDetails.selectedFolio) {
+      // Small delay to ensure database has been updated
+      const timer = setTimeout(() => {
+        resguardoDetails.refetch();
+      }, 500);
+      return () => clearTimeout(timer);
+    }
+  }, [showPDFBajaModal, resguardoDetails]);
 
   // Collect all errors
   const allErrors = [
@@ -465,7 +469,7 @@ export default function ConsultarResguardos({ folioParam }: ConsultarResguardosP
                   onGeneratePDF={handleGeneratePDF}
                   onDeleteAll={() => setShowDeleteAllModal(true)}
                   userRole={userRole}
-                  disableDelete={true}
+                  disableDelete={false}
                 />
               ) : (
                 <div className={`rounded-lg border p-4 h-[45vh] flex flex-col ${
@@ -497,7 +501,7 @@ export default function ConsultarResguardos({ folioParam }: ConsultarResguardosP
                   onGeneratePDFByResguardante={handleGeneratePDFByResguardante}
                   onClearSelection={clearSelection}
                   userRole={userRole}
-                  disableDelete={true}
+                  disableDelete={false}
                 />
               ) : (
                 <div className={`rounded-lg border h-[45vh] flex flex-col overflow-hidden ${
@@ -592,46 +596,85 @@ export default function ConsultarResguardos({ folioParam }: ConsultarResguardosP
             isDarkMode ? 'bg-black/95 border-white/10' : 'bg-white/95 border-black/10'
           }`}>
             <div className="p-6">
-              <h3 className={`text-lg font-medium mb-4 ${isDarkMode ? 'text-white' : 'text-black'}`}>
-                PDF de Baja Generado
-              </h3>
-              <div className={`rounded-lg border p-3 mb-6 ${
-                isDarkMode
-                  ? 'bg-white/[0.02] border-white/10'
-                  : 'bg-black/[0.02] border-black/10'
-              }`}>
-                <p className={`text-sm ${isDarkMode ? 'text-white/80' : 'text-black/80'}`}>
-                  Folio de baja: <span className="font-medium">{resguardoDelete.pdfBajaData.folioBaja}</span>
-                </p>
-              </div>
-              <div className="flex gap-3">
+              {/* Header */}
+              <div className="flex items-start justify-between mb-4">
+                <div className="flex items-center gap-3">
+                  <div className={`p-2 rounded-lg ${
+                    isDarkMode ? 'bg-green-500/10' : 'bg-green-50'
+                  }`}>
+                    <FileText size={20} className={isDarkMode ? 'text-green-400' : 'text-green-600'} />
+                  </div>
+                  <div>
+                    <h3 className={`text-lg font-medium ${isDarkMode ? 'text-white' : 'text-black'}`}>
+                      Baja generada
+                    </h3>
+                    <p className={`text-sm ${
+                      isDarkMode ? 'text-white/60' : 'text-black/60'
+                    }`}>
+                      Listo para descargar
+                    </p>
+                  </div>
+                </div>
                 <button
                   onClick={() => {
                     setShowPDFBajaModal(false);
                     resguardoDelete.clearPdfBajaData();
                   }}
-                  className={`flex-1 px-4 py-2 rounded-lg border text-sm font-medium transition-colors ${
+                  className={`p-2 rounded-lg transition-colors ${
                     isDarkMode
-                      ? 'border-white/10 hover:bg-white/5 text-white'
-                      : 'border-black/10 hover:bg-black/5 text-black'
+                      ? 'hover:bg-white/10 text-white'
+                      : 'hover:bg-black/10 text-black'
                   }`}
                 >
-                  Cerrar
-                </button>
-                <button
-                  onClick={handleGenerateBajaPDF}
-                  disabled={generatingPDF}
-                  className={`flex-1 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                    generatingPDF
-                      ? 'bg-blue-600/50 text-white cursor-not-allowed'
-                      : isDarkMode 
-                        ? 'bg-blue-600 hover:bg-blue-500 text-white' 
-                        : 'bg-blue-600 hover:bg-blue-700 text-white'
-                  }`}
-                >
-                  {generatingPDF ? 'Generando...' : 'Descargar PDF'}
+                  <X size={16} />
                 </button>
               </div>
+
+              {/* Folio info */}
+              <div className={`rounded-lg border p-3 mb-6 ${
+                isDarkMode
+                  ? 'bg-white/[0.02] border-white/10'
+                  : 'bg-black/[0.02] border-black/10'
+              }`}>
+                <label className={`block text-xs font-medium mb-1.5 ${
+                  isDarkMode ? 'text-white/60' : 'text-black/60'
+                }`}>
+                  Folio de baja
+                </label>
+                <div className="flex items-center gap-2">
+                  <FileText size={16} className={isDarkMode ? 'text-white/60' : 'text-black/60'} />
+                  <span className={`text-sm font-medium ${isDarkMode ? 'text-white' : 'text-black'}`}>
+                    {resguardoDelete.pdfBajaData.folioBaja}
+                  </span>
+                </div>
+              </div>
+
+              {/* Download button */}
+              <button
+                onClick={handleGenerateBajaPDF}
+                disabled={generatingPDF}
+                className={`w-full px-4 py-2 rounded-lg border text-sm font-medium flex items-center justify-center gap-2 transition-all ${
+                  generatingPDF
+                    ? isDarkMode
+                      ? 'bg-black border-white/5 text-white/40 cursor-not-allowed'
+                      : 'bg-white border-black/5 text-black/40 cursor-not-allowed'
+                    : isDarkMode
+                      ? 'bg-white text-black border-white hover:bg-white/90'
+                      : 'bg-black text-white border-black hover:bg-black/90'
+                }`}
+              >
+                {generatingPDF ? (
+                  <>
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-current"></div>
+                    Generando PDF...
+                  </>
+                ) : (
+                  <>
+                    <FileText size={14} />
+                    Descargar PDF
+                  </>
+                )}
+              </button>
             </div>
           </div>
         </div>
