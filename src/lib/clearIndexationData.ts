@@ -61,7 +61,7 @@ async function clearIndexedDB(): Promise<void> {
                 'inea-obsoletos-storage',
                 'itea-obsoletos-storage',
                 'resguardos-storage',
-                'resguardos-bajas-storage',
+                'resguardosBajas-storage',
                 'admin-storage',
                 'indexation-storage',
             ];

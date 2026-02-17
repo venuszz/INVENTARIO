@@ -62,13 +62,13 @@ export const useResguardosBajasStore = create<ResguardosBajasStore>()(
   getResguardoById: (id) => get().resguardos.find(r => r.id === id),
 }),
     {
-      name: 'resguardos-bajas-storage',
+      name: 'resguardosBajas-storage',
       storage: createJSONStorage(() => indexedDBStorage),
       onRehydrateStorage: () => (state) => {
         console.log('🔄 [RESGUARDOS_BAJAS Store] Hydration complete:', {
           resguardosCount: state?.resguardos.length ?? 0,
         });
-        useHydrationStore.getState().markAsHydrated('resguardos-bajas');
+        useHydrationStore.getState().markAsHydrated('resguardosBajas');
       },
     }
   )

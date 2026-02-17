@@ -12,7 +12,7 @@ import supabase from '@/app/lib/supabase/client';
 import type { RealtimeChannel, RealtimePostgresChangesPayload } from '@supabase/supabase-js';
 import type { ResguardoBaja } from '@/types/indexation';
 
-const MODULE_KEY = 'resguardos-bajas';
+const MODULE_KEY = 'resguardosBajas';
 const { stages: STAGES, table: TABLE } = RESGUARDOS_BAJAS_CONFIG;
 
 export function useResguardosBajasIndexation() {
@@ -208,7 +208,7 @@ export function useResguardosBajasIndexation() {
   // ============================================================================
   
   // Esperar a que el store se hidrate desde IndexedDB
-  const isStoreHydrated = useHydrationStore(state => state.isHydrated('resguardos-bajas'));
+  const isStoreHydrated = useHydrationStore(state => state.isHydrated('resguardosBajas'));
   
   useEffect(() => {
     if (isInitializedRef.current || !isStoreHydrated) return;
