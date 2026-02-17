@@ -92,6 +92,8 @@ export function useSearchAndFilters({
       rubro: muebles.map(m => m.rubro || '').filter(Boolean),
       estado: muebles.map(m => m.estado || '').filter(Boolean),
       estatus: muebles.map(m => m.estatus || '').filter(Boolean),
+      origen: ['INEA', 'ITEA', 'TLAXCALA'],
+      resguardo: ['Con resguardo', 'Sin resguardo'],
     };
   }, [muebles]);
 
@@ -233,7 +235,15 @@ export function useSearchAndFilters({
     }
 
     const seen = new Set<string>();
-    const fields = [
+    
+    // Priority 1: Origen and Resguardo (always first)
+    const priorityFields = [
+      { type: 'origen' as ActiveFilter['type'], data: searchableData.origen },
+      { type: 'resguardo' as ActiveFilter['type'], data: searchableData.resguardo },
+    ];
+    
+    // Priority 2: Other fields
+    const regularFields = [
       { type: 'id' as ActiveFilter['type'], data: searchableData.id },
       { type: 'area' as ActiveFilter['type'], data: searchableData.area },
       { type: 'usufinal' as ActiveFilter['type'], data: searchableData.usufinal },
@@ -247,8 +257,8 @@ export function useSearchAndFilters({
     let count = 0;
     const maxSuggestions = 10;
 
-    // Collect suggestions from all fields
-    for (const f of fields) {
+    // First, collect suggestions from priority fields (origen and resguardo)
+    for (const f of priorityFields) {
       if (count >= maxSuggestions) break;
 
       for (const v of f.data) {
@@ -265,17 +275,50 @@ export function useSearchAndFilters({
       }
     }
 
-    // Sort: exact matches first, then starts-with matches
-    allSuggestions.sort((a, b) => {
+    // Then, collect suggestions from regular fields
+    for (const f of regularFields) {
+      if (count >= maxSuggestions) break;
+
+      for (const v of f.data) {
+        const vLower = v.toLowerCase();
+        if (vLower.includes(term)) {
+          const key = f.type + ':' + vLower;
+          if (!seen.has(key)) {
+            allSuggestions.push({ value: v, type: f.type });
+            seen.add(key);
+            count++;
+            if (count >= maxSuggestions) break;
+          }
+        }
+      }
+    }
+
+    // Sort within each priority group: exact matches first, then starts-with matches
+    // But keep priority fields (origen, resguardo) always at the top
+    const prioritySuggestions = allSuggestions.filter(s => 
+      s.type === 'origen' || s.type === 'resguardo'
+    );
+    const regularSuggestions = allSuggestions.filter(s => 
+      s.type !== 'origen' && s.type !== 'resguardo'
+    );
+
+    // Sort each group independently
+    const sortByRelevance = (a: Suggestion, b: Suggestion) => {
       const aStarts = a.value.toLowerCase().startsWith(term);
       const bStarts = b.value.toLowerCase().startsWith(term);
       if (aStarts && !bStarts) return -1;
       if (!aStarts && bStarts) return 1;
       return 0;
-    });
+    };
+
+    prioritySuggestions.sort(sortByRelevance);
+    regularSuggestions.sort(sortByRelevance);
+
+    // Combine: priority suggestions first, then regular suggestions
+    const sortedSuggestions = [...prioritySuggestions, ...regularSuggestions];
 
     // Limit to 7 suggestions
-    const finalSuggestions = allSuggestions.slice(0, 7);
+    const finalSuggestions = sortedSuggestions.slice(0, 7);
     setSuggestions(finalSuggestions);
     setShowSuggestions(finalSuggestions.length > 0);
     setHighlightedIndex(finalSuggestions.length > 0 ? 0 : -1);
@@ -289,6 +332,16 @@ export function useSearchAndFilters({
     const term = deferredSearchTerm.toLowerCase().trim();
     let result = muebles;
 
+    // Helper function to check if item has resguardo
+    const hasResguardo = (item: LevMueble, foliosMap: Record<string, string>): boolean => {
+      return !!(item.id_inv && foliosMap[item.id_inv]);
+    };
+
+    // Build folios map for resguardo checking
+    const foliosMap: Record<string, string> = {};
+    // Note: This will be populated from parent component's foliosResguardo state
+    // For now, we'll check based on resguardante field as a fallback
+    
     // Apply filters if any are active or search term exists
     if (activeFilters.length > 0 || term) {
       result = muebles.filter(item => {
@@ -314,6 +367,18 @@ export function useSearchAndFilters({
               return (item.directorio?.nombre?.toLowerCase() || '').includes(filterTerm);
             case 'resguardante':
               return (item.resguardante?.toLowerCase() || '').includes(filterTerm);
+            case 'origen':
+              return (item.origen?.toLowerCase() || '').includes(filterTerm);
+            case 'resguardo':
+              // Check for "con resguardo" or "sin resguardo"
+              if (filterTerm.includes('con') || filterTerm.includes('si')) {
+                // Has resguardo: check if resguardante exists
+                return !!item.resguardante;
+              } else if (filterTerm.includes('sin') || filterTerm.includes('no')) {
+                // No resguardo: check if resguardante is empty
+                return !item.resguardante;
+              }
+              return true;
             default:
               return true;
           }
@@ -332,7 +397,8 @@ export function useSearchAndFilters({
           (item.resguardante?.toLowerCase() || '').includes(term) ||
           (item.rubro?.toLowerCase() || '').includes(term) ||
           (item.estado?.toLowerCase() || '').includes(term) ||
-          (item.estatus?.toLowerCase() || '').includes(term)
+          (item.estatus?.toLowerCase() || '').includes(term) ||
+          (item.origen?.toLowerCase() || '').includes(term)
         );
       });
     }

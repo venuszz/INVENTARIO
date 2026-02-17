@@ -1,11 +1,12 @@
 /**
  * Custom PDF export modal component
  * 
- * Modal for configuring and exporting PDF by area and director.
+ * Modal for confirming PDF export by area and director.
+ * Since área and director come from relational IDs, the information is exact and known.
  */
 
-import { useState, useMemo } from 'react';
-import { X, FileText, AlertCircle, Check } from 'lucide-react';
+import { useMemo, useEffect } from 'react';
+import { X, FileText, AlertCircle, CheckCircle } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { DirectorioOption } from '../types';
 import { clean } from '../utils';
@@ -30,13 +31,12 @@ interface CustomPDFModalProps {
 /**
  * CustomPDFModal component
  * 
- * Renders a modal for custom PDF export with:
- * - Pre-populated area field (read-only)
- * - Director search input
- * - Director list with suggested highlighting
- * - Puesto field (read-only)
+ * Renders a confirmation modal for custom PDF export with:
+ * - Pre-filled area field (read-only)
+ * - Pre-filled director name (read-only)
+ * - Pre-filled puesto field (read-only)
  * - Record count badge
- * - Validation before export
+ * - Confirmation button to generate PDF
  * 
  * @param props - Component props
  * @returns Custom PDF modal UI or null if not shown
@@ -55,17 +55,11 @@ export function CustomPDFModal({
   isDarkMode
 }: CustomPDFModalProps) {
   
-  const [searchDirectorTerm, setSearchDirectorTerm] = useState('');
-  const [selectedDirector, setSelectedDirector] = useState<{ nombre: string; puesto: string }>({ 
-    nombre: '', 
-    puesto: '' 
-  });
-
   /**
-   * Find suggested director based on name and area matching
+   * Find matched director based on name and area
    */
-  const directorSugerido = useMemo(() => {
-    if (!director) return null;
+  const matchedDirector = useMemo(() => {
+    if (!director || directorOptions.length === 0) return null;
 
     const targetNombre = clean(director);
     const targetArea = clean(area);
@@ -89,34 +83,20 @@ export function CustomPDFModal({
   }, [director, area, directorOptions]);
 
   /**
-   * Filter director options based on search term
+   * Auto-select director when found
    */
-  const filteredDirectorOptions = useMemo(() => {
-    if (!searchDirectorTerm) return directorOptions;
-
-    const searchClean = clean(searchDirectorTerm);
-    return directorOptions.filter(opt =>
-      clean(opt.nombre).includes(searchClean) ||
-      clean(opt.puesto || '').includes(searchClean) ||
-      clean(opt.area || '').includes(searchClean)
-    );
-  }, [searchDirectorTerm, directorOptions]);
-
-  /**
-   * Handle director selection
-   */
-  const handleDirectorClick = (opt: DirectorioOption) => {
-    setSelectedDirector({ nombre: opt.nombre, puesto: opt.puesto });
-    setSearchDirectorTerm(opt.nombre);
-    onDirectorSelect(opt);
-  };
+  useEffect(() => {
+    if (matchedDirector && show) {
+      onDirectorSelect(matchedDirector);
+    }
+  }, [matchedDirector, show, onDirectorSelect]);
 
   /**
    * Handle confirm button click
    */
   const handleConfirm = () => {
-    if (selectedDirector.nombre && selectedDirector.puesto) {
-      onConfirm(selectedDirector);
+    if (matchedDirector) {
+      onConfirm({ nombre: matchedDirector.nombre, puesto: matchedDirector.puesto });
     }
   };
 
@@ -127,8 +107,7 @@ export function CustomPDFModal({
     loading ||
     recordCount === 0 ||
     !area.trim() ||
-    !selectedDirector.nombre?.trim() ||
-    !selectedDirector.puesto?.trim();
+    !matchedDirector;
 
   // Early return after all hooks
   if (!show) return null;
@@ -157,7 +136,7 @@ export function CustomPDFModal({
           >
             <div className="p-6">
               {/* Header */}
-              <div className="flex items-start justify-between mb-4">
+              <div className="flex items-start justify-between mb-6">
                 <div className="flex items-center gap-3">
                   <div className={`p-2 rounded-lg ${
                     isDarkMode ? 'bg-white/10' : 'bg-black/10'
@@ -166,13 +145,13 @@ export function CustomPDFModal({
                   </div>
                   <div>
                     <h3 className={`text-lg font-medium ${isDarkMode ? 'text-white' : 'text-black'}`}>
-                      PDF Personalizado
+                      Confirmar Generación de PDF
                     </h3>
                     <div className="flex items-center gap-2 mt-0.5">
                       <p className={`text-sm ${
                         isDarkMode ? 'text-white/60' : 'text-black/60'
                       }`}>
-                        {recordCount} registros
+                        {recordCount} {recordCount === 1 ? 'registro' : 'registros'}
                       </p>
                     </div>
                   </div>
@@ -191,18 +170,72 @@ export function CustomPDFModal({
                 </motion.button>
               </div>
 
-              {/* Form fields */}
+              {/* Confirmation info */}
               <div className="space-y-4 mb-6">
+                {/* Success indicator if director found */}
+                {matchedDirector && (
+                  <motion.div
+                    initial={{ opacity: 0, scale: 0.95 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    className={`p-4 rounded-lg border flex items-start gap-3 ${
+                      isDarkMode
+                        ? 'bg-green-500/10 border-green-500/20'
+                        : 'bg-green-50 border-green-200'
+                    }`}
+                  >
+                    <CheckCircle size={20} className={isDarkMode ? 'text-green-400 mt-0.5' : 'text-green-600 mt-0.5'} />
+                    <div className="flex-1">
+                      <p className={`text-sm font-medium ${
+                        isDarkMode ? 'text-green-400' : 'text-green-800'
+                      }`}>
+                        Información verificada
+                      </p>
+                      <p className={`text-xs mt-0.5 ${
+                        isDarkMode ? 'text-green-400/80' : 'text-green-700'
+                      }`}>
+                        Los datos del director y área han sido confirmados
+                      </p>
+                    </div>
+                  </motion.div>
+                )}
+
+                {/* Warning if director not found */}
+                {!matchedDirector && director && (
+                  <motion.div
+                    initial={{ opacity: 0, scale: 0.95 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    className={`p-4 rounded-lg border flex items-start gap-3 ${
+                      isDarkMode
+                        ? 'bg-yellow-500/10 border-yellow-500/20'
+                        : 'bg-yellow-50 border-yellow-200'
+                    }`}
+                  >
+                    <AlertCircle size={20} className={isDarkMode ? 'text-yellow-400 mt-0.5' : 'text-yellow-600 mt-0.5'} />
+                    <div className="flex-1">
+                      <p className={`text-sm font-medium ${
+                        isDarkMode ? 'text-yellow-400' : 'text-yellow-800'
+                      }`}>
+                        Director no encontrado
+                      </p>
+                      <p className={`text-xs mt-0.5 ${
+                        isDarkMode ? 'text-yellow-400/80' : 'text-yellow-700'
+                      }`}>
+                        No se pudo verificar la información del director &quot;{director}&quot;
+                      </p>
+                    </div>
+                  </motion.div>
+                )}
+
                 {/* Area field (read-only) */}
                 <div>
                   <label className={`block text-xs font-medium mb-1.5 ${
                     isDarkMode ? 'text-white/60' : 'text-black/60'
                   }`}>
-                    Área seleccionada
+                    Área
                   </label>
                   <input
                     type="text"
-                    className={`w-full px-3 py-2 rounded-lg border text-sm transition-all ${
+                    className={`w-full px-3 py-2.5 rounded-lg border text-sm transition-all ${
                       isDarkMode
                         ? 'bg-white/[0.02] border-white/10 text-white'
                         : 'bg-black/[0.02] border-black/10 text-black'
@@ -212,123 +245,23 @@ export function CustomPDFModal({
                   />
                 </div>
 
-                {/* Director search and selection */}
+                {/* Director name field (read-only) */}
                 <div>
-                  {/* Warning if director not found */}
-                  {director && !directorSugerido && (
-                    <motion.div
-                      initial={{ opacity: 0, height: 0 }}
-                      animate={{ opacity: 1, height: 'auto' }}
-                      className={`mb-3 p-3 rounded-lg border flex items-start gap-2 ${
-                        isDarkMode
-                          ? 'bg-yellow-500/10 border-yellow-500/20'
-                          : 'bg-yellow-50 border-yellow-200'
-                      }`}
-                    >
-                      <AlertCircle size={16} className={isDarkMode ? 'text-yellow-400 mt-0.5' : 'text-yellow-600 mt-0.5'} />
-                      <div>
-                        <p className={`text-sm font-medium ${
-                          isDarkMode ? 'text-yellow-400' : 'text-yellow-800'
-                        }`}>
-                          Director no encontrado
-                        </p>
-                        <p className={`text-xs mt-0.5 ${
-                          isDarkMode ? 'text-yellow-400/80' : 'text-yellow-700'
-                        }`}>
-                          &quot;{director}&quot;
-                        </p>
-                      </div>
-                    </motion.div>
-                  )}
-
                   <label className={`block text-xs font-medium mb-1.5 ${
                     isDarkMode ? 'text-white/60' : 'text-black/60'
                   }`}>
-                    Buscar director
+                    Director
                   </label>
                   <input
                     type="text"
-                    className={`w-full px-3 py-2 rounded-lg border text-sm transition-all mb-2 ${
+                    className={`w-full px-3 py-2.5 rounded-lg border text-sm transition-all ${
                       isDarkMode
-                        ? 'bg-black border-white/10 text-white placeholder:text-white/40 focus:border-white/20'
-                        : 'bg-white border-black/10 text-black placeholder:text-black/40 focus:border-black/20'
-                    } focus:outline-none`}
-                    placeholder="Buscar por nombre..."
-                    value={searchDirectorTerm}
-                    onChange={e => setSearchDirectorTerm(e.target.value)}
-                    autoFocus
+                        ? 'bg-white/[0.02] border-white/10 text-white'
+                        : 'bg-black/[0.02] border-black/10 text-black'
+                    } focus:outline-none cursor-not-allowed`}
+                    value={matchedDirector?.nombre || director}
+                    readOnly
                   />
-
-                  {/* Director list */}
-                  <div className={`max-h-48 overflow-y-auto rounded-lg border ${
-                    isDarkMode
-                      ? 'bg-white/[0.02] border-white/10 scrollbar-thin scrollbar-track-white/5 scrollbar-thumb-white/20'
-                      : 'bg-black/[0.02] border-black/10 scrollbar-thin scrollbar-track-black/5 scrollbar-thumb-black/20'
-                  }`}>
-                    {filteredDirectorOptions.length === 0 ? (
-                      <div className={`text-sm p-3 text-center ${
-                        isDarkMode ? 'text-white/40' : 'text-black/40'
-                      }`}>
-                        No se encontraron directores
-                      </div>
-                    ) : (
-                      <div className="p-1">
-                        {filteredDirectorOptions.map(opt => {
-                          const isSuggested = directorSugerido && opt.id_directorio === directorSugerido.id_directorio;
-                          const isSelected = selectedDirector.nombre === opt.nombre;
-
-                          return (
-                            <motion.button
-                              key={opt.id_directorio}
-                              onClick={() => handleDirectorClick(opt)}
-                              className={`w-full text-left px-2.5 py-2 rounded-lg mb-1 transition-all ${
-                                isSuggested
-                                  ? isDarkMode
-                                    ? 'bg-white/10 border-l-2 border-white'
-                                    : 'bg-black/10 border-l-2 border-black'
-                                  : isSelected
-                                    ? isDarkMode
-                                      ? 'bg-white/[0.04] border-l-2 border-white/60'
-                                      : 'bg-black/[0.04] border-l-2 border-black/60'
-                                    : isDarkMode
-                                      ? 'hover:bg-white/[0.02] border-l-2 border-transparent'
-                                      : 'hover:bg-black/[0.02] border-l-2 border-transparent'
-                              }`}
-                              whileHover={{ x: 2 }}
-                              transition={{ duration: 0.15 }}
-                            >
-                              <div className="flex items-center justify-between">
-                                <div className="flex-1 min-w-0">
-                                  <div className={`text-sm font-medium flex items-center gap-2 ${
-                                    isDarkMode ? 'text-white' : 'text-black'
-                                  }`}>
-                                    {opt.nombre}
-                                    {isSuggested && (
-                                      <span className={`text-xs px-1.5 py-0.5 rounded-full font-medium ${
-                                        isDarkMode
-                                          ? 'bg-white/10 text-white/80 border border-white/20'
-                                          : 'bg-black/10 text-black/80 border border-black/20'
-                                      }`}>
-                                        Sugerido
-                                      </span>
-                                    )}
-                                  </div>
-                                  <div className={`text-xs truncate ${
-                                    isDarkMode ? 'text-white/60' : 'text-black/60'
-                                  }`}>
-                                    {opt.puesto}
-                                  </div>
-                                </div>
-                                {isSelected && (
-                                  <Check size={16} className={isDarkMode ? 'text-white' : 'text-black'} />
-                                )}
-                              </div>
-                            </motion.button>
-                          );
-                        })}
-                      </div>
-                    )}
-                  </div>
                 </div>
 
                 {/* Puesto field (read-only) */}
@@ -340,12 +273,12 @@ export function CustomPDFModal({
                   </label>
                   <input
                     type="text"
-                    className={`w-full px-3 py-2 rounded-lg border text-sm transition-all ${
+                    className={`w-full px-3 py-2.5 rounded-lg border text-sm transition-all ${
                       isDarkMode
                         ? 'bg-white/[0.02] border-white/10 text-white'
                         : 'bg-black/[0.02] border-black/10 text-black'
                     } focus:outline-none cursor-not-allowed`}
-                    value={selectedDirector.puesto || ''}
+                    value={matchedDirector?.puesto || ''}
                     readOnly
                   />
                 </div>
@@ -407,8 +340,8 @@ export function CustomPDFModal({
                     </>
                   ) : (
                     <>
-                      <FileText size={16} />
-                      Exportar PDF
+                      <CheckCircle size={16} />
+                      Confirmar y Generar PDF
                     </>
                   )}
                 </motion.button>

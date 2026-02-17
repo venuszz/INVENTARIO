@@ -67,6 +67,52 @@ export function getEstatusColors(isDarkMode: boolean): Record<string, string> {
 }
 
 /**
+ * Get Tailwind CSS classes for filter chips based on type and theme
+ * Returns special colors for origen and resguardo types to match table badges
+ * 
+ * @param type - The filter type
+ * @param term - The filter term (used for origen and resguardo specific colors)
+ * @param isDarkMode - Whether dark mode is enabled
+ * @returns CSS classes for the filter chip
+ */
+export function getFilterChipColors(
+  type: ActiveFilter['type'], 
+  term: string, 
+  isDarkMode: boolean
+): string {
+  // Special colors for origen filters (match table badges)
+  if (type === 'origen') {
+    const origenColors = getOrigenColors(isDarkMode);
+    return origenColors[term as keyof typeof origenColors] || (
+      isDarkMode 
+        ? 'bg-white/10 text-white border-white/20' 
+        : 'bg-black/10 text-black border-black/20'
+    );
+  }
+  
+  // Special colors for resguardo filters
+  if (type === 'resguardo') {
+    const cleanTerm = clean(term);
+    if (cleanTerm.includes('con') || cleanTerm.includes('si')) {
+      // "Con resguardo" or "Si"
+      return isDarkMode 
+        ? 'bg-white/10 text-white border-white/20' 
+        : 'bg-black/10 text-black border-black/20';
+    } else {
+      // "Sin resguardo" or "No"
+      return isDarkMode 
+        ? 'bg-white/[0.02] text-white/60 border-white/10' 
+        : 'bg-black/[0.02] text-black/60 border-black/10';
+    }
+  }
+  
+  // Default colors for other filter types
+  return isDarkMode 
+    ? 'bg-white/10 text-white border-white/20' 
+    : 'bg-black/10 text-black border-black/20';
+}
+
+/**
  * Truncate text to a specified length with ellipsis
  * 
  * @param text - The text to truncate
@@ -99,6 +145,8 @@ export function getTypeLabel(type: ActiveFilter['type']): string {
     case 'rubro': return 'RUBRO';
     case 'estado': return 'ESTADO';
     case 'estatus': return 'ESTATUS';
+    case 'origen': return 'ORIGEN';
+    case 'resguardo': return 'RESGUARDO';
     default: return '';
   }
 }
@@ -122,6 +170,8 @@ export function getTypeIcon(type: ActiveFilter['type']): React.ReactElement | nu
     case 'rubro': return <span className={baseClass}>RU</span>;
     case 'estado': return <span className={baseClass}>ED</span>;
     case 'estatus': return <span className={baseClass}>ES</span>;
+    case 'origen': return <span className={baseClass}>OR</span>;
+    case 'resguardo': return <span className={baseClass}>RG</span>;
     default: return null;
   }
 }

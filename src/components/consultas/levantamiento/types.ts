@@ -68,7 +68,7 @@ export interface DirectorioOption {
  */
 export interface ActiveFilter {
   term: string;
-  type: 'id' | 'descripcion' | 'area' | 'usufinal' | 'resguardante' | 'rubro' | 'estado' | 'estatus' | null;
+  type: 'id' | 'descripcion' | 'area' | 'usufinal' | 'resguardante' | 'rubro' | 'estado' | 'estatus' | 'origen' | 'resguardo' | null;
 }
 
 /**
@@ -82,7 +82,7 @@ export interface Suggestion {
 /**
  * Type of search match detected
  */
-export type SearchMatchType = 'id' | 'descripcion' | 'usufinal' | 'area' | 'resguardante' | 'rubro' | 'estado' | 'estatus' | null;
+export type SearchMatchType = 'id' | 'descripcion' | 'usufinal' | 'area' | 'resguardante' | 'rubro' | 'estado' | 'estatus' | 'origen' | 'resguardo' | null;
 
 /**
  * Searchable data vectors for optimized filtering
@@ -96,6 +96,8 @@ export interface SearchableData {
   rubro: string[];
   estado: string[];
   estatus: string[];
+  origen: string[];      // INEA, ITEA, TLAXCALA
+  resguardo: string[];   // "Con resguardo", "Sin resguardo"
 }
 
 /**
