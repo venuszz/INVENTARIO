@@ -1,7 +1,9 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Calendar, ChevronDown, Check, X } from 'lucide-react';
+import { Calendar, ChevronDown, Check, X, AlertCircle, Loader2, Package } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useRouter } from 'next/navigation';
 import { Step1Props } from '../types';
+import { useIdInventarioValidation } from '../hooks/useIdInventarioValidation';
 
 // Custom Select Component
 interface CustomSelectProps {
@@ -319,13 +321,41 @@ export default function Step1BasicInfo({
   isDarkMode,
   isTlaxcala = false
 }: Step1Props) {
+  const router = useRouter();
   const [showErrors, setShowErrors] = useState(false);
+  const [showPopover, setShowPopover] = useState(false);
+  const badgeRef = useRef<HTMLDivElement>(null);
+  
+  // Validate ID Inventario
+  const idValidation = useIdInventarioValidation(formData.id_inv);
 
   // Show errors only if user has tried to proceed (touched will be set by parent)
   useEffect(() => {
     const hasAnyTouched = Object.keys(touched).length > 0;
     setShowErrors(hasAnyTouched);
   }, [touched]);
+
+  // Expose validation result to parent via a custom event
+  useEffect(() => {
+    const event = new CustomEvent('idValidationChange', { 
+      detail: { 
+        exists: idValidation.exists, 
+        institution: idValidation.institution 
+      } 
+    });
+    window.dispatchEvent(event);
+  }, [idValidation.exists, idValidation.institution]);
+
+  // Format currency for display
+  const formatCurrency = (value: string | number) => {
+    if (!value) return 'N/A';
+    const numValue = typeof value === 'string' ? parseFloat(value.replace(/,/g, '')) : value;
+    if (isNaN(numValue)) return 'N/A';
+    return new Intl.NumberFormat('es-MX', {
+      style: 'currency',
+      currency: 'MXN'
+    }).format(numValue);
+  };
 
   const getInputClasses = (fieldName: string) => {
     const hasError = showErrors && !isFieldValid(fieldName);
@@ -392,15 +422,263 @@ export default function Step1BasicInfo({
           <label className={getLabelClasses()}>
             ID Inventario {!isTlaxcala && <span className="text-red-500">*</span>}
           </label>
-          <input
-            type="text"
-            name="id_inv"
-            value={formData.id_inv}
-            onChange={onChange}
-            onBlur={onBlur}
-            className={getInputClasses('id_inv')}
-            placeholder="Ej. INV-2023-001"
-          />
+          <div className="relative">
+            <input
+              type="text"
+              name="id_inv"
+              value={formData.id_inv}
+              onChange={onChange}
+              onBlur={onBlur}
+              className={getInputClasses('id_inv')}
+              placeholder="Ej. INV-2023-001"
+            />
+            
+            {/* Validation Badge with Popover */}
+            <AnimatePresence mode="wait">
+              {idValidation.loading && formData.id_inv && (
+                <motion.div
+                  initial={{ opacity: 0, scale: 0.8 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  exit={{ opacity: 0, scale: 0.8 }}
+                  transition={{ duration: 0.2, ease: "easeOut" }}
+                  className="absolute right-0 top-0 -translate-y-1/2"
+                >
+                  <div className={`flex items-center gap-1.5 px-2 py-1 rounded-full text-[9px] font-semibold tracking-widest ${
+                    isDarkMode 
+                      ? 'bg-blue-500/5 text-blue-400/60 border border-blue-500/20' 
+                      : 'bg-blue-50/50 text-blue-500/70 border border-blue-200/50'
+                  }`}>
+                    <Loader2 size={9} className="animate-spin" />
+                  </div>
+                </motion.div>
+              )}
+              
+              {!idValidation.loading && idValidation.exists && formData.id_inv && (
+                <motion.div
+                  ref={badgeRef}
+                  initial={{ opacity: 0, scale: 0.8 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  exit={{ opacity: 0, scale: 0.8 }}
+                  transition={{ duration: 0.2, ease: "easeOut" }}
+                  className="absolute right-0 top-0 -translate-y-1/2 z-50"
+                  onMouseEnter={() => setShowPopover(true)}
+                  onMouseLeave={() => setShowPopover(false)}
+                >
+                  <motion.div 
+                    className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[9px] font-semibold tracking-widest cursor-pointer transition-all duration-200 ${
+                      idValidation.institution === 'INEA'
+                        ? isDarkMode
+                          ? 'bg-amber-500/5 text-amber-400/70 border border-amber-500/20 hover:bg-amber-500/10 hover:border-amber-500/30'
+                          : 'bg-amber-50/50 text-amber-600/80 border border-amber-200/50 hover:bg-amber-50 hover:border-amber-300/60'
+                        : idValidation.institution === 'ITEA'
+                          ? isDarkMode
+                            ? 'bg-purple-500/5 text-purple-400/70 border border-purple-500/20 hover:bg-purple-500/10 hover:border-purple-500/30'
+                            : 'bg-purple-50/50 text-purple-600/80 border border-purple-200/50 hover:bg-purple-50 hover:border-purple-300/60'
+                          : isDarkMode
+                            ? 'bg-emerald-500/5 text-emerald-400/70 border border-emerald-500/20 hover:bg-emerald-500/10 hover:border-emerald-500/30'
+                            : 'bg-emerald-50/50 text-emerald-600/80 border border-emerald-200/50 hover:bg-emerald-50 hover:border-emerald-300/60'
+                    }`}
+                    whileHover={{ scale: 1.05 }}
+                    transition={{ duration: 0.15 }}
+                  >
+                    <AlertCircle size={10} strokeWidth={2.5} />
+                    <span>ID EXISTE · {idValidation.institution}</span>
+                  </motion.div>
+
+                  {/* Popover with Item Details */}
+                  <AnimatePresence>
+                    {showPopover && idValidation.itemData && (
+                      <motion.div
+                        initial={{ opacity: 0, y: -8, scale: 0.96 }}
+                        animate={{ opacity: 1, y: 0, scale: 1 }}
+                        exit={{ opacity: 0, y: -8, scale: 0.96 }}
+                        transition={{ duration: 0.2, ease: "easeOut" }}
+                        className="absolute right-0 top-full mt-3 w-96 pointer-events-auto"
+                        style={{ zIndex: 9999 }}
+                      >
+                        <div className={`rounded-lg overflow-hidden shadow-2xl border ${
+                          isDarkMode
+                            ? 'bg-black border-white/10'
+                            : 'bg-white border-black/10'
+                        }`}>
+                          {/* Header with institution badge */}
+                          <div className={`px-5 py-3 border-b ${
+                            isDarkMode ? 'border-white/5' : 'border-black/5'
+                          }`}>
+                            <div className="flex items-center justify-between">
+                              <div className={`text-xs font-medium ${
+                                isDarkMode ? 'text-white/60' : 'text-black/60'
+                              }`}>
+                                Bien Existente
+                              </div>
+                              <div className={`px-2 py-0.5 rounded text-[9px] font-bold tracking-wider ${
+                                idValidation.institution === 'INEA'
+                                  ? isDarkMode
+                                    ? 'bg-amber-500/10 text-amber-400 border border-amber-500/20'
+                                    : 'bg-amber-50 text-amber-600 border border-amber-200'
+                                  : idValidation.institution === 'ITEA'
+                                    ? isDarkMode
+                                      ? 'bg-purple-500/10 text-purple-400 border border-purple-500/20'
+                                      : 'bg-purple-50 text-purple-600 border border-purple-200'
+                                    : isDarkMode
+                                      ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
+                                      : 'bg-emerald-50 text-emerald-600 border border-emerald-200'
+                              }`}>
+                                {idValidation.institution}
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Content - Full text display */}
+                          <div className="p-5 space-y-3.5">
+                            {/* ID */}
+                            <div>
+                              <div className={`text-[10px] uppercase tracking-wider font-medium mb-1 ${
+                                isDarkMode ? 'text-white/40' : 'text-black/40'
+                              }`}>
+                                ID Inventario
+                              </div>
+                              <div className={`text-sm font-semibold ${
+                                isDarkMode ? 'text-white' : 'text-black'
+                              }`}>
+                                {idValidation.itemData.id_inv}
+                              </div>
+                            </div>
+
+                            {/* Description - Full text */}
+                            {idValidation.itemData.descripcion && (
+                              <div>
+                                <div className={`text-[10px] uppercase tracking-wider font-medium mb-1 ${
+                                  isDarkMode ? 'text-white/40' : 'text-black/40'
+                                }`}>
+                                  Descripción
+                                </div>
+                                <div className={`text-xs leading-relaxed ${
+                                  isDarkMode ? 'text-white/70' : 'text-black/70'
+                                }`}>
+                                  {idValidation.itemData.descripcion}
+                                </div>
+                              </div>
+                            )}
+
+                            {/* Area - Full text */}
+                            {idValidation.itemData.area?.nombre && (
+                              <div>
+                                <div className={`text-[10px] uppercase tracking-wider font-medium mb-1 ${
+                                  isDarkMode ? 'text-white/40' : 'text-black/40'
+                                }`}>
+                                  Área
+                                </div>
+                                <div className={`text-xs ${
+                                  isDarkMode ? 'text-white/80' : 'text-black/80'
+                                }`}>
+                                  {idValidation.itemData.area.nombre}
+                                </div>
+                              </div>
+                            )}
+
+                            {/* Responsible - Full text */}
+                            {idValidation.itemData.directorio?.nombre && (
+                              <div>
+                                <div className={`text-[10px] uppercase tracking-wider font-medium mb-1 ${
+                                  isDarkMode ? 'text-white/40' : 'text-black/40'
+                                }`}>
+                                  Responsable
+                                </div>
+                                <div className={`text-xs ${
+                                  isDarkMode ? 'text-white/80' : 'text-black/80'
+                                }`}>
+                                  {idValidation.itemData.directorio.nombre}
+                                </div>
+                              </div>
+                            )}
+
+                            {/* Value & Status in row */}
+                            <div className="flex items-center gap-4">
+                              {idValidation.itemData.valor && (
+                                <div className="flex-1">
+                                  <div className={`text-[10px] uppercase tracking-wider font-medium mb-1 ${
+                                    isDarkMode ? 'text-white/40' : 'text-black/40'
+                                  }`}>
+                                    Valor
+                                  </div>
+                                  <div className={`text-xs font-semibold ${
+                                    isDarkMode ? 'text-white' : 'text-black'
+                                  }`}>
+                                    {formatCurrency(idValidation.itemData.valor)}
+                                  </div>
+                                </div>
+                              )}
+
+                              {idValidation.itemData.estatus && (
+                                <div className="flex-1">
+                                  <div className={`text-[10px] uppercase tracking-wider font-medium mb-1 ${
+                                    isDarkMode ? 'text-white/40' : 'text-black/40'
+                                  }`}>
+                                    Estatus
+                                  </div>
+                                  <div className={`inline-flex items-center gap-1.5 px-2 py-1 rounded text-[10px] font-bold uppercase tracking-wide ${
+                                    idValidation.itemData.estatus === 'ACTIVO'
+                                      ? isDarkMode
+                                        ? 'bg-green-500/10 text-green-400 border border-green-500/20'
+                                        : 'bg-green-50 text-green-600 border border-green-200'
+                                      : isDarkMode
+                                        ? 'bg-red-500/10 text-red-400 border border-red-500/20'
+                                        : 'bg-red-50 text-red-600 border border-red-200'
+                                  }`}>
+                                    <div className={`w-1.5 h-1.5 rounded-full ${
+                                      idValidation.itemData.estatus === 'ACTIVO'
+                                        ? isDarkMode ? 'bg-green-400' : 'bg-green-500'
+                                        : isDarkMode ? 'bg-red-400' : 'bg-red-500'
+                                    }`} />
+                                    {idValidation.itemData.estatus}
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+
+                          {/* Action Button */}
+                          <div className={`px-5 pb-4`}>
+                            <motion.button
+                              type="button"
+                              onClick={(e) => {
+                                // Prevenir cualquier comportamiento por defecto del formulario
+                                e.preventDefault();
+                                e.stopPropagation();
+                                
+                                // Determinar la ruta según la institución usando el mismo formato que SearchBar
+                                const routes = {
+                                  'INEA': '/consultas/inea/general',
+                                  'ITEA': '/consultas/itea/general',
+                                  'TLAXCALA': '/consultas/no-listado'
+                                };
+                                const route = routes[idValidation.institution as keyof typeof routes];
+                                
+                                // Usar router.push para navegación del lado del cliente (mantiene el estado)
+                                router.push(`${route}?id=${idValidation.itemData.id}`);
+                              }}
+                              className={`w-full py-2.5 px-4 rounded-lg text-xs font-medium transition-all duration-200 flex items-center justify-center gap-2 ${
+                                isDarkMode
+                                  ? 'bg-white/5 text-white hover:bg-white/10 border border-white/10 hover:border-white/20'
+                                  : 'bg-black/5 text-black hover:bg-black/10 border border-black/10 hover:border-black/20'
+                              }`}
+                              whileHover={{ scale: 1.02 }}
+                              whileTap={{ scale: 0.98 }}
+                            >
+                              <Package size={14} />
+                              Ver Detalles del Bien
+                            </motion.button>
+                          </div>
+                        </div>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
+          
           {showErrors && !isFieldValid('id_inv') && (
             <motion.p 
               className="text-red-500 text-xs mt-2 font-medium"

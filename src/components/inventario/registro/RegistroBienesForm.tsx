@@ -33,6 +33,8 @@ export default function RegistroBienesForm() {
   const [message, setMessage] = useState<Message>({ type: '', text: '' });
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [showAreaWarning, setShowAreaWarning] = useState<boolean>(false);
+  const [hasDuplicateId, setHasDuplicateId] = useState<boolean>(false);
+  const [duplicateInstitution, setDuplicateInstitution] = useState<'INEA' | 'ITEA' | 'TLAXCALA' | null>(null);
   const imageFileRef = useRef<File | null>(null);
   const previousImagePathRef = useRef<string | null>(null); // Track previous uploaded image
   const previousDirectorRef = useRef<{ usufinal: string; area: string }>({ usufinal: '', area: '' });
@@ -127,6 +129,19 @@ export default function RegistroBienesForm() {
       }));
     }
   }, [filterOptions, formData.estado, formData.estatus, setFormData]);
+
+  // Listen for ID validation changes from Step1
+  useEffect(() => {
+    const handleIdValidation = (e: CustomEvent) => {
+      setHasDuplicateId(e.detail.exists);
+      setDuplicateInstitution(e.detail.institution);
+    };
+
+    window.addEventListener('idValidationChange', handleIdValidation as EventListener);
+    return () => {
+      window.removeEventListener('idValidationChange', handleIdValidation as EventListener);
+    };
+  }, []);
 
   // Image handling
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -618,6 +633,8 @@ export default function RegistroBienesForm() {
               onNext={nextStep}
               onSubmit={handleSubmit}
               isDarkMode={isDarkMode}
+              hasDuplicateId={hasDuplicateId}
+              duplicateInstitution={duplicateInstitution}
             />
           </form>
         </div>
