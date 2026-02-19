@@ -37,7 +37,93 @@ export const generatePDF = async ({ data, columns, title, fileName, firmas = [] 
     const regularFont = await pdfDoc.embedFont(StandardFonts.Helvetica);
 
     const normalizeText = (text: string) => {
-        return text.normalize('NFKD').replace(/[\u0300-\u036f]/g, '');
+        // First normalize and remove diacritics
+        let normalized = text.normalize('NFKD').replace(/[\u0300-\u036f]/g, '');
+        
+        // Replace common special characters that can't be encoded in WinAnsi
+        const replacements: Record<string, string> = {
+            'Ω': 'OMEGA',
+            'Σ': 'SIGMA',
+            'Δ': 'DELTA',
+            'Π': 'PI',
+            'Φ': 'PHI',
+            'Ψ': 'PSI',
+            'Θ': 'THETA',
+            'Λ': 'LAMBDA',
+            'Ξ': 'XI',
+            'Γ': 'GAMMA',
+            'α': 'alpha',
+            'β': 'beta',
+            'γ': 'gamma',
+            'δ': 'delta',
+            'ε': 'epsilon',
+            'ζ': 'zeta',
+            'η': 'eta',
+            'θ': 'theta',
+            'ι': 'iota',
+            'κ': 'kappa',
+            'λ': 'lambda',
+            'μ': 'mu',
+            'ν': 'nu',
+            'ξ': 'xi',
+            'ο': 'omicron',
+            'π': 'pi',
+            'ρ': 'rho',
+            'σ': 'sigma',
+            'τ': 'tau',
+            'υ': 'upsilon',
+            'φ': 'phi',
+            'χ': 'chi',
+            'ψ': 'psi',
+            'ω': 'omega',
+            '°': ' grados',
+            '±': '+/-',
+            '×': 'x',
+            '÷': '/',
+            '≈': '~',
+            '≠': '!=',
+            '≤': '<=',
+            '≥': '>=',
+            '∞': 'infinito',
+            '√': 'raiz',
+            '∑': 'suma',
+            '∫': 'integral',
+            '∂': 'd',
+            '∆': 'DELTA',
+            '∏': 'PI',
+            '€': 'EUR',
+            '£': 'GBP',
+            '¥': 'YEN',
+            '₹': 'INR',
+            '₽': 'RUB',
+            '₩': 'WON',
+            '₪': 'ILS',
+            '₱': 'PHP',
+            '₴': 'UAH',
+            '₦': 'NGN',
+            '₡': 'CRC',
+            '₨': 'Rs',
+            '₵': 'GHS',
+            '₮': 'MNT',
+            '₭': 'LAK',
+            '₲': 'PYG',
+            '₸': 'KZT',
+            '₺': 'TRY',
+            '₼': 'AZN',
+            '₾': 'GEL',
+            '₿': 'BTC',
+        };
+        
+        // Replace each special character
+        for (const [char, replacement] of Object.entries(replacements)) {
+            normalized = normalized.replace(new RegExp(char, 'g'), replacement);
+        }
+        
+        // Remove any remaining characters outside WinAnsi range (0x20-0xFF, excluding 0x80-0x9F)
+        // Keep only printable ASCII and extended Latin characters
+        normalized = normalized.replace(/[^\x20-\x7E\xA0-\xFF]/g, '');
+        
+        return normalized;
     };
 
     const margin = 40;
@@ -49,7 +135,9 @@ export const generatePDF = async ({ data, columns, title, fileName, firmas = [] 
     const verticalPadding = 3;
 
     const wrapText = (text: string, maxWidth: number, font: import('pdf-lib').PDFFont, fontSize: number) => {
-        const words = text.toString().split(' ');
+        // Normalize text first to avoid encoding issues
+        const normalizedText = normalizeText(text.toString());
+        const words = normalizedText.split(' ');
         const lines: string[] = [];
         let currentLine = '';
 
@@ -115,7 +203,9 @@ export const generatePDF = async ({ data, columns, title, fileName, firmas = [] 
     };
 
     const centerTextInCell = (text: string, cellWidth: number, font: import('pdf-lib').PDFFont, fontSize: number) => {
-        const textWidth = font.widthOfTextAtSize(text, fontSize);
+        // Normalize text first to avoid encoding issues
+        const normalizedText = normalizeText(text);
+        const textWidth = font.widthOfTextAtSize(normalizedText, fontSize);
         return (cellWidth - textWidth) / 2;
     };
 
@@ -230,15 +320,17 @@ export const generatePDF = async ({ data, columns, title, fileName, firmas = [] 
             thickness: 1,
             color: rgb(0, 0, 0),
         });
-        page.drawText(normalizeText('NOMBRE Y FIRMA'), {
-            x: xLeft + (signatureBoxWidth / 2) - (regularFont.widthOfTextAtSize('NOMBRE Y FIRMA', signatureFontSize) / 2),
+        const nombreFirmaText = normalizeText('NOMBRE Y FIRMA');
+        page.drawText(nombreFirmaText, {
+            x: xLeft + (signatureBoxWidth / 2) - (regularFont.widthOfTextAtSize(nombreFirmaText, signatureFontSize) / 2),
             y: lineY - 15,
             size: signatureFontSize,
             font: regularFont,
             color: rgb(0, 0, 0),
         });
-        page.drawText(normalizeText('PERSONA QUE LEVANTA EL REPORTE'), {
-            x: xLeft + (signatureBoxWidth / 2) - (regularFont.widthOfTextAtSize('PERSONA QUE LEVANTA EL REPORTE', signatureFontSize) / 2),
+        const personaLevantaText = normalizeText('PERSONA QUE LEVANTA EL REPORTE');
+        page.drawText(personaLevantaText, {
+            x: xLeft + (signatureBoxWidth / 2) - (regularFont.widthOfTextAtSize(personaLevantaText, signatureFontSize) / 2),
             y: lineY - 30,
             size: signatureFontSize,
             font: regularFont,
@@ -246,8 +338,9 @@ export const generatePDF = async ({ data, columns, title, fileName, firmas = [] 
         });
         if (firmas && firmas.length > 0) {
             const responsable = firmas.find(f => f.concepto === 'Responsable') || firmas[0];
-            page.drawText(normalizeText('RESPONSABLE'), {
-                x: xRight + (signatureBoxWidth / 2) - (regularFont.widthOfTextAtSize('RESPONSABLE', signatureFontSize) / 2),
+            const responsableText = normalizeText('RESPONSABLE');
+            page.drawText(responsableText, {
+                x: xRight + (signatureBoxWidth / 2) - (regularFont.widthOfTextAtSize(responsableText, signatureFontSize) / 2),
                 y: lineY + 30,
                 size: signatureFontSize,
                 font: regularFont,
@@ -260,17 +353,17 @@ export const generatePDF = async ({ data, columns, title, fileName, firmas = [] 
                 color: rgb(0, 0, 0),
             });
             
-            const nombreText = (responsable.nombre || 'SIN ASIGNAR').toUpperCase();
-            const puestoText = (responsable.puesto || 'SIN ASIGNAR').toUpperCase();
+            const nombreText = normalizeText((responsable.nombre || 'SIN ASIGNAR').toUpperCase());
+            const puestoText = normalizeText((responsable.puesto || 'SIN ASIGNAR').toUpperCase());
             
-            page.drawText(normalizeText(nombreText), {
+            page.drawText(nombreText, {
                 x: xRight + (signatureBoxWidth / 2) - (regularFont.widthOfTextAtSize(nombreText, signatureFontSize) / 2),
                 y: lineY - 15,
                 size: signatureFontSize,
                 font: regularFont,
                 color: rgb(0, 0, 0),
             });
-            page.drawText(normalizeText(puestoText), {
+            page.drawText(puestoText, {
                 x: xRight + (signatureBoxWidth / 2) - (regularFont.widthOfTextAtSize(puestoText, signatureFontSize) / 2),
                 y: lineY - 30,
                 size: signatureFontSize,
@@ -389,10 +482,11 @@ export const generatePDF = async ({ data, columns, title, fileName, firmas = [] 
                             title.toUpperCase()
                         ];
                         titles.forEach((text, index) => {
-                            const textWidth = font.widthOfTextAtSize(text, 9);
+                            const normalizedTitle = normalizeText(text);
+                            const textWidth = font.widthOfTextAtSize(normalizedTitle, 9);
                             const xPos = (pageWidth - textWidth) / 2;
                             if (currentPage) {
-                                currentPage.drawText(normalizeText(text), {
+                                currentPage.drawText(normalizedTitle, {
                                     x: xPos,
                                     y: currentYPos - (index * 12),
                                     size: 9,
@@ -410,10 +504,11 @@ export const generatePDF = async ({ data, columns, title, fileName, firmas = [] 
             // Encabezado de ORIGEN solo en la primera página del origen
             if (isFirstPageOfOrigen) {
                 const origenTitle = `ORIGEN: ${origen}`;
-                const titleWidth = font.widthOfTextAtSize(origenTitle, 10);
+                const normalizedOrigenTitle = normalizeText(origenTitle);
+                const titleWidth = font.widthOfTextAtSize(normalizedOrigenTitle, 10);
                 currentYPos -= 10;
                 currentPage.drawRectangle({ x: margin, y: currentYPos - 20, width: pageWidth - 2 * margin, height: 20, color: rgb(...color.bg) });
-                currentPage.drawText(origenTitle, { x: (pageWidth - titleWidth) / 2, y: currentYPos - 15, size: 10, font: font, color: rgb(...color.text) });
+                currentPage.drawText(normalizedOrigenTitle, { x: (pageWidth - titleWidth) / 2, y: currentYPos - 15, size: 10, font: font, color: rgb(...color.text) });
                 currentYPos -= 25;
             }
             // Encabezado de columnas solo si no se ha dibujado en esta página
@@ -439,8 +534,9 @@ export const generatePDF = async ({ data, columns, title, fileName, firmas = [] 
             globalIndex += pageData.length;
             globalPageCount++;
             const pageText = `PÁGINA ${globalPageCount}`;
-            const pageTextWidth = regularFont.widthOfTextAtSize(pageText, 10);
-            currentPage.drawText(normalizeText(pageText), {
+            const normalizedPageText = normalizeText(pageText);
+            const pageTextWidth = regularFont.widthOfTextAtSize(normalizedPageText, 10);
+            currentPage.drawText(normalizedPageText, {
                 x: pageWidth - margin - pageTextWidth,
                 y: margin - 20,
                 size: 10,
@@ -458,8 +554,9 @@ export const generatePDF = async ({ data, columns, title, fileName, firmas = [] 
             const signaturePage = pdfDoc.addPage([pageWidth, pageHeight]);
             drawSignatureSection(signaturePage, signatureBoxHeight + margin);
             const pageText = `PÁGINA ${globalPageCount + 1}`;
-            const pageTextWidth = regularFont.widthOfTextAtSize(pageText, 10);
-            signaturePage.drawText(normalizeText(pageText), {
+            const normalizedPageText = normalizeText(pageText);
+            const pageTextWidth = regularFont.widthOfTextAtSize(normalizedPageText, 10);
+            signaturePage.drawText(normalizedPageText, {
                 x: pageWidth - margin - pageTextWidth,
                 y: margin - 20,
                 size: 10,
