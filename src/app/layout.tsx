@@ -5,6 +5,7 @@ import HeaderContainer from "@/components/HeaderContainer";
 import { SpeedInsights } from '@vercel/speed-insights/next';
 import { ThemeProvider } from "@/context/ThemeContext";
 import IndexationPopover from "@/components/IndexationPopover";
+import SileoToaster from "@/components/SileoToaster";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -47,6 +48,7 @@ export default function RootLayout({
           <div className="indexation-popover-container">
             <IndexationPopover />
           </div>
+          <SileoToaster />
         </ThemeProvider>
       </body>
     </html>

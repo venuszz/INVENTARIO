@@ -29,6 +29,8 @@ import { useState, useEffect, useRef, useMemo } from 'react';
 import { usePathname } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import { MODULE_CONFIGS } from '@/config/modules';
+import { sileo } from 'sileo';
+import type { RealtimeChangeEvent } from '@/stores/indexationStore';
 
 interface ModuleState {
     key: string;
@@ -68,6 +70,8 @@ export default function IndexationPopover() {
     const [isAbsorbing, setIsAbsorbing] = useState(false);
     
     const prevStatesRef = useRef<Record<string, { isIndexing: boolean; isIndexed: boolean }>>({});
+    const prevRealtimeChangesRef = useRef<RealtimeChangeEvent[]>([]);
+    const prevReconnectionStatusRef = useRef<Record<string, string>>({});
     const absorbTimerRef = useRef<NodeJS.Timeout | null>(null);
     const autoHideTimerRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -121,6 +125,27 @@ export default function IndexationPopover() {
         return { indexing, indexed, errors };
     }, [activeModules]);
 
+    // Helper functions for realtime change toasts
+    // Obtener el ícono según el tipo de evento
+    const getEventIcon = (eventType: string) => {
+        switch (eventType) {
+            case 'INSERT': return Plus;
+            case 'UPDATE': return Edit2;
+            case 'DELETE': return Trash2;
+            default: return Bell;
+        }
+    };
+
+    // Obtener el texto según el tipo de evento
+    const getEventText = (eventType: string) => {
+        switch (eventType) {
+            case 'INSERT': return 'Nuevo registro';
+            case 'UPDATE': return 'Actualizado';
+            case 'DELETE': return 'Eliminado';
+            default: return 'Cambio';
+        }
+    };
+
     // Detectar cuando un módulo completa la indexación
     useEffect(() => {
         modules.forEach(module => {
@@ -132,9 +157,54 @@ export default function IndexationPopover() {
                 absorbTimerRef.current = setTimeout(() => {
                     setShowSuccessFlash(null);
                     setIsAbsorbing(false);
-                }, 800); // Reducido de 1200ms a 800ms para más estabilidad
+                }, 800);
             }
             prevStatesRef.current[module.key] = { isIndexing: module.state.isIndexing, isIndexed: module.state.isIndexed };
+        });
+    }, [modules]);
+
+    // Detectar cambios en reconnectionStatus y mostrar toasts
+    useEffect(() => {
+        modules.forEach(module => {
+            const prevStatus = prevReconnectionStatusRef.current[module.key] || 'idle';
+            const currentStatus = module.state.reconnectionStatus;
+            
+            // Solo procesar si el estado cambió
+            if (prevStatus !== currentStatus) {
+                if (currentStatus === 'failed') {
+                    // Error toast con duración de 8 segundos
+                    sileo.show({
+                        title: 'Conexión perdida',
+                        description: `${module.name}`,
+                        duration: 8000,
+                        icon: <WifiOff className="w-4 h-4 text-white" />,
+                        fill: '#171717',
+                        position: 'top-right',
+                    });
+                } else if (currentStatus === 'reconnecting') {
+                    // Info toast para reconexión
+                    sileo.show({
+                        title: 'Reconectando',
+                        description: `${module.name}`,
+                        duration: 5000,
+                        icon: <Loader2 className="w-4 h-4 text-white" />,
+                        fill: '#171717',
+                        position: 'top-right',
+                    });
+                } else if (currentStatus === 'reconciling') {
+                    // Info toast para sincronización
+                    sileo.show({
+                        title: 'Sincronizando',
+                        description: `${module.name}`,
+                        duration: 5000,
+                        icon: <RefreshCw className="w-4 h-4 text-white" />,
+                        fill: '#171717',
+                        position: 'top-right',
+                    });
+                }
+                
+                prevReconnectionStatusRef.current[module.key] = currentStatus;
+            }
         });
     }, [modules]);
 
@@ -179,106 +249,41 @@ export default function IndexationPopover() {
         };
     }, []);
 
-    // No mostrar en el servidor, en la página de login o si no hay módulos activos ni cambios
-    if (!isMounted || pathname === '/login' || (activeModules.length === 0 && realtimeChanges.filter(c => !c.dismissed).length === 0)) return null;
+    // Watch for new realtime changes and trigger Sileo toasts
+    useEffect(() => {
+        const newChanges = realtimeChanges.filter(
+            change => !prevRealtimeChangesRef.current.some(prev => prev.id === change.id)
+        );
+        
+        newChanges.forEach(change => {
+            if (change.dismissed) return;
+            
+            const EventIcon = getEventIcon(change.eventType);
+            const eventText = getEventText(change.eventType);
+            
+            sileo.show({
+                title: eventText,
+                description: change.table === 'config' ? 'Configuración' : change.moduleName,
+                duration: 3000,
+                icon: <EventIcon className="w-4 h-4 text-white" />,
+                fill: '#171717',
+                position: 'top-right',
+            });
+            
+            // Auto-dismiss after 3 seconds
+            setTimeout(() => {
+                dismissRealtimeChange(change.id);
+            }, 3000);
+        });
+        
+        prevRealtimeChangesRef.current = realtimeChanges;
+    }, [realtimeChanges, dismissRealtimeChange]);
 
-    // Obtener el ícono según el tipo de evento
-    const getEventIcon = (eventType: string) => {
-        switch (eventType) {
-            case 'INSERT': return Plus;
-            case 'UPDATE': return Edit2;
-            case 'DELETE': return Trash2;
-            default: return Bell;
-        }
-    };
-
-    // Obtener el color según el tipo de evento
-    const getEventColor = (eventType: string) => {
-        switch (eventType) {
-            case 'INSERT': return '#10b981'; // green
-            case 'UPDATE': return '#3b82f6'; // blue
-            case 'DELETE': return '#ef4444'; // red
-            default: return '#6b7280'; // gray
-        }
-    };
-
-    // Obtener el texto según el tipo de evento
-    const getEventText = (eventType: string) => {
-        switch (eventType) {
-            case 'INSERT': return 'Agregado';
-            case 'UPDATE': return 'Actualizado';
-            case 'DELETE': return 'Eliminado';
-            default: return 'Cambio';
-        }
-    };
+    // No mostrar en el servidor, en la página de login o si no hay módulos activos
+    if (!isMounted || pathname === '/login' || activeModules.length === 0) return null;
 
     return (
         <div className="fixed top-20 right-4 z-40 flex flex-col gap-2 max-w-sm">
-            {/* Notificaciones de cambios en tiempo real */}
-            <AnimatePresence>
-                {realtimeChanges
-                    .filter(change => !change.dismissed)
-                    .slice(0, 3) // Mostrar solo las últimas 3
-                    .map((change) => {
-                        const EventIcon = getEventIcon(change.eventType);
-                        const eventColor = getEventColor(change.eventType);
-                        const eventText = getEventText(change.eventType);
-                        
-                        return (
-                            <motion.div
-                                key={change.id}
-                                className={`${
-                                    isDarkMode ? 'bg-black text-white border-white/10' : 'bg-white text-black border-black/10'
-                                } shadow-2xl overflow-hidden select-none rounded-xl border backdrop-blur-sm`}
-                                initial={{ opacity: 0, x: 40, scale: 0.95 }}
-                                animate={{ opacity: 1, x: 0, scale: 1 }}
-                                exit={{ opacity: 0, x: 40, scale: 0.95 }}
-                                transition={{
-                                    type: 'spring',
-                                    stiffness: 300,
-                                    damping: 25,
-                                }}
-                            >
-                                <div className="p-3 flex items-start gap-3">
-                                    <motion.div
-                                        className="p-2 rounded-xl flex-shrink-0"
-                                        style={{ backgroundColor: `${eventColor}33` }}
-                                        initial={{ scale: 0.8 }}
-                                        animate={{ scale: 1 }}
-                                        transition={{ type: 'spring', stiffness: 400, damping: 15 }}
-                                    >
-                                        <EventIcon className="w-4 h-4" style={{ color: eventColor }} />
-                                    </motion.div>
-                                    
-                                    <div className="flex-1 min-w-0">
-                                        <div className="flex items-center justify-between gap-2 mb-1">
-                                            <span className="text-xs font-semibold truncate" style={{ color: eventColor }}>
-                                                {eventText}
-                                            </span>
-                                            <button
-                                                onClick={() => dismissRealtimeChange(change.id)}
-                                                className={`p-0.5 rounded hover:bg-opacity-20 transition-colors flex-shrink-0 ${
-                                                    isDarkMode ? 'hover:bg-white' : 'hover:bg-black'
-                                                }`}
-                                            >
-                                                <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                                                </svg>
-                                            </button>
-                                        </div>
-                                        
-                                        <div className={`text-xs ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>
-                                            <div className="font-medium truncate">
-                                                {change.table === 'config' ? 'CONFIGURACIÓN' : change.moduleName}
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </motion.div>
-                        );
-                    })}
-            </AnimatePresence>
-
             {/* Popover de indexación (solo si hay módulos activos) */}
             {activeModules.length > 0 && (
                 <>
