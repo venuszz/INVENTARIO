@@ -249,6 +249,85 @@ export default function IndexationPopover() {
         };
     }, []);
 
+    // Helper para obtener mensajes descriptivos según tabla y evento
+    const getRealtimeMessage = (change: RealtimeChangeEvent) => {
+        const { table, eventType, moduleName } = change;
+        
+        // Mensajes específicos por tabla y tipo de evento
+        const messages: Record<string, Record<string, { title: string; description: string }>> = {
+            muebles_inea: {
+                INSERT: { title: 'Nuevo bien agregado', description: 'Se registró un nuevo bien en INEA' },
+                UPDATE: { title: 'Bien actualizado', description: 'Se modificó información de un bien INEA' },
+                DELETE: { title: 'Bien eliminado', description: 'Se eliminó un bien del inventario INEA' },
+            },
+            muebles_itea: {
+                INSERT: { title: 'Nuevo bien agregado', description: 'Se registró un nuevo bien en ITEA' },
+                UPDATE: { title: 'Bien actualizado', description: 'Se modificó información de un bien ITEA' },
+                DELETE: { title: 'Bien eliminado', description: 'Se eliminó un bien del inventario ITEA' },
+            },
+            muebles_inea_obsoletos: {
+                INSERT: { title: 'Bien marcado obsoleto', description: 'Un bien INEA fue marcado como obsoleto' },
+                UPDATE: { title: 'Bien obsoleto actualizado', description: 'Se modificó un bien obsoleto de INEA' },
+                DELETE: { title: 'Bien reactivado', description: 'Un bien obsoleto INEA fue reactivado' },
+            },
+            muebles_itea_obsoletos: {
+                INSERT: { title: 'Bien marcado obsoleto', description: 'Un bien ITEA fue marcado como obsoleto' },
+                UPDATE: { title: 'Bien obsoleto actualizado', description: 'Se modificó un bien obsoleto de ITEA' },
+                DELETE: { title: 'Bien reactivado', description: 'Un bien obsoleto ITEA fue reactivado' },
+            },
+            muebles_no_listado: {
+                INSERT: { title: 'Nuevo bien no listado', description: 'Se agregó un bien al inventario no listado' },
+                UPDATE: { title: 'Bien no listado actualizado', description: 'Se modificó un bien no listado' },
+                DELETE: { title: 'Bien no listado eliminado', description: 'Se eliminó un bien del inventario no listado' },
+            },
+            resguardos: {
+                INSERT: { title: 'Nuevo resguardo creado', description: 'Se generó un nuevo resguardo de bienes' },
+                UPDATE: { title: 'Resguardo actualizado', description: 'Se modificó información de un resguardo' },
+                DELETE: { title: 'Resguardo eliminado', description: 'Se eliminó un resguardo del sistema' },
+            },
+            resguardos_bajas: {
+                INSERT: { title: 'Nueva baja registrada', description: 'Se dio de baja un resguardo de bienes' },
+                UPDATE: { title: 'Baja actualizada', description: 'Se modificó información de una baja' },
+                DELETE: { title: 'Baja eliminada', description: 'Se eliminó un registro de baja' },
+            },
+            directorio: {
+                INSERT: { title: 'Nueva persona agregada', description: 'Se registró una persona en el directorio' },
+                UPDATE: { title: 'Persona actualizada', description: 'Se modificó información del directorio' },
+                DELETE: { title: 'Persona eliminada', description: 'Se eliminó una persona del directorio' },
+            },
+            areas: {
+                INSERT: { title: 'Nueva área creada', description: 'Se agregó un área al catálogo' },
+                UPDATE: { title: 'Área actualizada', description: 'Se modificó información de un área' },
+                DELETE: { title: 'Área eliminada', description: 'Se eliminó un área del catálogo' },
+            },
+            config: {
+                INSERT: { title: 'Nueva configuración', description: 'Se agregó un parámetro de configuración' },
+                UPDATE: { title: 'Configuración actualizada', description: 'Se modificó un parámetro del sistema' },
+                DELETE: { title: 'Configuración eliminada', description: 'Se eliminó un parámetro de configuración' },
+            },
+            firmas: {
+                INSERT: { title: 'Nueva firma agregada', description: 'Se registró una firma en el sistema' },
+                UPDATE: { title: 'Firma actualizada', description: 'Se modificó información de una firma' },
+                DELETE: { title: 'Firma eliminada', description: 'Se eliminó una firma del sistema' },
+            },
+        };
+        
+        // Obtener mensaje específico o usar genérico
+        const tableMessages = messages[table];
+        if (tableMessages && tableMessages[eventType]) {
+            return tableMessages[eventType];
+        }
+        
+        // Mensajes genéricos como fallback
+        const genericMessages: Record<string, { title: string; description: string }> = {
+            INSERT: { title: 'Nuevo registro', description: `Se agregó un registro en ${moduleName}` },
+            UPDATE: { title: 'Registro actualizado', description: `Se modificó un registro en ${moduleName}` },
+            DELETE: { title: 'Registro eliminado', description: `Se eliminó un registro de ${moduleName}` },
+        };
+        
+        return genericMessages[eventType] || { title: 'Cambio detectado', description: moduleName };
+    };
+
     // Watch for new realtime changes and trigger Sileo toasts
     useEffect(() => {
         const newChanges = realtimeChanges.filter(
@@ -259,21 +338,21 @@ export default function IndexationPopover() {
             if (change.dismissed) return;
             
             const EventIcon = getEventIcon(change.eventType);
-            const eventText = getEventText(change.eventType);
+            const message = getRealtimeMessage(change);
             
             sileo.show({
-                title: eventText,
-                description: change.table === 'config' ? 'Configuración' : change.moduleName,
-                duration: 3000,
+                title: message.title,
+                description: message.description,
+                duration: 4000,
                 icon: <EventIcon className="w-4 h-4 text-white" />,
                 fill: '#171717',
                 position: 'top-right',
             });
             
-            // Auto-dismiss after 3 seconds
+            // Auto-dismiss after 4 seconds
             setTimeout(() => {
                 dismissRealtimeChange(change.id);
-            }, 3000);
+            }, 4000);
         });
         
         prevRealtimeChangesRef.current = realtimeChanges;
