@@ -9,8 +9,8 @@ export default function SileoToaster() {
       offset={{ top: 80 }}
       options={{
         styles: {
-          title: 'color: #ffffff',
-          description: 'color: rgba(255, 255, 255, 0.7)',
+          title: '!text-white',
+          description: '!text-white/70',
         }
       }}
     />

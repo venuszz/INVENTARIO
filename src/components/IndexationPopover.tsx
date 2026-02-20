@@ -180,6 +180,10 @@ export default function IndexationPopover() {
                         icon: <WifiOff className="w-4 h-4 text-white" />,
                         fill: '#171717',
                         position: 'top-right',
+                        styles: {
+                            title: '!text-white',
+                            description: '!text-white/70',
+                        },
                     });
                 } else if (currentStatus === 'reconnecting') {
                     // Info toast para reconexión
@@ -190,6 +194,10 @@ export default function IndexationPopover() {
                         icon: <Loader2 className="w-4 h-4 text-white" />,
                         fill: '#171717',
                         position: 'top-right',
+                        styles: {
+                            title: '!text-white',
+                            description: '!text-white/70',
+                        },
                     });
                 } else if (currentStatus === 'reconciling') {
                     // Info toast para sincronización
@@ -200,6 +208,10 @@ export default function IndexationPopover() {
                         icon: <RefreshCw className="w-4 h-4 text-white" />,
                         fill: '#171717',
                         position: 'top-right',
+                        styles: {
+                            title: '!text-white',
+                            description: '!text-white/70',
+                        },
                     });
                 }
                 
@@ -347,6 +359,10 @@ export default function IndexationPopover() {
                 icon: <EventIcon className="w-4 h-4 text-white" />,
                 fill: '#171717',
                 position: 'top-right',
+                styles: {
+                    title: '!text-white',
+                    description: '!text-white/70',
+                },
             });
             
             // Auto-dismiss after 4 seconds
