@@ -248,6 +248,13 @@ export default function ConsultasIneaObsoletos() {
     }
   }, [foundItem, sortedMuebles, rowsPerPage]);
 
+  // Reset to page 1 when filters change and current page is out of range
+  useEffect(() => {
+    if (currentPage > totalPages && totalPages > 0) {
+      setCurrentPage(1);
+    }
+  }, [totalFilteredCount, currentPage, totalPages]);
+
   // Calculate filtered value
   const filteredValue = sortedMuebles.reduce((sum, m) => 
     sum + (typeof m.valor === 'number' ? m.valor : parseFloat(m.valor || '0') || 0), 0

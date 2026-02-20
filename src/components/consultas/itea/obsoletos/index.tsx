@@ -283,6 +283,13 @@ export default function IteaObsoletosComponent() {
     }
   }, [foundItem, sortedMuebles, rowsPerPage]);
 
+  // Reset to page 1 when filters change and current page is out of range
+  useEffect(() => {
+    if (currentPage > totalPages && totalPages > 0) {
+      setCurrentPage(1);
+    }
+  }, [totalFilteredCount, currentPage, totalPages]);
+
   // Task 19: URL parameter handling for direct item linking
   useEffect(() => {
     const itemId = searchParams.get('id');

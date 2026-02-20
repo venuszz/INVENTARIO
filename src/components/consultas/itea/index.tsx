@@ -409,6 +409,13 @@ export default function ConsultasIteaGeneral() {
     }
   }, [foundItem, sortedMuebles, rowsPerPage]);
 
+  // Reset to page 1 when filters change and current page is out of range
+  useEffect(() => {
+    if (currentPage > totalPages && totalPages > 0) {
+      setCurrentPage(1);
+    }
+  }, [totalFilteredCount, currentPage, totalPages]);
+
   // Handle sorting
   const handleSort = (field: keyof Mueble) => {
     if (sortField === field) {
