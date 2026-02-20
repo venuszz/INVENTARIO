@@ -5,6 +5,9 @@ import { Plus, Trash2, Edit, X, Search, FileText, Package } from 'lucide-react';
 import SectionRealtimeToggle from '@/components/SectionRealtimeToggle';
 import { useAdminIndexation } from '@/hooks/indexation/useAdminIndexation';
 import { useDirectorioStats } from './hooks/useDirectorioStats';
+import { useDirectorioInconsistencies } from './hooks/useDirectorioInconsistencies';
+import { InconsistencyAlert } from './components/InconsistencyAlert';
+import { isAreaInConflict, getConflictTooltip } from './utils/inconsistencyHelpers';
 import { useIneaStore } from '@/stores/ineaStore';
 import { useIteaStore } from '@/stores/iteaStore';
 import { useNoListadoStore } from '@/stores/noListadoStore';
@@ -37,6 +40,14 @@ export function DirectorioManager() {
     
     // Hook para estadísticas (resguardos y bienes a cargo)
     const { stats: directorioStats } = useDirectorioStats(directorioIds);
+    
+    // Hook para detectar incoherencias
+    const { inconsistencies } = useDirectorioInconsistencies(
+        directorioFromStore,
+        areasFromStore,
+        directorioAreasFromStore,
+        directorioStats
+    );
     
     // Stores para contar bienes por área
     const ineaMuebles = useIneaStore(state => state.muebles);
@@ -416,6 +427,9 @@ export function DirectorioManager() {
             ? 'bg-black text-white'
             : 'bg-white text-black'
             }`}>
+            {/* Alerta de incoherencias flotante */}
+            <InconsistencyAlert inconsistencies={inconsistencies} isInDirectorioPage={true} />
+            
             <motion.div 
                 className={`h-full overflow-y-auto p-4 md:p-8 ${
                     isDarkMode 
@@ -485,7 +499,7 @@ export function DirectorioManager() {
                             >
                                 <Plus size={16} className={`flex-shrink-0 ${isDarkMode ? 'text-white/40' : 'text-black/40'}`} />
                                 <span className={`text-sm ${isDarkMode ? 'text-white/60' : 'text-black/60'}`}>
-                                    Agregar empleado...
+                                    Añadir responsable...
                                 </span>
                             </motion.div>
                         )}
@@ -507,7 +521,7 @@ export function DirectorioManager() {
                                 {/* Header con botón cerrar */}
                                 <div className="flex items-center justify-between mb-1">
                                     <span className={`text-xs font-medium ${isDarkMode ? 'text-white/60' : 'text-black/60'}`}>
-                                        Nuevo empleado
+                                        Nuevo responsable
                                     </span>
                                     <motion.button
                                         onClick={() => {
@@ -562,6 +576,10 @@ export function DirectorioManager() {
                                         <AnimatePresence mode="popLayout">
                                             {Array.from(new Set(newEmployeeAreas)).map(id_area => {
                                                 const areaObj = areasFromStore.find(a => a.id_area === id_area);
+                                                const hasConflict = isAreaInConflict(id_area, inconsistencies);
+                                                // For new employees, we can't get specific conflict tooltip since they don't have an id yet
+                                                const conflictTooltip = hasConflict ? 'Esta área ya está asignada a otro director' : '';
+                                                
                                                 return areaObj ? (
                                                     <motion.span 
                                                         key={`new-area-${id_area}`}
@@ -569,11 +587,26 @@ export function DirectorioManager() {
                                                         initial={{ opacity: 0, scale: 0.8 }}
                                                         animate={{ opacity: 1, scale: 1 }}
                                                         exit={{ opacity: 0, scale: 0.8 }}
-                                                        className={`flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium transition-colors ${isDarkMode
-                                                            ? 'bg-white/10 text-white border border-white/20'
-                                                            : 'bg-black/10 text-black border border-black/20'
-                                                            }`}
+                                                        className={`relative flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium transition-colors ${
+                                                            hasConflict
+                                                                ? isDarkMode
+                                                                    ? 'bg-red-500/10 text-red-400 border border-red-500/30'
+                                                                    : 'bg-red-50 text-red-600 border border-red-200'
+                                                                : isDarkMode
+                                                                    ? 'bg-white/10 text-white border border-white/20'
+                                                                    : 'bg-black/10 text-black border border-black/20'
+                                                        }`}
+                                                        title={conflictTooltip || undefined}
                                                     >
+                                                        {hasConflict && (
+                                                            <motion.span
+                                                                className={`absolute -top-1 -left-1 w-2 h-2 rounded-full ${
+                                                                    isDarkMode ? 'bg-red-400' : 'bg-red-600'
+                                                                }`}
+                                                                animate={{ scale: [1, 1.2, 1] }}
+                                                                transition={{ duration: 1.5, repeat: Infinity }}
+                                                            />
+                                                        )}
                                                         {areaObj.nombre}
                                                         <motion.button
                                                             type="button"
@@ -643,6 +676,77 @@ export function DirectorioManager() {
                             </motion.div>
                         )}
                     </AnimatePresence>
+                    
+                    {/* Leyenda de simbología */}
+                    <motion.div
+                        className={`px-3 py-2 rounded-lg ${
+                            isDarkMode ? 'bg-white/[0.02]' : 'bg-black/[0.02]'
+                        }`}
+                        initial={{ opacity: 0, y: -5 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: 0.3 }}
+                    >
+                        <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
+                            <span className={`text-[10px] font-medium uppercase tracking-wide ${
+                                isDarkMode ? 'text-white/30' : 'text-black/30'
+                            }`}>
+                                Simbología:
+                            </span>
+                            
+                            {/* Resguardos */}
+                            <div className="flex items-center gap-1.5">
+                                <span className={`flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium ${
+                                    isDarkMode 
+                                        ? 'bg-blue-500/10 text-blue-400 border border-blue-500/20' 
+                                        : 'bg-blue-50 text-blue-600 border border-blue-200'
+                                }`}>
+                                    <FileText size={12} />
+                                    0
+                                </span>
+                                <span className={`text-[10px] ${
+                                    isDarkMode ? 'text-white/50' : 'text-black/50'
+                                }`}>
+                                    Resguardos
+                                </span>
+                            </div>
+
+                            {/* Bienes a cargo */}
+                            <div className="flex items-center gap-1.5">
+                                <span className={`flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium ${
+                                    isDarkMode 
+                                        ? 'bg-green-500/10 text-green-400 border border-green-500/20' 
+                                        : 'bg-green-50 text-green-600 border border-green-200'
+                                }`}>
+                                    <Package size={12} />
+                                    0
+                                </span>
+                                <span className={`text-[10px] ${
+                                    isDarkMode ? 'text-white/50' : 'text-black/50'
+                                }`}>
+                                    Bienes a cargo
+                                </span>
+                            </div>
+
+                            {/* Área con conflicto */}
+                            <div className="flex items-center gap-1.5">
+                                <span className={`relative flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium ${
+                                    isDarkMode
+                                        ? 'bg-red-500/10 text-red-400 border border-red-500/30'
+                                        : 'bg-red-50 text-red-600 border border-red-200'
+                                }`}>
+                                    <span className={`w-2 h-2 rounded-full ${
+                                        isDarkMode ? 'bg-red-400' : 'bg-red-600'
+                                    }`} />
+                                    Área
+                                </span>
+                                <span className={`text-[10px] ${
+                                    isDarkMode ? 'text-white/50' : 'text-black/50'
+                                }`}>
+                                    Conflicto detectado
+                                </span>
+                            </div>
+                        </div>
+                    </motion.div>
                 </motion.div>
 
                 {/* Lista de empleados */}
@@ -730,6 +834,8 @@ export function DirectorioManager() {
                                                             const resguardosCount = countResguardosByArea(editEmployee.id_directorio, id_area);
                                                             const hasGoods = bienesCount > 0;
                                                             const hasResguardos = resguardosCount > 0;
+                                                            const hasConflict = isAreaInConflict(id_area, inconsistencies);
+                                                            const conflictTooltip = hasConflict ? getConflictTooltip(id_area, editEmployee.id_directorio, inconsistencies) : '';
                                                             
                                                             return areaObj ? (
                                                                 <motion.span 
@@ -738,11 +844,26 @@ export function DirectorioManager() {
                                                                     initial={{ opacity: 0, scale: 0.8 }}
                                                                     animate={{ opacity: 1, scale: 1 }}
                                                                     exit={{ opacity: 0, scale: 0.8 }}
-                                                                    className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium transition-colors ${isDarkMode
-                                                                        ? 'bg-white/10 text-white border border-white/20'
-                                                                        : 'bg-black/10 text-black border border-black/20'
-                                                                        }`}
+                                                                    className={`relative flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium transition-colors ${
+                                                                        hasConflict
+                                                                            ? isDarkMode
+                                                                                ? 'bg-red-500/10 text-red-400 border border-red-500/30'
+                                                                                : 'bg-red-50 text-red-600 border border-red-200'
+                                                                            : isDarkMode
+                                                                                ? 'bg-white/10 text-white border border-white/20'
+                                                                                : 'bg-black/10 text-black border border-black/20'
+                                                                    }`}
+                                                                    title={conflictTooltip || undefined}
                                                                 >
+                                                                    {hasConflict && (
+                                                                        <motion.span
+                                                                            className={`absolute -top-1 -left-1 w-2 h-2 rounded-full ${
+                                                                                isDarkMode ? 'bg-red-400' : 'bg-red-600'
+                                                                            }`}
+                                                                            animate={{ scale: [1, 1.2, 1] }}
+                                                                            transition={{ duration: 1.5, repeat: Infinity }}
+                                                                        />
+                                                                    )}
                                                                     <span className="flex items-center gap-1">
                                                                         {areaObj.nombre}
                                                                         {bienesCount > 0 && (
@@ -971,21 +1092,38 @@ export function DirectorioManager() {
                                                 {Array.from(new Set(directorAreasMap[employee.id_directorio] || [])).map(id_area => {
                                                     const areaObj = areasFromStore.find(a => a.id_area === id_area);
                                                     const isHighlighted = areaObj && (areaMatchesSearch(areaObj.nombre) || (highlightedArea && areaObj.nombre === highlightedArea));
+                                                    const hasConflict = isAreaInConflict(id_area, inconsistencies);
+                                                    const conflictTooltip = hasConflict ? getConflictTooltip(id_area, employee.id_directorio, inconsistencies) : '';
+                                                    
                                                     return areaObj ? (
                                                         <motion.span 
                                                             key={`view-area-${id_area}`}
-                                                            className={`px-2 py-0.5 rounded-full text-xs font-medium transition-all ${
-                                                                isHighlighted
+                                                            className={`relative px-2 py-0.5 rounded-full text-xs font-medium transition-all ${
+                                                                hasConflict
                                                                     ? isDarkMode
-                                                                        ? 'bg-white/20 text-white border border-white/40 ring-2 ring-white/20'
-                                                                        : 'bg-black/20 text-black border border-black/40 ring-2 ring-black/20'
-                                                                    : isDarkMode
-                                                                        ? 'bg-white/5 text-white/80 border border-white/10'
-                                                                        : 'bg-black/5 text-black/80 border border-black/10'
+                                                                        ? 'bg-red-500/10 text-red-400 border border-red-500/30'
+                                                                        : 'bg-red-50 text-red-600 border border-red-200'
+                                                                    : isHighlighted
+                                                                        ? isDarkMode
+                                                                            ? 'bg-white/20 text-white border border-white/40 ring-2 ring-white/20'
+                                                                            : 'bg-black/20 text-black border border-black/40 ring-2 ring-black/20'
+                                                                        : isDarkMode
+                                                                            ? 'bg-white/5 text-white/80 border border-white/10'
+                                                                            : 'bg-black/5 text-black/80 border border-black/10'
                                                             }`}
                                                             animate={isHighlighted ? { scale: [1, 1.05, 1] } : {}}
                                                             transition={{ duration: 0.3 }}
+                                                            title={conflictTooltip}
                                                         >
+                                                            {hasConflict && (
+                                                                <motion.span
+                                                                    className={`absolute -top-1 -right-1 w-2 h-2 rounded-full ${
+                                                                        isDarkMode ? 'bg-red-400' : 'bg-red-600'
+                                                                    }`}
+                                                                    animate={{ scale: [1, 1.2, 1] }}
+                                                                    transition={{ duration: 1.5, repeat: Infinity }}
+                                                                />
+                                                            )}
                                                             {areaObj.nombre}
                                                         </motion.span>
                                                     ) : null;

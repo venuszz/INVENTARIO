@@ -6,6 +6,7 @@ import { SpeedInsights } from '@vercel/speed-insights/next';
 import { ThemeProvider } from "@/context/ThemeContext";
 import IndexationPopover from "@/components/IndexationPopover";
 import SileoToaster from "@/components/SileoToaster";
+import GlobalInconsistencyAlert from "@/components/GlobalInconsistencyAlert";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -48,6 +49,7 @@ export default function RootLayout({
           <div className="indexation-popover-container">
             <IndexationPopover />
           </div>
+          <GlobalInconsistencyAlert />
           <SileoToaster />
         </ThemeProvider>
       </body>
