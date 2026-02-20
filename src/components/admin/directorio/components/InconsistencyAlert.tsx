@@ -43,7 +43,7 @@ export function InconsistencyAlert({ inconsistencies, isInDirectorioPage = false
     
     if (inconsistencies.length === 0) return null;
     
-    // Contar tipos de incoherencias
+    // Contar tipos de inconsistencias
     const duplicateAreasCount = inconsistencies.filter(i => i.type === 'duplicate_area').length;
     const emptyDirectorsCount = inconsistencies.filter(i => i.type === 'empty_director').length;
     const emptyAreasCount = inconsistencies.filter(i => i.type === 'empty_area').length;
@@ -132,7 +132,7 @@ export function InconsistencyAlert({ inconsistencies, isInDirectorioPage = false
                                 } ${
                                     isDarkMode ? 'text-red-400' : 'text-red-600'
                                 }`}>
-                                    {totalCount} {totalCount === 1 ? 'incoherencia' : 'incoherencias'}
+                                    {totalCount} {totalCount === 1 ? 'inconsistencia' : 'inconsistencias'}
                                 </span>
                                 {!isInDirectorioPage && (
                                     <ExternalLink className={`w-3 h-3 ml-1 ${
@@ -177,7 +177,7 @@ export function InconsistencyAlert({ inconsistencies, isInDirectorioPage = false
                                             <span className={`text-xs font-medium ${
                                                 isDarkMode ? 'text-white/60' : 'text-black/60'
                                             }`}>
-                                                Incoherencias detectadas
+                                                Inconsistencias detectadas
                                             </span>
                                         </div>
                                         <span className={`text-[10px] font-medium ${
@@ -399,7 +399,7 @@ export function InconsistencyAlert({ inconsistencies, isInDirectorioPage = false
                                             <span className={`text-xs font-medium ${
                                                 isDarkMode ? 'text-white/60' : 'text-black/60'
                                             }`}>
-                                                Incoherencias detectadas
+                                                Inconsistencias detectadas
                                             </span>
                                         </div>
                                         <span className={`text-[10px] font-medium ${
@@ -409,7 +409,7 @@ export function InconsistencyAlert({ inconsistencies, isInDirectorioPage = false
                                         </span>
                                     </div>
 
-                                    {/* Resumen de incoherencias */}
+                                    {/* Resumen de inconsistencias */}
                                     <div className="px-3 pb-3 space-y-2">
                                         {duplicateAreasCount > 0 && (
                                             <motion.div

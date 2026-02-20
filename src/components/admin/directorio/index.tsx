@@ -41,7 +41,7 @@ export function DirectorioManager() {
     // Hook para estadísticas (resguardos y bienes a cargo)
     const { stats: directorioStats } = useDirectorioStats(directorioIds);
     
-    // Hook para detectar incoherencias
+    // Hook para detectar inconsistencias
     const { inconsistencies } = useDirectorioInconsistencies(
         directorioFromStore,
         areasFromStore,
@@ -427,7 +427,7 @@ export function DirectorioManager() {
             ? 'bg-black text-white'
             : 'bg-white text-black'
             }`}>
-            {/* Alerta de incoherencias flotante */}
+            {/* Alerta de inconsistencias flotante */}
             <InconsistencyAlert inconsistencies={inconsistencies} isInDirectorioPage={true} />
             
             <motion.div 

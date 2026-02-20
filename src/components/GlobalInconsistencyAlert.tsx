@@ -25,7 +25,7 @@ export default function GlobalInconsistencyAlert() {
     // Hook para estadísticas
     const { stats: directorioStats } = useDirectorioStats(directorioIds);
     
-    // Hook para detectar incoherencias
+    // Hook para detectar inconsistencias
     const { inconsistencies } = useDirectorioInconsistencies(
         directorio,
         areas,
@@ -36,7 +36,7 @@ export default function GlobalInconsistencyAlert() {
     // Determinar si estamos en la página de directorio
     const isInDirectorioPage = pathname === '/admin/personal';
     
-    // Solo renderizar si hay incoherencias
+    // Solo renderizar si hay inconsistencias
     if (inconsistencies.length === 0) return null;
     
     // Si estamos en la página de directorio, no renderizar (el componente local lo hace)
