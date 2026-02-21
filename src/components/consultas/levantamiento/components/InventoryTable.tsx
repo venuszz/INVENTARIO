@@ -183,14 +183,18 @@ export function InventoryTable({
                 <td className={`px-4 py-3 text-sm ${
                   isDarkMode ? 'text-white/80' : 'text-black/80'
                 }`}>
-                  {truncateText(item.descripcion, 40)}
+                  <div className="line-clamp-3" title={item.descripcion || ''}>
+                    {item.descripcion}
+                  </div>
                 </td>
 
                 {/* Área */}
                 <td className={`px-4 py-3 text-sm ${
                   isDarkMode ? 'text-white/80' : 'text-black/80'
                 }`}>
-                  {item.area?.nombre ? truncateText(item.area.nombre, 20) : '-'}
+                  <div className="line-clamp-3" title={item.area?.nombre || ''}>
+                    {item.area?.nombre || '-'}
+                  </div>
                 </td>
 
                 {/* Usuario Final / Resguardante */}
@@ -198,22 +202,22 @@ export function InventoryTable({
                   isDarkMode ? 'text-white/80' : 'text-black/80'
                 }`}>
                   <div className="flex flex-col gap-1">
-                    <span className={`font-medium ${
+                    <span className={`font-medium line-clamp-3 ${
                       isDarkMode ? 'text-white' : 'text-black'
-                    }`}>
-                      {item.directorio?.nombre ? truncateText(item.directorio.nombre, 20) : (
+                    }`} title={item.directorio?.nombre || ''}>
+                      {item.directorio?.nombre || (
                         <span className={isDarkMode ? 'text-white/40' : 'text-black/40'}>
                           Sin director
                         </span>
                       )}
                     </span>
                     {item.resguardante && (
-                      <span className={`inline-block px-2 py-0.5 text-xs font-medium rounded-full border ${
+                      <span className={`inline-block px-2 py-0.5 text-xs font-medium rounded-full border line-clamp-3 ${
                         isDarkMode 
                           ? 'bg-white/5 text-white/80 border-white/10' 
                           : 'bg-black/5 text-black/80 border-black/10'
-                      }`}>
-                        {truncateText(item.resguardante, 20)}
+                      }`} title={item.resguardante}>
+                        {item.resguardante}
                       </span>
                     )}
                   </div>

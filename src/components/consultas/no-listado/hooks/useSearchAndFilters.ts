@@ -180,10 +180,18 @@ export function useSearchAndFilters(muebles: Mueble[], foliosResguardo: Record<s
             return 0;
         });
 
-        setSuggestions(allSuggestions.slice(0, 7));
-        setShowSuggestions(allSuggestions.length > 0);
-        setHighlightedIndex(allSuggestions.length > 0 ? 0 : -1);
-    }, [deferredSearchTerm, searchableData]);
+        // Filter out suggestions that are already in active filters
+        const activeFilterValues = new Set(
+            activeFilters.map(f => f.term.toLowerCase())
+        );
+        const filteredSuggestions = allSuggestions.filter(
+            s => !activeFilterValues.has(s.value.toLowerCase())
+        );
+
+        setSuggestions(filteredSuggestions.slice(0, 7));
+        setShowSuggestions(filteredSuggestions.length > 0);
+        setHighlightedIndex(filteredSuggestions.length > 0 ? 0 : -1);
+    }, [deferredSearchTerm, searchableData, activeFilters]);
 
     // Filter and sort muebles
     const filteredMueblesOmni = useMemo(() => {
@@ -192,39 +200,51 @@ export function useSearchAndFilters(muebles: Mueble[], foliosResguardo: Record<s
         if (activeFilters.length === 0 && !term) return muebles;
 
         return muebles.filter(item => {
-            const passesActiveFilters = activeFilters.every(filter => {
-                const filterTerm = filter.term.toLowerCase();
-                if (!filterTerm) return true;
+            // Group filters by type for OR logic within same type
+            const filtersByType = activeFilters.reduce((acc, filter) => {
+                const type = filter.type || 'unknown';
+                if (!acc[type]) acc[type] = [];
+                acc[type].push(filter);
+                return acc;
+            }, {} as Record<string, ActiveFilter[]>);
 
-                switch (filter.type) {
-                    case 'sin_id': return !item.id_inv || item.id_inv.trim() === '';
-                    case 'con_resguardo': return !!foliosResguardo[item.id_inv];
-                    case 'sin_resguardo': return !foliosResguardo[item.id_inv];
-                    case 'folio': {
-                        const itemFolio = foliosResguardo[item.id_inv];
-                        return itemFolio && itemFolio.toLowerCase().includes(filterTerm);
+            // Check active filters: AND between types, OR within same type
+            const passesActiveFilters = Object.entries(filtersByType).every(([type, filters]) => {
+                // Within same type, item must match at least ONE filter (OR logic)
+                return filters.some(filter => {
+                    const filterTerm = filter.term.toLowerCase();
+                    if (!filterTerm) return true;
+
+                    switch (filter.type) {
+                        case 'sin_id': return !item.id_inv || item.id_inv.trim() === '';
+                        case 'con_resguardo': return !!foliosResguardo[item.id_inv];
+                        case 'sin_resguardo': return !foliosResguardo[item.id_inv];
+                        case 'folio': {
+                            const itemFolio = foliosResguardo[item.id_inv];
+                            return itemFolio && itemFolio.toLowerCase().includes(filterTerm);
+                        }
+                        case 'id': return (item.id_inv?.toLowerCase() || '').includes(filterTerm);
+                        case 'descripcion': return (item.descripcion?.toLowerCase() || '').includes(filterTerm);
+                        case 'rubro': return (item.rubro?.toLowerCase() || '').includes(filterTerm);
+                        case 'estado': {
+                            const estado = item.estado?.toUpperCase() || '';
+                            const filterUpper = filterTerm.toUpperCase();
+                            // Convert long form to short form if needed
+                            let shortForm = filterUpper;
+                            if (filterUpper === 'PENDIENTE') shortForm = 'P';
+                            else if (filterUpper === 'BUENO') shortForm = 'B';
+                            else if (filterUpper === 'MALO') shortForm = 'M';
+                            else if (filterUpper === 'REGULAR') shortForm = 'R';
+                            // Match the short form
+                            return estado === shortForm;
+                        }
+                        case 'estatus': return (item.estatus?.toLowerCase() || '').includes(filterTerm);
+                        case 'area': return (item.area?.nombre?.toLowerCase() || '').includes(filterTerm);
+                        case 'usufinal': return (item.directorio?.nombre?.toLowerCase() || '').includes(filterTerm);
+                        case 'resguardante': return ((item as any).resguardante?.toLowerCase() || '').includes(filterTerm);
+                        default: return true;
                     }
-                    case 'id': return (item.id_inv?.toLowerCase() || '').includes(filterTerm);
-                    case 'descripcion': return (item.descripcion?.toLowerCase() || '').includes(filterTerm);
-                    case 'rubro': return (item.rubro?.toLowerCase() || '').includes(filterTerm);
-                    case 'estado': {
-                        const estado = item.estado?.toUpperCase() || '';
-                        const filterUpper = filterTerm.toUpperCase();
-                        // Convert long form to short form if needed
-                        let shortForm = filterUpper;
-                        if (filterUpper === 'PENDIENTE') shortForm = 'P';
-                        else if (filterUpper === 'BUENO') shortForm = 'B';
-                        else if (filterUpper === 'MALO') shortForm = 'M';
-                        else if (filterUpper === 'REGULAR') shortForm = 'R';
-                        // Match the short form
-                        return estado === shortForm;
-                    }
-                    case 'estatus': return (item.estatus?.toLowerCase() || '').includes(filterTerm);
-                    case 'area': return (item.area?.nombre?.toLowerCase() || '').includes(filterTerm);
-                    case 'usufinal': return (item.directorio?.nombre?.toLowerCase() || '').includes(filterTerm);
-                    case 'resguardante': return ((item as any).resguardante?.toLowerCase() || '').includes(filterTerm);
-                    default: return true;
-                }
+                });
             });
 
             if (!passesActiveFilters) return false;

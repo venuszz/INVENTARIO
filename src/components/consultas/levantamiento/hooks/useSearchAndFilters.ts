@@ -106,13 +106,17 @@ export function useSearchAndFilters({
 
   /**
    * Determine if custom PDF export is enabled
-   * Requires both area and usufinal filters with valid values
+   * Requires EXACTLY ONE area filter and EXACTLY ONE usufinal filter with valid values
    */
   const isCustomPDFEnabled = useMemo(() => {
-    const areaFilter = activeFilters.find(f => f.type === 'area');
-    const directorFilter = activeFilters.find(f => f.type === 'usufinal');
+    const areaFilters = activeFilters.filter(f => f.type === 'area');
+    const directorFilters = activeFilters.filter(f => f.type === 'usufinal');
     
-    if (!areaFilter || !directorFilter) return false;
+    // Must have exactly one of each type
+    if (areaFilters.length !== 1 || directorFilters.length !== 1) return false;
+
+    const areaFilter = areaFilters[0];
+    const directorFilter = directorFilters[0];
 
     const cleanVal = (v: string) => 
       (v || '').normalize('NFKD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim();
@@ -317,71 +321,80 @@ export function useSearchAndFilters({
     // Combine: priority suggestions first, then regular suggestions
     const sortedSuggestions = [...prioritySuggestions, ...regularSuggestions];
 
+    // Filter out suggestions that are already in active filters
+    const activeFilterValues = new Set(
+      activeFilters.map(f => f.term.toLowerCase())
+    );
+    const filteredSuggestions = sortedSuggestions.filter(
+      s => !activeFilterValues.has(s.value.toLowerCase())
+    );
+
     // Limit to 7 suggestions
-    const finalSuggestions = sortedSuggestions.slice(0, 7);
+    const finalSuggestions = filteredSuggestions.slice(0, 7);
     setSuggestions(finalSuggestions);
     setShowSuggestions(finalSuggestions.length > 0);
     setHighlightedIndex(finalSuggestions.length > 0 ? 0 : -1);
-  }, [deferredSearchTerm, searchableData]);
+  }, [deferredSearchTerm, searchableData, activeFilters]);
 
   /**
    * Filter and sort muebles based on active filters and search term
-   * Uses memoization for performance optimization
+   * Uses OR logic within same filter type, AND logic between different types
    */
   const filteredMuebles = useMemo(() => {
     const term = deferredSearchTerm.toLowerCase().trim();
     let result = muebles;
-
-    // Helper function to check if item has resguardo
-    const hasResguardo = (item: LevMueble, foliosMap: Record<string, string>): boolean => {
-      return !!(item.id_inv && foliosMap[item.id_inv]);
-    };
-
-    // Build folios map for resguardo checking
-    const foliosMap: Record<string, string> = {};
-    // Note: This will be populated from parent component's foliosResguardo state
-    // For now, we'll check based on resguardante field as a fallback
     
     // Apply filters if any are active or search term exists
     if (activeFilters.length > 0 || term) {
       result = muebles.filter(item => {
-        // Check active filters
-        const passesActiveFilters = activeFilters.every(filter => {
-          const filterTerm = filter.term.toLowerCase();
-          if (!filterTerm) return true;
+        // Group filters by type for OR logic within same type
+        const filtersByType = activeFilters.reduce((acc, filter) => {
+          const type = filter.type || 'unknown';
+          if (!acc[type]) acc[type] = [];
+          acc[type].push(filter);
+          return acc;
+        }, {} as Record<string, ActiveFilter[]>);
 
-          switch (filter.type) {
-            case 'id':
-              return (item.id_inv?.toLowerCase() || '').includes(filterTerm);
-            case 'descripcion':
-              return (item.descripcion?.toLowerCase() || '').includes(filterTerm);
-            case 'rubro':
-              return (item.rubro?.toLowerCase() || '').includes(filterTerm);
-            case 'estado':
-              return (item.estado?.toLowerCase() || '').includes(filterTerm);
-            case 'estatus':
-              return (item.estatus?.toLowerCase() || '').includes(filterTerm);
-            case 'area':
-              return (item.area?.nombre?.toLowerCase() || '').includes(filterTerm);
-            case 'usufinal':
-              return (item.directorio?.nombre?.toLowerCase() || '').includes(filterTerm);
-            case 'resguardante':
-              return ((item as any).resguardante?.toLowerCase() || '').includes(filterTerm);
-            case 'origen':
-              return (item.origen?.toLowerCase() || '').includes(filterTerm);
-            case 'resguardo':
-              // Check for "con resguardo" or "sin resguardo"
-              if (filterTerm.includes('con') || filterTerm.includes('si')) {
-                // Has resguardo: check if resguardante exists
-                return !!(item as any).resguardante;
-              } else if (filterTerm.includes('sin') || filterTerm.includes('no')) {
-                // No resguardo: check if resguardante is empty
-                return !(item as any).resguardante;
-              }
-              return true;
-            default:
-              return true;
-          }
+        // Check active filters: AND between types, OR within same type
+        const passesActiveFilters = Object.entries(filtersByType).every(([type, filters]) => {
+          // Within same type, item must match at least ONE filter (OR logic)
+          return filters.some(filter => {
+            const filterTerm = filter.term.toLowerCase();
+            if (!filterTerm) return true;
+
+            switch (filter.type) {
+              case 'id':
+                return (item.id_inv?.toLowerCase() || '').includes(filterTerm);
+              case 'descripcion':
+                return (item.descripcion?.toLowerCase() || '').includes(filterTerm);
+              case 'rubro':
+                return (item.rubro?.toLowerCase() || '').includes(filterTerm);
+              case 'estado':
+                return (item.estado?.toLowerCase() || '').includes(filterTerm);
+              case 'estatus':
+                return (item.estatus?.toLowerCase() || '').includes(filterTerm);
+              case 'area':
+                return (item.area?.nombre?.toLowerCase() || '').includes(filterTerm);
+              case 'usufinal':
+                return (item.directorio?.nombre?.toLowerCase() || '').includes(filterTerm);
+              case 'resguardante':
+                return ((item as any).resguardante?.toLowerCase() || '').includes(filterTerm);
+              case 'origen':
+                return (item.origen?.toLowerCase() || '').includes(filterTerm);
+              case 'resguardo':
+                // Check for "con resguardo" or "sin resguardo"
+                if (filterTerm.includes('con') || filterTerm.includes('si')) {
+                  // Has resguardo: check if resguardante exists
+                  return !!(item as any).resguardante;
+                } else if (filterTerm.includes('sin') || filterTerm.includes('no')) {
+                  // No resguardo: check if resguardante is empty
+                  return !(item as any).resguardante;
+                }
+                return true;
+              default:
+                return true;
+            }
+          });
         });
 
         if (!passesActiveFilters) return false;
