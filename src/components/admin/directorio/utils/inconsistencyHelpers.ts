@@ -24,7 +24,7 @@ export function getConflictingDirectors(
     if (!issue || issue.type !== 'duplicate_area') return [];
     
     return issue.directors
-        .filter(d => d.id_directorio !== current_id_directorio)
+        .filter(d => d.id !== current_id_directorio)
         .map(d => d.nombre);
 }
 

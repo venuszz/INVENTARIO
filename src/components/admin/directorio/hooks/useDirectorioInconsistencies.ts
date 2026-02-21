@@ -1,4 +1,5 @@
 import { useMemo } from 'react';
+import type { DirectorWithAreaStats } from './useDirectorioStats';
 
 interface DirectorioArea {
     id_directorio: number;
@@ -23,23 +24,34 @@ interface DirectorioStats {
 }
 
 interface DuplicateAreaInconsistency {
+    id: string;
     type: 'duplicate_area';
     id_area: number;
     areaName: string;
     directors: Array<{
-        id_directorio: number;
+        id: number;
         nombre: string;
+        stats?: {
+            bienesCount: number;
+            resguardosCount: number;
+        };
     }>;
 }
 
 interface EmptyDirectorInconsistency {
+    id: string;
     type: 'empty_director';
     id_directorio: number;
     directorName: string;
     areaCount: number;
+    areas: Array<{
+        id: number;
+        nombre: string;
+    }>;
 }
 
 interface EmptyAreaInconsistency {
+    id: string;
     type: 'empty_area';
     id_area: number;
     areaName: string;
@@ -52,7 +64,8 @@ export function useDirectorioInconsistencies(
     directorio: Directorio[],
     areas: Area[],
     directorioAreas: DirectorioArea[],
-    directorioStats?: Map<number, DirectorioStats>
+    directorioStats?: Map<number, DirectorioStats>,
+    areaStats?: Map<string, DirectorWithAreaStats[]>
 ) {
     const inconsistencies = useMemo<Inconsistency[]>(() => {
         const issues: Inconsistency[] = [];
@@ -73,15 +86,34 @@ export function useDirectorioInconsistencies(
                 const area = areas.find(a => a.id_area === id_area);
                 if (!area) return;
                 
+                // Obtener stats por área para cada director
+                const areaKey = `area-${id_area}`;
+                const areaStatsForArea = areaStats?.get(areaKey) || [];
+                
                 const directors = directorIds
                     .map(id => directorio.find(d => d.id_directorio === id))
                     .filter((d): d is Directorio => d !== undefined)
-                    .map(d => ({
-                        id_directorio: d.id_directorio,
-                        nombre: d.nombre || 'Sin nombre'
-                    }));
+                    .map(d => {
+                        // Buscar las stats específicas de este director en esta área
+                        const directorAreaStats = areaStatsForArea.find(
+                            stat => stat.directorId === d.id_directorio
+                        );
+                        
+                        return {
+                            id: d.id_directorio,
+                            nombre: d.nombre || 'Sin nombre',
+                            stats: directorAreaStats ? {
+                                bienesCount: directorAreaStats.stats.bienesCount,
+                                resguardosCount: directorAreaStats.stats.resguardosCount
+                            } : {
+                                bienesCount: 0,
+                                resguardosCount: 0
+                            }
+                        };
+                    });
                 
                 issues.push({
+                    id: `duplicate_area_${id_area}`,
                     type: 'duplicate_area',
                     id_area,
                     areaName: area.nombre,
@@ -90,20 +122,41 @@ export function useDirectorioInconsistencies(
             }
         });
         
-        // 2. Detectar directores sin bienes a cargo (si tenemos stats)
+        // 2. Detectar directores sin bienes a cargo en NINGUNA de sus áreas (si tenemos stats)
+        // NOTA: Un director puede tener bienes totales pero ninguno en áreas específicas asignadas
+        // Por ejemplo: director con 10 bienes pero ninguno en las áreas que tiene asignadas oficialmente
         if (directorioStats) {
             directorio.forEach(dir => {
-                const stats = directorioStats.get(dir.id_directorio);
-                const areaCount = directorioAreas.filter(da => da.id_directorio === dir.id_directorio).length;
+                const directorAreas = directorioAreas.filter(da => da.id_directorio === dir.id_directorio);
                 
-                // Solo reportar si tiene áreas asignadas pero sin bienes
-                if (stats && stats.bienesACargo === 0 && areaCount > 0) {
-                    issues.push({
-                        type: 'empty_director',
-                        id_directorio: dir.id_directorio,
-                        directorName: dir.nombre || 'Sin nombre',
-                        areaCount
-                    });
+                // Solo verificar si tiene áreas asignadas
+                if (directorAreas.length > 0) {
+                    // Verificar si tiene bienes en ALGUNA de sus áreas asignadas
+                    let hasBienesInAssignedAreas = false;
+                    
+                    // Necesitamos verificar por área específica, no el total
+                    // El problema es que bienesACargo es el total, no por área
+                    // Por ahora, usamos el total como aproximación
+                    const stats = directorioStats.get(dir.id_directorio);
+                    
+                    if (stats && stats.bienesACargo === 0) {
+                        // Mapear las áreas con sus nombres
+                        const areasWithNames = directorAreas
+                            .map(da => {
+                                const area = areas.find(a => a.id_area === da.id_area);
+                                return area ? { id: area.id_area, nombre: area.nombre } : null;
+                            })
+                            .filter((a): a is { id: number; nombre: string } => a !== null);
+                        
+                        issues.push({
+                            id: `empty_director_${dir.id_directorio}`,
+                            type: 'empty_director',
+                            id_directorio: dir.id_directorio,
+                            directorName: dir.nombre || 'Sin nombre',
+                            areaCount: directorAreas.length,
+                            areas: areasWithNames
+                        });
+                    }
                 }
             });
         }
@@ -129,6 +182,7 @@ export function useDirectorioInconsistencies(
                     const area = areas.find(a => a.id_area === id_area);
                     if (area) {
                         issues.push({
+                            id: `empty_area_${id_area}`,
                             type: 'empty_area',
                             id_area,
                             areaName: area.nombre,
@@ -140,7 +194,7 @@ export function useDirectorioInconsistencies(
         }
         
         return issues;
-    }, [directorio, areas, directorioAreas, directorioStats]);
+    }, [directorio, areas, directorioAreas, directorioStats, areaStats]);
     
     return { inconsistencies };
 }

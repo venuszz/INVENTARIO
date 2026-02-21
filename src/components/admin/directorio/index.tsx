@@ -7,6 +7,7 @@ import { useAdminIndexation } from '@/hooks/indexation/useAdminIndexation';
 import { useDirectorioStats } from './hooks/useDirectorioStats';
 import { useDirectorioInconsistencies } from './hooks/useDirectorioInconsistencies';
 import { InconsistencyAlert } from './components/InconsistencyAlert';
+import { InconsistencyResolverMode } from './components/resolver/InconsistencyResolverMode';
 import { isAreaInConflict, getConflictTooltip } from './utils/inconsistencyHelpers';
 import { useIneaStore } from '@/stores/ineaStore';
 import { useIteaStore } from '@/stores/iteaStore';
@@ -39,14 +40,15 @@ export function DirectorioManager() {
     );
     
     // Hook para estadísticas (resguardos y bienes a cargo)
-    const { stats: directorioStats } = useDirectorioStats(directorioIds);
+    const { stats: directorioStats, areaStats } = useDirectorioStats(directorioIds);
     
     // Hook para detectar inconsistencias
     const { inconsistencies } = useDirectorioInconsistencies(
         directorioFromStore,
         areasFromStore,
         directorioAreasFromStore,
-        directorioStats
+        directorioStats,
+        areaStats
     );
     
     // Stores para contar bienes por área
@@ -131,6 +133,9 @@ export function DirectorioManager() {
     // Estado para highlighting desde URL
     const [highlightedArea, setHighlightedArea] = useState<string | null>(null);
     const [highlightedDirector, setHighlightedDirector] = useState<string | null>(null);
+    
+    // Estado para el modo resolver
+    const [isResolverMode, setIsResolverMode] = useState(false);
 
     const editInputRef = useRef<HTMLInputElement>(null);
     const newEmployeeInputRef = useRef<HTMLInputElement>(null);
@@ -427,10 +432,38 @@ export function DirectorioManager() {
             ? 'bg-black text-white'
             : 'bg-white text-black'
             }`}>
-            {/* Alerta de inconsistencias flotante */}
-            <InconsistencyAlert inconsistencies={inconsistencies} isInDirectorioPage={true} />
+            {/* Alerta de inconsistencias flotante - Solo visible cuando NO está en modo resolver */}
+            {!isResolverMode && (
+                <InconsistencyAlert 
+                    inconsistencies={inconsistencies} 
+                    isInDirectorioPage={true}
+                    onEnterResolverMode={() => setIsResolverMode(true)}
+                />
+            )}
             
-            <motion.div 
+            {isResolverMode ? (
+                /* Modo Resolver */
+                <motion.div 
+                    className={`h-full overflow-y-auto p-4 md:p-8 ${
+                        isDarkMode 
+                            ? 'scrollbar-thin scrollbar-track-white/5 scrollbar-thumb-white/20 hover:scrollbar-thumb-white/30'
+                            : 'scrollbar-thin scrollbar-track-black/5 scrollbar-thumb-black/20 hover:scrollbar-thumb-black/30'
+                    }`}
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    transition={{ duration: 0.3 }}
+                >
+                    <div className="w-full max-w-7xl mx-auto pb-8">
+                        <InconsistencyResolverMode
+                            inconsistencies={inconsistencies}
+                            onExit={() => setIsResolverMode(false)}
+                        />
+                    </div>
+                </motion.div>
+            ) : (
+                /* Vista Normal del Directorio */
+                <motion.div 
                 className={`h-full overflow-y-auto p-4 md:p-8 ${
                     isDarkMode 
                         ? 'scrollbar-thin scrollbar-track-white/5 scrollbar-thumb-white/20 hover:scrollbar-thumb-white/30'
@@ -1148,6 +1181,7 @@ export function DirectorioManager() {
                 </motion.div>
                 </div>
             </motion.div>
+            )}
         </div>
     );
 }

@@ -2,15 +2,16 @@ import { useTheme } from '@/context/ThemeContext';
 import { AlertTriangle, ExternalLink } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, usePathname } from 'next/navigation';
 import type { Inconsistency } from '../hooks/useDirectorioInconsistencies';
 
 interface InconsistencyAlertProps {
     inconsistencies: Inconsistency[];
     isInDirectorioPage?: boolean;
+    onEnterResolverMode?: () => void;
 }
 
-export function InconsistencyAlert({ inconsistencies, isInDirectorioPage = false }: InconsistencyAlertProps) {
+export function InconsistencyAlert({ inconsistencies, isInDirectorioPage = false, onEnterResolverMode }: InconsistencyAlertProps) {
     const { isDarkMode } = useTheme();
     const router = useRouter();
     const [isHovered, setIsHovered] = useState(false);
@@ -96,7 +97,7 @@ export function InconsistencyAlert({ inconsistencies, isInDirectorioPage = false
                             animate={{ opacity: 1 }}
                             exit={{ opacity: 0 }}
                             transition={{ duration: 0.2 }}
-                            onClick={!isInDirectorioPage ? handleNavigateToDirectorio : shouldShowDetails ? handleManualExpand : undefined}
+                            onClick={!isInDirectorioPage ? handleNavigateToDirectorio : undefined}
                         >
                             <div className="flex items-center gap-3">
                                 <div className="relative">
@@ -149,7 +150,7 @@ export function InconsistencyAlert({ inconsistencies, isInDirectorioPage = false
                                     animate={{ opacity: 1, y: 0 }}
                                     transition={{ duration: 0.2, delay: 0.1 }}
                                 >
-                                    Click para ver detalles
+                                    Pasa el cursor para ver detalles
                                 </motion.span>
                             )}
                         </motion.div>
@@ -249,7 +250,7 @@ export function InconsistencyAlert({ inconsistencies, isInDirectorioPage = false
                                                                                 <div className="mt-1 space-y-0.5">
                                                                                     {issue.directors.map((director) => (
                                                                                         <p 
-                                                                                            key={director.id_directorio}
+                                                                                            key={director.id}
                                                                                             className={`text-[10px] pl-2 ${
                                                                                                 isDarkMode ? 'text-white/60' : 'text-black/60'
                                                                                             }`}
@@ -384,6 +385,30 @@ export function InconsistencyAlert({ inconsistencies, isInDirectorioPage = false
                                             )}
                                         </div>
                                     </div>
+                                    
+                                    {/* Botón para entrar al modo resolver */}
+                                    {onEnterResolverMode && (
+                                        <div className="px-3 pb-3 pt-2">
+                                            <motion.button
+                                                onClick={() => {
+                                                    onEnterResolverMode();
+                                                    setIsHovered(false);
+                                                }}
+                                                className={`w-full px-3 py-2.5 rounded-lg text-xs font-medium transition-all ${
+                                                    isDarkMode
+                                                        ? 'bg-red-500/10 text-red-400 border border-red-500/30 hover:bg-red-500/20'
+                                                        : 'bg-red-50 text-red-600 border border-red-200 hover:bg-red-100'
+                                                }`}
+                                                initial={{ opacity: 0, y: 5 }}
+                                                animate={{ opacity: 1, y: 0 }}
+                                                transition={{ duration: 0.2, delay: 0.25 }}
+                                                whileHover={{ scale: 1.02 }}
+                                                whileTap={{ scale: 0.98 }}
+                                            >
+                                                Resolver inconsistencias
+                                            </motion.button>
+                                        </div>
+                                    )}
                                 </>
                             ) : (
                                 /* Vista resumida con botón - Fuera de página de directorio */

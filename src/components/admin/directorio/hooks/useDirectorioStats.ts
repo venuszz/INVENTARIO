@@ -5,8 +5,21 @@ import { useNoListadoStore } from '@/stores/noListadoStore';
 import { useResguardosStore } from '@/stores/resguardosStore';
 import type { ResguardanteStats } from '../types';
 
+export interface AreaStats {
+  bienesCount: number;
+  resguardosCount: number;
+}
+
+export interface DirectorWithAreaStats {
+  directorId: number;
+  areaId: number;
+  areaName: string;
+  stats: AreaStats;
+}
+
 interface UseDirectorioStatsReturn {
   stats: Map<number, ResguardanteStats>;
+  areaStats: Map<string, DirectorWithAreaStats[]>; // key: `${directorId}-${areaId}`
   loading: boolean;
   error: string | null;
   refetch: () => Promise<void>;
@@ -20,6 +33,7 @@ export function useDirectorioStats(
   directorioIds: number[]
 ): UseDirectorioStatsReturn {
   const [stats, setStats] = useState<Map<number, ResguardanteStats>>(new Map());
+  const [areaStats, setAreaStats] = useState<Map<string, DirectorWithAreaStats[]>>(new Map());
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -35,6 +49,7 @@ export function useDirectorioStats(
   const calculateStats = useCallback(() => {
     if (memoizedIds.length === 0) {
       setStats(new Map());
+      setAreaStats(new Map());
       setLoading(false);
       return;
     }
@@ -44,6 +59,7 @@ export function useDirectorioStats(
     
     try {
       const statsMap = new Map<number, ResguardanteStats>();
+      const areaStatsTemp = new Map<string, { directorId: number; areaId: number; areaName: string; bienesCount: number; resguardosCount: number }>();
       
       // Initialize all directors with 0 counts
       memoizedIds.forEach(id => {
@@ -53,6 +69,26 @@ export function useDirectorioStats(
         });
       });
       
+      // Helper to update area stats
+      const updateAreaStats = (directorId: number, areaId: number, areaName: string, type: 'bienes' | 'resguardo') => {
+        const key = `${directorId}-${areaId}`;
+        if (!areaStatsTemp.has(key)) {
+          areaStatsTemp.set(key, {
+            directorId,
+            areaId,
+            areaName,
+            bienesCount: 0,
+            resguardosCount: 0
+          });
+        }
+        const stats = areaStatsTemp.get(key)!;
+        if (type === 'bienes') {
+          stats.bienesCount++;
+        } else {
+          stats.resguardosCount++;
+        }
+      };
+      
       // Count bienes a cargo from all 3 tables
       // INEA muebles
       ineaMuebles.forEach(mueble => {
@@ -60,6 +96,9 @@ export function useDirectorioStats(
           const current = statsMap.get(mueble.id_directorio);
           if (current) {
             current.bienesACargo++;
+          }
+          if (mueble.id_area && mueble.area) {
+            updateAreaStats(mueble.id_directorio, mueble.id_area, mueble.area.nombre, 'bienes');
           }
         }
       });
@@ -71,6 +110,9 @@ export function useDirectorioStats(
           if (current) {
             current.bienesACargo++;
           }
+          if (mueble.id_area && mueble.area) {
+            updateAreaStats(mueble.id_directorio, mueble.id_area, mueble.area.nombre, 'bienes');
+          }
         }
       });
       
@@ -80,6 +122,9 @@ export function useDirectorioStats(
           const current = statsMap.get(mueble.id_directorio);
           if (current) {
             current.bienesACargo++;
+          }
+          if (mueble.id_area && mueble.area) {
+            updateAreaStats(mueble.id_directorio, mueble.id_area, mueble.area.nombre, 'bienes');
           }
         }
       });
@@ -95,6 +140,11 @@ export function useDirectorioStats(
           }
           // Add folio to the set (automatically handles uniqueness)
           resguardosByDirector.get(resguardo.id_directorio)!.add(resguardo.folio);
+          
+          // Update area stats for resguardos
+          if (resguardo.id_area && resguardo.area_nombre) {
+            updateAreaStats(resguardo.id_directorio, resguardo.id_area, resguardo.area_nombre, 'resguardo');
+          }
         }
       });
       
@@ -106,7 +156,27 @@ export function useDirectorioStats(
         }
       });
       
+      // Convert areaStatsTemp to final format grouped by area
+      const finalAreaStats = new Map<string, DirectorWithAreaStats[]>();
+      areaStatsTemp.forEach((data) => {
+        const areaKey = `area-${data.areaId}`;
+        if (!finalAreaStats.has(areaKey)) {
+          finalAreaStats.set(areaKey, []);
+        }
+        
+        finalAreaStats.get(areaKey)!.push({
+          directorId: data.directorId,
+          areaId: data.areaId,
+          areaName: data.areaName,
+          stats: {
+            bienesCount: data.bienesCount,
+            resguardosCount: data.resguardosCount
+          }
+        });
+      });
+      
       setStats(statsMap);
+      setAreaStats(finalAreaStats);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Error loading statistics');
       console.error('Error calculating directorio stats:', err);
@@ -121,6 +191,7 @@ export function useDirectorioStats(
 
   return { 
     stats, 
+    areaStats,
     loading, 
     error, 
     refetch: async () => calculateStats() 
