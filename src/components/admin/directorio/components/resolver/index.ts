@@ -7,3 +7,5 @@ export { CompletionScreen } from './CompletionScreen';
 export { DuplicateAreaResolver } from './resolvers/DuplicateAreaResolver';
 export { EmptyDirectorResolver } from './resolvers/EmptyDirectorResolver';
 export { EmptyAreaResolver } from './resolvers/EmptyAreaResolver';
+export { DuplicateAreaConfirmation } from './resolvers/DuplicateAreaConfirmation';
+export { EmptyDirectorConfirmation } from './resolvers/EmptyDirectorConfirmation';

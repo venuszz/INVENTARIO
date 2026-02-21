@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { AnimatePresence } from 'framer-motion';
 import { ResolverHeader } from './ResolverHeader';
 import { ResolverLayout } from './ResolverLayout';
@@ -10,6 +10,8 @@ import { CompletionScreen } from './CompletionScreen';
 import { DuplicateAreaResolver } from './resolvers/DuplicateAreaResolver';
 import { EmptyDirectorResolver } from './resolvers/EmptyDirectorResolver';
 import { EmptyAreaResolver } from './resolvers/EmptyAreaResolver';
+import { DuplicateAreaConfirmation } from './resolvers/DuplicateAreaConfirmation';
+import { EmptyDirectorConfirmation } from './resolvers/EmptyDirectorConfirmation';
 import { useInconsistencyResolver } from '../../hooks/useInconsistencyResolver';
 import { useInconsistencyActions } from '../../hooks/useInconsistencyActions';
 import type { InconsistencyWithStats } from '../../types/resolver';
@@ -46,6 +48,9 @@ export function InconsistencyResolverMode({
 
   // Store resolution data
   const resolutionDataRef = useRef<any>(null);
+  
+  // Confirmation mode state
+  const [showConfirmation, setShowConfirmation] = useState(false);
 
   // Keyboard navigation
   useEffect(() => {
@@ -78,46 +83,92 @@ export function InconsistencyResolverMode({
   const handleResolve = async () => {
     if (!selectedInconsistency || !resolutionDataRef.current) return;
 
+    // Show confirmation panel instead of executing immediately
+    setShowConfirmation(true);
+  };
+
+  const handleConfirmResolve = async (additionalData?: any) => {
+    if (!selectedInconsistency) return;
+
+    let operationSuccess = false;
+
     try {
-      const { type, areaId, directorId } = selectedInconsistency;
+      const { type, id_area, id_directorio } = selectedInconsistency as any;
+      const areaId = id_area;
+      const directorId = id_directorio;
 
       switch (type) {
         case 'duplicate_area':
-          if (areaId && resolutionDataRef.current.directorId) {
-            await keepOneDirector(areaId, resolutionDataRef.current.directorId);
+          if (!areaId || !resolutionDataRef.current?.directorId) {
+            throw new Error('Faltan datos necesarios para la operación');
           }
+          
+          await keepOneDirector(areaId, resolutionDataRef.current.directorId);
+          operationSuccess = true;
           break;
 
         case 'empty_director':
-          if (directorId) {
-            // Solo hay una opción: eliminar el director completo
+          if (!directorId) {
+            throw new Error('Falta directorId para la operación');
+          }
+          
+          const emptyDirectorOption = additionalData?.option || 'delete_all';
+          const emptyDirectorTargetId = additionalData?.targetDirectorId;
+          
+          if (emptyDirectorOption === 'delete_all' || emptyDirectorOption === 'keep_areas') {
             await deleteDirector(directorId);
+            operationSuccess = true;
+          } else if (emptyDirectorOption === 'reassign_areas' && emptyDirectorTargetId) {
+            await deleteDirector(directorId, emptyDirectorOption, emptyDirectorTargetId);
+            operationSuccess = true;
+          } else {
+            throw new Error('Opción no válida o faltan datos para la operación');
           }
           break;
 
         case 'empty_area':
-          if (areaId) {
-            const { option, directorId: targetDirectorId } = resolutionDataRef.current;
-            if (option === 'remove_from_director' && targetDirectorId) {
-              await removeAreaFromDirector(areaId, targetDirectorId);
-            } else if (option === 'delete_area') {
-              await deleteArea(areaId);
-            }
-            // 'keep' option does nothing
+          if (!areaId) {
+            throw new Error('Falta areaId para la operación');
+          }
+          
+          const { option: areaOption, directorId: emptyAreaDirectorId } = resolutionDataRef.current || {};
+          
+          if (areaOption === 'remove_from_director' && emptyAreaDirectorId) {
+            await removeAreaFromDirector(areaId, emptyAreaDirectorId);
+            operationSuccess = true;
+          } else if (areaOption === 'delete_area') {
+            await deleteArea(areaId);
+            operationSuccess = true;
+          } else if (areaOption === 'keep') {
+            operationSuccess = true;
+          } else {
+            throw new Error('Opción no válida o faltan datos para la operación');
           }
           break;
+
+        default:
+          throw new Error(`Tipo de inconsistencia no reconocido: ${type}`);
       }
 
-      // Mark as resolved and move to next
-      markAsResolved(selectedInconsistency.id);
-      resolutionDataRef.current = null;
+      if (operationSuccess) {
+        markAsResolved(selectedInconsistency.id);
+        resolutionDataRef.current = null;
+        setShowConfirmation(false);
+      } else {
+        throw new Error('La operación no se completó exitosamente');
+      }
     } catch (err) {
-      console.error('Error resolving inconsistency:', err);
+      // Error will be displayed via error state
     }
+  };
+
+  const handleBackFromConfirmation = () => {
+    setShowConfirmation(false);
   };
 
   const handleSkip = () => {
     resolutionDataRef.current = null;
+    setShowConfirmation(false);
     nextInconsistency();
   };
 
@@ -128,6 +179,46 @@ export function InconsistencyResolverMode({
         resolvedCount={resolvedCount}
         onExit={onExit}
       />
+    );
+  }
+
+  // Render confirmation panel (full screen)
+  if (showConfirmation && selectedInconsistency) {
+    return (
+      <>
+        <ResolverHeader
+          pendingCount={pendingCount}
+          onExit={onExit}
+        />
+
+        <div className="mt-6">
+          {selectedInconsistency.type === 'duplicate_area' && resolutionDataRef.current?.directorId && (
+            <DuplicateAreaConfirmation
+              inconsistency={selectedInconsistency}
+              selectedDirectorId={resolutionDataRef.current.directorId}
+              onBack={handleBackFromConfirmation}
+              onConfirm={handleConfirmResolve}
+            />
+          )}
+
+          {selectedInconsistency.type === 'empty_director' && (
+            <EmptyDirectorConfirmation
+              inconsistency={selectedInconsistency}
+              onBack={handleBackFromConfirmation}
+              onConfirm={async (option, targetDirectorId) => {
+                await handleConfirmResolve({ option, targetDirectorId });
+              }}
+            />
+          )}
+        </div>
+
+        {/* Error Display */}
+        {error && (
+          <div className="mt-4 p-4 bg-red-500/10 border border-red-500/20 rounded-lg">
+            <p className="text-sm text-red-600 dark:text-red-400">{error}</p>
+          </div>
+        )}
+      </>
     );
   }
 

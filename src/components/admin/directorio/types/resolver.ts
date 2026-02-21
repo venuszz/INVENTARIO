@@ -23,9 +23,11 @@ export interface DirectorStats {
 export interface InconsistencyWithStats {
   id: string;
   type: 'duplicate_area' | 'empty_director' | 'empty_area';
-  areaId?: number;
+  id_area?: number; // Changed from areaId to match database
+  areaId?: number; // Keep for backwards compatibility
   areaName?: string;
-  directorId?: number;
+  id_directorio?: number; // Changed from directorId to match database
+  directorId?: number; // Keep for backwards compatibility
   directorName?: string;
   directors?: Array<{
     id: number;
