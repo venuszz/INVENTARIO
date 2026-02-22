@@ -1,5 +1,5 @@
 "use client"
-import { useState, useRef, useMemo, useEffect } from 'react';
+import { useState, useRef, useMemo, useEffect, lazy, Suspense, useDeferredValue, useCallback } from 'react';
 import { useTheme } from '@/context/ThemeContext';
 import { Plus, Trash2, Edit, X, Search, FileText, Package } from 'lucide-react';
 import SectionRealtimeToggle from '@/components/SectionRealtimeToggle';
@@ -7,13 +7,26 @@ import { useAdminIndexation } from '@/hooks/indexation/useAdminIndexation';
 import { useDirectorioStats } from './hooks/useDirectorioStats';
 import { useDirectorioInconsistencies } from './hooks/useDirectorioInconsistencies';
 import { InconsistencyAlert } from './components/InconsistencyAlert';
-import { InconsistencyResolverMode } from './components/resolver/InconsistencyResolverMode';
+import { LoadingSkeleton } from './components/LoadingSkeleton';
 import { isAreaInConflict, getConflictTooltip } from './utils/inconsistencyHelpers';
 import { useIneaStore } from '@/stores/ineaStore';
 import { useIteaStore } from '@/stores/iteaStore';
 import { useNoListadoStore } from '@/stores/noListadoStore';
 import { useResguardosStore } from '@/stores/resguardosStore';
 import { motion, AnimatePresence } from 'framer-motion';
+
+// Lazy load heavy components for better performance
+const InconsistencyResolverMode = lazy(() => 
+  import('./components/resolver/InconsistencyResolverMode').then(m => ({ 
+    default: m.InconsistencyResolverMode 
+  }))
+);
+
+const TransferMode = lazy(() => 
+  import('./components/transfer/TransferMode').then(m => ({ 
+    default: m.TransferMode 
+  }))
+);
 
 interface Directorio {
     id_directorio: number;
@@ -136,6 +149,9 @@ export function DirectorioManager() {
     
     // Estado para el modo resolver
     const [isResolverMode, setIsResolverMode] = useState(false);
+    
+    // Estado para el modo transferencia
+    const [isTransferMode, setIsTransferMode] = useState(false);
 
     const editInputRef = useRef<HTMLInputElement>(null);
     const newEmployeeInputRef = useRef<HTMLInputElement>(null);
@@ -171,38 +187,41 @@ export function DirectorioManager() {
         }
     }, []);
 
-    // Función para verificar si un área coincide con la búsqueda
-    const areaMatchesSearch = (areaName: string) => {
-        if (!searchTerm) return false;
-        return areaName.toLowerCase().includes(searchTerm.toLowerCase());
-    };
+    // Use deferred value for search term to avoid blocking input
+    const deferredSearchTerm = useDeferredValue(searchTerm);
 
-    // Mapear directorioAreas a un objeto para fácil acceso
-    const directorAreasMap = directorioAreasFromStore.reduce((acc, rel) => {
+    // Mapear directorioAreas con useMemo
+    const directorAreasMap = useMemo(() => directorioAreasFromStore.reduce((acc, rel) => {
         if (!acc[rel.id_directorio]) acc[rel.id_directorio] = [];
         acc[rel.id_directorio].push(rel.id_area);
         return acc;
-    }, {} as { [id_directorio: number]: number[] });
+    }, {} as { [id_directorio: number]: number[] }), [directorioAreasFromStore]);
 
-    // Filtrar directorio según el término de búsqueda
-    const filteredDirectorio = directorioFromStore.filter(item => {
-        const searchLower = searchTerm.toLowerCase();
-        
-        // Buscar en nombre, puesto e ID
-        const matchesBasicInfo = 
-            item.nombre?.toLowerCase().includes(searchLower) ||
-            item.puesto?.toLowerCase().includes(searchLower) ||
-            item.id_directorio.toString().includes(searchTerm);
-        
-        // Buscar en áreas asignadas
-        const employeeAreas = directorAreasMap[item.id_directorio] || [];
-        const matchesArea = employeeAreas.some(id_area => {
-            const areaObj = areasFromStore.find(a => a.id_area === id_area);
-            return areaObj?.nombre?.toLowerCase().includes(searchLower);
+    // Filtrar directorio con useMemo y deferredSearchTerm
+    const filteredDirectorio = useMemo(() => {
+        if (!deferredSearchTerm.trim()) {
+            return directorioFromStore;
+        }
+        const searchLower = deferredSearchTerm.toLowerCase();
+        return directorioFromStore.filter(item => {
+            const matchesBasicInfo = 
+                item.nombre?.toLowerCase().includes(searchLower) ||
+                item.puesto?.toLowerCase().includes(searchLower) ||
+                item.id_directorio.toString().includes(deferredSearchTerm);
+            const employeeAreas = directorAreasMap[item.id_directorio] || [];
+            const matchesArea = employeeAreas.some(id_area => {
+                const areaObj = areasFromStore.find(a => a.id_area === id_area);
+                return areaObj?.nombre?.toLowerCase().includes(searchLower);
+            });
+            return matchesBasicInfo || matchesArea;
         });
-        
-        return matchesBasicInfo || matchesArea;
-    });
+    }, [directorioFromStore, deferredSearchTerm, directorAreasMap, areasFromStore]);
+
+    // areaMatchesSearch con useCallback
+    const areaMatchesSearch = useCallback((areaName: string) => {
+        if (!deferredSearchTerm) return false;
+        return areaName.toLowerCase().includes(deferredSearchTerm.toLowerCase());
+    }, [deferredSearchTerm]);
 
     // Función para agregar área manualmente
     const addAreaManually = async (areaName: string, isEditing: boolean) => {
@@ -443,24 +462,50 @@ export function DirectorioManager() {
             
             {isResolverMode ? (
                 /* Modo Resolver */
-                <motion.div 
-                    className={`h-full overflow-y-auto p-4 md:p-8 ${
-                        isDarkMode 
-                            ? 'scrollbar-thin scrollbar-track-white/5 scrollbar-thumb-white/20 hover:scrollbar-thumb-white/30'
-                            : 'scrollbar-thin scrollbar-track-black/5 scrollbar-thumb-black/20 hover:scrollbar-thumb-black/30'
-                    }`}
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    exit={{ opacity: 0 }}
-                    transition={{ duration: 0.3 }}
-                >
-                    <div className="w-full max-w-7xl mx-auto pb-8">
-                        <InconsistencyResolverMode
-                            inconsistencies={inconsistencies}
-                            onExit={() => setIsResolverMode(false)}
-                        />
-                    </div>
-                </motion.div>
+                <Suspense fallback={<LoadingSkeleton />}>
+                    <motion.div 
+                        className={`h-full overflow-y-auto p-4 md:p-8 ${
+                            isDarkMode 
+                                ? 'scrollbar-thin scrollbar-track-white/5 scrollbar-thumb-white/20 hover:scrollbar-thumb-white/30'
+                                : 'scrollbar-thin scrollbar-track-black/5 scrollbar-thumb-black/20 hover:scrollbar-thumb-black/30'
+                        }`}
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        transition={{ duration: 0.3 }}
+                    >
+                        <div className="w-full max-w-7xl mx-auto pb-8">
+                            <InconsistencyResolverMode
+                                inconsistencies={inconsistencies}
+                                onExit={() => setIsResolverMode(false)}
+                            />
+                        </div>
+                    </motion.div>
+                </Suspense>
+            ) : isTransferMode ? (
+                /* Modo Transferencia de Bienes */
+                <Suspense fallback={<LoadingSkeleton />}>
+                    <motion.div 
+                        className={`h-full overflow-y-auto p-4 md:p-8 ${
+                            isDarkMode 
+                                ? 'scrollbar-thin scrollbar-track-white/5 scrollbar-thumb-white/20 hover:scrollbar-thumb-white/30 bg-black text-white'
+                                : 'scrollbar-thin scrollbar-track-black/5 scrollbar-thumb-black/20 hover:scrollbar-thumb-black/30 bg-white text-black'
+                        }`}
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        transition={{ duration: 0.3 }}
+                    >
+                        <div className="w-full max-w-7xl mx-auto pb-8">
+                            <TransferMode
+                                directors={directorioFromStore.filter(d => d.nombre !== null) as Array<{ id_directorio: number; nombre: string; puesto?: string }>}
+                                areas={areasFromStore}
+                                directorioAreas={directorioAreasFromStore}
+                                onExit={() => setIsTransferMode(false)}
+                            />
+                        </div>
+                    </motion.div>
+                </Suspense>
             ) : (
                 /* Vista Normal del Directorio */
                 <motion.div 
@@ -516,24 +561,45 @@ export function DirectorioManager() {
                     <AnimatePresence>
                         {!isAddingNew && (
                             <motion.div
-                                className={`flex items-center gap-3 px-3 py-2 rounded-lg border transition-all cursor-pointer ${isDarkMode
-                                    ? 'border-white/10 hover:border-white/20'
-                                    : 'border-black/10 hover:border-black/20'
-                                    }`}
-                                onClick={() => {
-                                    setIsAddingNew(true);
-                                    setTimeout(() => newEmployeeInputRef.current?.focus(), 100);
-                                }}
-                                initial={{ opacity: 0, height: 0, marginTop: 0 }}
-                                animate={{ opacity: 1, height: 'auto', marginTop: 0 }}
-                                exit={{ opacity: 0, height: 0, marginTop: 0 }}
-                                whileHover={{ scale: 1.005 }}
-                                whileTap={{ scale: 0.995 }}
+                                className="flex gap-3"
+                                initial={{ opacity: 0, height: 0 }}
+                                animate={{ opacity: 1, height: 'auto' }}
+                                exit={{ opacity: 0, height: 0 }}
                             >
-                                <Plus size={16} className={`flex-shrink-0 ${isDarkMode ? 'text-white/40' : 'text-black/40'}`} />
-                                <span className={`text-sm ${isDarkMode ? 'text-white/60' : 'text-black/60'}`}>
-                                    Añadir responsable...
-                                </span>
+                                {/* Botón Añadir Responsable */}
+                                <motion.div
+                                    className={`flex-1 flex items-center gap-3 px-3 py-2 rounded-lg border transition-all cursor-pointer ${isDarkMode
+                                        ? 'border-white/10 hover:border-white/20'
+                                        : 'border-black/10 hover:border-black/20'
+                                        }`}
+                                    onClick={() => {
+                                        setIsAddingNew(true);
+                                        setTimeout(() => newEmployeeInputRef.current?.focus(), 100);
+                                    }}
+                                    whileHover={{ scale: 1.005 }}
+                                    whileTap={{ scale: 0.995 }}
+                                >
+                                    <Plus size={16} className={`flex-shrink-0 ${isDarkMode ? 'text-white/40' : 'text-black/40'}`} />
+                                    <span className={`text-sm ${isDarkMode ? 'text-white/60' : 'text-black/60'}`}>
+                                        Añadir responsable...
+                                    </span>
+                                </motion.div>
+
+                                {/* Botón Transferir Bienes */}
+                                <motion.div
+                                    className={`flex items-center gap-3 px-3 py-2 rounded-lg border transition-all cursor-pointer ${isDarkMode
+                                        ? 'border-blue-500/20 hover:border-blue-500/40 bg-blue-500/5'
+                                        : 'border-blue-500/20 hover:border-blue-500/40 bg-blue-500/5'
+                                        }`}
+                                    onClick={() => setIsTransferMode(true)}
+                                    whileHover={{ scale: 1.005 }}
+                                    whileTap={{ scale: 0.995 }}
+                                >
+                                    <Package size={16} className="flex-shrink-0 text-blue-600 dark:text-blue-400" />
+                                    <span className="text-sm font-medium text-blue-600 dark:text-blue-400">
+                                        Transferir Bienes
+                                    </span>
+                                </motion.div>
                             </motion.div>
                         )}
                     </AnimatePresence>
