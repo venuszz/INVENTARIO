@@ -68,40 +68,46 @@ export function DirectorioManager() {
     const ineaMuebles = useIneaStore(state => state.muebles);
     const iteaMuebles = useIteaStore(state => state.muebles);
     const noListadoMuebles = useNoListadoStore(state => state.muebles);
+    const resguardos = useResguardosStore(state => state.resguardos);
     
-    // Función para contar bienes por área para un director específico
-    const countBienesByArea = (id_directorio: number, id_area: number): number => {
-        let count = 0;
+    // Pre-calculate bienes counts by director and area (MEMOIZED)
+    const bienesByDirectorArea = useMemo(() => {
+        const map = new Map<string, number>();
         
-        // Contar en INEA
-        count += ineaMuebles.filter(m => 
-            m.id_directorio === id_directorio && m.id_area === id_area
-        ).length;
+        // Count INEA
+        ineaMuebles.forEach(m => {
+            if (m.id_directorio && m.id_area) {
+                const key = `${m.id_directorio}-${m.id_area}`;
+                map.set(key, (map.get(key) || 0) + 1);
+            }
+        });
         
-        // Contar en ITEA
-        count += iteaMuebles.filter(m => 
-            m.id_directorio === id_directorio && m.id_area === id_area
-        ).length;
+        // Count ITEA
+        iteaMuebles.forEach(m => {
+            if (m.id_directorio && m.id_area) {
+                const key = `${m.id_directorio}-${m.id_area}`;
+                map.set(key, (map.get(key) || 0) + 1);
+            }
+        });
         
-        // Contar en No Listado
-        count += noListadoMuebles.filter(m => 
-            m.id_directorio === id_directorio && m.id_area === id_area
-        ).length;
+        // Count No Listado
+        noListadoMuebles.forEach(m => {
+            if (m.id_directorio && m.id_area) {
+                const key = `${m.id_directorio}-${m.id_area}`;
+                map.set(key, (map.get(key) || 0) + 1);
+            }
+        });
         
-        return count;
-    };
+        return map;
+    }, [ineaMuebles, iteaMuebles, noListadoMuebles]);
     
-    // Función para contar resguardos por área para un director específico
-    const countResguardosByArea = (id_directorio: number, id_area: number): number => {
-        // Get resguardos for this director
-        const directorResguardos = useResguardosStore.getState().resguardos.filter(
-            r => r.id_directorio === id_directorio
-        );
+    // Pre-calculate resguardos counts by director and area (MEMOIZED)
+    const resguardosByDirectorArea = useMemo(() => {
+        const map = new Map<string, number>();
         
-        // Count unique folios where the mueble belongs to the specified area
-        const uniqueFolios = new Set<string>();
-        
-        directorResguardos.forEach(resguardo => {
+        resguardos.forEach(resguardo => {
+            if (!resguardo.id_directorio) return;
+            
             let muebleIdArea: number | null = null;
             
             // Find the mueble to get id_area based on origen
@@ -116,14 +122,31 @@ export function DirectorioManager() {
                 muebleIdArea = mueble?.id_area ?? null;
             }
             
-            // If this mueble belongs to the target area, add the folio
-            if (muebleIdArea === id_area) {
-                uniqueFolios.add(resguardo.folio);
+            if (muebleIdArea) {
+                const key = `${resguardo.id_directorio}-${muebleIdArea}-${resguardo.folio}`;
+                map.set(key, 1);
             }
         });
         
-        return uniqueFolios.size;
-    };
+        // Count unique folios per director-area
+        const counts = new Map<string, number>();
+        map.forEach((_, key) => {
+            const [id_directorio, id_area] = key.split('-');
+            const countKey = `${id_directorio}-${id_area}`;
+            counts.set(countKey, (counts.get(countKey) || 0) + 1);
+        });
+        
+        return counts;
+    }, [resguardos, ineaMuebles, iteaMuebles, noListadoMuebles]);
+    
+    // Fast lookup functions using memoized maps
+    const countBienesByArea = useCallback((id_directorio: number, id_area: number): number => {
+        return bienesByDirectorArea.get(`${id_directorio}-${id_area}`) || 0;
+    }, [bienesByDirectorArea]);
+    
+    const countResguardosByArea = useCallback((id_directorio: number, id_area: number): number => {
+        return resguardosByDirectorArea.get(`${id_directorio}-${id_area}`) || 0;
+    }, [resguardosByDirectorArea]);
     
     // Estados locales
     const [editingId, setEditingId] = useState<number | null>(null);
@@ -189,6 +212,9 @@ export function DirectorioManager() {
 
     // Use deferred value for search term to avoid blocking input
     const deferredSearchTerm = useDeferredValue(searchTerm);
+    
+    // Track if we're currently filtering (show skeleton during filter)
+    const isFiltering = searchTerm !== deferredSearchTerm;
 
     // Mapear directorioAreas con useMemo
     const directorAreasMap = useMemo(() => directorioAreasFromStore.reduce((acc, rel) => {
@@ -547,13 +573,14 @@ export function DirectorioManager() {
                         <Search size={16} className={`absolute left-3 top-1/2 -translate-y-1/2 ${isDarkMode ? 'text-white/40' : 'text-black/40'}`} />
                         <input
                             type="text"
-                            placeholder="Buscar..."
+                            placeholder="Buscar por nombre, puesto, ID o área..."
                             value={searchTerm}
                             onChange={(e) => setSearchTerm(e.target.value)}
                             className={`w-full pl-9 pr-4 py-2 rounded-lg border text-sm transition-all ${isDarkMode
                                 ? 'bg-black border-white/10 text-white placeholder:text-white/40 focus:border-white/20'
                                 : 'bg-white border-black/10 text-black placeholder:text-black/40 focus:border-black/20'
                                 } focus:outline-none`}
+                            autoComplete="off"
                         />
                     </div>
 
@@ -855,30 +882,49 @@ export function DirectorioManager() {
                     animate={{ opacity: 1 }}
                     transition={{ delay: 0.3 }}
                 >
-                    <AnimatePresence mode="popLayout">
-                        {filteredDirectorio.length === 0 ? (
-                            <motion.div 
-                                className={`text-center py-16 text-sm ${isDarkMode ? 'text-white/40' : 'text-black/40'}`}
-                                initial={{ opacity: 0, y: 10 }}
-                                animate={{ opacity: 1, y: 0 }}
-                                exit={{ opacity: 0, y: -10 }}
-                            >
-                                {searchTerm ? 'No se encontraron resultados' : 'No hay empleados registrados'}
-                            </motion.div>
-                        ) : (
-                            filteredDirectorio.map((employee) => (
-                                <motion.div
-                                    key={employee.id_directorio}
-                                    layout
-                                    initial={{ opacity: 0, y: 20 }}
-                                    animate={{ opacity: 1, y: 0 }}
-                                    exit={{ opacity: 0, scale: 0.95 }}
-                                    transition={{ 
-                                        layout: { type: 'spring', stiffness: 350, damping: 30 },
-                                        opacity: { duration: 0.2 },
-                                        y: { duration: 0.3 }
-                                    }}
-                                    className={`group rounded-lg border transition-all ${
+                    {isFiltering ? (
+                        /* Show skeleton while filtering */
+                        <div className="space-y-1">
+                            {[...Array(5)].map((_, i) => (
+                                <div 
+                                    key={`skeleton-${i}`}
+                                    className={`rounded-lg border p-4 animate-pulse ${
+                                        isDarkMode ? 'bg-white/[0.02] border-white/5' : 'bg-black/[0.02] border-black/5'
+                                    }`}
+                                >
+                                    <div className="flex items-start justify-between mb-3">
+                                        <div className="flex-1 space-y-2">
+                                            <div className={`h-4 w-48 rounded ${isDarkMode ? 'bg-white/10' : 'bg-black/10'}`} />
+                                            <div className={`h-3 w-32 rounded ${isDarkMode ? 'bg-white/5' : 'bg-black/5'}`} />
+                                        </div>
+                                        <div className="flex gap-1">
+                                            <div className={`h-8 w-8 rounded-lg ${isDarkMode ? 'bg-white/5' : 'bg-black/5'}`} />
+                                            <div className={`h-8 w-8 rounded-lg ${isDarkMode ? 'bg-white/5' : 'bg-black/5'}`} />
+                                        </div>
+                                    </div>
+                                    <div className="flex gap-2">
+                                        <div className={`h-6 w-24 rounded-full ${isDarkMode ? 'bg-white/5' : 'bg-black/5'}`} />
+                                        <div className={`h-6 w-32 rounded-full ${isDarkMode ? 'bg-white/5' : 'bg-black/5'}`} />
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    ) : filteredDirectorio.length === 0 ? (
+                        <div 
+                            className={`text-center py-16 text-sm ${isDarkMode ? 'text-white/40' : 'text-black/40'}`}
+                        >
+                            {searchTerm ? 'No se encontraron resultados' : 'No hay empleados registrados'}
+                        </div>
+                    ) : (
+                        /* Simplified animations - removed AnimatePresence mode="popLayout" */
+                        filteredDirectorio.map((employee) => (
+                            <motion.div
+                                key={employee.id_directorio}
+                                initial={{ opacity: 0 }}
+                                animate={{ opacity: 1 }}
+                                exit={{ opacity: 0 }}
+                                transition={{ duration: 0.15 }}
+                                className={`group rounded-lg border transition-all ${
                                         deletingId === employee.id_directorio
                                             ? isDarkMode
                                                 ? 'bg-red-500/10 border-red-500/30'
@@ -1233,7 +1279,6 @@ export function DirectorioManager() {
                                 </motion.div>
                             ))
                         )}
-                    </AnimatePresence>
                 </motion.div>
 
                 {/* Footer */}
