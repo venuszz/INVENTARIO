@@ -38,6 +38,7 @@ export default function ConsultasIneaObsoletos() {
   const router = useRouter();
   const { isDarkMode } = useTheme();
   const userRole = useUserRole();
+  const inputRef = useRef<HTMLInputElement | null>(null);
 
   // Initialize indexation hook
   const { muebles, isIndexing, realtimeConnected, reindex: reindexObsoletos } = useIneaObsoletosIndexation();
@@ -66,6 +67,9 @@ export default function ConsultasIneaObsoletos() {
   });
 
   // Initialize search and filters hook
+  // Initialize search and filters hook with empty folios map (obsoletos don't have resguardos)
+  const emptyFoliosMap = useMemo(() => ({}), []);
+  
   const {
     searchTerm,
     setSearchTerm,
@@ -81,7 +85,7 @@ export default function ConsultasIneaObsoletos() {
     handleSuggestionClick,
     handleInputKeyDown,
     handleInputBlur
-  } = useSearchAndFilters(muebles, {});
+  } = useSearchAndFilters(muebles, emptyFoliosMap);
 
   // Initialize item edit hook
   const {
@@ -349,29 +353,28 @@ export default function ConsultasIneaObsoletos() {
               )}
             </AnimatePresence>
 
-            {/* Search Bar with Plus Button */}
+            {/* Search Bar - Siempre ocupa todo el ancho */}
             <motion.div 
               className="mb-6 space-y-3"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               transition={{ delay: 0.2 }}
             >
-              <div className="flex gap-2 relative">
-                <div className="flex-1 relative">
+              <div className="flex gap-2">
+                <div className="flex-1">
                   <SearchBar
                     searchTerm={searchTerm}
                     setSearchTerm={setSearchTerm}
+                    searchMatchType={searchMatchType}
+                    showSuggestions={showSuggestions}
+                    suggestions={suggestions}
+                    highlightedIndex={highlightedIndex}
+                    onSuggestionClick={handleSuggestionClick}
+                    onKeyDown={handleInputKeyDown}
+                    onBlur={handleInputBlur}
                     isDarkMode={isDarkMode}
+                    inputRef={inputRef}
                   />
-                  {/* Suggestion Dropdown */}
-                  {showSuggestions && (
-                    <SuggestionDropdown
-                      suggestions={suggestions}
-                      highlightedIndex={highlightedIndex}
-                      onSuggestionClick={handleSuggestionClick}
-                      isDarkMode={isDarkMode}
-                    />
-                  )}
                 </div>
                 <motion.button
                   onClick={saveCurrentFilter}
@@ -394,7 +397,7 @@ export default function ConsultasIneaObsoletos() {
                 </motion.button>
               </div>
               
-              {/* Active Filters */}
+              {/* Filtros activos */}
               {activeFilters.length > 0 && (
                 <FilterChips
                   activeFilters={activeFilters}

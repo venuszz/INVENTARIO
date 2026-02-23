@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useDeferredValue } from 'react';
+import { useState, useEffect, useMemo, useDeferredValue, useRef } from 'react';
 import type { Mueble, ActiveFilter } from '../types';
 
 /**
@@ -13,6 +13,7 @@ export function useSearchAndFilters(muebles: Mueble[], foliosResguardo: Record<s
   const [activeFilters, setActiveFilters] = useState<ActiveFilter[]>([]);
   const [suggestions, setSuggestions] = useState<{ value: string; type: ActiveFilter['type']; isConcept?: boolean }[]>([]);
   const [highlightedIndex, setHighlightedIndex] = useState<number>(-1);
+  const prevMatchTypeRef = useRef<ActiveFilter['type']>(null);
   const [showSuggestions, setShowSuggestions] = useState(false);
 
   // Defer search term to avoid blocking input
@@ -41,7 +42,10 @@ export function useSearchAndFilters(muebles: Mueble[], foliosResguardo: Record<s
   // Detect search match type
   useEffect(() => {
     if (!deferredSearchTerm || !muebles || !Array.isArray(muebles) || muebles.length === 0) {
-      setSearchMatchType(null);
+      if (prevMatchTypeRef.current !== null) {
+        prevMatchTypeRef.current = null;
+        setSearchMatchType(null);
+      }
       return;
     }
 
@@ -49,15 +53,24 @@ export function useSearchAndFilters(muebles: Mueble[], foliosResguardo: Record<s
     
     // Check for special concepts
     if (term === 'sin id' || term === 'sin inventario' || term === 'sin número') {
-      setSearchMatchType('sin_id');
+      if (prevMatchTypeRef.current !== 'sin_id') {
+        prevMatchTypeRef.current = 'sin_id';
+        setSearchMatchType('sin_id');
+      }
       return;
     }
     if (term === 'con resguardo' || term === 'resguardado' || term === 'con folio') {
-      setSearchMatchType('con_resguardo');
+      if (prevMatchTypeRef.current !== 'con_resguardo') {
+        prevMatchTypeRef.current = 'con_resguardo';
+        setSearchMatchType('con_resguardo');
+      }
       return;
     }
     if (term === 'sin resguardo' || term === 'sin folio') {
-      setSearchMatchType('sin_resguardo');
+      if (prevMatchTypeRef.current !== 'sin_resguardo') {
+        prevMatchTypeRef.current = 'sin_resguardo';
+        setSearchMatchType('sin_resguardo');
+      }
       return;
     }
     
@@ -116,7 +129,10 @@ export function useSearchAndFilters(muebles: Mueble[], foliosResguardo: Record<s
       if (bestMatch.score >= 12) break;
     }
 
-    setSearchMatchType(bestMatch.type);
+    if (prevMatchTypeRef.current !== bestMatch.type) {
+      prevMatchTypeRef.current = bestMatch.type;
+      setSearchMatchType(bestMatch.type);
+    }
   }, [deferredSearchTerm, muebles, foliosResguardo]);
 
   // Generate suggestions

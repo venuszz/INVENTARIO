@@ -215,31 +215,35 @@ export default function InventoryTable({
                                                     : 'hover:bg-black/[0.03]'
                                         }`}
                                     >
-                                        <td className={`px-4 py-3.5 whitespace-nowrap text-sm transition-all ${
+                                        <td className={`px-4 py-4 align-top text-sm transition-all ${
                                             isDarkMode ? 'text-white' : 'text-black'
                                         } ${isSelected ? 'font-medium' : 'font-light'}`}>
                                             <span className={`${isSelected ? 'opacity-100' : 'opacity-90'}`}>
                                                 {item.id_inv}
                                             </span>
                                         </td>
-                                        <td className={`px-4 py-3.5 text-sm font-light transition-all ${
+                                        <td className={`px-4 py-4 align-top text-sm font-light transition-all ${
                                             isDarkMode ? 'text-white/90' : 'text-black/90'
                                         }`}>
-                                            <div className={`max-w-md ${isSelected ? 'font-normal' : ''}`}>
-                                                {truncateText(item.descripcion, 50)}
+                                            <div className={`max-w-md line-clamp-3 ${isSelected ? 'font-normal' : ''}`}>
+                                                {item.descripcion}
                                             </div>
                                         </td>
-                                        <td className={`px-4 py-3.5 text-sm font-light ${
+                                        <td className={`px-4 py-4 align-top text-sm font-light ${
                                             isDarkMode ? 'text-white/80' : 'text-black/80'
                                         }`}>
-                                            {isSyncing ? <CellSkeleton /> : truncateText(item.area?.nombre ?? null, 25)}
+                                            <div className="line-clamp-3">
+                                                {isSyncing ? <CellSkeleton /> : (item.area?.nombre ?? null)}
+                                            </div>
                                         </td>
-                                        <td className={`px-4 py-3.5 text-sm font-light ${
+                                        <td className={`px-4 py-4 align-top text-sm font-light ${
                                             isDarkMode ? 'text-white/80' : 'text-black/80'
                                         }`}>
-                                            {isSyncing ? <CellSkeleton /> : truncateText(item.directorio?.nombre ?? null, 25)}
+                                            <div className="line-clamp-3">
+                                                {isSyncing ? <CellSkeleton /> : (item.directorio?.nombre ?? null)}
+                                            </div>
                                         </td>
-                                        <td className="px-4 py-3.5 text-sm">
+                                        <td className="px-4 py-4 align-top text-sm">
                                             {(() => {
                                                 const status = item.estatus;
                                                 const { text, style } = getStatusBadgeColors(status);
@@ -256,7 +260,7 @@ export default function InventoryTable({
                                                 );
                                             })()}
                                         </td>
-                                        <td className="px-4 py-3.5 text-sm">
+                                        <td className="px-4 py-4 align-top text-sm">
                                             {folio ? (
                                                 <button
                                                     className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-light border transition-all ${

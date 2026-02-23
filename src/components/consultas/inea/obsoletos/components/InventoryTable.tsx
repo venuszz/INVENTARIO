@@ -233,7 +233,7 @@ export const InventoryTable: React.FC<InventoryTableProps> = ({
                           : 'hover:bg-black/[0.03]'
                     } ${isSyncing ? 'opacity-50' : ''}`}
                   >
-                    <td className={`px-4 py-3.5 whitespace-nowrap text-sm transition-all ${
+                    <td className={`px-4 py-4 align-top text-sm transition-all ${
                       isDarkMode ? 'text-white' : 'text-black'
                     } ${selectedItem?.id === item.id ? 'font-medium' : 'font-light'}`}>
                       <span className={`${selectedItem?.id === item.id ? 'opacity-100' : 'opacity-90'}`}>
@@ -243,24 +243,28 @@ export const InventoryTable: React.FC<InventoryTableProps> = ({
                         <RefreshCw className="inline-block ml-2 h-3 w-3 animate-spin" />
                       )}
                     </td>
-                    <td className={`px-4 py-3.5 text-sm font-light transition-all ${
+                    <td className={`px-4 py-4 align-top text-sm font-light transition-all ${
                       isDarkMode ? 'text-white/90' : 'text-black/90'
                     }`}>
-                      <div className={`max-w-md ${selectedItem?.id === item.id ? 'font-normal' : ''}`}>
-                        {truncateText(item.descripcion, 50)}
+                      <div className={`max-w-md line-clamp-3 ${selectedItem?.id === item.id ? 'font-normal' : ''}`}>
+                        {item.descripcion}
                       </div>
                     </td>
-                    <td className={`px-4 py-3.5 text-sm font-light ${
+                    <td className={`px-4 py-4 align-top text-sm font-light ${
                       isDarkMode ? 'text-white/80' : 'text-black/80'
                     }`}>
-                      {isSyncing ? <CellSkeleton /> : truncateText(item.area?.nombre || '', 25)}
+                      <div className="line-clamp-3">
+                        {isSyncing ? <CellSkeleton /> : (item.area?.nombre || '')}
+                      </div>
                     </td>
-                    <td className={`px-4 py-3.5 text-sm font-light ${
+                    <td className={`px-4 py-4 align-top text-sm font-light ${
                       isDarkMode ? 'text-white/80' : 'text-black/80'
                     }`}>
-                      {isSyncing ? <CellSkeleton /> : truncateText(item.directorio?.nombre || item.usufinal || '', 25)}
+                      <div className="line-clamp-3">
+                        {isSyncing ? <CellSkeleton /> : (item.directorio?.nombre || item.usufinal || '')}
+                      </div>
                     </td>
-                    <td className={`px-4 py-3.5 text-sm font-light ${
+                    <td className={`px-4 py-4 align-top text-sm font-light ${
                       isDarkMode ? 'text-white/80' : 'text-black/80'
                     }`}>
                       {formatDate(item.fechabaja) || 'No especificada'}

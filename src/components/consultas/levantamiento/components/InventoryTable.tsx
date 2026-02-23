@@ -173,14 +173,14 @@ export function InventoryTable({
                 </td>
 
                 {/* ID Inventario */}
-                <td className={`px-4 py-3 whitespace-nowrap text-sm font-medium ${
+                <td className={`px-4 py-4 align-top text-sm font-medium ${
                   isDarkMode ? 'text-white' : 'text-black'
                 }`}>
                   {item.id_inv}
                 </td>
 
                 {/* Descripción */}
-                <td className={`px-4 py-3 text-sm ${
+                <td className={`px-4 py-4 align-top text-sm ${
                   isDarkMode ? 'text-white/80' : 'text-black/80'
                 }`}>
                   <div className="line-clamp-3" title={item.descripcion || ''}>
@@ -189,7 +189,7 @@ export function InventoryTable({
                 </td>
 
                 {/* Área */}
-                <td className={`px-4 py-3 text-sm ${
+                <td className={`px-4 py-4 align-top text-sm ${
                   isDarkMode ? 'text-white/80' : 'text-black/80'
                 }`}>
                   <div className="line-clamp-3" title={item.area?.nombre || ''}>
@@ -198,7 +198,7 @@ export function InventoryTable({
                 </td>
 
                 {/* Usuario Final / Resguardante */}
-                <td className={`px-4 py-3 text-sm ${
+                <td className={`px-4 py-4 align-top text-sm ${
                   isDarkMode ? 'text-white/80' : 'text-black/80'
                 }`}>
                   <div className="flex flex-col gap-1">
