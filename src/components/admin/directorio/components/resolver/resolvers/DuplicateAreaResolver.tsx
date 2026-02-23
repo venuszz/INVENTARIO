@@ -78,7 +78,7 @@ export function DuplicateAreaResolver({
             const isRecommended = director.id === recommended.id;
             const bienesCount = director.stats?.bienesCount || 0;
             const resguardosCount = director.stats?.resguardosCount || 0;
-            const uniqueKey = `director-${director.id || index}-${director.nombre}`;
+            const uniqueKey = `director-${director.id || index}-${index}-${director.nombre}`;
 
             return (
               <motion.button

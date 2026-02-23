@@ -14,6 +14,7 @@ import { useIteaStore } from '@/stores/iteaStore';
 import { useNoListadoStore } from '@/stores/noListadoStore';
 import { useResguardosStore } from '@/stores/resguardosStore';
 import { motion, AnimatePresence } from 'framer-motion';
+import { EditableAreaChip } from './components/EditableAreaChip';
 
 // Lazy load heavy components for better performance
 const InconsistencyResolverMode = lazy(() => 
@@ -290,6 +291,28 @@ export function DirectorioManager() {
                     }
                 }
             }
+        }
+    };
+
+    // Handler para actualizar nombre de área
+    const handleAreaNameUpdate = async (areaId: number, newName: string) => {
+        try {
+            const response = await fetch(`/api/supabase-proxy?target=${encodeURIComponent(`/rest/v1/area?id_area=eq.${areaId}`)}`, {
+                method: 'PATCH',
+                credentials: 'include',
+                headers: { 
+                    'Content-Type': 'application/json',
+                    'Prefer': 'return=representation'
+                },
+                body: JSON.stringify({ nombre: newName })
+            });
+
+            if (!response.ok) {
+                throw new Error('Error al actualizar el nombre del área');
+            }
+        } catch (error) {
+            console.error('Error updating area name:', error);
+            throw error;
         }
     };
 
@@ -983,75 +1006,20 @@ export function DirectorioManager() {
                                                             const conflictTooltip = hasConflict ? getConflictTooltip(id_area, editEmployee.id_directorio, inconsistencies) : '';
                                                             
                                                             return areaObj ? (
-                                                                <motion.span 
+                                                                <EditableAreaChip
                                                                     key={`edit-area-${id_area}`}
-                                                                    layout
-                                                                    initial={{ opacity: 0, scale: 0.8 }}
-                                                                    animate={{ opacity: 1, scale: 1 }}
-                                                                    exit={{ opacity: 0, scale: 0.8 }}
-                                                                    className={`relative flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium transition-colors ${
-                                                                        hasConflict
-                                                                            ? isDarkMode
-                                                                                ? 'bg-red-500/10 text-red-400 border border-red-500/30'
-                                                                                : 'bg-red-50 text-red-600 border border-red-200'
-                                                                            : isDarkMode
-                                                                                ? 'bg-white/10 text-white border border-white/20'
-                                                                                : 'bg-black/10 text-black border border-black/20'
-                                                                    }`}
-                                                                    title={conflictTooltip || undefined}
-                                                                >
-                                                                    {hasConflict && (
-                                                                        <motion.span
-                                                                            className={`absolute -top-1 -left-1 w-2 h-2 rounded-full ${
-                                                                                isDarkMode ? 'bg-red-400' : 'bg-red-600'
-                                                                            }`}
-                                                                            animate={{ scale: [1, 1.2, 1] }}
-                                                                            transition={{ duration: 1.5, repeat: Infinity }}
-                                                                        />
-                                                                    )}
-                                                                    <span className="flex items-center gap-1">
-                                                                        {areaObj.nombre}
-                                                                        {bienesCount > 0 && (
-                                                                            <span className={`flex items-center gap-0.5 ml-1 px-1.5 py-0.5 rounded-full text-[10px] ${
-                                                                                isDarkMode 
-                                                                                    ? 'bg-green-500/20 text-green-400' 
-                                                                                    : 'bg-green-100 text-green-700'
-                                                                            }`}>
-                                                                                <Package size={10} />
-                                                                                {bienesCount}
-                                                                            </span>
-                                                                        )}
-                                                                        {resguardosCount > 0 && (
-                                                                            <span className={`flex items-center gap-0.5 ml-1 px-1.5 py-0.5 rounded-full text-[10px] ${
-                                                                                isDarkMode 
-                                                                                    ? 'bg-blue-500/20 text-blue-400' 
-                                                                                    : 'bg-blue-100 text-blue-700'
-                                                                            }`}>
-                                                                                <FileText size={10} />
-                                                                                {resguardosCount}
-                                                                            </span>
-                                                                        )}
-                                                                    </span>
-                                                                    {hasGoods || hasResguardos ? (
-                                                                        <span 
-                                                                            className={`opacity-30 cursor-not-allowed`}
-                                                                            title={`No se puede eliminar: ${bienesCount} bien(es) y ${resguardosCount} resguardo(s) en esta área`}
-                                                                        >
-                                                                            <X size={12} />
-                                                                        </span>
-                                                                    ) : (
-                                                                        <motion.button
-                                                                            type="button"
-                                                                            onClick={() => setEditSelectedAreas(editSelectedAreas.filter(a => a !== id_area))}
-                                                                            className="hover:text-red-500 transition-colors"
-                                                                            whileHover={{ scale: 1.2 }}
-                                                                            whileTap={{ scale: 0.9 }}
-                                                                            title="Eliminar área"
-                                                                        >
-                                                                            <X size={12} />
-                                                                        </motion.button>
-                                                                    )}
-                                                                </motion.span>
+                                                                    areaId={id_area}
+                                                                    areaName={areaObj.nombre}
+                                                                    directorId={editEmployee.id_directorio}
+                                                                    bienesCount={bienesCount}
+                                                                    resguardosCount={resguardosCount}
+                                                                    hasConflict={hasConflict}
+                                                                    conflictTooltip={conflictTooltip}
+                                                                    canRemove={!hasGoods && !hasResguardos}
+                                                                    onRemove={() => setEditSelectedAreas(editSelectedAreas.filter(a => a !== id_area))}
+                                                                    onAreaNameUpdate={handleAreaNameUpdate}
+                                                                    isEditMode={true}
+                                                                />
                                                             ) : null;
                                                         })}
                                                     </AnimatePresence>
@@ -1239,38 +1207,23 @@ export function DirectorioManager() {
                                                     const isHighlighted = areaObj && (areaMatchesSearch(areaObj.nombre) || (highlightedArea && areaObj.nombre === highlightedArea));
                                                     const hasConflict = isAreaInConflict(id_area, inconsistencies);
                                                     const conflictTooltip = hasConflict ? getConflictTooltip(id_area, employee.id_directorio, inconsistencies) : '';
+                                                    const bienesCount = countBienesByArea(employee.id_directorio, id_area);
+                                                    const resguardosCount = countResguardosByArea(employee.id_directorio, id_area);
                                                     
                                                     return areaObj ? (
-                                                        <motion.span 
+                                                        <EditableAreaChip
                                                             key={`view-area-${id_area}`}
-                                                            className={`relative px-2 py-0.5 rounded-full text-xs font-medium transition-all ${
-                                                                hasConflict
-                                                                    ? isDarkMode
-                                                                        ? 'bg-red-500/10 text-red-400 border border-red-500/30'
-                                                                        : 'bg-red-50 text-red-600 border border-red-200'
-                                                                    : isHighlighted
-                                                                        ? isDarkMode
-                                                                            ? 'bg-white/20 text-white border border-white/40 ring-2 ring-white/20'
-                                                                            : 'bg-black/20 text-black border border-black/40 ring-2 ring-black/20'
-                                                                        : isDarkMode
-                                                                            ? 'bg-white/5 text-white/80 border border-white/10'
-                                                                            : 'bg-black/5 text-black/80 border border-black/10'
-                                                            }`}
-                                                            animate={isHighlighted ? { scale: [1, 1.05, 1] } : {}}
-                                                            transition={{ duration: 0.3 }}
-                                                            title={conflictTooltip}
-                                                        >
-                                                            {hasConflict && (
-                                                                <motion.span
-                                                                    className={`absolute -top-1 -right-1 w-2 h-2 rounded-full ${
-                                                                        isDarkMode ? 'bg-red-400' : 'bg-red-600'
-                                                                    }`}
-                                                                    animate={{ scale: [1, 1.2, 1] }}
-                                                                    transition={{ duration: 1.5, repeat: Infinity }}
-                                                                />
-                                                            )}
-                                                            {areaObj.nombre}
-                                                        </motion.span>
+                                                            areaId={id_area}
+                                                            areaName={areaObj.nombre}
+                                                            directorId={employee.id_directorio}
+                                                            bienesCount={bienesCount}
+                                                            resguardosCount={resguardosCount}
+                                                            hasConflict={hasConflict}
+                                                            conflictTooltip={conflictTooltip}
+                                                            isHighlighted={!!isHighlighted}
+                                                            onAreaNameUpdate={handleAreaNameUpdate}
+                                                            isEditMode={false}
+                                                        />
                                                     ) : null;
                                                 })}
                                             </div>

@@ -248,9 +248,9 @@ export function InconsistencyAlert({ inconsistencies, isInDirectorioPage = false
                                                                                     Asignada a:
                                                                                 </p>
                                                                                 <div className="mt-1 space-y-0.5">
-                                                                                    {issue.directors.map((director) => (
+                                                                                    {issue.directors.map((director, dirIndex) => (
                                                                                         <p 
-                                                                                            key={director.id}
+                                                                                            key={`${director.id}-${dirIndex}`}
                                                                                             className={`text-[10px] pl-2 ${
                                                                                                 isDarkMode ? 'text-white/60' : 'text-black/60'
                                                                                             }`}
