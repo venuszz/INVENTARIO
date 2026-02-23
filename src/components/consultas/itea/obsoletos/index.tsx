@@ -325,7 +325,7 @@ export default function IteaObsoletosComponent() {
         isDarkMode ? 'bg-black text-white' : 'bg-white text-black'
       }`}>
         <motion.div 
-          className={`h-full overflow-y-auto p-4 md:p-8 ${
+          className={`h-full overflow-y-auto p-[2vw] md:p-[3vw] lg:p-[2vw] ${
             isDarkMode 
               ? 'scrollbar-thin scrollbar-track-white/5 scrollbar-thumb-white/20 hover:scrollbar-thumb-white/30'
               : 'scrollbar-thin scrollbar-track-black/5 scrollbar-thumb-black/20 hover:scrollbar-thumb-black/30'
@@ -334,7 +334,7 @@ export default function IteaObsoletosComponent() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.4 }}
         >
-          <div className="w-full max-w-7xl mx-auto pb-8">
+          <div className="w-full max-w-[95vw] mx-auto pb-[2vw]">
             {/* Header */}
             <Header 
               isDarkMode={isDarkMode}
@@ -357,12 +357,12 @@ export default function IteaObsoletosComponent() {
 
             {/* Search Bar with Plus Button */}
             <motion.div 
-              className="mb-6 space-y-3"
+              className="mb-[1.5vw] space-y-[0.75vw]"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               transition={{ delay: 0.2 }}
             >
-              <div className="flex gap-2 relative">
+              <div className="flex gap-[0.5vw] relative">
                 <div className="flex-1 relative">
                   <SearchBar
                     searchTerm={searchTerm}
@@ -385,7 +385,7 @@ export default function IteaObsoletosComponent() {
                 <motion.button
                   onClick={saveCurrentFilter}
                   disabled={!searchTerm || !searchMatchType}
-                  className={`px-4 py-2 rounded-lg border flex items-center gap-2 text-sm font-light tracking-tight transition-all ${searchTerm && searchMatchType
+                  className={`px-[1vw] py-[0.5vw] rounded-lg border flex items-center gap-[0.5vw] text-[0.875rem] font-light tracking-tight transition-all ${searchTerm && searchMatchType
                     ? (isDarkMode
                       ? 'bg-white/5 hover:bg-white/10 border-white/10 text-white'
                       : 'bg-black/5 hover:bg-black/10 border-black/10 text-black'
@@ -399,7 +399,7 @@ export default function IteaObsoletosComponent() {
                   whileHover={searchTerm && searchMatchType ? { scale: 1.02 } : {}}
                   whileTap={searchTerm && searchMatchType ? { scale: 0.98 } : {}}
                 >
-                  <Plus className="h-4 w-4" />
+                  <Plus className="h-[1vw] w-[1vw] min-h-[14px] min-w-[14px]" />
                 </motion.button>
               </div>
               
@@ -447,7 +447,7 @@ export default function IteaObsoletosComponent() {
             {/* Main Content */}
             <motion.div 
               className={selectedItem 
-                ? "grid grid-cols-1 lg:grid-cols-2 gap-6" 
+                ? "grid grid-cols-1 lg:grid-cols-2 gap-[1.5vw] items-start" 
                 : "w-full"
               }
               initial={{ opacity: 0 }}
@@ -456,7 +456,7 @@ export default function IteaObsoletosComponent() {
             >
               {/* Table Section */}
               <div className={`flex-1 min-w-0 flex flex-col ${selectedItem ? '' : 'w-full'}`}>
-                <div className={selectedItem ? 'h-[600px]' : ''}>
+                <div className={selectedItem ? 'h-[150vh] flex flex-col' : ''}>
                   <InventoryTable
                     muebles={mueblesOmni}
                     paginatedMuebles={paginatedMuebles}
@@ -491,7 +491,7 @@ export default function IteaObsoletosComponent() {
               {selectedItem && (
                 <AnimatePresence mode="wait">
                   <motion.div 
-                    className="flex flex-col"
+                    className="flex flex-col h-[150vh]"
                     initial={{ opacity: 0, x: 20 }}
                     animate={{ opacity: 1, x: 0 }}
                     exit={{ opacity: 0, x: 20 }}

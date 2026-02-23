@@ -15,7 +15,7 @@ export default function ValueStatsPanel({
 }: ValueStatsPanelProps) {
   return (
     <motion.div 
-      className={`mb-6 p-4 rounded-lg border transition-colors ${
+      className={`mb-[1.5vw] p-[1vw] rounded-lg border transition-colors ${
         isDarkMode 
           ? 'bg-white/[0.02] border-white/10' 
           : 'bg-black/[0.02] border-black/10'
@@ -31,18 +31,18 @@ export default function ValueStatsPanel({
           transition={{ duration: 0.3, delay: 0.1 }}
           className="text-center"
         >
-          <div className={`text-xs font-medium mb-1 ${
+          <div className={`font-medium mb-[0.25vw] ${
             isDarkMode ? 'text-white/60' : 'text-black/60'
-          }`}>
+          }`} style={{ fontSize: 'clamp(0.625rem, 0.75vw, 0.75rem)' }}>
             {hasActiveFilters ? 'Bienes Filtrados' : 'Total de Bienes'}
           </div>
-          <div className="text-2xl font-light tracking-tight">
+          <div className="font-light tracking-tight" style={{ fontSize: 'clamp(1.25rem, 1.5vw, 1.5rem)' }}>
             {filteredCount.toLocaleString('es-MX')}
           </div>
           {hasActiveFilters && (
-            <div className={`text-xs mt-1 ${
+            <div className={`mt-[0.25vw] ${
               isDarkMode ? 'text-white/40' : 'text-black/40'
-            }`}>
+            }`} style={{ fontSize: 'clamp(0.625rem, 0.75vw, 0.75rem)' }}>
               de {totalCount.toLocaleString('es-MX')} totales
             </div>
           )}

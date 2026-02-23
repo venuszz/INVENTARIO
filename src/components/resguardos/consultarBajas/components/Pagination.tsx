@@ -21,7 +21,7 @@ export const Pagination: React.FC<PaginationProps> = ({
   setRowsPerPage,
   isDarkMode
 }) => {
-  const rowsOptions = [10, 25, 50, 100];
+  const rowsOptions = [25, 50, 100];
 
   const handleRowsRotate = () => {
     const currentIndex = rowsOptions.indexOf(rowsPerPage);

@@ -50,7 +50,7 @@ export default function DetailPanel({
   return (
     <div
       ref={detailRef}
-      className={`border rounded-lg overflow-visible flex flex-col flex-shrink-0 w-full h-[600px] ${
+      className={`border rounded-lg overflow-visible flex flex-col flex-shrink-0 w-full h-full ${
         isDarkMode ? 'bg-black border-white/10' : 'bg-white border-black/10'
       }`}
     >

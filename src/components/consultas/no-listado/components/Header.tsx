@@ -7,15 +7,15 @@ interface HeaderProps {
 
 export default function Header({ isDarkMode, realtimeConnected }: HeaderProps) {
   return (
-    <div className={`flex justify-between items-center mb-8 pb-6 border-b ${
+    <div className={`flex justify-between items-center mb-[2vw] pb-[1.5vw] border-b ${
       isDarkMode ? 'border-white/10' : 'border-black/10'
     }`}>
       <div>
-        <h1 className="text-3xl font-light tracking-tight mb-1">
-          Inventario No Listado
+        <h1 className="font-light tracking-tight mb-[0.25vw]" style={{ fontSize: 'clamp(1.5rem, 2vw, 2rem)' }}>
+          Inventario TLAXCALA
         </h1>
-        <p className={`text-sm ${isDarkMode ? 'text-white/40' : 'text-black/40'}`}>
-          Consulta y gestión de bienes no listados oficialmente
+        <p className={`${isDarkMode ? 'text-white/40' : 'text-black/40'}`} style={{ fontSize: 'clamp(0.75rem, 0.875vw, 0.875rem)' }}>
+          Consulta y gestión de bienes del estado de Tlaxcala
         </p>
       </div>
       <SectionRealtimeToggle 

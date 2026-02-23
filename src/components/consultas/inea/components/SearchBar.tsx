@@ -34,8 +34,7 @@ export default function SearchBar({
     <div className="relative">
       <div className="relative">
         <Search 
-          size={16} 
-          className={`absolute left-3 top-1/2 -translate-y-1/2 ${
+          className={`absolute left-[0.75vw] top-1/2 -translate-y-1/2 w-[1vw] h-[1vw] min-w-[14px] min-h-[14px] ${
             isDarkMode ? 'text-white/40' : 'text-black/40'
           }`}
         />
@@ -47,7 +46,7 @@ export default function SearchBar({
           onChange={(e) => setSearchTerm(e.target.value)}
           onKeyDown={onKeyDown}
           onBlur={onBlur}
-          className={`w-full pl-9 pr-4 py-2 rounded-lg border text-sm transition-all ${
+          className={`w-full pl-[2.25vw] pr-[1vw] py-[0.5vw] rounded-lg border text-[clamp(0.75rem,0.875vw,1rem)] transition-all ${
             isDarkMode
               ? 'bg-black border-white/10 text-white placeholder:text-white/40 focus:border-white/20'
               : 'bg-white border-black/10 text-black placeholder:text-black/40 focus:border-black/20'
@@ -57,7 +56,7 @@ export default function SearchBar({
           <motion.span 
             initial={{ opacity: 0, scale: 0.8 }}
             animate={{ opacity: 1, scale: 1 }}
-            className={`absolute right-3 top-1/2 -translate-y-1/2 text-xs px-2 py-0.5 rounded-full font-medium ${
+            className={`absolute right-[0.75vw] top-1/2 -translate-y-1/2 text-[clamp(0.625rem,0.75vw,0.875rem)] px-[0.5vw] py-[0.125vw] rounded-full font-medium ${
               isDarkMode 
                 ? 'bg-white/10 text-white/80 border border-white/20' 
                 : 'bg-black/10 text-black/80 border border-black/20'
@@ -76,13 +75,13 @@ export default function SearchBar({
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -10 }}
             transition={{ duration: 0.2 }}
-            className={`absolute z-50 w-full mt-2 rounded-lg border shadow-lg overflow-hidden ${
+            className={`absolute z-50 w-full mt-[0.5vw] rounded-lg border shadow-lg overflow-hidden ${
               isDarkMode
                 ? 'bg-black border-white/10'
                 : 'bg-white border-black/10'
             }`}
           >
-            <div className={`max-h-60 overflow-y-auto p-1 ${
+            <div className={`max-h-[min(15rem,30vh)] overflow-y-auto p-[0.25vw] ${
               isDarkMode 
                 ? 'scrollbar-thin scrollbar-track-white/5 scrollbar-thumb-white/20 hover:scrollbar-thumb-white/30'
                 : 'scrollbar-thin scrollbar-track-black/5 scrollbar-thumb-black/20 hover:scrollbar-thumb-black/30'
@@ -95,7 +94,7 @@ export default function SearchBar({
                     key={`${suggestion.type}-${suggestion.value}-${index}`}
                     type="button"
                     onClick={() => onSuggestionClick(index)}
-                    className={`w-full flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-left transition-all duration-150 ${
+                    className={`w-full flex items-center gap-[0.625vw] px-[0.625vw] py-[0.5vw] rounded-lg text-left transition-all duration-150 ${
                       isConcept
                         ? isSelected
                           ? isDarkMode 
@@ -118,21 +117,21 @@ export default function SearchBar({
                       ? (isDarkMode ? 'text-white' : 'text-black')
                       : (isDarkMode ? 'text-white/40' : 'text-black/40')
                     }>
-                      {suggestion.type === 'id' ? <Hash className="w-3.5 h-3.5" /> : 
-                       suggestion.type === 'area' ? <MapPin className="w-3.5 h-3.5" /> :
-                       suggestion.type === 'usufinal' ? <User className="w-3.5 h-3.5" /> :
-                       suggestion.type === 'descripcion' ? <FileText className="w-3.5 h-3.5" /> : 
-                       suggestion.type === 'resguardante' ? <User className="w-3.5 h-3.5" /> :
-                       suggestion.type === 'rubro' ? <Package className="w-3.5 h-3.5" /> :
-                       <Search className="w-3.5 h-3.5" />}
+                      {suggestion.type === 'id' ? <Hash className="w-[0.875vw] h-[0.875vw] min-w-[12px] min-h-[12px]" /> : 
+                       suggestion.type === 'area' ? <MapPin className="w-[0.875vw] h-[0.875vw] min-w-[12px] min-h-[12px]" /> :
+                       suggestion.type === 'usufinal' ? <User className="w-[0.875vw] h-[0.875vw] min-w-[12px] min-h-[12px]" /> :
+                       suggestion.type === 'descripcion' ? <FileText className="w-[0.875vw] h-[0.875vw] min-w-[12px] min-h-[12px]" /> : 
+                       suggestion.type === 'resguardante' ? <User className="w-[0.875vw] h-[0.875vw] min-w-[12px] min-h-[12px]" /> :
+                       suggestion.type === 'rubro' ? <Package className="w-[0.875vw] h-[0.875vw] min-w-[12px] min-h-[12px]" /> :
+                       <Search className="w-[0.875vw] h-[0.875vw] min-w-[12px] min-h-[12px]" />}
                     </span>
 
                     {/* Content */}
                     <div className="flex-1 min-w-0">
-                      <div className="text-sm truncate font-medium">
+                      <div className="text-[clamp(0.75rem,0.875vw,1rem)] truncate font-medium">
                         {suggestion.value}
                       </div>
-                      <div className={`text-xs truncate ${
+                      <div className={`text-[clamp(0.625rem,0.75vw,0.875rem)] truncate ${
                         isSelected
                           ? (isDarkMode ? 'text-white/60' : 'text-black/60')
                           : (isDarkMode ? 'text-white/40' : 'text-black/40')

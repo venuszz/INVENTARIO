@@ -15,7 +15,7 @@ export function ValueStatsPanel({
 }: ValueStatsPanelProps) {
   return (
     <motion.div 
-      className={`mb-6 p-4 rounded-lg border transition-colors ${
+      className={`mb-[1.5vw] p-[1vw] rounded-lg border transition-colors ${
         isDarkMode 
           ? 'bg-white/[0.02] border-white/10' 
           : 'bg-black/[0.02] border-black/10'
@@ -24,7 +24,7 @@ export function ValueStatsPanel({
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.3 }}
     >
-      <div className="flex items-center justify-center gap-8">
+      <div className="flex items-center justify-center gap-[2vw]">
         {/* Conteo de Bienes */}
         <motion.div
           initial={{ opacity: 0, scale: 0.95 }}
@@ -32,18 +32,18 @@ export function ValueStatsPanel({
           transition={{ duration: 0.3, delay: 0.1 }}
           className="text-center"
         >
-          <div className={`text-xs font-medium mb-1 ${
+          <div className={`text-[clamp(0.625rem,0.75vw,0.75rem)] font-medium mb-[0.25vw] ${
             isDarkMode ? 'text-white/60' : 'text-black/60'
           }`}>
             Artículos de Baja
           </div>
-          <div className="text-2xl font-light tracking-tight">
+          <div className="text-[clamp(1.25rem,2vw,1.5rem)] font-light tracking-tight">
             {loading ? '...' : filteredCount.toLocaleString('es-MX')}
           </div>
         </motion.div>
 
         {/* Separador vertical */}
-        <div className={`h-12 w-px ${
+        <div className={`h-[3vw] w-px ${
           isDarkMode ? 'bg-white/10' : 'bg-black/10'
         }`} />
 
@@ -54,12 +54,12 @@ export function ValueStatsPanel({
           transition={{ duration: 0.3, delay: 0.15 }}
           className="text-center"
         >
-          <div className={`text-xs font-medium mb-1 ${
+          <div className={`text-[clamp(0.625rem,0.75vw,0.75rem)] font-medium mb-[0.25vw] ${
             isDarkMode ? 'text-white/60' : 'text-black/60'
           }`}>
             Valor Total
           </div>
-          <div className="text-2xl font-light tracking-tight">
+          <div className="text-[clamp(1.25rem,2vw,1.5rem)] font-light tracking-tight">
             {loading ? '...' : `${totalValue.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
           </div>
         </motion.div>

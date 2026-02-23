@@ -59,23 +59,24 @@ export default function DetailPanel({
   return (
     <div
       ref={detailRef}
-      className={`border rounded-lg overflow-visible flex flex-col flex-shrink-0 w-full h-[600px] ${
+      className={`border rounded-lg overflow-visible flex flex-col flex-shrink-0 w-full h-full ${
         isDarkMode ? 'bg-black border-white/10' : 'bg-white border-black/10'
       }`}
     >
       {/* Header - Fixed at top */}
       <div
-        className={`border-b px-6 py-4 flex justify-between items-center ${
+        className={`border-b px-[1.5vw] py-[1vw] flex justify-between items-center ${
           isDarkMode ? 'bg-black border-white/10' : 'bg-white border-black/10'
         }`}
       >
         <h2
-          className={`text-lg font-light tracking-tight flex items-center gap-2 ${
+          className={`font-light tracking-tight flex items-center gap-[0.5vw] ${
             isDarkMode ? 'text-white' : 'text-black'
           }`}
+          style={{ fontSize: 'clamp(1rem, 1.125vw, 1.125rem)' }}
         >
           <Archive
-            className={`h-4 w-4 ${isDarkMode ? 'text-white/60' : 'text-black/60'}`}
+            className={`h-[1vw] w-[1vw] min-h-[14px] min-w-[14px] ${isDarkMode ? 'text-white/60' : 'text-black/60'}`}
           />
           Detalle del Bien
         </h2>
@@ -87,18 +88,18 @@ export default function DetailPanel({
             onClose();
           }}
           title="Cerrar detalle"
-          className={`rounded-lg p-1.5 transition-all ${
+          className={`rounded-lg p-[0.375vw] min-w-[28px] min-h-[28px] transition-all ${
             isDarkMode
               ? 'text-white/60 hover:text-white hover:bg-white/5'
               : 'text-black/60 hover:text-black hover:bg-black/5'
           }`}
         >
-          <X className="h-4 w-4" />
+          <X className="h-[1vw] w-[1vw] min-h-[14px] min-w-[14px]" />
         </button>
       </div>
 
       {/* Scrollable Content */}
-      <div className={`flex-grow p-6 overflow-y-auto ${
+      <div className={`flex-grow p-[1.5vw] overflow-y-auto ${
         isDarkMode 
           ? 'scrollbar-thin scrollbar-track-white/5 scrollbar-thumb-white/20 hover:scrollbar-thumb-white/30'
           : 'scrollbar-thin scrollbar-track-black/5 scrollbar-thumb-black/20 hover:scrollbar-thumb-black/30'
@@ -165,18 +166,19 @@ function EditMode({
   const hasActiveResguardo = !!(editFormData.id_inv && foliosResguardo[editFormData.id_inv]);
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-[1.5vw]">
       {/* Image Section */}
       <div className="form-group">
         <label
-          className={`flex items-center gap-2 text-xs font-medium uppercase tracking-wider mb-3 ${
+          className={`flex items-center gap-[0.5vw] font-medium uppercase tracking-wider mb-[0.75vw] ${
             isDarkMode ? 'text-white/60' : 'text-black/60'
           }`}
+          style={{ fontSize: 'clamp(0.625rem, 0.75vw, 0.75rem)' }}
         >
           Imagen del Bien
         </label>
 
-          <div className="flex items-start gap-4">
+          <div className="flex items-start gap-[1vw]">
             <div className="flex-1">
               {imagePreview ? (
                 <div className="relative group">
@@ -266,7 +268,7 @@ function EditMode({
         </div>
 
       {/* Form Fields Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-[1vw]">
         {/* ID Inventario */}
         <div className="form-group">
           <label
@@ -649,19 +651,20 @@ function ViewMode({
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-[1.5vw]">
       {/* Image Section */}
       <div
-        className={`rounded-lg p-4 transition-all border ${
+        className={`rounded-lg p-[1vw] transition-all border ${
           isDarkMode
             ? 'bg-white/[0.02] hover:bg-white/[0.04] border-white/10'
             : 'bg-black/[0.02] hover:bg-black/[0.04] border-black/10'
         }`}
       >
         <h3
-          className={`text-xs font-medium uppercase tracking-wider mb-3 ${
+          className={`font-medium uppercase tracking-wider mb-[0.75vw] ${
             isDarkMode ? 'text-white/60' : 'text-black/60'
           }`}
+          style={{ fontSize: 'clamp(0.625rem, 0.75vw, 0.75rem)' }}
         >
           Fotografía del Bien
         </h3>
@@ -670,10 +673,10 @@ function ViewMode({
 
       {/* Resguardo Info */}
       {folio && detalleResguardo ? (
-        <div className="mb-4">
-          <div className={`text-xs font-medium mb-2 ${
+        <div className="mb-[1vw]">
+          <div className={`font-medium mb-[0.5vw] ${
             isDarkMode ? 'text-white/60' : 'text-black/60'
-          }`}>
+          }`} style={{ fontSize: 'clamp(0.625rem, 0.75vw, 0.75rem)' }}>
             Resguardo
           </div>
           <div className={`rounded-lg border ${
@@ -681,7 +684,7 @@ function ViewMode({
               ? 'bg-white/[0.02] border-white/10'
               : 'bg-black/[0.02] border-black/10'
           }`}>
-            <div className="grid grid-cols-2 gap-3 p-3">
+            <div className="grid grid-cols-2 gap-[0.75vw] p-[0.75vw]">
               <div className="flex items-start gap-2">
                 <FileText className={`h-3.5 w-3.5 mt-0.5 flex-shrink-0 ${
                   isDarkMode ? 'text-white/40' : 'text-black/40'
@@ -770,7 +773,7 @@ function ViewMode({
       )}
 
       {/* Details Grid */}
-      <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+      <div className="grid grid-cols-1 gap-[1.5vw] md:grid-cols-2">
         <DetailCard label="ID Inventario" value={selectedItem.id_inv} isDarkMode={isDarkMode} />
         <DetailCard
           label="Rubro"
@@ -906,7 +909,7 @@ interface DetailCardProps {
 function DetailCard({ label, value, isDarkMode, colSpan2 = false, isLoading = false }: DetailCardProps) {
   return (
     <div
-      className={`rounded-lg p-4 transition-all border ${
+      className={`rounded-lg p-[1vw] transition-all border ${
         colSpan2 ? 'col-span-2' : ''
       } ${
         isDarkMode
@@ -915,18 +918,19 @@ function DetailCard({ label, value, isDarkMode, colSpan2 = false, isLoading = fa
       }`}
     >
       <h3
-        className={`text-xs font-medium uppercase tracking-wider mb-2 ${
+        className={`font-medium uppercase tracking-wider mb-[0.5vw] ${
           isDarkMode ? 'text-white/60' : 'text-black/60'
         }`}
+        style={{ fontSize: 'clamp(0.625rem, 0.75vw, 0.75rem)' }}
       >
         {label}
       </h3>
       {isLoading ? (
-        <div className={`h-5 rounded animate-pulse ${
+        <div className={`h-[1.25vw] min-h-[18px] rounded animate-pulse ${
           isDarkMode ? 'bg-white/10' : 'bg-black/10'
         }`} style={{ width: '60%' }} />
       ) : (
-        <p className={`font-light text-sm ${isDarkMode ? 'text-white/90' : 'text-black/90'}`}>
+        <p className={`font-light ${isDarkMode ? 'text-white/90' : 'text-black/90'}`} style={{ fontSize: 'clamp(0.75rem, 0.875vw, 0.875rem)' }}>
           {value}
         </p>
       )}

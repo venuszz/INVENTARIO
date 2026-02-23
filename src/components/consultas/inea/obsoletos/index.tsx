@@ -46,7 +46,7 @@ export default function ConsultasIneaObsoletos() {
 
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
-  const [rowsPerPage, setRowsPerPage] = useState(10);
+  const [rowsPerPage, setRowsPerPage] = useState(25);
 
   // Sorting state
   const [sortField, setSortField] = useState<keyof Mueble>('id_inv');
@@ -293,7 +293,7 @@ export default function ConsultasIneaObsoletos() {
         isDarkMode ? 'bg-black text-white' : 'bg-white text-black'
       }`}>
         <motion.div 
-          className={`h-full overflow-y-auto p-4 md:p-8 ${
+          className={`h-full overflow-y-auto p-[2vw] md:p-[3vw] lg:p-[2vw] ${
             isDarkMode 
               ? 'scrollbar-thin scrollbar-track-white/5 scrollbar-thumb-white/20 hover:scrollbar-thumb-white/30'
               : 'scrollbar-thin scrollbar-track-black/5 scrollbar-thumb-black/20 hover:scrollbar-thumb-black/30'
@@ -302,7 +302,7 @@ export default function ConsultasIneaObsoletos() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.4 }}
         >
-          <div className="w-full max-w-7xl mx-auto pb-8">
+          <div className="w-full max-w-[95vw] mx-auto pb-[2vw]">
             {/* Header */}
             <Header 
               isDarkMode={isDarkMode}
@@ -355,12 +355,12 @@ export default function ConsultasIneaObsoletos() {
 
             {/* Search Bar - Siempre ocupa todo el ancho */}
             <motion.div 
-              className="mb-6 space-y-3"
+              className="mb-[1.5vw] space-y-[0.75vw]"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               transition={{ delay: 0.2 }}
             >
-              <div className="flex gap-2">
+              <div className="flex gap-[0.5vw]">
                 <div className="flex-1">
                   <SearchBar
                     searchTerm={searchTerm}
@@ -379,7 +379,7 @@ export default function ConsultasIneaObsoletos() {
                 <motion.button
                   onClick={saveCurrentFilter}
                   disabled={!searchTerm || !searchMatchType}
-                  className={`px-4 py-2 rounded-lg border flex items-center gap-2 text-sm font-light tracking-tight transition-all ${searchTerm && searchMatchType
+                  className={`px-[1vw] py-[0.5vw] rounded-lg border flex items-center gap-[0.5vw] text-[0.875rem] font-light tracking-tight transition-all ${searchTerm && searchMatchType
                     ? (isDarkMode
                       ? 'bg-white/5 hover:bg-white/10 border-white/10 text-white'
                       : 'bg-black/5 hover:bg-black/10 border-black/10 text-black'
@@ -393,7 +393,7 @@ export default function ConsultasIneaObsoletos() {
                   whileHover={searchTerm && searchMatchType ? { scale: 1.02 } : {}}
                   whileTap={searchTerm && searchMatchType ? { scale: 0.98 } : {}}
                 >
-                  <Plus className="h-4 w-4" />
+                  <Plus className="h-[1vw] w-[1vw] min-h-[14px] min-w-[14px]" />
                 </motion.button>
               </div>
               
@@ -410,7 +410,7 @@ export default function ConsultasIneaObsoletos() {
             {/* Main Content */}
             <motion.div 
               className={selectedItem 
-                ? "grid grid-cols-1 lg:grid-cols-2 gap-6" 
+                ? "grid grid-cols-1 lg:grid-cols-2 gap-[1.5vw] items-start" 
                 : "w-full"
               }
               initial={{ opacity: 0 }}
@@ -419,7 +419,7 @@ export default function ConsultasIneaObsoletos() {
             >
               {/* Table Section */}
               <div className={`flex-1 min-w-0 flex flex-col ${selectedItem ? '' : 'w-full'}`}>
-                <div className={selectedItem ? 'h-[600px]' : ''}>
+                <div className={selectedItem ? 'h-[150vh] flex flex-col' : ''}>
                   <InventoryTable
                     muebles={muebles}
                     paginatedMuebles={paginatedMuebles}
@@ -454,7 +454,7 @@ export default function ConsultasIneaObsoletos() {
               {selectedItem && (
                 <AnimatePresence mode="wait">
                   <motion.div 
-                    className="flex flex-col"
+                    className="flex flex-col h-[150vh]"
                     initial={{ opacity: 0, x: 20 }}
                     animate={{ opacity: 1, x: 0 }}
                     exit={{ opacity: 0, x: 20 }}
@@ -486,7 +486,7 @@ export default function ConsultasIneaObsoletos() {
                     />
                     
                     {/* Action Buttons */}
-                    <div className={`mt-6 flex items-center justify-end gap-2 px-4 py-3 ${
+                    <div className={`mt-[1.5vw] flex items-center justify-end gap-[0.5vw] px-[1vw] py-[0.75vw] ${
                       isDarkMode ? 'text-white' : 'text-black'
                     }`}>
                       {isEditing ? (
@@ -494,7 +494,7 @@ export default function ConsultasIneaObsoletos() {
                           <motion.button
                             onClick={saveChanges}
                             disabled={isSaving}
-                            className={`flex items-center gap-2 px-4 py-2 rounded-lg border text-sm font-light tracking-tight transition-all ${
+                            className={`flex items-center gap-[0.5vw] px-[1vw] py-[0.5vw] rounded-lg border text-[0.875rem] font-light tracking-tight transition-all ${
                               isSaving
                                 ? isDarkMode
                                   ? 'bg-white/5 border-white/10 text-white/40 cursor-not-allowed'
@@ -508,12 +508,12 @@ export default function ConsultasIneaObsoletos() {
                           >
                             {isSaving ? (
                               <>
-                                <div className="h-3.5 w-3.5 border-2 border-current border-t-transparent rounded-full animate-spin" />
+                                <div className="h-[0.875vw] w-[0.875vw] min-h-[12px] min-w-[12px] border-2 border-current border-t-transparent rounded-full animate-spin" />
                                 Guardando...
                               </>
                             ) : (
                               <>
-                                <Save className="h-3.5 w-3.5" />
+                                <Save className="h-[0.875vw] w-[0.875vw] min-h-[12px] min-w-[12px]" />
                                 Guardar
                               </>
                             )}
@@ -521,7 +521,7 @@ export default function ConsultasIneaObsoletos() {
                           <motion.button
                             onClick={cancelEdit}
                             disabled={isSaving}
-                            className={`flex items-center gap-2 px-4 py-2 rounded-lg border text-sm font-light tracking-tight transition-all ${
+                            className={`flex items-center gap-[0.5vw] px-[1vw] py-[0.5vw] rounded-lg border text-[0.875rem] font-light tracking-tight transition-all ${
                               isSaving
                                 ? isDarkMode
                                   ? 'bg-white/[0.02] border-white/10 text-white/30 cursor-not-allowed'
@@ -533,7 +533,7 @@ export default function ConsultasIneaObsoletos() {
                             whileHover={!isSaving ? { scale: 1.02 } : {}}
                             whileTap={!isSaving ? { scale: 0.98 } : {}}
                           >
-                            <X className="h-3.5 w-3.5" />
+                            <X className="h-[0.875vw] w-[0.875vw] min-h-[12px] min-w-[12px]" />
                             Cancelar
                           </motion.button>
                         </>
@@ -542,7 +542,7 @@ export default function ConsultasIneaObsoletos() {
                           <>
                             <motion.button
                               onClick={handleStartEdit}
-                              className={`flex items-center gap-2 px-4 py-2 rounded-lg border text-sm font-light tracking-tight transition-all ${
+                              className={`flex items-center gap-[0.5vw] px-[1vw] py-[0.5vw] rounded-lg border text-[0.875rem] font-light tracking-tight transition-all ${
                                 isDarkMode
                                   ? 'bg-white/5 border-white/10 text-white hover:bg-white/10'
                                   : 'bg-black/5 border-black/10 text-black hover:bg-black/10'
@@ -550,12 +550,12 @@ export default function ConsultasIneaObsoletos() {
                               whileHover={{ scale: 1.02 }}
                               whileTap={{ scale: 0.98 }}
                             >
-                              <Edit className="h-3.5 w-3.5" />
+                              <Edit className="h-[0.875vw] w-[0.875vw] min-h-[12px] min-w-[12px]" />
                               Editar
                             </motion.button>
                             <motion.button
                               onClick={() => setShowReactivarModal(true)}
-                              className={`flex items-center gap-2 px-4 py-2 rounded-lg border text-sm font-light tracking-tight transition-all ${
+                              className={`flex items-center gap-[0.5vw] px-[1vw] py-[0.5vw] rounded-lg border text-[0.875rem] font-light tracking-tight transition-all ${
                                 isDarkMode
                                   ? 'bg-white/[0.02] border-white/10 text-white/60 hover:bg-white/5 hover:text-white'
                                   : 'bg-black/[0.02] border-black/10 text-black/60 hover:bg-black/5 hover:text-black'
@@ -563,7 +563,7 @@ export default function ConsultasIneaObsoletos() {
                               whileHover={{ scale: 1.02 }}
                               whileTap={{ scale: 0.98 }}
                             >
-                              <RotateCw className="h-3.5 w-3.5" />
+                              <RotateCw className="h-[0.875vw] w-[0.875vw] min-h-[12px] min-w-[12px]" />
                               Reactivar
                             </motion.button>
                           </>

@@ -43,7 +43,7 @@ export function Pagination({
   isDarkMode
 }: PaginationProps) {
   
-  const rowsOptions = [10, 25, 50, 100];
+  const rowsOptions = [25, 50, 100];
 
   /**
    * Rotate to next rows per page option

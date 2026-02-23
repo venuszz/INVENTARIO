@@ -64,7 +64,7 @@ export default function LevantamientoUnificado() {
 
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
-  const [rowsPerPage, setRowsPerPage] = useState(10);
+  const [rowsPerPage, setRowsPerPage] = useState(25);
 
   // Sorting state
   const [sortField, setSortField] = useState<keyof LevMueble>('id_inv');

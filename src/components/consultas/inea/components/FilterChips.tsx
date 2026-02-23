@@ -93,7 +93,7 @@ export default function FilterChips({
   }
 
   return (
-    <div className="flex flex-wrap gap-1.5 items-center">
+    <div className="flex flex-wrap gap-[0.375vw] items-center">
       <AnimatePresence mode="popLayout">
         {activeFilters.map((filter, index) => {
           // Get colors for estado filters
@@ -112,7 +112,7 @@ export default function FilterChips({
                 layout: { type: 'spring', stiffness: 350, damping: 30 },
                 opacity: { duration: 0.2 }
               }}
-              className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium border transition-all ${
+              className={`inline-flex items-center gap-[0.375vw] px-[0.625vw] py-[0.25vw] rounded-full text-[clamp(0.625rem,0.75vw,0.875rem)] font-medium border transition-all ${
                 estadoColors
                   ? `${estadoColors.bg} ${estadoColors.border} ${estadoColors.text}`
                   : isDarkMode
@@ -121,7 +121,7 @@ export default function FilterChips({
               }`}
             >
               {/* Filter type label */}
-              <span className={`text-[10px] font-semibold ${
+              <span className={`text-[clamp(0.5rem,0.625vw,0.75rem)] font-semibold ${
                 estadoColors
                   ? estadoColors.text
                   : isDarkMode ? 'text-white/60' : 'text-black/60'
@@ -137,7 +137,7 @@ export default function FilterChips({
               {/* Remove button */}
               <motion.button
                 onClick={() => removeFilter(index)}
-                className={`p-0.5 rounded-full transition-colors ${
+                className={`p-[0.125vw] rounded-full transition-colors ${
                   estadoColors
                     ? `hover:bg-current/10 ${estadoColors.text}`
                     : isDarkMode
@@ -148,7 +148,7 @@ export default function FilterChips({
                 whileHover={{ scale: 1.2 }}
                 whileTap={{ scale: 0.9 }}
               >
-                <X size={12} />
+                <X className="w-[0.75vw] h-[0.75vw] min-w-[10px] min-h-[10px]" />
               </motion.button>
             </motion.div>
           );
@@ -162,7 +162,7 @@ export default function FilterChips({
             animate={{ opacity: 1, scale: 1 }}
             exit={{ opacity: 0, scale: 0.8 }}
             onClick={clearAllFilters}
-            className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium border transition-all ${
+            className={`inline-flex items-center gap-[0.25vw] px-[0.625vw] py-[0.25vw] rounded-full text-[clamp(0.625rem,0.75vw,0.875rem)] font-medium border transition-all ${
               isDarkMode
                 ? 'bg-white/5 text-white/80 border-white/10 hover:bg-white/10'
                 : 'bg-black/5 text-black/80 border-black/10 hover:bg-black/10'
@@ -171,7 +171,7 @@ export default function FilterChips({
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
           >
-            <X size={12} />
+            <X className="w-[0.75vw] h-[0.75vw] min-w-[10px] min-h-[10px]" />
             Limpiar todo
           </motion.button>
         )}
