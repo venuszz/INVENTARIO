@@ -1,3 +1,5 @@
+export type MatchType = 'direct' | 'by_resguardante' | 'by_director';
+
 export interface SearchResult {
     id: string; // UUID
     id_inv: string | null;
@@ -26,6 +28,9 @@ export interface SearchResult {
     nombre?: string | null;
     puesto?: string | null;
     areas_asignadas?: string[] | null;
+    // Tipo de coincidencia (para búsqueda relacional)
+    matchType?: MatchType;
+    matchedDirector?: string | null;
 }
 
 export interface SearchResultsByOrigin {

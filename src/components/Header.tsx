@@ -35,11 +35,11 @@ export function useCerrarSesion() {
     const handleLogout = async () => {
         try {
             console.log('🚪 Iniciando proceso de logout completo...');
-            
+
             // 1. Limpiar TODOS los datos de indexación (IndexedDB + Zustand stores)
             console.log('🧹 Limpiando datos de indexación...');
             await clearAllIndexationData();
-            
+
             // 2. Cerrar sesión en Supabase
             console.log('🔐 Cerrando sesión en Supabase...');
             await supabase.auth.signOut();
@@ -55,11 +55,11 @@ export function useCerrarSesion() {
             // 4. Limpiar COMPLETAMENTE localStorage
             console.log('💾 Limpiando localStorage completamente...');
             localStorage.clear(); // Elimina TODO el localStorage
-            
+
             // 5. Limpiar COMPLETAMENTE sessionStorage
             console.log('📦 Limpiando sessionStorage...');
             sessionStorage.clear();
-            
+
             // 6. Limpiar todas las cookies del lado del cliente
             console.log('🍪 Eliminando cookies del cliente...');
             document.cookie.split(";").forEach((c) => {
@@ -67,7 +67,7 @@ export function useCerrarSesion() {
                     .replace(/^ +/, "")
                     .replace(/=.*/, "=;expires=" + new Date().toUTCString() + ";path=/");
             });
-            
+
             // 7. Limpiar caché del navegador (Service Workers si existen)
             console.log('🗑️ Limpiando caché...');
             if ('caches' in window) {
@@ -76,7 +76,7 @@ export function useCerrarSesion() {
                     cacheNames.map(cacheName => caches.delete(cacheName))
                 );
             }
-            
+
             // 8. Limpiar IndexedDB completamente (por si acaso)
             console.log('🗄️ Limpiando IndexedDB...');
             if (window.indexedDB) {
@@ -89,7 +89,7 @@ export function useCerrarSesion() {
             }
 
             console.log('✅ Logout completado exitosamente - Todo limpio');
-            
+
             // 9. Redireccionar al login con recarga forzada
             window.location.href = '/login';
         } catch (error) {
@@ -125,6 +125,7 @@ export default function NavigationBar() {
     const [hideCollapsibleButtons, setHideCollapsibleButtons] = useState(false);
     const [hideNotifications, setHideNotifications] = useState(false);
     const [hideMenus, setHideMenus] = useState(false);
+    const [searchBarIsWide, setSearchBarIsWide] = useState(false);
     const handleLogout = useCerrarSesion();
 
     // Refs para detectar colisiones
@@ -155,77 +156,96 @@ export default function NavigationBar() {
         }
     }, []);
 
-    // Gestionar visibilidad de elementos con ocultación progresiva
+    // Gestionar visibilidad de elementos con ocultación progresiva y detección de superposición
     useEffect(() => {
         const checkCollisions = () => {
             const windowWidth = window.innerWidth;
-            
-            // Breakpoints progresivos para ocultar elementos
-            const BREAKPOINT_HIDE_COLLAPSIBLE = 1400; // Ocultar botones colapsables (Dashboard, Validar usuarios, Dark mode)
-            const BREAKPOINT_HIDE_SEARCH = 1200;      // Ocultar barra de búsqueda
-            const BREAKPOINT_HIDE_NOTIFICATIONS = 1100; // Ocultar notificaciones
-            const BREAKPOINT_HIDE_MENUS = 900;        // Ocultar menús y mostrar hamburguesa
-
-            // Aplicar ocultación progresiva según el ancho
-            if (windowWidth < BREAKPOINT_HIDE_MENUS) {
-                setHideMenus(true);
-                setHideNotifications(true);
-                setSearchBarShouldHide(true);
-                setHideCollapsibleButtons(true);
-            } else if (windowWidth < BREAKPOINT_HIDE_NOTIFICATIONS) {
-                setHideMenus(false);
-                setHideNotifications(true);
-                setSearchBarShouldHide(true);
-                setHideCollapsibleButtons(true);
-            } else if (windowWidth < BREAKPOINT_HIDE_SEARCH) {
-                setHideMenus(false);
-                setHideNotifications(false);
-                setSearchBarShouldHide(true);
-                setHideCollapsibleButtons(true);
-            } else if (windowWidth < BREAKPOINT_HIDE_COLLAPSIBLE) {
-                setHideMenus(false);
-                setHideNotifications(false);
-                setSearchBarShouldHide(false);
-                setHideCollapsibleButtons(true);
-            } else {
-                setHideMenus(false);
-                setHideNotifications(false);
-                setSearchBarShouldHide(false);
-                setHideCollapsibleButtons(false);
-            }
-
-            // Lógica adicional para el logo
+            const searchRect = searchBarRef.current?.getBoundingClientRect();
+            const actionButtonsRect = actionButtonsContainerRef.current?.getBoundingClientRect();
+            const notificationRect = notificationWrapperRef.current?.getBoundingClientRect();
             const logoRect = logoRef.current?.getBoundingClientRect();
             const menuRect = menuContainerRef.current?.getBoundingClientRect();
-            const searchRect = searchBarRef.current?.getBoundingClientRect();
-            
-            let logoHasCollision = false;
 
-            // Solo ocultar logo si realmente hay colisión con otros elementos
-            if (logoRect && menuRect && !hideMenus) {
-                const logoToMenuGap = menuRect.left - logoRect.right;
-                if (logoToMenuGap < 10) {
-                    logoHasCollision = true;
+            // Detectar superposición real entre search bar y otros elementos
+            let hasOverlap = false;
+
+            if (searchRect && actionButtonsRect) {
+                // Verificar si hay superposición horizontal
+                const searchRight = searchRect.right;
+                const buttonsLeft = actionButtonsRect.left;
+                const gap = buttonsLeft - searchRight;
+
+                if (gap < 20) { // Si hay menos de 20px de espacio
+                    hasOverlap = true;
                 }
             }
 
-            // Si la búsqueda está expandida, verificar si hay espacio suficiente
-            if (isSearchExpanded && logoRect && searchRect && !searchBarShouldHide) {
-                const totalNeededSpace = logoRect.width + searchRect.width + 400;
-                if (windowWidth < totalNeededSpace) {
-                    logoHasCollision = true;
+            // Calcular colisión real entre el logo, menú y la barra de búsqueda
+            let menuIsColliding = false;
+            if (logoRect && searchRect && menuRect && !hideMenus) {
+                // Si la distancia entre el logo y la barra de búsqueda es menor al tamaño base del menú (o del menú actual)
+                const availableSpaceForMenu = searchRect.left - logoRect.right;
+                if (availableSpaceForMenu < (menuRect.width + 20)) {
+                    menuIsColliding = true;
                 }
             }
 
-            // Si los botones están expandidos, verificar colisión real
-            if (isHeaderExpanded && logoRect) {
-                const totalNeededSpace = logoRect.width + 800;
-                if (windowWidth < totalNeededSpace) {
-                    logoHasCollision = true;
+            // Breakpoints progresivos para ocultar elementos
+            const BREAKPOINT_HIDE_COLLAPSIBLE = 1400;
+            const BREAKPOINT_HIDE_SEARCH = 1200;
+            const BREAKPOINT_HIDE_NOTIFICATIONS = 1100;
+            const BREAKPOINT_HIDE_MENUS = 900;
+
+            // Si hay superposición O la barra de búsqueda está expandida y es ancha, ocultar elementos progresivamente
+            if (hasOverlap || searchBarIsWide || menuIsColliding) {
+                // Primero ocultar botones colapsables
+                setHideCollapsibleButtons(true);
+
+                // Si aún hay superposición o ventana pequeña, ocultar notificaciones
+                if (hasOverlap || windowWidth < 1300) {
+                    setHideNotifications(true);
+                } else {
+                    setHideNotifications(false);
+                }
+
+                // Ocultar menús si hay colisión o ventana pequeña
+                if (windowWidth < 1100 || menuIsColliding) {
+                    setHideMenus(true);
+                } else {
+                    setHideMenus(false);
+                }
+            } else {
+                // Aplicar ocultación progresiva normal según el ancho
+                if (windowWidth < BREAKPOINT_HIDE_MENUS) {
+                    setHideMenus(true);
+                    setHideNotifications(true);
+                    setSearchBarShouldHide(true);
+                    setHideCollapsibleButtons(true);
+                } else if (windowWidth < BREAKPOINT_HIDE_NOTIFICATIONS) {
+                    setHideMenus(false);
+                    setHideNotifications(true);
+                    setSearchBarShouldHide(true);
+                    setHideCollapsibleButtons(true);
+                } else if (windowWidth < BREAKPOINT_HIDE_SEARCH) {
+                    setHideMenus(false);
+                    setHideNotifications(false);
+                    setSearchBarShouldHide(true);
+                    setHideCollapsibleButtons(true);
+                } else if (windowWidth < BREAKPOINT_HIDE_COLLAPSIBLE) {
+                    setHideMenus(false);
+                    setHideNotifications(false);
+                    setSearchBarShouldHide(false);
+                    setHideCollapsibleButtons(true);
+                } else {
+                    setHideMenus(false);
+                    setHideNotifications(false);
+                    setSearchBarShouldHide(false);
+                    setHideCollapsibleButtons(false);
                 }
             }
 
-            setLogoShouldHide(logoHasCollision);
+            // Nunca ocultaremos el logo por expansión de barra, preferimos esconder el menú
+            setLogoShouldHide(false);
         };
 
         const timer = setTimeout(checkCollisions, 50);
@@ -235,7 +255,7 @@ export default function NavigationBar() {
             clearTimeout(timer);
             window.removeEventListener('resize', checkCollisions);
         };
-    }, [openMenu, openSubmenu, isSearchExpanded, isHeaderExpanded]);
+    }, [openMenu, openSubmenu, searchBarIsWide, isHeaderExpanded, hideMenus, searchBarShouldHide]);
 
     // Cerrar menús al hacer clic fuera
     useEffect(() => {
@@ -342,11 +362,12 @@ export default function NavigationBar() {
     };
 
     // Manejar expansión de búsqueda
-    const handleSearchExpand = (expanded: boolean) => {
-        if (expanded && isHeaderExpanded) {
+    const handleSearchExpand = (isWide: boolean) => {
+        setSearchBarIsWide(isWide);
+        if (isWide && isHeaderExpanded) {
             setIsHeaderExpanded(false);
         }
-        setIsSearchExpanded(expanded);
+        setIsSearchExpanded(isWide);
     };
 
     // Funciones para menú móvil (click)
@@ -562,13 +583,12 @@ export default function NavigationBar() {
                                     </motion.button>
                                     <AnimatePresence>
                                         {openMenu === "Inventario" && (
-                                            <motion.div 
-                                                data-dropdown="true" 
-                                                className={`absolute left-0 mt-2 w-56 rounded-lg border overflow-hidden z-20 ${
-                                                    pathname === '/' 
-                                                        ? (isDarkMode ? 'bg-black/95 border-white/10 backdrop-blur-md' : 'bg-white/95 border-black/10 backdrop-blur-md') 
+                                            <motion.div
+                                                data-dropdown="true"
+                                                className={`absolute left-0 mt-2 w-56 rounded-lg border overflow-hidden z-20 ${pathname === '/'
+                                                        ? (isDarkMode ? 'bg-black/95 border-white/10 backdrop-blur-md' : 'bg-white/95 border-black/10 backdrop-blur-md')
                                                         : (isDarkMode ? 'bg-black border-white/10' : 'bg-white border-black/10')
-                                                }`}
+                                                    }`}
                                                 initial={{ opacity: 0, y: -10 }}
                                                 animate={{ opacity: 1, y: 0 }}
                                                 exit={{ opacity: 0, y: -10 }}
@@ -629,87 +649,100 @@ export default function NavigationBar() {
                                                 </motion.button>
                                                 <AnimatePresence>
                                                     {openMenu === item.title && (
-                                                        <motion.div 
-                                                            data-dropdown="true" 
-                                                            className={`absolute left-0 mt-2 w-56 rounded-lg border overflow-visible z-20 ${
-                                                                pathname === '/' 
-                                                                    ? (isDarkMode ? 'bg-black/95 border-white/10 backdrop-blur-md' : 'bg-white/95 border-black/10 backdrop-blur-md') 
+                                                        <motion.div
+                                                            data-dropdown="true"
+                                                            className={`absolute left-0 mt-2 w-56 rounded-lg border overflow-visible z-20 ${pathname === '/'
+                                                                    ? (isDarkMode ? 'bg-black/95 border-white/10 backdrop-blur-md' : 'bg-white/95 border-black/10 backdrop-blur-md')
                                                                     : (isDarkMode ? 'bg-black border-white/10' : 'bg-white border-black/10')
-                                                            }`}
+                                                                }`}
                                                             initial={{ opacity: 0, y: -10 }}
                                                             animate={{ opacity: 1, y: 0 }}
                                                             exit={{ opacity: 0, y: -10 }}
                                                             transition={{ duration: 0.2 }}
                                                         >
-                                                        <div className="py-1 rounded-lg overflow-hidden">
-                                                            {item.submenu.map((subItem) => (
-                                                                <div key={subItem.title}>
-                                                                    {subItem.children ? (
-                                                                        <div
-                                                                            onMouseEnter={() => handleSubmenuHover(`${item.title}-${subItem.title}`)}
-                                                                            onMouseLeave={() => handleSubmenuHover(null)}
-                                                                        >
-                                                                            <button
-                                                                                className={`flex justify-between w-full px-4 py-2.5 text-sm transition-all duration-200 ${isActive(subItem.path)
-                                                                                    ? isDarkMode ? 'text-white bg-white/10 border-l-2 border-white' : 'text-black bg-black/10 border-l-2 border-black'
-                                                                                    : isDarkMode
-                                                                                        ? `text-white/60 hover:text-white hover:bg-white/5`
-                                                                                        : `text-black/60 hover:text-black hover:bg-black/5`
-                                                                                    }`}
+                                                            <div className="py-1 rounded-lg overflow-hidden">
+                                                                {item.submenu.map((subItem) => (
+                                                                    <div key={subItem.title}>
+                                                                        {subItem.children ? (
+                                                                            <div
+                                                                                onMouseEnter={() => handleSubmenuHover(`${item.title}-${subItem.title}`)}
+                                                                                onMouseLeave={() => handleSubmenuHover(null)}
                                                                             >
-                                                                                {subItem.title}
-                                                                                <motion.div
-                                                                                    animate={{ rotate: openSubmenu === `${item.title}-${subItem.title}` ? 90 : 0 }}
-                                                                                    transition={{ duration: 0.3, ease: "easeInOut" }}
+                                                                                <button
+                                                                                    className={`flex justify-between w-full px-4 py-2.5 text-sm transition-all duration-200 ${isActive(subItem.path)
+                                                                                        ? isDarkMode ? 'text-white bg-white/10 border-l-2 border-white' : 'text-black bg-black/10 border-l-2 border-black'
+                                                                                        : isDarkMode
+                                                                                            ? `text-white/60 hover:text-white hover:bg-white/5`
+                                                                                            : `text-black/60 hover:text-black hover:bg-black/5`
+                                                                                        }`}
                                                                                 >
-                                                                                    <ChevronRight className="w-3 h-3" />
-                                                                                </motion.div>
-                                                                            </button>
-                                                                            <AnimatePresence>
-                                                                                {openSubmenu === `${item.title}-${subItem.title}` && (
+                                                                                    {subItem.title}
                                                                                     <motion.div
-                                                                                        initial={{ height: 0, opacity: 0 }}
-                                                                                        animate={{ height: "auto", opacity: 1 }}
-                                                                                        exit={{ height: 0, opacity: 0 }}
-                                                                                        transition={{ 
-                                                                                            duration: 0.3,
-                                                                                            ease: [0.4, 0, 0.2, 1]
-                                                                                        }}
-                                                                                        className="overflow-hidden"
+                                                                                        animate={{ rotate: openSubmenu === `${item.title}-${subItem.title}` ? 90 : 0 }}
+                                                                                        transition={{ duration: 0.3, ease: "easeInOut" }}
                                                                                     >
-                                                                                        <div className={`pl-4 py-1 border-l-2 ml-4 ${isDarkMode ? 'border-white/10' : 'border-black/10'}`}>
-                                                                                            {subItem.children.map((child, childIndex) => (
-                                                                                                <motion.div
-                                                                                                    key={child.title}
-                                                                                                    initial={{ x: -10, opacity: 0 }}
-                                                                                                    animate={{ x: 0, opacity: 1 }}
-                                                                                                    transition={{ 
-                                                                                                        duration: 0.2,
-                                                                                                        delay: childIndex * 0.05,
-                                                                                                        ease: "easeOut"
-                                                                                                    }}
-                                                                                                >
-                                                                                                    <Link
-                                                                                                        href={child.path}
-                                                                                                        onClick={closeAll}
-                                                                                                        className={`block px-4 py-2 text-sm rounded-md transition-all duration-200 ${pathname === child.path
-                                                                                                            ? isDarkMode ? 'text-white bg-white/10 font-medium' : 'text-black bg-black/10 font-medium'
-                                                                                                            : isDarkMode
-                                                                                                                ? `text-white/50 hover:text-white hover:bg-white/5`
-                                                                                                                : `text-black/50 hover:text-black hover:bg-black/5`
-                                                                                                            }`}
-                                                                                                    >
-                                                                                                        {child.title}
-                                                                                                    </Link>
-                                                                                                </motion.div>
-                                                                                            ))}
-                                                                                        </div>
+                                                                                        <ChevronRight className="w-3 h-3" />
                                                                                     </motion.div>
-                                                                                )}
-                                                                            </AnimatePresence>
-                                                                        </div>
-                                                                    ) : subItem.title === 'Crear resguardo' ? (
-                                                                        <RoleGuard roles={["admin", "superadmin"]} userRole={userData.rol}>
+                                                                                </button>
+                                                                                <AnimatePresence>
+                                                                                    {openSubmenu === `${item.title}-${subItem.title}` && (
+                                                                                        <motion.div
+                                                                                            initial={{ height: 0, opacity: 0 }}
+                                                                                            animate={{ height: "auto", opacity: 1 }}
+                                                                                            exit={{ height: 0, opacity: 0 }}
+                                                                                            transition={{
+                                                                                                duration: 0.3,
+                                                                                                ease: [0.4, 0, 0.2, 1]
+                                                                                            }}
+                                                                                            className="overflow-hidden"
+                                                                                        >
+                                                                                            <div className={`pl-4 py-1 border-l-2 ml-4 ${isDarkMode ? 'border-white/10' : 'border-black/10'}`}>
+                                                                                                {subItem.children.map((child, childIndex) => (
+                                                                                                    <motion.div
+                                                                                                        key={child.title}
+                                                                                                        initial={{ x: -10, opacity: 0 }}
+                                                                                                        animate={{ x: 0, opacity: 1 }}
+                                                                                                        transition={{
+                                                                                                            duration: 0.2,
+                                                                                                            delay: childIndex * 0.05,
+                                                                                                            ease: "easeOut"
+                                                                                                        }}
+                                                                                                    >
+                                                                                                        <Link
+                                                                                                            href={child.path}
+                                                                                                            onClick={closeAll}
+                                                                                                            className={`block px-4 py-2 text-sm rounded-md transition-all duration-200 ${pathname === child.path
+                                                                                                                ? isDarkMode ? 'text-white bg-white/10 font-medium' : 'text-black bg-black/10 font-medium'
+                                                                                                                : isDarkMode
+                                                                                                                    ? `text-white/50 hover:text-white hover:bg-white/5`
+                                                                                                                    : `text-black/50 hover:text-black hover:bg-black/5`
+                                                                                                                }`}
+                                                                                                        >
+                                                                                                            {child.title}
+                                                                                                        </Link>
+                                                                                                    </motion.div>
+                                                                                                ))}
+                                                                                            </div>
+                                                                                        </motion.div>
+                                                                                    )}
+                                                                                </AnimatePresence>
+                                                                            </div>
+                                                                        ) : subItem.title === 'Crear resguardo' ? (
+                                                                            <RoleGuard roles={["admin", "superadmin"]} userRole={userData.rol}>
+                                                                                <Link
+                                                                                    href={subItem.path}
+                                                                                    onClick={closeAll}
+                                                                                    className={`block px-4 py-2.5 text-sm transition-all duration-200 ${pathname === subItem.path
+                                                                                        ? isDarkMode ? 'text-white bg-white/10 border-l-2 border-white' : 'text-black bg-black/10 border-l-2 border-black'
+                                                                                        : isDarkMode
+                                                                                            ? `text-white/60 hover:text-white hover:bg-white/5`
+                                                                                            : `text-black/60 hover:text-black hover:bg-black/5`
+                                                                                        }`}
+                                                                                >
+                                                                                    {subItem.title}
+                                                                                </Link>
+                                                                            </RoleGuard>
+                                                                        ) : (
                                                                             <Link
                                                                                 href={subItem.path}
                                                                                 onClick={closeAll}
@@ -722,27 +755,13 @@ export default function NavigationBar() {
                                                                             >
                                                                                 {subItem.title}
                                                                             </Link>
-                                                                        </RoleGuard>
-                                                                    ) : (
-                                                                        <Link
-                                                                            href={subItem.path}
-                                                                            onClick={closeAll}
-                                                                            className={`block px-4 py-2.5 text-sm transition-all duration-200 ${pathname === subItem.path
-                                                                                ? isDarkMode ? 'text-white bg-white/10 border-l-2 border-white' : 'text-black bg-black/10 border-l-2 border-black'
-                                                                                : isDarkMode
-                                                                                    ? `text-white/60 hover:text-white hover:bg-white/5`
-                                                                                    : `text-black/60 hover:text-black hover:bg-black/5`
-                                                                                }`}
-                                                                        >
-                                                                            {subItem.title}
-                                                                        </Link>
-                                                                    )}
-                                                                </div>
-                                                            ))}
-                                                        </div>
-                                                    </motion.div>
-                                                )}
-                                            </AnimatePresence>
+                                                                        )}
+                                                                    </div>
+                                                                ))}
+                                                            </div>
+                                                        </motion.div>
+                                                    )}
+                                                </AnimatePresence>
                                             </>
                                         ) : (
                                             <motion.div
@@ -798,13 +817,12 @@ export default function NavigationBar() {
                                     </motion.button>
                                     <AnimatePresence>
                                         {openMenu === "Administración" && (
-                                            <motion.div 
-                                                data-dropdown="true" 
-                                                className={`absolute left-0 mt-2 w-56 rounded-lg border overflow-hidden z-20 ${
-                                                    pathname === '/' 
-                                                        ? (isDarkMode ? 'bg-black/95 border-white/10 backdrop-blur-md' : 'bg-white/95 border-black/10 backdrop-blur-md') 
+                                            <motion.div
+                                                data-dropdown="true"
+                                                className={`absolute left-0 mt-2 w-56 rounded-lg border overflow-hidden z-20 ${pathname === '/'
+                                                        ? (isDarkMode ? 'bg-black/95 border-white/10 backdrop-blur-md' : 'bg-white/95 border-black/10 backdrop-blur-md')
                                                         : (isDarkMode ? 'bg-black border-white/10' : 'bg-white border-black/10')
-                                                }`}
+                                                    }`}
                                                 initial={{ opacity: 0, y: -10 }}
                                                 animate={{ opacity: 1, y: 0 }}
                                                 exit={{ opacity: 0, y: -10 }}
@@ -847,11 +865,10 @@ export default function NavigationBar() {
                     {/* Search Bar - After Menus */}
                     <div
                         ref={searchBarRef}
-                        className={`hidden md:flex items-center flex-shrink-0 transition-all duration-300 ease-in-out ${
-                            searchBarShouldHide ? 'w-0 opacity-0 scale-90 pointer-events-none' : 'w-auto opacity-100 scale-100'
-                        }`}
+                        className={`hidden md:flex items-center flex-shrink-0 transition-all duration-300 ease-in-out ${searchBarShouldHide ? 'w-0 opacity-0 scale-90 pointer-events-none' : 'w-auto opacity-100 scale-100'
+                            }`}
                     >
-                        <UniversalSearchBar 
+                        <UniversalSearchBar
                             isDarkMode={isDarkMode}
                             userRoles={userData.rol ? [userData.rol] : []}
                             onExpandChange={handleSearchExpand}
@@ -869,9 +886,8 @@ export default function NavigationBar() {
                             {/* Collapsible buttons container */}
                             <div
                                 ref={actionButtonsRef}
-                                className={`flex items-center transition-all duration-500 ease-in-out overflow-hidden ${
-                                    hideCollapsibleButtons 
-                                        ? 'max-w-0 opacity-0' 
+                                className={`flex items-center transition-all duration-500 ease-in-out overflow-hidden ${hideCollapsibleButtons
+                                        ? 'max-w-0 opacity-0'
                                         : isHeaderExpanded
                                             ? 'max-w-96 opacity-100'
                                             : 'max-w-0 opacity-0'
@@ -921,8 +937,7 @@ export default function NavigationBar() {
                             </div>
 
                             {/* Hover trigger indicator - Minimalist */}
-                            <div className={`flex items-center justify-center transition-all duration-500 ease-in-out ${
-                                hideCollapsibleButtons 
+                            <div className={`flex items-center justify-center transition-all duration-500 ease-in-out ${hideCollapsibleButtons
                                     ? 'w-0 opacity-0 pointer-events-none'
                                     : isHeaderExpanded
                                         ? 'w-2 h-6 opacity-30'
@@ -950,12 +965,11 @@ export default function NavigationBar() {
                         </div>
 
                         {/* Always visible buttons */}
-                        <div className={`flex items-center space-x-3 transition-all duration-500 ${
-                            hideCollapsibleButtons 
-                                ? 'ml-0' 
+                        <div className={`flex items-center space-x-3 transition-all duration-500 ${hideCollapsibleButtons
+                                ? 'ml-0'
                                 : isHeaderExpanded ? 'ml-1' : 'ml-3'
                             }`}>
-                            
+
                             <RoleGuard roles={["superadmin", "admin"]} userRole={userData.rol}>
                                 <div className={`relative transition-all duration-300 ${hideNotifications ? 'opacity-0 scale-90 pointer-events-none w-0' : 'opacity-100 scale-100'}`} ref={notificationWrapperRef}>
                                     <button
