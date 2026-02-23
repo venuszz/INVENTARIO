@@ -78,26 +78,26 @@ const ImagePreview: React.FC<ImagePreviewProps> = ({ imagePath }) => {
 
   if (loading) {
     return (
-      <div className="w-full h-64 flex items-center justify-center bg-white/5 rounded-lg">
-        <span className="text-white/40">Cargando imagen...</span>
+      <div className="w-full h-64 flex items-center justify-center bg-white/[0.02] border border-white/10 rounded-lg">
+        <span className="text-white/40 text-sm font-light">Cargando imagen...</span>
       </div>
     );
   }
 
   if (error || !imageUrl) {
     return (
-      <div className="w-full h-64 flex items-center justify-center bg-white/5 rounded-lg">
-        <span className="text-white/30">Imagen no disponible</span>
+      <div className="w-full h-64 flex items-center justify-center bg-white/[0.02] border border-white/10 rounded-lg">
+        <span className="text-white/30 text-sm font-light">Imagen no disponible</span>
       </div>
     );
   }
 
   return (
-    <div className="w-full h-64 bg-black rounded-lg overflow-hidden">
+    <div className="w-full h-64 bg-black border border-white/10 rounded-lg overflow-hidden">
       <img
         src={imageUrl}
         alt="Imagen del bien"
-        className="w-full h-full object-cover"
+        className="w-full h-full object-contain"
         onError={() => setError(true)}
       />
     </div>
@@ -315,21 +315,21 @@ function EditMode({
 
           <div className="flex-shrink-0 w-64 space-y-2">
             <label
-              className={`flex flex-col items-center justify-center h-32 border-2 border-dashed rounded-lg cursor-pointer transition-all p-4 ${
-                isDarkMode
-                  ? 'border-white/10 hover:border-white/20'
-                  : 'border-black/10 hover:border-black/20'
+              className={`flex flex-col items-center justify-center h-32 border-2 border-dashed rounded-lg cursor-pointer transition-all ${
+                isDarkMode 
+                  ? 'border-white/10 hover:border-white/20 hover:bg-white/[0.02]' 
+                  : 'border-black/10 hover:border-black/20 hover:bg-black/[0.02]'
               }`}
             >
               <div className="text-center">
                 <Plus
-                  className={`h-6 w-6 mx-auto mb-1 ${
+                  className={`h-5 w-5 mx-auto mb-1 ${
                     isDarkMode ? 'text-white/40' : 'text-black/40'
                   }`}
                 />
                 <span
-                  className={`text-xs ${
-                    isDarkMode ? 'text-white/40' : 'text-black/40'
+                  className={`text-xs font-light ${
+                    isDarkMode ? 'text-white/60' : 'text-black/60'
                   }`}
                 >
                   Cambiar imagen
@@ -343,17 +343,15 @@ function EditMode({
               />
             </label>
             <div
-              className={`text-xs p-2 rounded-lg ${
+              className={`text-xs p-2 rounded-lg border font-light ${
                 isDarkMode
-                  ? 'text-white/40 bg-white/[0.02]'
-                  : 'text-black/40 bg-black/[0.02]'
+                  ? 'text-white/60 bg-white/[0.02] border-white/10'
+                  : 'text-black/60 bg-black/[0.02] border-black/10'
               }`}
             >
               <p>Formatos: JPG, PNG, GIF, WebP</p>
               <p>Tamaño máximo: 5MB</p>
-              {uploading && (
-                <p className="text-red-400 mt-1">Subiendo imagen...</p>
-              )}
+              {uploading && <p className={`mt-1 ${isDarkMode ? 'text-white' : 'text-black'}`}>Subiendo imagen...</p>}
             </div>
           </div>
         </div>
@@ -363,7 +361,7 @@ function EditMode({
         {/* Form Fields */}
         <div className="form-group">
           <label
-            className={`text-xs font-medium uppercase tracking-wider mb-2 block ${
+            className={`flex items-center gap-2 text-xs font-medium uppercase tracking-wider mb-2 ${
               isDarkMode ? 'text-white/60' : 'text-black/60'
             }`}
           >
@@ -374,12 +372,12 @@ function EditMode({
             value={editFormData?.id_inv || ''}
             onChange={(e) => onFormChange(e, 'id_inv')}
             disabled={isDisabled}
-            className={`w-full border rounded-lg px-4 py-2.5 text-sm transition-all ${
+            className={`w-full border rounded-lg px-3 py-2 text-sm font-light focus:outline-none transition-all ${
               isDisabled ? 'opacity-50 cursor-not-allowed' : ''
             } ${
               isDarkMode
-                ? 'bg-black border-white/10 text-white placeholder-white/40 focus:border-white/20'
-                : 'bg-white border-black/10 text-black placeholder-black/40 focus:border-black/20'
+                ? 'bg-white/[0.02] border-white/10 text-white placeholder:text-white/30 focus:border-white/20 focus:bg-white/[0.04]'
+                : 'bg-black/[0.02] border-black/10 text-black placeholder:text-black/30 focus:border-black/20 focus:bg-black/[0.04]'
             }`}
             placeholder="Ingrese el ID de inventario"
           />
@@ -387,7 +385,7 @@ function EditMode({
 
         <div className="form-group">
           <label
-            className={`text-xs font-medium uppercase tracking-wider mb-2 block ${
+            className={`flex items-center gap-2 text-xs font-medium uppercase tracking-wider mb-2 ${
               isDarkMode ? 'text-white/60' : 'text-black/60'
             }`}
           >
@@ -396,7 +394,7 @@ function EditMode({
           <CustomSelect
             value={editFormData?.rubro || ''}
             onChange={(val) => onFormChange({ target: { value: val } } as any, 'rubro')}
-            options={filterOptions.rubros.map(rubro => ({ value: rubro, label: rubro }))}
+            options={(filterOptions.rubros ?? []).map(rubro => ({ value: rubro, label: rubro }))}
             placeholder="Seleccione el rubro"
             isDarkMode={isDarkMode}
             disabled={isDisabled}
@@ -405,7 +403,7 @@ function EditMode({
 
         <div className="form-group col-span-2">
           <label
-            className={`text-xs font-medium uppercase tracking-wider mb-2 block ${
+            className={`flex items-center gap-2 text-xs font-medium uppercase tracking-wider mb-2 ${
               isDarkMode ? 'text-white/60' : 'text-black/60'
             }`}
           >
@@ -415,12 +413,12 @@ function EditMode({
             value={editFormData?.descripcion || ''}
             onChange={(e) => onFormChange(e, 'descripcion')}
             disabled={isDisabled}
-            className={`w-full border rounded-lg px-4 py-2.5 text-sm transition-all ${
+            className={`w-full border rounded-lg px-3 py-2 text-sm font-light focus:outline-none transition-all resize-none ${
               isDisabled ? 'opacity-50 cursor-not-allowed' : ''
             } ${
               isDarkMode
-                ? 'bg-black border-white/10 text-white placeholder-white/40 focus:border-white/20'
-                : 'bg-white border-black/10 text-black placeholder-black/40 focus:border-black/20'
+                ? 'bg-white/[0.02] border-white/10 text-white placeholder:text-white/30 focus:border-white/20 focus:bg-white/[0.04]'
+                : 'bg-black/[0.02] border-black/10 text-black placeholder:text-black/30 focus:border-black/20 focus:bg-black/[0.04]'
             }`}
             rows={3}
             placeholder="Ingrese la descripción"
@@ -429,65 +427,71 @@ function EditMode({
 
         <div className="form-group">
           <label
-            className={`text-xs font-medium uppercase tracking-wider mb-2 block ${
+            className={`flex items-center gap-2 text-xs font-medium uppercase tracking-wider mb-2 ${
               isDarkMode ? 'text-white/60' : 'text-black/60'
             }`}
           >
+            <DollarSign className="h-3.5 w-3.5" />
             Valor
           </label>
           <div className="relative">
-            <span
-              className={`absolute inset-y-0 left-0 flex items-center pl-3 text-sm ${
-                isDarkMode ? 'text-white/40' : 'text-black/40'
-              }`}
-            >
-              $
-            </span>
+            <div className="absolute inset-y-0 left-0 flex items-center pl-3">
+              <span className={`text-sm font-light ${isDarkMode ? 'text-white/60' : 'text-black/60'}`}>$</span>
+            </div>
             <input
-              type="number"
-              value={editFormData?.valor || 0}
+              type="text"
+              value={editFormData?.valor || ''}
               onChange={(e) => onFormChange(e, 'valor')}
               disabled={isDisabled}
-              className={`w-full border rounded-lg pl-8 pr-4 py-2.5 text-sm transition-all ${
+              className={`w-full border rounded-lg pl-8 pr-16 py-2 text-sm font-light focus:outline-none transition-all ${
                 isDisabled ? 'opacity-50 cursor-not-allowed' : ''
               } ${
                 isDarkMode
-                  ? 'bg-black border-white/10 text-white placeholder-white/40 focus:border-white/20'
-                  : 'bg-white border-black/10 text-black placeholder-black/40 focus:border-black/20'
+                  ? 'bg-white/[0.02] border-white/10 text-white placeholder:text-white/30 focus:border-white/20 focus:bg-white/[0.04]'
+                  : 'bg-black/[0.02] border-black/10 text-black placeholder:text-black/30 focus:border-black/20 focus:bg-black/[0.04]'
               }`}
               placeholder="0.00"
             />
+            <div className="absolute inset-y-0 right-0 flex items-center pr-3">
+              <span className={`text-xs font-light ${isDarkMode ? 'text-white/40' : 'text-black/40'}`}>
+                MXN
+              </span>
+            </div>
           </div>
         </div>
 
         <div className="form-group">
-          <label className={`flex items-center gap-2 text-sm font-medium mb-2 ${
-            isDarkMode ? 'text-gray-300' : 'text-gray-700'
-          }`}>Fecha de Adquisición</label>
-          <div className="relative">
-            <Calendar className={`absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 pointer-events-none ${
-              isDarkMode ? 'text-gray-500' : 'text-gray-400'
-            }`} />
-            <input
-              type="date"
-              value={editFormData?.f_adq || ''}
-              onChange={(e) => onFormChange(e, 'f_adq')}
-              disabled={isDisabled}
-              className={`w-full border rounded-lg pl-10 pr-4 py-2.5 focus:outline-none focus:ring-2 focus:border-transparent transition-all ${
-                isDisabled ? 'opacity-50 cursor-not-allowed' : ''
-              } ${
-                isDarkMode
-                  ? 'bg-gray-800 border-gray-700 text-white focus:ring-white/50'
-                  : 'bg-white border-gray-300 text-gray-900 focus:ring-blue-500'
-              }`}
-            />
-          </div>
+          <label
+            className={`flex items-center gap-2 text-xs font-medium uppercase tracking-wider mb-2 ${
+              isDarkMode ? 'text-white/60' : 'text-black/60'
+            }`}
+          >
+            <Calendar className="h-3.5 w-3.5" />
+            Fecha de Adquisición
+          </label>
+          <input
+            type="date"
+            value={editFormData?.f_adq || ''}
+            onChange={(e) => onFormChange(e, 'f_adq')}
+            disabled={isDisabled}
+            className={`w-full border rounded-lg px-3 py-2 text-sm font-light focus:outline-none transition-all ${
+              isDisabled ? 'opacity-50 cursor-not-allowed' : ''
+            } ${
+              isDarkMode
+                ? 'bg-white/[0.02] border-white/10 text-white focus:border-white/20 focus:bg-white/[0.04]'
+                : 'bg-black/[0.02] border-black/10 text-black focus:border-black/20 focus:bg-black/[0.04]'
+            }`}
+          />
         </div>
 
         <div className="form-group">
-          <label className={`flex items-center gap-2 text-xs font-medium uppercase tracking-wider mb-2 ${
-            isDarkMode ? 'text-white/60' : 'text-black/60'
-          }`}>Forma de Adquisición</label>
+          <label
+            className={`flex items-center gap-2 text-xs font-medium uppercase tracking-wider mb-2 ${
+              isDarkMode ? 'text-white/60' : 'text-black/60'
+            }`}
+          >
+            Forma de Adquisición
+          </label>
           <CustomSelect
             value={editFormData?.formadq || ''}
             onChange={(val) => onFormChange({ target: { value: val } } as any, 'formadq')}
@@ -502,124 +506,138 @@ function EditMode({
         </div>
 
         <div className="form-group">
-          <label className={`flex items-center gap-2 text-sm font-medium mb-2 ${
-            isDarkMode ? 'text-gray-300' : 'text-gray-700'
-          }`}>Proveedor</label>
-          <div className="relative">
-            <Store className={`absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 pointer-events-none ${
-              isDarkMode ? 'text-gray-500' : 'text-gray-400'
-            }`} />
-            <input
-              type="text"
-              value={editFormData?.proveedor || ''}
-              onChange={(e) => onFormChange(e, 'proveedor')}
-              disabled={isDisabled}
-              className={`w-full border rounded-lg pl-10 pr-4 py-2.5 focus:outline-none focus:ring-2 focus:border-transparent transition-all ${
-                isDisabled ? 'opacity-50 cursor-not-allowed' : ''
-              } ${
-                isDarkMode
-                  ? 'bg-gray-800 border-gray-700 text-white placeholder-gray-500 focus:ring-white/50'
-                  : 'bg-white border-gray-300 text-gray-900 placeholder-gray-400 focus:ring-blue-500'
-              }`}
-              placeholder="Nombre del proveedor"
-            />
-          </div>
+          <label
+            className={`flex items-center gap-2 text-xs font-medium uppercase tracking-wider mb-2 ${
+              isDarkMode ? 'text-white/60' : 'text-black/60'
+            }`}
+          >
+            <Store className="h-3.5 w-3.5" />
+            Proveedor
+          </label>
+          <input
+            type="text"
+            value={editFormData?.proveedor || ''}
+            onChange={(e) => onFormChange(e, 'proveedor')}
+            disabled={isDisabled}
+            className={`w-full border rounded-lg px-3 py-2 text-sm font-light focus:outline-none transition-all ${
+              isDisabled ? 'opacity-50 cursor-not-allowed' : ''
+            } ${
+              isDarkMode
+                ? 'bg-white/[0.02] border-white/10 text-white placeholder:text-white/30 focus:border-white/20 focus:bg-white/[0.04]'
+                : 'bg-black/[0.02] border-black/10 text-black placeholder:text-black/30 focus:border-black/20 focus:bg-black/[0.04]'
+            }`}
+            placeholder="Nombre del proveedor"
+          />
         </div>
 
         <div className="form-group">
-          <label className={`flex items-center gap-2 text-sm font-medium mb-2 ${
-            isDarkMode ? 'text-gray-300' : 'text-gray-700'
-          }`}>Factura</label>
-          <div className="relative">
-            <Receipt className={`absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 pointer-events-none ${
-              isDarkMode ? 'text-gray-500' : 'text-gray-400'
-            }`} />
-            <input
-              type="text"
-              value={editFormData?.factura || ''}
-              onChange={(e) => onFormChange(e, 'factura')}
-              disabled={isDisabled}
-              className={`w-full border rounded-lg pl-10 pr-4 py-2.5 focus:outline-none focus:ring-2 focus:border-transparent transition-all ${
-                isDisabled ? 'opacity-50 cursor-not-allowed' : ''
-              } ${
-                isDarkMode
-                  ? 'bg-gray-800 border-gray-700 text-white placeholder-gray-500 focus:ring-white/50'
-                  : 'bg-white border-gray-300 text-gray-900 placeholder-gray-400 focus:ring-blue-500'
-              }`}
-              placeholder="Número de factura"
-            />
-          </div>
+          <label
+            className={`flex items-center gap-2 text-xs font-medium uppercase tracking-wider mb-2 ${
+              isDarkMode ? 'text-white/60' : 'text-black/60'
+            }`}
+          >
+            <Receipt className="h-3.5 w-3.5" />
+            Factura
+          </label>
+          <input
+            type="text"
+            value={editFormData?.factura || ''}
+            onChange={(e) => onFormChange(e, 'factura')}
+            disabled={isDisabled}
+            className={`w-full border rounded-lg px-3 py-2 text-sm font-light focus:outline-none transition-all ${
+              isDisabled ? 'opacity-50 cursor-not-allowed' : ''
+            } ${
+              isDarkMode
+                ? 'bg-white/[0.02] border-white/10 text-white placeholder:text-white/30 focus:border-white/20 focus:bg-white/[0.04]'
+                : 'bg-black/[0.02] border-black/10 text-black placeholder:text-black/30 focus:border-black/20 focus:bg-black/[0.04]'
+            }`}
+            placeholder="Número de factura"
+          />
         </div>
 
         <div className="form-group">
-          <label className={`flex items-center gap-2 text-sm font-medium mb-2 ${
-            isDarkMode ? 'text-gray-300' : 'text-gray-700'
-          }`}>Estado</label>
-          <div className="relative">
-            <Building2 className={`absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 pointer-events-none ${
-              isDarkMode ? 'text-gray-500' : 'text-gray-400'
-            }`} />
-            <input
-              type="text"
-              placeholder="Estado"
-              value={editFormData?.ubicacion_es || ''}
-              onChange={(e) => onFormChange(e, 'ubicacion_es')}
-              disabled={isDisabled}
-              className={`w-full border rounded-lg pl-10 pr-4 py-2.5 focus:outline-none focus:ring-2 focus:border-transparent transition-all ${
-                isDisabled ? 'opacity-50 cursor-not-allowed' : ''
-              } ${
-                isDarkMode
-                  ? 'bg-gray-800 border-gray-700 text-white placeholder-gray-500 focus:ring-white/50'
-                  : 'bg-white border-gray-300 text-gray-900 placeholder-gray-400 focus:ring-blue-500'
-              }`}
-            />
-          </div>
+          <label
+            className={`flex items-center gap-2 text-xs font-medium uppercase tracking-wider mb-2 ${
+              isDarkMode ? 'text-white/60' : 'text-black/60'
+            }`}
+          >
+            <Building2 className="h-3.5 w-3.5" />
+            Estado
+          </label>
+          <input
+            type="text"
+            placeholder="Estado"
+            value={editFormData?.ubicacion_es || ''}
+            onChange={(e) => onFormChange(e, 'ubicacion_es')}
+            disabled={isDisabled}
+            className={`w-full border rounded-lg px-3 py-2 text-sm font-light focus:outline-none transition-all ${
+              isDisabled ? 'opacity-50 cursor-not-allowed' : ''
+            } ${
+              isDarkMode
+                ? 'bg-white/[0.02] border-white/10 text-white placeholder:text-white/30 focus:border-white/20 focus:bg-white/[0.04]'
+                : 'bg-black/[0.02] border-black/10 text-black placeholder:text-black/30 focus:border-black/20 focus:bg-black/[0.04]'
+            }`}
+          />
         </div>
 
         <div className="form-group">
-          <label className={`flex items-center gap-2 text-sm font-medium mb-2 ${
-            isDarkMode ? 'text-gray-300' : 'text-gray-700'
-          }`}>Municipio</label>
+          <label
+            className={`flex items-center gap-2 text-xs font-medium uppercase tracking-wider mb-2 ${
+              isDarkMode ? 'text-white/60' : 'text-black/60'
+            }`}
+          >
+            <Building2 className="h-3.5 w-3.5" />
+            Municipio
+          </label>
           <input
             type="text"
             placeholder="Municipio"
             value={editFormData?.ubicacion_mu || ''}
             onChange={(e) => onFormChange(e, 'ubicacion_mu')}
             disabled={isDisabled}
-            className={`w-full border rounded-lg px-4 py-2.5 focus:outline-none focus:ring-2 focus:border-transparent transition-all ${
+            className={`w-full border rounded-lg px-3 py-2 text-sm font-light focus:outline-none transition-all ${
               isDisabled ? 'opacity-50 cursor-not-allowed' : ''
             } ${
               isDarkMode
-                ? 'bg-gray-800 border-gray-700 text-white placeholder-gray-500 focus:ring-white/50'
-                : 'bg-white border-gray-300 text-gray-900 placeholder-gray-400 focus:ring-blue-500'
+                ? 'bg-white/[0.02] border-white/10 text-white placeholder:text-white/30 focus:border-white/20 focus:bg-white/[0.04]'
+                : 'bg-black/[0.02] border-black/10 text-black placeholder:text-black/30 focus:border-black/20 focus:bg-black/[0.04]'
             }`}
           />
         </div>
 
         <div className="form-group">
-          <label className={`flex items-center gap-2 text-sm font-medium mb-2 ${
-            isDarkMode ? 'text-gray-300' : 'text-gray-700'
-          }`}>Nomenclatura</label>
+          <label
+            className={`flex items-center gap-2 text-xs font-medium uppercase tracking-wider mb-2 ${
+              isDarkMode ? 'text-white/60' : 'text-black/60'
+            }`}
+          >
+            <Building2 className="h-3.5 w-3.5" />
+            Nomenclatura
+          </label>
           <input
             type="text"
             placeholder="Nomenclatura"
             value={editFormData?.ubicacion_no || ''}
             onChange={(e) => onFormChange(e, 'ubicacion_no')}
             disabled={isDisabled}
-            className={`w-full border rounded-lg px-4 py-2.5 focus:outline-none focus:ring-2 focus:border-transparent transition-all ${
+            className={`w-full border rounded-lg px-3 py-2 text-sm font-light focus:outline-none transition-all ${
               isDisabled ? 'opacity-50 cursor-not-allowed' : ''
             } ${
               isDarkMode
-                ? 'bg-gray-800 border-gray-700 text-white placeholder-gray-500 focus:ring-white/50'
-                : 'bg-white border-gray-300 text-gray-900 placeholder-gray-400 focus:ring-blue-500'
+                ? 'bg-white/[0.02] border-white/10 text-white placeholder:text-white/30 focus:border-white/20 focus:bg-white/[0.04]'
+                : 'bg-black/[0.02] border-black/10 text-black placeholder:text-black/30 focus:border-black/20 focus:bg-black/[0.04]'
             }`}
           />
         </div>
 
         <div className="form-group">
-          <label className={`flex items-center gap-2 text-xs font-medium uppercase tracking-wider mb-2 ${
-            isDarkMode ? 'text-white/60' : 'text-black/60'
-          }`}>Estado Físico</label>
+          <label
+            className={`flex items-center gap-2 text-xs font-medium uppercase tracking-wider mb-2 ${
+              isDarkMode ? 'text-white/60' : 'text-black/60'
+            }`}
+          >
+            Estado Físico
+          </label>
           <CustomSelect
             value={editFormData?.estado || ''}
             onChange={(val) => onFormChange({ target: { value: val } } as any, 'estado')}
@@ -634,25 +652,33 @@ function EditMode({
         </div>
 
         <div className="form-group">
-          <label className={`flex items-center gap-2 text-sm font-medium mb-2 ${
-            isDarkMode ? 'text-gray-300' : 'text-gray-700'
-          }`}>Área</label>
+          <label
+            className={`flex items-center gap-2 text-xs font-medium uppercase tracking-wider mb-2 ${
+              isDarkMode ? 'text-white/60' : 'text-black/60'
+            }`}
+          >
+            Área
+          </label>
           <input
             type="text"
             value={editFormData?.area?.nombre || ''}
             readOnly
-            className={`w-full border rounded-lg px-4 py-2.5 cursor-not-allowed ${
+            className={`w-full border rounded-lg px-3 py-2 text-sm font-light cursor-not-allowed ${
               isDarkMode
-                ? 'bg-gray-900 border-gray-700 text-gray-500'
-                : 'bg-gray-100 border-gray-300 text-gray-500'
+                ? 'bg-white/[0.02] border-white/10 text-white/40'
+                : 'bg-black/[0.02] border-black/10 text-black/40'
             }`}
           />
         </div>
 
         <div className="form-group">
-          <label className={`flex items-center gap-2 text-xs font-medium uppercase tracking-wider mb-2 ${
-            isDarkMode ? 'text-white/60' : 'text-black/60'
-          }`}>Director/Jefe de Área</label>
+          <label
+            className={`flex items-center gap-2 text-xs font-medium uppercase tracking-wider mb-2 ${
+              isDarkMode ? 'text-white/60' : 'text-black/60'
+            }`}
+          >
+            Director/Jefe de Área
+          </label>
           <CustomSelect
             value={
               typeof editFormData?.directorio === 'object' && editFormData?.directorio !== null 
