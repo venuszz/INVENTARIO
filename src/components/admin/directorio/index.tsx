@@ -490,7 +490,7 @@ export function DirectorioManager() {
                 /* Modo Resolver */
                 <Suspense fallback={<LoadingSkeleton />}>
                     <motion.div 
-                        className={`h-full overflow-y-auto p-4 md:p-8 ${
+                        className={`h-full overflow-y-auto p-[2vw] md:p-[3vw] lg:p-[2vw] ${
                             isDarkMode 
                                 ? 'scrollbar-thin scrollbar-track-white/5 scrollbar-thumb-white/20 hover:scrollbar-thumb-white/30'
                                 : 'scrollbar-thin scrollbar-track-black/5 scrollbar-thumb-black/20 hover:scrollbar-thumb-black/30'
@@ -500,7 +500,7 @@ export function DirectorioManager() {
                         exit={{ opacity: 0 }}
                         transition={{ duration: 0.3 }}
                     >
-                        <div className="w-full max-w-7xl mx-auto pb-8">
+                        <div className="w-full max-w-[95vw] mx-auto pb-[2vw]">
                             <InconsistencyResolverMode
                                 inconsistencies={inconsistencies}
                                 onExit={() => setIsResolverMode(false)}
@@ -512,7 +512,7 @@ export function DirectorioManager() {
                 /* Modo Transferencia de Bienes */
                 <Suspense fallback={<LoadingSkeleton />}>
                     <motion.div 
-                        className={`h-full overflow-y-auto p-4 md:p-8 ${
+                        className={`h-full overflow-y-auto p-[2vw] md:p-[3vw] lg:p-[2vw] ${
                             isDarkMode 
                                 ? 'scrollbar-thin scrollbar-track-white/5 scrollbar-thumb-white/20 hover:scrollbar-thumb-white/30 bg-black text-white'
                                 : 'scrollbar-thin scrollbar-track-black/5 scrollbar-thumb-black/20 hover:scrollbar-thumb-black/30 bg-white text-black'
@@ -522,7 +522,7 @@ export function DirectorioManager() {
                         exit={{ opacity: 0 }}
                         transition={{ duration: 0.3 }}
                     >
-                        <div className="w-full max-w-7xl mx-auto pb-8">
+                        <div className="w-full max-w-[95vw] mx-auto pb-[2vw]">
                             <TransferMode
                                 directors={directorioFromStore.filter(d => d.nombre !== null) as Array<{ id_directorio: number; nombre: string; puesto?: string }>}
                                 areas={areasFromStore}
@@ -535,7 +535,7 @@ export function DirectorioManager() {
             ) : (
                 /* Vista Normal del Directorio */
                 <motion.div 
-                className={`h-full overflow-y-auto p-4 md:p-8 ${
+                className={`h-full overflow-y-auto p-[2vw] md:p-[3vw] lg:p-[2vw] ${
                     isDarkMode 
                         ? 'scrollbar-thin scrollbar-track-white/5 scrollbar-thumb-white/20 hover:scrollbar-thumb-white/30'
                         : 'scrollbar-thin scrollbar-track-black/5 scrollbar-thumb-black/20 hover:scrollbar-thumb-black/30'
@@ -544,14 +544,14 @@ export function DirectorioManager() {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.4 }}
             >
-                <div className="w-full max-w-5xl mx-auto pb-8">
+                <div className="w-full max-w-[95vw] mx-auto pb-[2vw]">
                 {/* Header */}
-                <div className={`flex justify-between items-center mb-8 pb-6 border-b ${isDarkMode ? 'border-white/10' : 'border-black/10'}`}>
+                <div className={`flex justify-between items-center mb-[2vw] pb-[1.5vw] border-b ${isDarkMode ? 'border-white/10' : 'border-black/10'}`}>
                     <div>
-                        <h1 className="text-3xl font-light tracking-tight mb-1">
+                        <h1 className="font-light tracking-tight" style={{ fontSize: 'clamp(1.5rem, 2vw, 1.875rem)', marginBottom: 'clamp(0.25rem, 0.25vw, 0.25rem)' }}>
                             Directorio de Personal
                         </h1>
-                        <p className={`text-sm ${isDarkMode ? 'text-white/40' : 'text-black/40'}`}>
+                        <p className={isDarkMode ? 'text-white/40' : 'text-black/40'} style={{ fontSize: 'clamp(0.75rem, 0.875vw, 0.875rem)' }}>
                             Gestiona el personal autorizado y sus áreas
                         </p>
                     </div>
@@ -563,7 +563,7 @@ export function DirectorioManager() {
 
                 {/* Search and Add Button */}
                 <motion.div 
-                    className="mb-8 space-y-3"
+                    className="mb-[2vw] space-y-[0.75vw]"
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
                     transition={{ delay: 0.2 }}

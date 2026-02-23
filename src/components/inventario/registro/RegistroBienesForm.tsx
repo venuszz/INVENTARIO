@@ -401,19 +401,26 @@ export default function RegistroBienesForm() {
       isDarkMode ? 'bg-black text-white' : 'bg-white text-black'
     }`}>
       <motion.div 
-        className={`h-full overflow-y-auto p-4 md:p-8 ${
+        className={`h-full overflow-y-auto ${
           isDarkMode 
             ? 'scrollbar-thin scrollbar-track-white/5 scrollbar-thumb-white/20 hover:scrollbar-thumb-white/30'
             : 'scrollbar-thin scrollbar-track-black/5 scrollbar-thumb-black/20 hover:scrollbar-thumb-black/30'
         }`}
+        style={{ padding: 'clamp(0.75rem, 1vw, 1rem) clamp(1.5rem, 2vw, 2rem)' }}
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.4 }}
       >
-        <div className="w-full max-w-5xl mx-auto pb-8">
+        <div className="w-full max-w-[95vw] mx-auto" style={{ paddingBottom: 'clamp(1.5rem, 2vw, 2rem)' }}>
           {/* Header */}
-          <div className={`mb-8 pb-6 border-b ${isDarkMode ? 'border-white/10' : 'border-black/10'}`}>
-            <h1 className="text-3xl font-light tracking-tight mb-6">
+          <div className={`border-b ${isDarkMode ? 'border-white/10' : 'border-black/10'}`} style={{ 
+            marginBottom: 'clamp(1.5rem, 2vw, 2rem)',
+            paddingBottom: 'clamp(1rem, 1.5vw, 1.5rem)'
+          }}>
+            <h1 className="font-light tracking-tight" style={{ 
+              fontSize: 'clamp(1.5rem, 1.875vw, 1.875rem)',
+              marginBottom: 'clamp(1rem, 1.5vw, 1.5rem)'
+            }}>
               Registro de Bienes
             </h1>
             
@@ -430,7 +437,7 @@ export default function RegistroBienesForm() {
           <AnimatePresence>
             {message.text && (
               <motion.div 
-                className={`mb-6 p-4 rounded-lg flex items-center justify-between border ${
+                className={`rounded-lg flex items-center justify-between border ${
                   message.type === 'success'
                     ? isDarkMode 
                       ? 'bg-green-500/10 border-green-500/30 text-green-400' 
@@ -439,34 +446,39 @@ export default function RegistroBienesForm() {
                       ? 'bg-red-500/10 border-red-500/30 text-red-400'
                       : 'bg-red-50 border-red-200 text-red-800'
                 }`}
+                style={{ 
+                  marginBottom: 'clamp(1rem, 1.5vw, 1.5rem)',
+                  padding: 'clamp(0.75rem, 1vw, 1rem)'
+                }}
                 initial={{ opacity: 0, y: -10, height: 0 }}
                 animate={{ opacity: 1, y: 0, height: 'auto' }}
                 exit={{ opacity: 0, y: -10, height: 0 }}
                 transition={{ duration: 0.3 }}
               >
-                <div className="flex items-center gap-3">
+                <div className="flex items-center" style={{ gap: 'clamp(0.5rem, 0.75vw, 0.75rem)' }}>
                   {message.type === 'success' ? (
-                    <CheckCircle size={18} />
+                    <CheckCircle style={{ width: 'clamp(1rem, 1.125vw, 1.125rem)', height: 'clamp(1rem, 1.125vw, 1.125rem)' }} />
                   ) : (
-                    <AlertTriangle size={18} />
+                    <AlertTriangle style={{ width: 'clamp(1rem, 1.125vw, 1.125rem)', height: 'clamp(1rem, 1.125vw, 1.125rem)' }} />
                   )}
-                  <span className="text-sm font-medium">{message.text}</span>
+                  <span className="font-medium" style={{ fontSize: 'clamp(0.75rem, 0.875vw, 0.875rem)' }}>{message.text}</span>
                 </div>
                 <motion.button
                   onClick={handleCloseMessage}
-                  className={`p-1.5 rounded-lg transition-colors ${
+                  className={`rounded-lg transition-colors ${
                     isDarkMode ? 'hover:bg-white/10' : 'hover:bg-black/10'
                   }`}
+                  style={{ padding: 'clamp(0.25rem, 0.375vw, 0.375rem)' }}
                   whileHover={{ scale: 1.1 }}
                   whileTap={{ scale: 0.9 }}
                 >
-                  <X size={14} />
+                  <X style={{ width: 'clamp(0.75rem, 0.875vw, 0.875rem)', height: 'clamp(0.75rem, 0.875vw, 0.875rem)' }} />
                 </motion.button>
               </motion.div>
             )}
           </AnimatePresence>
 
-          <form onSubmit={handleSubmit} className="space-y-6">
+          <form onSubmit={handleSubmit} style={{ gap: 'clamp(1rem, 1.5vw, 1.5rem)', display: 'flex', flexDirection: 'column' }}>
             {/* Form content */}
             <AnimatePresence mode="wait">
               <motion.div
@@ -478,22 +490,25 @@ export default function RegistroBienesForm() {
               >
                 {/* Step 0 - Institution Selection */}
                 {currentStep === 0 && (
-                  <div className="space-y-6">
-                    <div className="text-center mb-8">
-                      <h2 className="text-2xl font-light mb-2">Selecciona la Institución</h2>
-                      <p className={`text-sm ${isDarkMode ? 'text-white/60' : 'text-black/60'}`}>
+                  <div style={{ gap: 'clamp(1rem, 1.5vw, 1.5rem)', display: 'flex', flexDirection: 'column' }}>
+                    <div className="text-center" style={{ marginBottom: 'clamp(1.5rem, 2vw, 2rem)' }}>
+                      <h2 className="font-light" style={{ 
+                        fontSize: 'clamp(1.25rem, 1.5vw, 1.5rem)',
+                        marginBottom: 'clamp(0.375rem, 0.5vw, 0.5rem)'
+                      }}>Selecciona la Institución</h2>
+                      <p className={`${isDarkMode ? 'text-white/60' : 'text-black/60'}`} style={{ fontSize: 'clamp(0.75rem, 0.875vw, 0.875rem)' }}>
                         Elige la institución para la cual registrarás el bien
                       </p>
                     </div>
                     
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 max-w-4xl mx-auto">
+                    <div className="grid grid-cols-1 md:grid-cols-3 max-w-4xl mx-auto" style={{ gap: 'clamp(0.75rem, 1vw, 1rem)' }}>
                       <motion.button
                         type="button"
                         onClick={() => {
                           setInstitucion('INEA');
                           setIsTlaxcala(false);
                         }}
-                        className={`p-8 rounded-xl border-2 transition-all ${
+                        className={`rounded-xl border-2 transition-all ${
                           institucion === 'INEA'
                             ? isDarkMode
                               ? 'border-white bg-white/10'
@@ -502,12 +517,16 @@ export default function RegistroBienesForm() {
                               ? 'border-white/20 hover:border-white/40'
                               : 'border-black/20 hover:border-black/40'
                         }`}
+                        style={{ padding: 'clamp(1.5rem, 2vw, 2rem)' }}
                         whileHover={{ scale: 1.02 }}
                         whileTap={{ scale: 0.98 }}
                       >
                         <div className="text-center">
-                          <div className="text-3xl font-light mb-2">INEA</div>
-                          <div className={`text-sm ${isDarkMode ? 'text-white/60' : 'text-black/60'}`}>
+                          <div className="font-light" style={{ 
+                            fontSize: 'clamp(1.5rem, 1.875vw, 1.875rem)',
+                            marginBottom: 'clamp(0.375rem, 0.5vw, 0.5rem)'
+                          }}>INEA</div>
+                          <div className={`${isDarkMode ? 'text-white/60' : 'text-black/60'}`} style={{ fontSize: 'clamp(0.75rem, 0.875vw, 0.875rem)' }}>
                             Instituto Nacional para la Educación de los Adultos
                           </div>
                         </div>
@@ -519,7 +538,7 @@ export default function RegistroBienesForm() {
                           setInstitucion('ITEA');
                           setIsTlaxcala(false);
                         }}
-                        className={`p-8 rounded-xl border-2 transition-all ${
+                        className={`rounded-xl border-2 transition-all ${
                           institucion === 'ITEA'
                             ? isDarkMode
                               ? 'border-white bg-white/10'
@@ -528,12 +547,16 @@ export default function RegistroBienesForm() {
                               ? 'border-white/20 hover:border-white/40'
                               : 'border-black/20 hover:border-black/40'
                         }`}
+                        style={{ padding: 'clamp(1.5rem, 2vw, 2rem)' }}
                         whileHover={{ scale: 1.02 }}
                         whileTap={{ scale: 0.98 }}
                       >
                         <div className="text-center">
-                          <div className="text-3xl font-light mb-2">ITEJPA</div>
-                          <div className={`text-sm ${isDarkMode ? 'text-white/60' : 'text-black/60'}`}>
+                          <div className="font-light" style={{ 
+                            fontSize: 'clamp(1.5rem, 1.875vw, 1.875rem)',
+                            marginBottom: 'clamp(0.375rem, 0.5vw, 0.5rem)'
+                          }}>ITEJPA</div>
+                          <div className={`${isDarkMode ? 'text-white/60' : 'text-black/60'}`} style={{ fontSize: 'clamp(0.75rem, 0.875vw, 0.875rem)' }}>
                             Instituto Tlaxcalteca para la Educación de Jóvenes y Personas Adultas
                           </div>
                         </div>
@@ -545,7 +568,7 @@ export default function RegistroBienesForm() {
                           setInstitucion('TLAXCALA');
                           setIsTlaxcala(true);
                         }}
-                        className={`p-8 rounded-xl border-2 transition-all ${
+                        className={`rounded-xl border-2 transition-all ${
                           institucion === 'TLAXCALA'
                             ? isDarkMode
                               ? 'border-white bg-white/10'
@@ -554,12 +577,16 @@ export default function RegistroBienesForm() {
                               ? 'border-white/20 hover:border-white/40'
                               : 'border-black/20 hover:border-black/40'
                         }`}
+                        style={{ padding: 'clamp(1.5rem, 2vw, 2rem)' }}
                         whileHover={{ scale: 1.02 }}
                         whileTap={{ scale: 0.98 }}
                       >
                         <div className="text-center">
-                          <div className="text-3xl font-light mb-2">TLAXCALA</div>
-                          <div className={`text-sm ${isDarkMode ? 'text-white/60' : 'text-black/60'}`}>
+                          <div className="font-light" style={{ 
+                            fontSize: 'clamp(1.5rem, 1.875vw, 1.875rem)',
+                            marginBottom: 'clamp(0.375rem, 0.5vw, 0.5rem)'
+                          }}>TLAXCALA</div>
+                          <div className={`${isDarkMode ? 'text-white/60' : 'text-black/60'}`} style={{ fontSize: 'clamp(0.75rem, 0.875vw, 0.875rem)' }}>
                             No Listado
                           </div>
                         </div>

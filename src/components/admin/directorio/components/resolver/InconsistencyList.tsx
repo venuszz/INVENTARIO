@@ -45,26 +45,30 @@ export function InconsistencyList({
   }, {} as Record<string, Array<InconsistencyWithStats & { originalIndex: number }>>);
 
   return (
-    <div className="p-4 space-y-4">
+    <div style={{ padding: 'clamp(0.75rem, 1vw, 1rem)', gap: 'clamp(0.75rem, 1vw, 1rem)', display: 'flex', flexDirection: 'column' }}>
       {Object.entries(grouped).map(([type, items]) => {
         const config = typeConfig[type as keyof typeof typeConfig];
         const Icon = config.icon;
 
         return (
-          <div key={type} className="space-y-2">
+          <div key={type} style={{ gap: 'clamp(0.375rem, 0.5vw, 0.5rem)', display: 'flex', flexDirection: 'column' }}>
             {/* Group Header */}
-            <div className={`flex items-center gap-2 px-3 py-2 text-sm font-medium ${
+            <div className={`flex items-center font-medium ${
               isDarkMode ? 'text-white/70' : 'text-black/70'
-            }`}>
-              <Icon className={`w-4 h-4 ${isDarkMode ? 'text-white/50' : 'text-black/50'}`} />
+            }`} style={{ 
+              gap: 'clamp(0.375rem, 0.5vw, 0.5rem)',
+              padding: 'clamp(0.375rem, 0.5vw, 0.5rem) clamp(0.5rem, 0.75vw, 0.75rem)',
+              fontSize: 'clamp(0.75rem, 0.875vw, 0.875rem)'
+            }}>
+              <Icon className={`${isDarkMode ? 'text-white/50' : 'text-black/50'}`} style={{ width: 'clamp(0.75rem, 1vw, 1rem)', height: 'clamp(0.75rem, 1vw, 1rem)' }} />
               <span>{config.label}</span>
-              <span className={`ml-auto text-xs ${isDarkMode ? 'text-white/40' : 'text-black/40'}`}>
+              <span className={`ml-auto ${isDarkMode ? 'text-white/40' : 'text-black/40'}`} style={{ fontSize: 'clamp(0.625rem, 0.75vw, 0.75rem)' }}>
                 {items.length}
               </span>
             </div>
 
             {/* Items */}
-            <div className="space-y-1">
+            <div style={{ gap: 'clamp(0.25rem, 0.25vw, 0.25rem)', display: 'flex', flexDirection: 'column' }}>
               {items.map((item, idx) => {
                 const isSelected = item.originalIndex === selectedIndex;
                 const isResolved = resolvedIds.has(item.id);
@@ -83,7 +87,7 @@ export function InconsistencyList({
                     onClick={() => !isResolved && onSelect(item.originalIndex)}
                     disabled={isResolved}
                     className={`
-                      w-full text-left px-3 py-3 rounded-lg transition-all
+                      w-full text-left rounded-lg transition-all
                       ${isSelected && !isResolved
                         ? isDarkMode
                           ? 'bg-white/5 border-2 border-white/20'
@@ -94,10 +98,11 @@ export function InconsistencyList({
                       }
                       ${isResolved ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}
                     `}
+                    style={{ padding: 'clamp(0.5rem, 0.75vw, 0.75rem)' }}
                     aria-selected={isSelected}
                     aria-label={`Inconsistencia: ${item.areaName || item.directorName}`}
                   >
-                    <div className="flex items-start gap-3">
+                    <div className="flex items-start" style={{ gap: 'clamp(0.5rem, 0.75vw, 0.75rem)' }}>
                       {/* Icon or Check */}
                       <div className={`flex-shrink-0 w-5 h-5 rounded-full flex items-center justify-center ${
                         isDarkMode ? 'bg-white/10' : 'bg-black/10'

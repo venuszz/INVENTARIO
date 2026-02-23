@@ -350,12 +350,12 @@ const ConsultarBajasResguardos = () => {
         </div>
       )}
 
-      <div className={`h-full overflow-y-auto p-4 md:p-8 ${
+      <div className={`h-full overflow-y-auto p-[2vw] md:p-[3vw] lg:p-[2vw] ${
         isDarkMode 
           ? 'scrollbar-thin scrollbar-track-white/5 scrollbar-thumb-white/20 hover:scrollbar-thumb-white/30'
           : 'scrollbar-thin scrollbar-track-black/5 scrollbar-thumb-black/20 hover:scrollbar-thumb-black/30'
       }`}>
-        <div className="w-full max-w-7xl mx-auto pb-8">
+        <div className="w-full max-w-[95vw] mx-auto pb-[2vw]">
           {/* Header */}
           <Header 
             totalCount={totalCount}
@@ -365,7 +365,7 @@ const ConsultarBajasResguardos = () => {
 
           {/* Warning message for parameter not found */}
           {paramNotFoundMessage && (
-            <div className={`mt-4 p-3 rounded-lg border ${
+            <div className={`mt-[1vw] p-[0.75vw] rounded-lg border ${
               isDarkMode
                 ? 'bg-yellow-500/10 text-yellow-400 border-yellow-500/20'
                 : 'bg-yellow-50 text-yellow-800 border-yellow-200'
@@ -375,9 +375,9 @@ const ConsultarBajasResguardos = () => {
           )}
 
           {/* Main container */}
-          <div className="grid grid-cols-1 lg:grid-cols-5 gap-6 mt-8">
+          <div className="grid grid-cols-1 lg:grid-cols-5 gap-[1.5vw] mt-[2vw]">
           {/* Left panel - Bajas table */}
-          <div className="lg:col-span-3 space-y-6">
+          <div className="lg:col-span-3 space-y-[1.5vw]">
             {/* Search and Filters */}
             <SearchAndFilters
               searchTerm={searchAndFilters.searchTerm}
@@ -435,7 +435,7 @@ const ConsultarBajasResguardos = () => {
           </div>
 
           {/* Right panel - Details */}
-          <div ref={detailRef} className="lg:col-span-2 space-y-6">
+          <div ref={detailRef} className="lg:col-span-2 space-y-[1.5vw]">
             {/* Details Panel */}
             <BajaDetailsPanel
               selectedBaja={selectedBaja}

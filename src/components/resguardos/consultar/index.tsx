@@ -390,12 +390,12 @@ export default function ConsultarResguardos({ folioParam }: ConsultarResguardosP
     <div className={`h-[calc(100vh-4rem)] overflow-hidden transition-colors duration-300 ${
       isDarkMode ? 'bg-black text-white' : 'bg-white text-black'
     }`}>
-      <div className={`h-full overflow-y-auto p-4 md:p-8 ${
+      <div className={`h-full overflow-y-auto p-[2vw] md:p-[3vw] lg:p-[2vw] ${
         isDarkMode 
           ? 'scrollbar-thin scrollbar-track-white/5 scrollbar-thumb-white/20 hover:scrollbar-thumb-white/30'
           : 'scrollbar-thin scrollbar-track-black/5 scrollbar-thumb-black/20 hover:scrollbar-thumb-black/30'
       }`}>
-        <div className="w-full max-w-7xl mx-auto pb-8">
+        <div className="w-full max-w-[95vw] mx-auto pb-[2vw]">
           {/* Loading overlay for URL parameter */}
           {folioParamLoading && (
             <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 backdrop-blur-sm">
@@ -425,9 +425,9 @@ export default function ConsultarResguardos({ folioParam }: ConsultarResguardosP
           )}
 
           {/* Main container */}
-          <div className="grid grid-cols-1 lg:grid-cols-5 gap-6 mt-8">
+          <div className="grid grid-cols-1 lg:grid-cols-5 gap-[1.5vw] mt-[2vw]">
             {/* Left panel - List */}
-            <div className="lg:col-span-3 space-y-6">
+            <div className="lg:col-span-3 space-y-[1.5vw]">
               {/* Unified search and filters */}
               <SearchAndFilters
                 searchTerm={searchAndFilters.searchTerm}
@@ -503,7 +503,7 @@ export default function ConsultarResguardos({ folioParam }: ConsultarResguardosP
             </div>
 
             {/* Right panel - Details */}
-            <div ref={detailRef} className="lg:col-span-2 flex flex-col gap-6">
+            <div ref={detailRef} className="lg:col-span-2 flex flex-col gap-[1.5vw]">
               {/* Resguardo Info Panel - Always visible */}
               {resguardoDetails.resguardoDetails && resguardoDetails.articulos.length > 0 ? (
                 <ResguardoInfoPanel
@@ -521,20 +521,20 @@ export default function ConsultarResguardos({ folioParam }: ConsultarResguardosP
                   disableDelete={false}
                 />
               ) : (
-                <div className={`rounded-lg border p-4 h-[45vh] flex flex-col ${
+                <div className={`rounded-lg border p-[1vw] h-[45vh] flex flex-col ${
                   isDarkMode ? 'bg-white/[0.02] border-white/10' : 'bg-black/[0.02] border-black/10'
                 }`}>
-                  <h2 className={`text-sm font-medium mb-4 ${
+                  <h2 className={`font-medium mb-[1vw] ${
                     isDarkMode ? 'text-white/60' : 'text-black/60'
-                  }`}>
+                  }`} style={{ fontSize: 'clamp(0.75rem, 0.875vw, 0.875rem)' }}>
                     Información del Resguardo
                   </h2>
                   <div className={`flex flex-col items-center justify-center flex-1 ${
                     isDarkMode ? 'text-white/40' : 'text-black/40'
                   }`}>
-                    <FileText className="h-12 w-12 mb-3" />
-                    <p className="text-sm">Seleccione un resguardo</p>
-                    <p className="text-xs mt-1">Haga clic en un folio para ver los detalles</p>
+                    <FileText className="h-[3vw] w-[3vw] min-h-[48px] min-w-[48px] mb-[0.75vw]" />
+                    <p style={{ fontSize: 'clamp(0.75rem, 0.875vw, 0.875rem)' }}>Seleccione un resguardo</p>
+                    <p className="mt-[0.25vw]" style={{ fontSize: 'clamp(0.625rem, 0.75vw, 0.75rem)' }}>Haga clic en un folio para ver los detalles</p>
                   </div>
                 </div>
               )}
@@ -556,21 +556,21 @@ export default function ConsultarResguardos({ folioParam }: ConsultarResguardosP
                 <div className={`rounded-lg border h-[45vh] flex flex-col overflow-hidden ${
                   isDarkMode ? 'bg-white/[0.02] border-white/10' : 'bg-black/[0.02] border-black/10'
                 }`}>
-                  <div className={`px-4 py-3 border-b flex-shrink-0 ${
+                  <div className={`px-[1vw] py-[0.75vw] border-b flex-shrink-0 ${
                     isDarkMode ? 'border-white/10' : 'border-black/10'
                   }`}>
-                    <h2 className={`text-sm font-medium ${
+                    <h2 className={`font-medium ${
                       isDarkMode ? 'text-white/60' : 'text-black/60'
-                    }`}>
+                    }`} style={{ fontSize: 'clamp(0.75rem, 0.875vw, 0.875rem)' }}>
                       Artículos del Resguardo
                     </h2>
                   </div>
-                  <div className={`flex-1 flex flex-col items-center justify-center p-8 ${
+                  <div className={`flex-1 flex flex-col items-center justify-center p-[2vw] ${
                     isDarkMode ? 'text-white/40' : 'text-black/40'
                   }`}>
-                    <ListChecks className="h-12 w-12 mb-3" />
-                    <p className="text-sm">No hay artículos</p>
-                    <p className="text-xs mt-1">Seleccione un resguardo para ver sus artículos</p>
+                    <ListChecks className="h-[3vw] w-[3vw] min-h-[48px] min-w-[48px] mb-[0.75vw]" />
+                    <p style={{ fontSize: 'clamp(0.75rem, 0.875vw, 0.875rem)' }}>No hay artículos</p>
+                    <p className="mt-[0.25vw]" style={{ fontSize: 'clamp(0.625rem, 0.75vw, 0.75rem)' }}>Seleccione un resguardo para ver sus artículos</p>
                   </div>
                 </div>
               )}

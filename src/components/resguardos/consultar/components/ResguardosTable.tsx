@@ -71,9 +71,6 @@ export default function ResguardosTable({
     sample: foliosUnicos.slice(0, 2)
   });
 
-  // Calculate skeleton rows needed
-  const skeletonRowsCount = Math.max(0, rowsPerPage - foliosUnicos.length);
-
   return (
     <div className={`rounded-lg border overflow-hidden mb-4 flex flex-col h-[calc(90vh)] ${
       isDarkMode
@@ -297,42 +294,6 @@ export default function ResguardosTable({
                 );
               })
             )}
-            
-            {/* Skeleton rows to fill the page */}
-            {!loading && !error && skeletonRowsCount > 0 && Array.from({ length: skeletonRowsCount }).map((_, idx) => (
-              <tr
-                key={`skeleton-${idx}`}
-                className={`border-b ${
-                  isDarkMode ? 'border-white/5' : 'border-black/5'
-                }`}
-              >
-                <td className="px-4 py-3">
-                  <div className={`h-4 w-24 rounded ${
-                    isDarkMode ? 'bg-white/5' : 'bg-black/5'
-                  }`} />
-                </td>
-                <td className="px-4 py-3">
-                  <div className={`h-4 w-20 rounded ${
-                    isDarkMode ? 'bg-white/5' : 'bg-black/5'
-                  }`} />
-                </td>
-                <td className="px-4 py-3">
-                  <div className="space-y-1">
-                    <div className={`h-4 w-full rounded ${
-                      isDarkMode ? 'bg-white/5' : 'bg-black/5'
-                    }`} />
-                    <div className={`h-3 w-32 rounded ${
-                      isDarkMode ? 'bg-white/5' : 'bg-black/5'
-                    }`} />
-                  </div>
-                </td>
-                <td className="px-4 py-3">
-                  <div className={`h-6 w-8 rounded-full ${
-                    isDarkMode ? 'bg-white/5' : 'bg-black/5'
-                  }`} />
-                </td>
-              </tr>
-            ))}
           </tbody>
         </table>
       </div>

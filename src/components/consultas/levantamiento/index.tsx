@@ -493,21 +493,27 @@ export default function LevantamientoUnificado() {
       <div className={`h-[calc(100vh-4rem)] overflow-hidden transition-colors duration-300 ${
         isDarkMode ? 'bg-black text-white' : 'bg-white text-black'
       }`}>
-        <div className={`h-full overflow-y-auto p-4 md:p-8 ${
+        <div className={`h-full overflow-y-auto ${
           isDarkMode 
             ? 'scrollbar-thin scrollbar-track-white/5 scrollbar-thumb-white/20 hover:scrollbar-thumb-white/30'
             : 'scrollbar-thin scrollbar-track-black/5 scrollbar-thumb-black/20 hover:scrollbar-thumb-black/30'
-        }`}>
-          <div className="w-full max-w-7xl mx-auto pb-8">
+        }`} style={{ padding: 'clamp(0.75rem, 1vw, 1rem) clamp(1.5rem, 2vw, 2rem)' }}>
+          <div className="w-full max-w-[95vw] mx-auto" style={{ paddingBottom: 'clamp(1.5rem, 2vw, 2rem)' }}>
             {/* Header */}
-            <div className={`flex justify-between items-center mb-8 pb-6 border-b ${
+            <div className={`flex justify-between items-center border-b ${
               isDarkMode ? 'border-white/10' : 'border-black/10'
-            }`}>
+            }`} style={{ 
+              marginBottom: 'clamp(1.5rem, 2vw, 2rem)',
+              paddingBottom: 'clamp(1rem, 1.5vw, 1.5rem)'
+            }}>
               <div>
-                <h1 className="text-3xl font-light tracking-tight mb-1">
+                <h1 className="font-light tracking-tight" style={{ 
+                  fontSize: 'clamp(1.5rem, 1.875vw, 1.875rem)',
+                  marginBottom: 'clamp(0.125rem, 0.25vw, 0.25rem)'
+                }}>
                   Levantamiento Unificado
                 </h1>
-                <p className={`text-sm ${isDarkMode ? 'text-white/40' : 'text-black/40'}`}>
+                <p className={`${isDarkMode ? 'text-white/40' : 'text-black/40'}`} style={{ fontSize: 'clamp(0.75rem, 0.875vw, 0.875rem)' }}>
                   Consulta integrada de inventario INEA, ITEA y TLAXCALA
                 </p>
               </div>
@@ -518,8 +524,13 @@ export default function LevantamientoUnificado() {
             </div>
 
             {/* Search and filters */}
-            <div className="mb-6 space-y-3">
-              <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center">
+            <div style={{ 
+              marginBottom: 'clamp(1rem, 1.5vw, 1.5rem)',
+              gap: 'clamp(0.5rem, 0.75vw, 0.75rem)',
+              display: 'flex',
+              flexDirection: 'column'
+            }}>
+              <div className="flex flex-col sm:flex-row items-start sm:items-center" style={{ gap: 'clamp(0.5rem, 0.75vw, 0.75rem)' }}>
                 <div className="flex-1 w-full">
                   <SearchBar
                     searchTerm={searchTerm}
@@ -559,7 +570,7 @@ export default function LevantamientoUnificado() {
 
             {/* Message banner */}
             {message && (
-              <div className={`p-3 mb-4 rounded-lg border ${
+              <div className={`rounded-lg border ${
                 isDarkMode
                   ? message.type === 'success' ? 'bg-green-500/10 text-green-400 border-green-500/20' :
                     message.type === 'error' ? 'bg-red-500/10 text-red-400 border-red-500/20' :
@@ -569,7 +580,11 @@ export default function LevantamientoUnificado() {
                     message.type === 'error' ? 'bg-red-50 text-red-800 border-red-200' :
                     message.type === 'warning' ? 'bg-yellow-50 text-yellow-800 border-yellow-200' :
                     message.type === 'info' ? 'bg-blue-50 text-blue-800 border-blue-200' : ''
-              }`}>
+              }`} style={{ 
+                padding: 'clamp(0.5rem, 0.75vw, 0.75rem)',
+                marginBottom: 'clamp(0.75rem, 1vw, 1rem)',
+                fontSize: 'clamp(0.75rem, 0.875vw, 0.875rem)'
+              }}>
                 {message.text}
               </div>
             )}

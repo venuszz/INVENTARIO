@@ -632,12 +632,12 @@ export default function CrearResguardos() {
     <div className={`h-[calc(100vh-4rem)] overflow-hidden transition-colors duration-300 ${
       isDarkMode ? 'bg-black text-white' : 'bg-white text-black'
     }`}>
-      <div className={`h-full overflow-y-auto p-4 md:p-8 ${
+      <div className={`h-full overflow-y-auto p-[2vw] md:p-[3vw] lg:p-[2vw] ${
         isDarkMode 
           ? 'scrollbar-thin scrollbar-track-white/5 scrollbar-thumb-white/20 hover:scrollbar-thumb-white/30'
           : 'scrollbar-thin scrollbar-track-black/5 scrollbar-thumb-black/20 hover:scrollbar-thumb-black/30'
       }`}>
-        <div className="w-full max-w-7xl mx-auto pb-8">
+        <div className="w-full max-w-[95vw] mx-auto pb-[2vw]">
           {/* Header */}
           <Header
             selectedCount={selectedMuebles.length}
@@ -647,9 +647,9 @@ export default function CrearResguardos() {
           />
 
           {/* Main container */}
-          <div className="grid grid-cols-1 lg:grid-cols-5 gap-6 mt-8">
+          <div className="grid grid-cols-1 lg:grid-cols-5 gap-[1.5vw] mt-[2vw]">
             {/* Left panel - Muebles table */}
-            <div className="lg:col-span-3 space-y-6">
+            <div className="lg:col-span-3 space-y-[1.5vw]">
               <FolioInfoPanel
                 folio={folio}
                 directorName={
@@ -734,13 +734,13 @@ export default function CrearResguardos() {
             </div>
 
             {/* Right panel - Details */}
-            <div ref={detailRef} className="lg:col-span-2 space-y-6">
-              <div className={`rounded-lg border p-4 ${
+            <div ref={detailRef} className="lg:col-span-2 space-y-[1.5vw]">
+              <div className={`rounded-lg border p-[1vw] ${
                 isDarkMode ? 'bg-white/[0.02] border-white/10' : 'bg-black/[0.02] border-black/10'
               }`}>
-                <h2 className={`text-sm font-medium mb-4 ${
+                <h2 className={`font-medium mb-[1vw] ${
                   isDarkMode ? 'text-white/60' : 'text-black/60'
-                }`}>
+                }`} style={{ fontSize: 'clamp(0.75rem, 0.875vw, 0.875rem)' }}>
                   Información del Resguardo
                 </h2>
 
@@ -840,24 +840,24 @@ export default function CrearResguardos() {
 
       {/* Error Alert */}
       {error && (
-        <div className={`fixed bottom-4 left-4 right-4 md:left-auto md:right-4 md:w-96 px-4 py-3 rounded-lg shadow-lg border z-50 backdrop-blur-sm animate-fade-in ${
+        <div className={`fixed bottom-[1vw] left-[1vw] right-[1vw] md:left-auto md:right-[1vw] md:w-[24vw] px-[1vw] py-[0.75vw] rounded-lg shadow-lg border z-50 backdrop-blur-sm animate-fade-in ${
           isDarkMode ? 'bg-red-900/80 text-red-100 border-red-800' : 'bg-red-50 text-red-900 border-red-200'
         }`}>
           <div className="flex items-center">
-            <AlertTriangle className={`h-5 w-5 mr-3 flex-shrink-0 animate-pulse ${
+            <AlertTriangle className={`h-[1.25vw] w-[1.25vw] min-h-[18px] min-w-[18px] mr-[0.75vw] flex-shrink-0 animate-pulse ${
               isDarkMode ? 'text-red-400' : 'text-red-600'
             }`} />
             <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium">{error}</p>
+              <p className="font-medium" style={{ fontSize: 'clamp(0.75rem, 0.875vw, 0.875rem)' }}>{error}</p>
             </div>
             <button
               title='Cerrar alerta'
               onClick={() => setError(null)}
-              className={`ml-4 flex-shrink-0 p-1 rounded-full transition-colors ${
+              className={`ml-[1vw] flex-shrink-0 p-[0.25vw] min-w-[24px] min-h-[24px] rounded-full transition-colors ${
                 isDarkMode ? 'text-red-200 hover:text-white hover:bg-red-800' : 'text-red-600 hover:text-red-800 hover:bg-red-100'
               }`}
             >
-              <X className="h-4 w-4" />
+              <X className="h-[1vw] w-[1vw] min-h-[14px] min-w-[14px]" />
             </button>
           </div>
         </div>
@@ -865,20 +865,20 @@ export default function CrearResguardos() {
 
       {/* Success Alert */}
       {successMessage && (
-        <div className={`fixed bottom-4 left-4 right-4 md:left-auto md:right-4 md:w-96 px-4 py-3 rounded-lg shadow-lg border z-50 backdrop-blur-sm animate-fade-in ${
+        <div className={`fixed bottom-[1vw] left-[1vw] right-[1vw] md:left-auto md:right-[1vw] md:w-[24vw] px-[1vw] py-[0.75vw] rounded-lg shadow-lg border z-50 backdrop-blur-sm animate-fade-in ${
           isDarkMode ? 'bg-green-900/80 text-green-100 border-green-800' : 'bg-green-50 text-green-900 border-green-200'
         }`}>
           <div className="flex items-center">
             <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium">{successMessage}</p>
+              <p className="font-medium" style={{ fontSize: 'clamp(0.75rem, 0.875vw, 0.875rem)' }}>{successMessage}</p>
             </div>
             <button
               onClick={() => setSuccessMessage(null)}
-              className={`ml-4 flex-shrink-0 p-1 rounded-full transition-colors ${
+              className={`ml-[1vw] flex-shrink-0 p-[0.25vw] min-w-[24px] min-h-[24px] rounded-full transition-colors ${
                 isDarkMode ? 'text-green-200 hover:text-white hover:bg-green-800' : 'text-green-600 hover:text-green-800 hover:bg-green-100'
               }`}
             >
-              <X className="h-4 w-4" />
+              <X className="h-[1vw] w-[1vw] min-h-[14px] min-w-[14px]" />
             </button>
           </div>
         </div>

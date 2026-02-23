@@ -10,7 +10,7 @@ interface ResolverLayoutProps {
 
 export function ResolverLayout({ leftPanel, rightPanel }: ResolverLayoutProps) {
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-[35%_65%] gap-6 items-start">
+    <div className="grid grid-cols-1 lg:grid-cols-[35%_65%] items-start" style={{ gap: 'clamp(1rem, 1.5vw, 1.5rem)' }}>
       {/* Left Panel - Inconsistency List */}
       <div className="h-full">
         {leftPanel}

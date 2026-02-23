@@ -47,24 +47,24 @@ export default function UsuariosPendientesManager() {
                 ? 'bg-black text-white' 
                 : 'bg-white text-black'
         }`}>
-            <div className={`h-full overflow-y-auto p-4 md:p-8 ${
+            <div className={`h-full overflow-y-auto p-[2vw] md:p-[3vw] lg:p-[2vw] ${
                 isDarkMode 
                     ? 'scrollbar-thin scrollbar-track-white/5 scrollbar-thumb-white/20 hover:scrollbar-thumb-white/30'
                     : 'scrollbar-thin scrollbar-track-black/5 scrollbar-thumb-black/20 hover:scrollbar-thumb-black/30'
             }`}>
-                <div className="w-full max-w-5xl mx-auto pb-8">
+                <div className="w-full max-w-[95vw] mx-auto pb-[2vw]">
                     {/* Header */}
-                    <div className={`mb-8 pb-6 border-b ${isDarkMode ? 'border-white/10' : 'border-black/10'}`}>
-                        <h1 className="text-3xl font-light tracking-tight mb-1">
+                    <div className={`mb-[2vw] pb-[1.5vw] border-b ${isDarkMode ? 'border-white/10' : 'border-black/10'}`}>
+                        <h1 className="font-light tracking-tight" style={{ fontSize: 'clamp(1.5rem, 2vw, 1.875rem)', marginBottom: 'clamp(0.25rem, 0.25vw, 0.25rem)' }}>
                             Usuarios Pendientes
                         </h1>
-                        <p className={`text-sm ${isDarkMode ? 'text-white/40' : 'text-black/40'}`}>
+                        <p className={isDarkMode ? 'text-white/40' : 'text-black/40'} style={{ fontSize: 'clamp(0.75rem, 0.875vw, 0.875rem)' }}>
                             Gestiona las solicitudes de acceso al sistema
                         </p>
                     </div>
 
                     {/* Filters */}
-                    <div className="mb-6 flex gap-2">
+                    <div className="mb-[1.5vw] flex gap-[0.5vw]">
                         {filters.map(filter => (
                             <button
                                 key={filter.value}
@@ -94,7 +94,7 @@ export default function UsuariosPendientesManager() {
                             </p>
                         </div>
                     ) : (
-                        <div className="space-y-1">
+                        <div className="space-y-1" style={{ display: 'flex', flexDirection: 'column', gap: 'clamp(0.25rem, 0.25vw, 0.25rem)' }}>
                             {pendingUsers.map((user) => {
                                 const isExpanded = selectedUser?.id === user.id;
                                 const isOAuth = user.user_type === 'oauth';
@@ -259,7 +259,7 @@ export default function UsuariosPendientesManager() {
 
                     {/* Footer */}
                     {!loading && pendingUsers.length > 0 && (
-                        <div className={`mt-8 pt-4 border-t text-xs ${isDarkMode ? 'border-white/10 text-white/40' : 'border-black/10 text-black/40'}`}>
+                        <div className={`border-t ${isDarkMode ? 'border-white/10 text-white/40' : 'border-black/10 text-black/40'}`} style={{ marginTop: 'clamp(1.5rem, 2vw, 2rem)', paddingTop: 'clamp(0.75rem, 1vw, 1rem)', fontSize: 'clamp(0.625rem, 0.75vw, 0.75rem)' }}>
                             {pendingUsers.length} {pendingUsers.length === 1 ? 'solicitud pendiente' : 'solicitudes pendientes'}
                         </div>
                     )}

@@ -45,28 +45,34 @@ export function DuplicateAreaResolver({
   const totalResguardos = inconsistency.directors.reduce((sum, dir) => sum + (dir.stats?.resguardosCount || 0), 0);
 
   return (
-    <div className="flex flex-col h-full space-y-6">
+    <div className="flex flex-col h-full" style={{ gap: 'clamp(1rem, 1.5vw, 1.5rem)' }}>
       {/* Description */}
-      <div className={`p-4 rounded-lg border ${
+      <div className={`rounded-lg border ${
         isDarkMode 
           ? 'bg-neutral-900/50 border-neutral-700' 
           : 'bg-neutral-50 border-neutral-200'
-      }`}>
-        <p className={`text-sm ${isDarkMode ? 'text-neutral-300' : 'text-neutral-700'}`}>
+      }`} style={{ padding: 'clamp(0.75rem, 1vw, 1rem)' }}>
+        <p className={`${isDarkMode ? 'text-neutral-300' : 'text-neutral-700'}`} style={{ fontSize: 'clamp(0.75rem, 0.875vw, 0.875rem)' }}>
           El área <span className={`font-medium ${isDarkMode ? 'text-white' : 'text-black'}`}>{inconsistency.areaName}</span> está asignada a múltiples directores.
           Selecciona el director que debe mantener esta área.
         </p>
       </div>
 
       {/* Directors List - Más grande y espaciado */}
-      <div className="flex-1 flex flex-col space-y-4">
-        <h4 className={`text-xs font-medium uppercase tracking-wider ${
+      <div className="flex-1 flex flex-col" style={{ gap: 'clamp(0.75rem, 1vw, 1rem)' }}>
+        <h4 className={`font-medium uppercase tracking-wider ${
           isDarkMode ? 'text-neutral-500' : 'text-neutral-500'
-        }`}>
+        }`} style={{ fontSize: 'clamp(0.625rem, 0.75vw, 0.75rem)' }}>
           Selecciona el director a mantener
         </h4>
 
-        <div className="flex-1 space-y-4 overflow-y-auto pr-3 pl-1">
+        <div className="flex-1 overflow-y-auto" style={{ 
+          gap: 'clamp(0.75rem, 1vw, 1rem)',
+          display: 'flex',
+          flexDirection: 'column',
+          paddingRight: 'clamp(0.5rem, 0.75vw, 0.75rem)',
+          paddingLeft: 'clamp(0.125rem, 0.25vw, 0.25rem)'
+        }}>
           {inconsistency.directors.map((director, index) => {
             const isSelected = selectedDirectorId === director.id;
             const isRecommended = director.id === recommended.id;
@@ -170,12 +176,12 @@ export function DuplicateAreaResolver({
 
       {/* Info */}
       {recommended && (
-        <div className={`p-3 rounded-lg border ${
+        <div className={`rounded-lg border ${
           isDarkMode 
             ? 'bg-neutral-900/50 border-neutral-700' 
             : 'bg-neutral-50 border-neutral-200'
-        }`}>
-          <p className={`text-xs ${isDarkMode ? 'text-neutral-400' : 'text-neutral-600'}`}>
+        }`} style={{ padding: 'clamp(0.5rem, 0.75vw, 0.75rem)' }}>
+          <p className={`${isDarkMode ? 'text-neutral-400' : 'text-neutral-600'}`} style={{ fontSize: 'clamp(0.625rem, 0.75vw, 0.75rem)' }}>
             💡 Se recomienda mantener al director con más bienes y resguardos.
           </p>
         </div>

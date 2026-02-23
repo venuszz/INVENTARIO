@@ -191,7 +191,7 @@ export function InconsistencyResolverMode({
           onExit={onExit}
         />
 
-        <div className="mt-6">
+        <div className="mt-[1.5vw]">
           {selectedInconsistency.type === 'duplicate_area' && resolutionDataRef.current?.directorId && (
             <DuplicateAreaConfirmation
               inconsistency={selectedInconsistency}
@@ -214,8 +214,8 @@ export function InconsistencyResolverMode({
 
         {/* Error Display */}
         {error && (
-          <div className="mt-4 p-4 bg-red-500/10 border border-red-500/20 rounded-lg">
-            <p className="text-sm text-red-600 dark:text-red-400">{error}</p>
+          <div className="p-[1vw] bg-red-500/10 border border-red-500/20 rounded-lg" style={{ marginTop: 'clamp(0.75rem, 1vw, 1rem)' }}>
+            <p className="text-red-600 dark:text-red-400" style={{ fontSize: 'clamp(0.75rem, 0.875vw, 0.875rem)' }}>{error}</p>
           </div>
         )}
       </>
@@ -229,7 +229,7 @@ export function InconsistencyResolverMode({
         onExit={onExit}
       />
 
-      <div className="mt-6">
+      <div className="mt-[1.5vw]">
         <ResolverLayout
           leftPanel={
             <InconsistencyList
@@ -293,8 +293,8 @@ export function InconsistencyResolverMode({
 
       {/* Error Display */}
       {error && (
-        <div className="mt-4 p-4 bg-red-500/10 border border-red-500/20 rounded-lg">
-          <p className="text-sm text-red-600 dark:text-red-400">{error}</p>
+        <div className="p-[1vw] bg-red-500/10 border border-red-500/20 rounded-lg" style={{ marginTop: 'clamp(0.75rem, 1vw, 1rem)' }}>
+          <p className="text-red-600 dark:text-red-400" style={{ fontSize: 'clamp(0.75rem, 0.875vw, 0.875rem)' }}>{error}</p>
         </div>
       )}
     </>

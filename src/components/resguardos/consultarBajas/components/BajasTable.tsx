@@ -36,7 +36,7 @@ export const BajasTable: React.FC<BajasTableProps> = ({
   const foliosUnicos = Array.from(new Map(bajas.map(r => [r.folio_resguardo, r])).values());
 
   return (
-    <div className={`rounded-lg border overflow-hidden mb-4 flex flex-col h-[calc(90vh)] ${
+    <div className={`rounded-lg border overflow-hidden mb-4 flex flex-col h-[calc(100vh)] ${
       isDarkMode
         ? 'bg-white/[0.02] border-white/10'
         : 'bg-black/[0.02] border-black/10'

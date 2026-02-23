@@ -49,28 +49,34 @@ export function EmptyAreaResolver({
   };
 
   return (
-    <div className="flex flex-col h-full space-y-6">
+    <div className="flex flex-col h-full" style={{ gap: 'clamp(1rem, 1.5vw, 1.5rem)' }}>
       {/* Description - Más prominente */}
-      <div className={`p-4 rounded-lg border ${
+      <div className={`rounded-lg border ${
         isDarkMode 
           ? 'bg-neutral-900/50 border-neutral-700' 
           : 'bg-neutral-50 border-neutral-200'
-      }`}>
-        <p className={`text-sm ${isDarkMode ? 'text-neutral-300' : 'text-neutral-700'}`}>
+      }`} style={{ padding: 'clamp(0.75rem, 1vw, 1rem)' }}>
+        <p className={`${isDarkMode ? 'text-neutral-300' : 'text-neutral-700'}`} style={{ fontSize: 'clamp(0.75rem, 0.875vw, 0.875rem)' }}>
           El área <span className={`font-medium ${isDarkMode ? 'text-white' : 'text-black'}`}>{inconsistency.areaName}</span> tiene directores asignados
           pero no tiene bienes registrados.
         </p>
       </div>
 
       {/* Options - Más grandes */}
-      <div className="flex-1 flex flex-col space-y-4">
-        <h4 className={`text-xs font-medium uppercase tracking-wider ${
+      <div className="flex-1 flex flex-col" style={{ gap: 'clamp(0.75rem, 1vw, 1rem)' }}>
+        <h4 className={`font-medium uppercase tracking-wider ${
           isDarkMode ? 'text-neutral-500' : 'text-neutral-500'
-        }`}>
+        }`} style={{ fontSize: 'clamp(0.625rem, 0.75vw, 0.75rem)' }}>
           Selecciona una acción
         </h4>
 
-        <div className="flex-1 space-y-4 overflow-y-auto pr-3 pl-1">
+        <div className="flex-1 overflow-y-auto" style={{ 
+          gap: 'clamp(0.75rem, 1vw, 1rem)',
+          display: 'flex',
+          flexDirection: 'column',
+          paddingRight: 'clamp(0.5rem, 0.75vw, 0.75rem)',
+          paddingLeft: 'clamp(0.125rem, 0.25vw, 0.25rem)'
+        }}>
           {/* Option 1: Remove from specific director */}
           <div className={`
             rounded-lg border transition-all
@@ -276,27 +282,35 @@ export function EmptyAreaResolver({
       </div>
 
       {/* Directors List - Compacto al final */}
-      <div className={`p-3 rounded-lg border ${
+      <div className={`rounded-lg border ${
         isDarkMode 
           ? 'bg-neutral-900/50 border-neutral-700' 
           : 'bg-neutral-50 border-neutral-200'
-      }`}>
-        <h5 className={`text-xs font-medium uppercase tracking-wider mb-2 ${
+      }`} style={{ padding: 'clamp(0.5rem, 0.75vw, 0.75rem)' }}>
+        <h5 className={`font-medium uppercase tracking-wider ${
           isDarkMode ? 'text-neutral-500' : 'text-neutral-500'
-        }`}>
+        }`} style={{ 
+          fontSize: 'clamp(0.625rem, 0.75vw, 0.75rem)',
+          marginBottom: 'clamp(0.375rem, 0.5vw, 0.5rem)'
+        }}>
           Directores asignados ({inconsistency.directors.length})
         </h5>
-        <div className="flex flex-wrap gap-1.5">
+        <div className="flex flex-wrap" style={{ gap: 'clamp(0.25rem, 0.375vw, 0.375rem)' }}>
           {inconsistency.directors.map((director) => (
             <span 
               key={`director-chip-${director.id}`} 
-              className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs border ${
+              className={`inline-flex items-center rounded border ${
                 isDarkMode 
                   ? 'bg-neutral-800 text-neutral-300 border-neutral-700' 
                   : 'bg-white text-neutral-700 border-neutral-300'
               }`}
+              style={{ 
+                gap: 'clamp(0.125rem, 0.25vw, 0.25rem)',
+                padding: 'clamp(0.125rem, 0.125vw, 0.125rem) clamp(0.375rem, 0.5vw, 0.5rem)',
+                fontSize: 'clamp(0.625rem, 0.75vw, 0.75rem)'
+              }}
             >
-              <User className="w-2.5 h-2.5" />
+              <User style={{ width: 'clamp(0.5rem, 0.625vw, 0.625rem)', height: 'clamp(0.5rem, 0.625vw, 0.625rem)' }} />
               {director.nombre}
             </span>
           ))}

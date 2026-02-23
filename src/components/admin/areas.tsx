@@ -211,7 +211,7 @@ export default function ConfigManagementComponent() {
             : 'bg-white text-black'
             }`}>
             <motion.div 
-                className={`h-full overflow-y-auto p-4 md:p-8 ${
+                className={`h-full overflow-y-auto p-[2vw] md:p-[3vw] lg:p-[2vw] ${
                     isDarkMode 
                         ? 'scrollbar-thin scrollbar-track-white/5 scrollbar-thumb-white/20 hover:scrollbar-thumb-white/30'
                         : 'scrollbar-thin scrollbar-track-black/5 scrollbar-thumb-black/20 hover:scrollbar-thumb-black/30'
@@ -220,14 +220,14 @@ export default function ConfigManagementComponent() {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.4 }}
             >
-                <div className="w-full max-w-5xl mx-auto pb-8">
+                <div className="w-full max-w-[95vw] mx-auto pb-[2vw]">
                 {/* Header */}
-                <div className={`flex justify-between items-center mb-8 pb-6 border-b ${isDarkMode ? 'border-white/10' : 'border-black/10'}`}>
+                <div className={`flex justify-between items-center mb-[2vw] pb-[1.5vw] border-b ${isDarkMode ? 'border-white/10' : 'border-black/10'}`}>
                     <div>
-                        <h1 className="text-3xl font-light tracking-tight mb-1">
+                        <h1 className="font-light tracking-tight" style={{ fontSize: 'clamp(1.5rem, 2vw, 1.875rem)', marginBottom: 'clamp(0.25rem, 0.25vw, 0.25rem)' }}>
                             Gestión de Configuración
                         </h1>
-                        <p className={`text-sm ${isDarkMode ? 'text-white/40' : 'text-black/40'}`}>
+                        <p className={isDarkMode ? 'text-white/40' : 'text-black/40'} style={{ fontSize: 'clamp(0.75rem, 0.875vw, 0.875rem)' }}>
                             Administra los catálogos del sistema
                         </p>
                     </div>
@@ -238,7 +238,7 @@ export default function ConfigManagementComponent() {
                 </div>
 
                 {/* Tabs */}
-                <div className="flex gap-8 mb-8">
+                <div className="flex gap-[2vw] mb-[2vw]">
                     {CONFIG_TYPES.map((type, index) => (
                         <motion.button
                             key={type.id}
@@ -265,7 +265,7 @@ export default function ConfigManagementComponent() {
 
                 {/* Search and Add */}
                 <motion.div 
-                    className="mb-8 space-y-3"
+                    className="mb-[2vw] space-y-[0.75vw]"
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
                     transition={{ delay: 0.2 }}
@@ -346,7 +346,7 @@ export default function ConfigManagementComponent() {
 
                 {/* Lista de items */}
                 <motion.div 
-                    className="space-y-1"
+                    style={{ display: 'flex', flexDirection: 'column', gap: 'clamp(0.25rem, 0.25vw, 0.25rem)' }}
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
                     transition={{ delay: 0.3 }}
@@ -510,7 +510,8 @@ export default function ConfigManagementComponent() {
 
                 {/* Footer */}
                 <motion.div 
-                    className={`mt-8 pt-4 border-t text-xs ${isDarkMode ? 'border-white/10 text-white/40' : 'border-black/10 text-black/40'}`}
+                    className={`border-t ${isDarkMode ? 'border-white/10 text-white/40' : 'border-black/10 text-black/40'}`}
+                    style={{ marginTop: 'clamp(1.5rem, 2vw, 2rem)', paddingTop: 'clamp(0.75rem, 1vw, 1rem)', fontSize: 'clamp(0.625rem, 0.75vw, 0.75rem)' }}
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
                     transition={{ delay: 0.4 }}
