@@ -14,6 +14,9 @@ import { useMemo, useCallback } from 'react';
 import { useIneaIndexation } from '@/hooks/indexation/useIneaIndexation';
 import { useIteaIndexation } from '@/hooks/indexation/useIteaIndexation';
 import { useNoListadoIndexation } from '@/hooks/indexation/useNoListadoIndexation';
+import { useIneaStore } from '@/stores/ineaStore';
+import { useIteaStore } from '@/stores/iteaStore';
+import { useNoListadoStore } from '@/stores/noListadoStore';
 import { LevMueble } from '../types';
 
 /**
@@ -30,6 +33,14 @@ export interface UseUnifiedInventoryReturn {
   realtimeConnected: boolean;
   /** Function to trigger reindexation of all three sources */
   reindex: () => Promise<void>;
+  /** True if any source is currently syncing */
+  isSyncing: boolean;
+  /** Total count of records being synced across all sources */
+  syncingCount: number;
+  /** Array of source names that are currently syncing */
+  syncingSources: string[];
+  /** Combined array of all syncing IDs from all sources */
+  syncingIds: string[];
 }
 
 /**
@@ -54,6 +65,14 @@ export function useUnifiedInventory(): UseUnifiedInventoryReturn {
   const ineaContext = useIneaIndexation();
   const iteaContext = useIteaIndexation();
   const tlaxcalaContext = useNoListadoIndexation();
+  
+  // Get sync state from all three stores
+  const ineaSyncingIds = useIneaStore(state => state.syncingIds) || [];
+  const ineaIsSyncing = useIneaStore(state => state.isSyncing);
+  const iteaSyncingIds = useIteaStore(state => state.syncingIds) || [];
+  const iteaIsSyncing = useIteaStore(state => state.isSyncing);
+  const tlaxcalaSyncingIds = useNoListadoStore(state => state.syncingIds) || [];
+  const tlaxcalaIsSyncing = useNoListadoStore(state => state.isSyncing);
 
   /**
    * Combine data from all three sources with origin labels
@@ -130,12 +149,45 @@ export function useUnifiedInventory(): UseUnifiedInventoryReturn {
       tlaxcalaContext.reindex()
     ]);
   }, [ineaContext, iteaContext, tlaxcalaContext]);
+  
+  /**
+   * Aggregate sync state from all three sources
+   * If any source is syncing, show as syncing
+   */
+  const isSyncing = ineaIsSyncing || iteaIsSyncing || tlaxcalaIsSyncing;
+  
+  /**
+   * Calculate total count of syncing records across all sources
+   */
+  const syncingCount = ineaSyncingIds.length + iteaSyncingIds.length + tlaxcalaSyncingIds.length;
+  
+  /**
+   * Get array of source names that are currently syncing
+   */
+  const syncingSources = useMemo(() => {
+    const sources: string[] = [];
+    if (ineaIsSyncing) sources.push('INEA');
+    if (iteaIsSyncing) sources.push('ITEA');
+    if (tlaxcalaIsSyncing) sources.push('TLAXCALA');
+    return sources;
+  }, [ineaIsSyncing, iteaIsSyncing, tlaxcalaIsSyncing]);
+  
+  /**
+   * Combined array of all syncing IDs from all sources
+   */
+  const syncingIds = useMemo(() => {
+    return [...ineaSyncingIds, ...iteaSyncingIds, ...tlaxcalaSyncingIds];
+  }, [ineaSyncingIds, iteaSyncingIds, tlaxcalaSyncingIds]);
 
   return {
     muebles,
     loading,
     error,
     realtimeConnected,
-    reindex
+    reindex,
+    isSyncing,
+    syncingCount,
+    syncingSources,
+    syncingIds
   };
 }

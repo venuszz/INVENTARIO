@@ -19,11 +19,22 @@ interface IneaObsoletosStore {
   muebles: MuebleINEA[];
   lastFetchedAt: string | null;
   
+  // Sync state
+  syncingIds: string[];
+  isSyncing: boolean;
+  
   // Acciones CRUD
   setMuebles: (muebles: MuebleINEA[]) => void;
   addMueble: (mueble: MuebleINEA) => void;
   updateMueble: (id: string, updates: Partial<MuebleINEA>) => void; // UUID
   removeMueble: (id: string) => void; // UUID
+  
+  // Sync actions
+  updateMuebleBatch: (muebles: MuebleINEA[]) => void;
+  setSyncingIds: (ids: string[]) => void;
+  removeSyncingIds: (ids: string[]) => void;
+  clearSyncingIds: () => void;
+  setIsSyncing: (syncing: boolean) => void;
   
   // Utilidades
   isCacheValid: (maxAgeMinutes?: number) => boolean;
@@ -47,6 +58,8 @@ export const useIneaObsoletosStore = create<IneaObsoletosStore>()(
     (set, get) => ({
   muebles: [],
   lastFetchedAt: null,
+  syncingIds: [],
+  isSyncing: false,
   
   setMuebles: (muebles) => {
     set({
@@ -77,6 +90,37 @@ export const useIneaObsoletosStore = create<IneaObsoletosStore>()(
       lastFetchedAt: new Date().toISOString(),
     }));
   },
+  
+  updateMuebleBatch: (muebles) => set((state) => {
+    const mueblesMap = new Map(state.muebles.map(m => [m.id, m]));
+    muebles.forEach(mueble => {
+      mueblesMap.set(mueble.id, mueble);
+    });
+    return {
+      muebles: Array.from(mueblesMap.values()),
+      lastFetchedAt: new Date().toISOString(),
+    };
+  }),
+  
+  setSyncingIds: (ids) => set({
+    syncingIds: ids,
+    isSyncing: ids.length > 0
+  }),
+  
+  removeSyncingIds: (ids) => set((state) => {
+    const newIds = state.syncingIds.filter(id => !ids.includes(id));
+    return {
+      syncingIds: newIds,
+      isSyncing: newIds.length > 0
+    };
+  }),
+  
+  clearSyncingIds: () => set({
+    syncingIds: [],
+    isSyncing: false
+  }),
+  
+  setIsSyncing: (syncing) => set({ isSyncing: syncing }),
   
   isCacheValid: (maxAgeMinutes = DEFAULT_CACHE_DURATION_MINUTES) => {
     const { lastFetchedAt, muebles } = get();

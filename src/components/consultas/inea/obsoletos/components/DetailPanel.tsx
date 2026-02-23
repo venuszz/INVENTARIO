@@ -126,6 +126,7 @@ interface DetailPanelProps {
   onReactivate: () => void;
   isDarkMode: boolean;
   isSyncing?: boolean;
+  isGlobalSyncing?: boolean;
   saving?: boolean;
 }
 
@@ -151,9 +152,13 @@ export const DetailPanel: React.FC<DetailPanelProps> = ({
   onReactivate,
   isDarkMode,
   isSyncing = false,
+  isGlobalSyncing = false,
   saving = false
 }) => {
   if (!selectedItem) return null;
+
+  // Disable editing if global sync is in progress
+  const isDisabled = isGlobalSyncing;
 
   return (
     <div
@@ -208,6 +213,7 @@ export const DetailPanel: React.FC<DetailPanelProps> = ({
             filterOptions={filterOptions}
             directorio={directorio}
             isDarkMode={isDarkMode}
+            isDisabled={isDisabled}
             onImageChange={onImageChange}
             onFormChange={onFormChange}
             onSelectDirector={onSelectDirector}
@@ -234,6 +240,7 @@ interface EditModeProps {
   filterOptions: FilterOptions;
   directorio: Directorio[];
   isDarkMode: boolean;
+  isDisabled?: boolean;
   onImageChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
   onFormChange: (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>, field: keyof Mueble) => void;
   onSelectDirector: (nombre: string) => void;
@@ -246,6 +253,7 @@ function EditMode({
   filterOptions,
   directorio,
   isDarkMode,
+  isDisabled = false,
   onImageChange,
   onFormChange,
   onSelectDirector
@@ -365,7 +373,10 @@ function EditMode({
             type="text"
             value={editFormData?.id_inv || ''}
             onChange={(e) => onFormChange(e, 'id_inv')}
+            disabled={isDisabled}
             className={`w-full border rounded-lg px-4 py-2.5 text-sm transition-all ${
+              isDisabled ? 'opacity-50 cursor-not-allowed' : ''
+            } ${
               isDarkMode
                 ? 'bg-black border-white/10 text-white placeholder-white/40 focus:border-white/20'
                 : 'bg-white border-black/10 text-black placeholder-black/40 focus:border-black/20'
@@ -388,6 +399,7 @@ function EditMode({
             options={filterOptions.rubros.map(rubro => ({ value: rubro, label: rubro }))}
             placeholder="Seleccione el rubro"
             isDarkMode={isDarkMode}
+            disabled={isDisabled}
           />
         </div>
 
@@ -402,7 +414,10 @@ function EditMode({
           <textarea
             value={editFormData?.descripcion || ''}
             onChange={(e) => onFormChange(e, 'descripcion')}
+            disabled={isDisabled}
             className={`w-full border rounded-lg px-4 py-2.5 text-sm transition-all ${
+              isDisabled ? 'opacity-50 cursor-not-allowed' : ''
+            } ${
               isDarkMode
                 ? 'bg-black border-white/10 text-white placeholder-white/40 focus:border-white/20'
                 : 'bg-white border-black/10 text-black placeholder-black/40 focus:border-black/20'
@@ -432,7 +447,10 @@ function EditMode({
               type="number"
               value={editFormData?.valor || 0}
               onChange={(e) => onFormChange(e, 'valor')}
+              disabled={isDisabled}
               className={`w-full border rounded-lg pl-8 pr-4 py-2.5 text-sm transition-all ${
+                isDisabled ? 'opacity-50 cursor-not-allowed' : ''
+              } ${
                 isDarkMode
                   ? 'bg-black border-white/10 text-white placeholder-white/40 focus:border-white/20'
                   : 'bg-white border-black/10 text-black placeholder-black/40 focus:border-black/20'
@@ -454,7 +472,10 @@ function EditMode({
               type="date"
               value={editFormData?.f_adq || ''}
               onChange={(e) => onFormChange(e, 'f_adq')}
+              disabled={isDisabled}
               className={`w-full border rounded-lg pl-10 pr-4 py-2.5 focus:outline-none focus:ring-2 focus:border-transparent transition-all ${
+                isDisabled ? 'opacity-50 cursor-not-allowed' : ''
+              } ${
                 isDarkMode
                   ? 'bg-gray-800 border-gray-700 text-white focus:ring-white/50'
                   : 'bg-white border-gray-300 text-gray-900 focus:ring-blue-500'
@@ -476,6 +497,7 @@ function EditMode({
             ]}
             placeholder="Seleccionar forma de adquisición"
             isDarkMode={isDarkMode}
+            disabled={isDisabled}
           />
         </div>
 
@@ -491,7 +513,10 @@ function EditMode({
               type="text"
               value={editFormData?.proveedor || ''}
               onChange={(e) => onFormChange(e, 'proveedor')}
+              disabled={isDisabled}
               className={`w-full border rounded-lg pl-10 pr-4 py-2.5 focus:outline-none focus:ring-2 focus:border-transparent transition-all ${
+                isDisabled ? 'opacity-50 cursor-not-allowed' : ''
+              } ${
                 isDarkMode
                   ? 'bg-gray-800 border-gray-700 text-white placeholder-gray-500 focus:ring-white/50'
                   : 'bg-white border-gray-300 text-gray-900 placeholder-gray-400 focus:ring-blue-500'
@@ -513,7 +538,10 @@ function EditMode({
               type="text"
               value={editFormData?.factura || ''}
               onChange={(e) => onFormChange(e, 'factura')}
+              disabled={isDisabled}
               className={`w-full border rounded-lg pl-10 pr-4 py-2.5 focus:outline-none focus:ring-2 focus:border-transparent transition-all ${
+                isDisabled ? 'opacity-50 cursor-not-allowed' : ''
+              } ${
                 isDarkMode
                   ? 'bg-gray-800 border-gray-700 text-white placeholder-gray-500 focus:ring-white/50'
                   : 'bg-white border-gray-300 text-gray-900 placeholder-gray-400 focus:ring-blue-500'
@@ -536,7 +564,10 @@ function EditMode({
               placeholder="Estado"
               value={editFormData?.ubicacion_es || ''}
               onChange={(e) => onFormChange(e, 'ubicacion_es')}
+              disabled={isDisabled}
               className={`w-full border rounded-lg pl-10 pr-4 py-2.5 focus:outline-none focus:ring-2 focus:border-transparent transition-all ${
+                isDisabled ? 'opacity-50 cursor-not-allowed' : ''
+              } ${
                 isDarkMode
                   ? 'bg-gray-800 border-gray-700 text-white placeholder-gray-500 focus:ring-white/50'
                   : 'bg-white border-gray-300 text-gray-900 placeholder-gray-400 focus:ring-blue-500'
@@ -554,7 +585,10 @@ function EditMode({
             placeholder="Municipio"
             value={editFormData?.ubicacion_mu || ''}
             onChange={(e) => onFormChange(e, 'ubicacion_mu')}
+            disabled={isDisabled}
             className={`w-full border rounded-lg px-4 py-2.5 focus:outline-none focus:ring-2 focus:border-transparent transition-all ${
+              isDisabled ? 'opacity-50 cursor-not-allowed' : ''
+            } ${
               isDarkMode
                 ? 'bg-gray-800 border-gray-700 text-white placeholder-gray-500 focus:ring-white/50'
                 : 'bg-white border-gray-300 text-gray-900 placeholder-gray-400 focus:ring-blue-500'
@@ -571,7 +605,10 @@ function EditMode({
             placeholder="Nomenclatura"
             value={editFormData?.ubicacion_no || ''}
             onChange={(e) => onFormChange(e, 'ubicacion_no')}
+            disabled={isDisabled}
             className={`w-full border rounded-lg px-4 py-2.5 focus:outline-none focus:ring-2 focus:border-transparent transition-all ${
+              isDisabled ? 'opacity-50 cursor-not-allowed' : ''
+            } ${
               isDarkMode
                 ? 'bg-gray-800 border-gray-700 text-white placeholder-gray-500 focus:ring-white/50'
                 : 'bg-white border-gray-300 text-gray-900 placeholder-gray-400 focus:ring-blue-500'
@@ -592,6 +629,7 @@ function EditMode({
             ]}
             placeholder="Seleccione un estado"
             isDarkMode={isDarkMode}
+            disabled={isDisabled}
           />
         </div>
 
@@ -628,6 +666,7 @@ function EditMode({
             ]}
             placeholder="Seleccionar Director/Jefe"
             isDarkMode={isDarkMode}
+            disabled={isDisabled}
           />
         </div>
 

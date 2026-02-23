@@ -31,6 +31,7 @@ import { FilterChips } from './components/FilterChips';
 import { ExportButtons } from './components/ExportButtons';
 import { InventoryTable } from './components/InventoryTable';
 import { Pagination } from './components/Pagination';
+import SyncStatusBanner from './components/SyncStatusBanner';
 
 // Import modals
 import { ExportModal } from './modals/ExportModal';
@@ -59,7 +60,11 @@ export default function LevantamientoUnificado() {
     loading,
     error: inventoryError,
     realtimeConnected,
-    reindex
+    reindex,
+    isSyncing,
+    syncingCount,
+    syncingSources,
+    syncingIds
   } = useUnifiedInventory();
 
   // Pagination state
@@ -523,6 +528,14 @@ export default function LevantamientoUnificado() {
               />
             </div>
 
+            {/* Sync Status Banner */}
+            <SyncStatusBanner 
+              isSyncing={isSyncing} 
+              syncingCount={syncingCount} 
+              syncingSources={syncingSources}
+              isDarkMode={isDarkMode} 
+            />
+
             {/* Search and filters */}
             <div style={{ 
               marginBottom: 'clamp(1rem, 1.5vw, 1.5rem)',
@@ -608,6 +621,7 @@ export default function LevantamientoUnificado() {
                     onSort={handleSort}
                     foliosResguardo={foliosResguardo}
                     onFolioClick={handleFolioClick}
+                    syncingIds={syncingIds}
                     isDarkMode={isDarkMode}
                   />
 

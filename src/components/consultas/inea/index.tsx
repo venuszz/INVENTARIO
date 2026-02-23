@@ -24,6 +24,7 @@ import FilterChips from './components/FilterChips';
 import InventoryTable from './components/InventoryTable';
 import DetailPanel from './components/DetailPanel';
 import Pagination from './components/Pagination';
+import SyncStatusBanner from './components/SyncStatusBanner';
 
 // Import modals
 import InactiveModal from './modals/InactiveModal';
@@ -45,6 +46,7 @@ export default function ConsultasIneaGeneral() {
   // Initialize indexation hook
   const { muebles, isIndexing, realtimeConnected, reindex } = useIneaIndexation();
   const syncingIds = useIneaStore(state => state.syncingIds) || [];
+  const isSyncing = useIneaStore(state => state.isSyncing);
 
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
@@ -415,6 +417,13 @@ export default function ConsultasIneaGeneral() {
               onReindex={reindex}
             />
 
+            {/* Floating Sync Status Banner */}
+            <SyncStatusBanner
+              isSyncing={isSyncing}
+              syncingCount={syncingIds.length}
+              isDarkMode={isDarkMode}
+            />
+
             {/* Value Stats Panel */}
             <motion.div
               initial={{ opacity: 0 }}
@@ -588,6 +597,7 @@ export default function ConsultasIneaGeneral() {
                       onSelectDirector={handleSelectDirector}
                       isDarkMode={isDarkMode}
                       isSyncing={selectedItem ? (Array.isArray(syncingIds) && syncingIds.includes(selectedItem.id)) : false}
+                      isGlobalSyncing={isSyncing}
                     />
                     
                     {/* Action Buttons - mismo diseño que Pagination */}
@@ -647,39 +657,57 @@ export default function ConsultasIneaGeneral() {
                           <>
                             <motion.button
                               onClick={handleStartEdit}
+                              disabled={isSyncing}
                               className={`flex items-center gap-[0.5vw] px-[1vw] py-[0.5vw] rounded-lg border text-[0.875rem] font-light tracking-tight transition-all ${
-                                isDarkMode
-                                  ? 'bg-white/5 border-white/10 text-white hover:bg-white/10'
-                                  : 'bg-black/5 border-black/10 text-black hover:bg-black/10'
+                                isSyncing
+                                  ? isDarkMode
+                                    ? 'bg-white/[0.02] border-white/10 text-white/30 cursor-not-allowed'
+                                    : 'bg-black/[0.02] border-black/10 text-black/30 cursor-not-allowed'
+                                  : isDarkMode
+                                    ? 'bg-white/5 border-white/10 text-white hover:bg-white/10'
+                                    : 'bg-black/5 border-black/10 text-black hover:bg-black/10'
                               }`}
-                              whileHover={{ scale: 1.02 }}
-                              whileTap={{ scale: 0.98 }}
+                              whileHover={!isSyncing ? { scale: 1.02 } : {}}
+                              whileTap={!isSyncing ? { scale: 0.98 } : {}}
+                              title={isSyncing ? 'Espera a que termine la sincronización' : 'Editar registro'}
                             >
                               <Edit className="h-[0.875vw] w-[0.875vw] min-h-[12px] min-w-[12px]" />
                               Editar
                             </motion.button>
                             <motion.button
                               onClick={markAsInactive}
+                              disabled={isSyncing}
                               className={`flex items-center gap-[0.5vw] px-[1vw] py-[0.5vw] rounded-lg border text-[0.875rem] font-light tracking-tight transition-all ${
-                                isDarkMode
-                                  ? 'bg-white/[0.02] border-white/10 text-white/60 hover:bg-white/5 hover:text-white'
-                                  : 'bg-black/[0.02] border-black/10 text-black/60 hover:bg-black/5 hover:text-black'
+                                isSyncing
+                                  ? isDarkMode
+                                    ? 'bg-white/[0.02] border-white/10 text-white/20 cursor-not-allowed'
+                                    : 'bg-black/[0.02] border-black/10 text-black/20 cursor-not-allowed'
+                                  : isDarkMode
+                                    ? 'bg-white/[0.02] border-white/10 text-white/60 hover:bg-white/5 hover:text-white'
+                                    : 'bg-black/[0.02] border-black/10 text-black/60 hover:bg-black/5 hover:text-black'
                               }`}
-                              whileHover={{ scale: 1.02 }}
-                              whileTap={{ scale: 0.98 }}
+                              whileHover={!isSyncing ? { scale: 1.02 } : {}}
+                              whileTap={!isSyncing ? { scale: 0.98 } : {}}
+                              title={isSyncing ? 'Espera a que termine la sincronización' : 'Marcar como inactivo'}
                             >
                               <AlertTriangle className="h-[0.875vw] w-[0.875vw] min-h-[12px] min-w-[12px]" />
                               Inactivo
                             </motion.button>
                             <motion.button
                               onClick={markAsBaja}
+                              disabled={isSyncing}
                               className={`flex items-center gap-[0.5vw] px-[1vw] py-[0.5vw] rounded-lg border text-[0.875rem] font-light tracking-tight transition-all ${
-                                isDarkMode
-                                  ? 'bg-white/[0.02] border-white/10 text-white/60 hover:bg-white/5 hover:text-white'
-                                  : 'bg-black/[0.02] border-black/10 text-black/60 hover:bg-black/5 hover:text-black'
+                                isSyncing
+                                  ? isDarkMode
+                                    ? 'bg-white/[0.02] border-white/10 text-white/20 cursor-not-allowed'
+                                    : 'bg-black/[0.02] border-black/10 text-black/20 cursor-not-allowed'
+                                  : isDarkMode
+                                    ? 'bg-white/[0.02] border-white/10 text-white/60 hover:bg-white/5 hover:text-white'
+                                    : 'bg-black/[0.02] border-black/10 text-black/60 hover:bg-black/5 hover:text-black'
                               }`}
-                              whileHover={{ scale: 1.02 }}
-                              whileTap={{ scale: 0.98 }}
+                              whileHover={!isSyncing ? { scale: 1.02 } : {}}
+                              whileTap={!isSyncing ? { scale: 0.98 } : {}}
+                              title={isSyncing ? 'Espera a que termine la sincronización' : 'Dar de baja'}
                             >
                               <Trash2 className="h-[0.875vw] w-[0.875vw] min-h-[12px] min-w-[12px]" />
                               Dar de Baja

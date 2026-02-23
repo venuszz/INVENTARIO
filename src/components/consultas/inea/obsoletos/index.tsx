@@ -4,6 +4,7 @@ import { useState, useRef, useEffect, useMemo } from 'react';
 import { useTheme } from '@/context/ThemeContext';
 import { useUserRole } from '@/hooks/useUserRole';
 import { useIneaObsoletosIndexation } from '@/hooks/indexation/useIneaObsoletosIndexation';
+import { useIneaObsoletosStore } from '@/stores/ineaObsoletosStore';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useRouter } from 'next/navigation';
 
@@ -24,6 +25,7 @@ import SuggestionDropdown from '@/components/consultas/inea/components/Suggestio
 import { InventoryTable } from './components/InventoryTable';
 import { DetailPanel } from './components/DetailPanel';
 import { Pagination } from './components/Pagination';
+import { SyncStatusBanner } from './components/SyncStatusBanner';
 
 // Import modals
 import { ReactivarModal } from './modals/ReactivarModal';
@@ -42,7 +44,8 @@ export default function ConsultasIneaObsoletos() {
 
   // Initialize indexation hook
   const { muebles, isIndexing, realtimeConnected, reindex: reindexObsoletos } = useIneaObsoletosIndexation();
-  const syncingIds: string[] = [];
+  const syncingIds = useIneaObsoletosStore(state => state.syncingIds) || [];
+  const isSyncing = useIneaObsoletosStore(state => state.isSyncing);
 
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
@@ -309,6 +312,13 @@ export default function ConsultasIneaObsoletos() {
               realtimeConnected={realtimeConnected}
             />
 
+            {/* Floating Sync Status Banner */}
+            <SyncStatusBanner
+              isSyncing={isSyncing}
+              syncingCount={syncingIds.length}
+              isDarkMode={isDarkMode}
+            />
+
             {/* Value Stats Panel */}
             <motion.div
               initial={{ opacity: 0 }}
@@ -482,6 +492,7 @@ export default function ConsultasIneaObsoletos() {
                       onReactivate={() => setShowReactivarModal(true)}
                       isDarkMode={isDarkMode}
                       isSyncing={selectedItem ? (Array.isArray(syncingIds) && syncingIds.includes(selectedItem.id)) : false}
+                      isGlobalSyncing={isSyncing}
                       saving={loading}
                     />
                     
@@ -493,9 +504,9 @@ export default function ConsultasIneaObsoletos() {
                         <>
                           <motion.button
                             onClick={saveChanges}
-                            disabled={isSaving}
+                            disabled={isSaving || isSyncing}
                             className={`flex items-center gap-[0.5vw] px-[1vw] py-[0.5vw] rounded-lg border text-[0.875rem] font-light tracking-tight transition-all ${
-                              isSaving
+                              isSaving || isSyncing
                                 ? isDarkMode
                                   ? 'bg-white/5 border-white/10 text-white/40 cursor-not-allowed'
                                   : 'bg-black/5 border-black/10 text-black/40 cursor-not-allowed'
@@ -503,8 +514,9 @@ export default function ConsultasIneaObsoletos() {
                                   ? 'bg-white/5 border-white/10 text-white hover:bg-white/10'
                                   : 'bg-black/5 border-black/10 text-black hover:bg-black/10'
                             }`}
-                            whileHover={!isSaving ? { scale: 1.02 } : {}}
-                            whileTap={!isSaving ? { scale: 0.98 } : {}}
+                            whileHover={!isSaving && !isSyncing ? { scale: 1.02 } : {}}
+                            whileTap={!isSaving && !isSyncing ? { scale: 0.98 } : {}}
+                            title={isSyncing ? 'Espera a que termine la sincronización' : undefined}
                           >
                             {isSaving ? (
                               <>
@@ -520,9 +532,9 @@ export default function ConsultasIneaObsoletos() {
                           </motion.button>
                           <motion.button
                             onClick={cancelEdit}
-                            disabled={isSaving}
+                            disabled={isSaving || isSyncing}
                             className={`flex items-center gap-[0.5vw] px-[1vw] py-[0.5vw] rounded-lg border text-[0.875rem] font-light tracking-tight transition-all ${
-                              isSaving
+                              isSaving || isSyncing
                                 ? isDarkMode
                                   ? 'bg-white/[0.02] border-white/10 text-white/30 cursor-not-allowed'
                                   : 'bg-black/[0.02] border-black/10 text-black/30 cursor-not-allowed'
@@ -530,8 +542,8 @@ export default function ConsultasIneaObsoletos() {
                                   ? 'bg-white/[0.02] border-white/10 text-white/60 hover:bg-white/5 hover:text-white'
                                   : 'bg-black/[0.02] border-black/10 text-black/60 hover:bg-black/5 hover:text-black'
                             }`}
-                            whileHover={!isSaving ? { scale: 1.02 } : {}}
-                            whileTap={!isSaving ? { scale: 0.98 } : {}}
+                            whileHover={!isSaving && !isSyncing ? { scale: 1.02 } : {}}
+                            whileTap={!isSaving && !isSyncing ? { scale: 0.98 } : {}}
                           >
                             <X className="h-[0.875vw] w-[0.875vw] min-h-[12px] min-w-[12px]" />
                             Cancelar
@@ -542,26 +554,38 @@ export default function ConsultasIneaObsoletos() {
                           <>
                             <motion.button
                               onClick={handleStartEdit}
+                              disabled={isSyncing}
                               className={`flex items-center gap-[0.5vw] px-[1vw] py-[0.5vw] rounded-lg border text-[0.875rem] font-light tracking-tight transition-all ${
-                                isDarkMode
-                                  ? 'bg-white/5 border-white/10 text-white hover:bg-white/10'
-                                  : 'bg-black/5 border-black/10 text-black hover:bg-black/10'
+                                isSyncing
+                                  ? isDarkMode
+                                    ? 'bg-white/[0.02] border-white/10 text-white/30 cursor-not-allowed'
+                                    : 'bg-black/[0.02] border-black/10 text-black/30 cursor-not-allowed'
+                                  : isDarkMode
+                                    ? 'bg-white/5 border-white/10 text-white hover:bg-white/10'
+                                    : 'bg-black/5 border-black/10 text-black hover:bg-black/10'
                               }`}
-                              whileHover={{ scale: 1.02 }}
-                              whileTap={{ scale: 0.98 }}
+                              whileHover={!isSyncing ? { scale: 1.02 } : {}}
+                              whileTap={!isSyncing ? { scale: 0.98 } : {}}
+                              title={isSyncing ? 'Espera a que termine la sincronización' : 'Editar registro'}
                             >
                               <Edit className="h-[0.875vw] w-[0.875vw] min-h-[12px] min-w-[12px]" />
                               Editar
                             </motion.button>
                             <motion.button
                               onClick={() => setShowReactivarModal(true)}
+                              disabled={isSyncing}
                               className={`flex items-center gap-[0.5vw] px-[1vw] py-[0.5vw] rounded-lg border text-[0.875rem] font-light tracking-tight transition-all ${
-                                isDarkMode
-                                  ? 'bg-white/[0.02] border-white/10 text-white/60 hover:bg-white/5 hover:text-white'
-                                  : 'bg-black/[0.02] border-black/10 text-black/60 hover:bg-black/5 hover:text-black'
+                                isSyncing
+                                  ? isDarkMode
+                                    ? 'bg-white/[0.02] border-white/10 text-white/20 cursor-not-allowed'
+                                    : 'bg-black/[0.02] border-black/10 text-black/20 cursor-not-allowed'
+                                  : isDarkMode
+                                    ? 'bg-white/[0.02] border-white/10 text-white/60 hover:bg-white/5 hover:text-white'
+                                    : 'bg-black/[0.02] border-black/10 text-black/60 hover:bg-black/5 hover:text-black'
                               }`}
-                              whileHover={{ scale: 1.02 }}
-                              whileTap={{ scale: 0.98 }}
+                              whileHover={!isSyncing ? { scale: 1.02 } : {}}
+                              whileTap={!isSyncing ? { scale: 0.98 } : {}}
+                              title={isSyncing ? 'Espera a que termine la sincronización' : 'Reactivar artículo'}
                             >
                               <RotateCw className="h-[0.875vw] w-[0.875vw] min-h-[12px] min-w-[12px]" />
                               Reactivar

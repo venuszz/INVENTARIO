@@ -39,6 +39,11 @@ export function useIneaObsoletosIndexation() {
     updateMueble,
     removeMueble,
     isCacheValid,
+    updateMuebleBatch,
+    setSyncingIds,
+    removeSyncingIds,
+    clearSyncingIds,
+    setIsSyncing,
   } = useIneaObsoletosStore();
   
   const isIndexingRef = useRef(false);
@@ -46,6 +51,119 @@ export function useIneaObsoletosIndexation() {
   const reconnectionTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const isInitializedRef = useRef(false);
   const hasHydratedRef = useRef(false);
+  const syncQueueRef = useRef<{ ids: string[]; type: 'area' | 'directorio'; refId: number } | null>(null);
+  const isSyncingRef = useRef(false);
+  
+  /**
+   * Process updates in batches to avoid UI lag and handle Supabase 1000-record limit
+   */
+  const processBatchUpdates = useCallback(async (
+    _ids: string[],
+    type: 'area' | 'directorio',
+    refId: number
+  ) => {
+    if (isSyncingRef.current) {
+      syncQueueRef.current = { ids: _ids, type, refId };
+      return;
+    }
+    
+    isSyncingRef.current = true;
+    setIsSyncing(true);
+    
+    const BATCH_SIZE = 1000;
+    const allFetchedMuebles: MuebleINEA[] = [];
+    const filterField = type === 'area' ? 'id_area' : 'id_directorio';
+    
+    // Fetch all affected records in batches of 1000
+    let hasMore = true;
+    let offset = 0;
+    
+    while (hasMore) {
+      try {
+        const { data: affectedMuebles, error } = await supabase
+          .from(TABLE)
+          .select(`
+            *,
+            area:id_area(id_area, nombre),
+            directorio:id_directorio(id_directorio, nombre, puesto)
+          `)
+          .eq(filterField, refId)
+          .eq('estatus', 'BAJA')
+          .range(offset, offset + BATCH_SIZE - 1);
+        
+        if (error) {
+          console.error(`Error fetching batch at offset ${offset}:`, error);
+          break;
+        }
+        
+        if (affectedMuebles && affectedMuebles.length > 0) {
+          // Fetch resguardos for these muebles
+          const muebleIds = affectedMuebles.map(m => m.id);
+          const { data: resguardos } = await supabase
+            .from('resguardos')
+            .select('id_mueble, resguardante, f_resguardo')
+            .in('id_mueble', muebleIds)
+            .eq('origen', 'INEA')
+            .order('f_resguardo', { ascending: false });
+          
+          // Create map of most recent resguardo per mueble
+          const resguardoMap = new Map<string, string | null>();
+          if (resguardos) {
+            resguardos.forEach(r => {
+              if (!resguardoMap.has(r.id_mueble)) {
+                resguardoMap.set(r.id_mueble, r.resguardante || null);
+              }
+            });
+          }
+          
+          // Transform data to extract resguardante
+          const transformed = affectedMuebles.map(item => ({
+            ...item,
+            resguardante: resguardoMap.get(item.id) || null
+          }));
+          allFetchedMuebles.push(...transformed);
+          
+          // Set syncing IDs for skeleton display - THIS TRIGGERS RE-RENDER
+          const ids = affectedMuebles.map(m => m.id);
+          setSyncingIds(ids);
+          
+          hasMore = affectedMuebles.length === BATCH_SIZE;
+          offset += BATCH_SIZE;
+        } else {
+          hasMore = false;
+        }
+      } catch (error) {
+        console.error(`Error processing batch at offset ${offset}:`, error);
+        break;
+      }
+    }
+    
+    // Ensure minimum skeleton display time of 800ms
+    await new Promise(resolve => setTimeout(resolve, 800));
+    
+    // Update store in batches of 50 to avoid UI lag
+    const UI_BATCH_SIZE = 50;
+    for (let i = 0; i < allFetchedMuebles.length; i += UI_BATCH_SIZE) {
+      const batch = allFetchedMuebles.slice(i, i + UI_BATCH_SIZE);
+      updateMuebleBatch(batch);
+      
+      const syncedIds = batch.map(m => m.id);
+      removeSyncingIds(syncedIds);
+      
+      // Small delay between batches to show progressive update
+      await new Promise(resolve => setTimeout(resolve, 100));
+    }
+    
+    clearSyncingIds();
+    setIsSyncing(false);
+    isSyncingRef.current = false;
+    
+    if (syncQueueRef.current) {
+      const queued = syncQueueRef.current;
+      syncQueueRef.current = null;
+      await processBatchUpdates(queued.ids, queued.type, queued.refId);
+    }
+  }, [updateMuebleBatch, setSyncingIds, removeSyncingIds, clearSyncingIds, setIsSyncing]);
   
   const indexData = useCallback(async () => {
     if (isIndexingRef.current) {
@@ -283,6 +401,32 @@ export function useIneaObsoletosIndexation() {
           handleReconciliation();
         }
       })
+      // Listen to area table changes
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'area' },
+        async (payload: any) => {
+          const { new: updatedArea } = payload;
+          updateLastEventReceived(MODULE_KEY);
+
+          try {
+            processBatchUpdates([], 'area', updatedArea.id_area);
+          } catch (error) {
+            console.error('Error handling area update:', error);
+          }
+        }
+      )
+      // Listen to directorio table changes
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'directorio' },
+        async (payload: any) => {
+          const { new: updatedDirector } = payload;
+          updateLastEventReceived(MODULE_KEY);
+
+          try {
+            processBatchUpdates([], 'directorio', updatedDirector.id_directorio);
+          } catch (error) {
+            console.error('Error handling director update:', error);
+          }
+        }
+      )
       // Listen to resguardos table changes
       .on('postgres_changes', 
         { event: '*', schema: 'public', table: 'resguardos', filter: 'origen=eq.INEA' },
@@ -328,7 +472,7 @@ export function useIneaObsoletosIndexation() {
       .subscribe();
     
     channelRef.current = channel;
-  }, [indexationState?.realtimeConnected, updateRealtimeConnection, updateLastEventReceived, setDisconnectedAt, addMueble, updateMueble, removeMueble]);
+  }, [indexationState?.realtimeConnected, updateRealtimeConnection, updateLastEventReceived, setDisconnectedAt, addMueble, updateMueble, removeMueble, processBatchUpdates]);
   
   const handleReconnection = useCallback(async () => {
     const state = indexationState;

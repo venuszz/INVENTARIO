@@ -20,6 +20,7 @@ interface InventoryTableProps {
   onSort: (field: keyof LevMueble) => void;
   foliosResguardo: Record<string, string>;
   onFolioClick: (folio: string) => void;
+  syncingIds: string[];
   isDarkMode: boolean;
 }
 
@@ -44,11 +45,30 @@ export function InventoryTable({
   onSort,
   foliosResguardo,
   onFolioClick,
+  syncingIds,
   isDarkMode
 }: InventoryTableProps) {
   
   const origenColors = getOrigenColors(isDarkMode);
   const estatusColors = getEstatusColors(isDarkMode);
+  
+  /**
+   * Check if a mueble is currently syncing
+   */
+  const isMuebleSyncing = (muebleId: string) => {
+    return syncingIds.includes(muebleId);
+  };
+  
+  /**
+   * Skeleton loader component for syncing cells
+   */
+  function SkeletonLoader() {
+    return (
+      <div className={`h-4 rounded animate-pulse ${
+        isDarkMode ? 'bg-white/10' : 'bg-black/10'
+      }`} style={{ width: '80%' }} />
+    );
+  }
 
   /**
    * Sortable column header component
@@ -192,35 +212,46 @@ export function InventoryTable({
                 <td className={`px-4 py-4 align-top text-sm ${
                   isDarkMode ? 'text-white/80' : 'text-black/80'
                 }`}>
-                  <div className="line-clamp-3" title={item.area?.nombre || ''}>
-                    {item.area?.nombre || '-'}
-                  </div>
+                  {isMuebleSyncing(item.id) ? (
+                    <SkeletonLoader />
+                  ) : (
+                    <div className="line-clamp-3" title={item.area?.nombre || ''}>
+                      {item.area?.nombre || '-'}
+                    </div>
+                  )}
                 </td>
 
                 {/* Usuario Final / Resguardante */}
                 <td className={`px-4 py-4 align-top text-sm ${
                   isDarkMode ? 'text-white/80' : 'text-black/80'
                 }`}>
-                  <div className="flex flex-col gap-1">
-                    <span className={`font-medium line-clamp-3 ${
-                      isDarkMode ? 'text-white' : 'text-black'
-                    }`} title={item.directorio?.nombre || ''}>
-                      {item.directorio?.nombre || (
-                        <span className={isDarkMode ? 'text-white/40' : 'text-black/40'}>
-                          Sin director
+                  {isMuebleSyncing(item.id) ? (
+                    <div className="flex flex-col gap-1">
+                      <SkeletonLoader />
+                      {item.resguardante && <SkeletonLoader />}
+                    </div>
+                  ) : (
+                    <div className="flex flex-col gap-1">
+                      <span className={`font-medium line-clamp-3 ${
+                        isDarkMode ? 'text-white' : 'text-black'
+                      }`} title={item.directorio?.nombre || ''}>
+                        {item.directorio?.nombre || (
+                          <span className={isDarkMode ? 'text-white/40' : 'text-black/40'}>
+                            Sin director
+                          </span>
+                        )}
+                      </span>
+                      {item.resguardante && (
+                        <span className={`inline-block px-2 py-0.5 text-xs font-medium rounded-full border line-clamp-3 ${
+                          isDarkMode 
+                            ? 'bg-white/5 text-white/80 border-white/10' 
+                            : 'bg-black/5 text-black/80 border-black/10'
+                        }`} title={item.resguardante}>
+                          {item.resguardante}
                         </span>
                       )}
-                    </span>
-                    {item.resguardante && (
-                      <span className={`inline-block px-2 py-0.5 text-xs font-medium rounded-full border line-clamp-3 ${
-                        isDarkMode 
-                          ? 'bg-white/5 text-white/80 border-white/10' 
-                          : 'bg-black/5 text-black/80 border-black/10'
-                      }`} title={item.resguardante}>
-                        {item.resguardante}
-                      </span>
-                    )}
-                  </div>
+                    </div>
+                  )}
                 </td>
 
                 {/* Estatus Badge */}
