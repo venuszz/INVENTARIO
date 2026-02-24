@@ -297,21 +297,41 @@ export default function LevantamientoUnificado() {
   /**
    * Get filtered muebles for custom PDF export
    */
-  const getFilteredMueblesForExportPDF = (): LevMueble[] => {
-    return filteredMuebles.filter(item => 
+  const getFilteredMueblesForExportPDF = (omitEmptyStatus = false): LevMueble[] => {
+    let filtered = filteredMuebles.filter(item => 
       item && 
       typeof item === 'object' && 
       item.id_inv && 
       item.area?.nombre && 
       item.directorio?.nombre
     );
+
+    if (omitEmptyStatus) {
+      filtered = filtered.filter(item => item.estatus && item.estatus.trim() !== '');
+    }
+
+    return filtered;
+  };
+
+  /**
+   * Count records without status
+   */
+  const getRecordsWithoutStatusCount = (): number => {
+    const baseFiltered = filteredMuebles.filter(item => 
+      item && 
+      typeof item === 'object' && 
+      item.id_inv && 
+      item.area?.nombre && 
+      item.directorio?.nombre
+    );
+    return baseFiltered.filter(item => !item.estatus || item.estatus.trim() === '').length;
   };
 
   /**
    * Handle custom PDF export confirmation
    * Since área and director come from relational IDs, generate PDF directly
    */
-  const handleCustomPDFConfirm = async (directorData: { nombre: string; puesto: string }) => {
+  const handleCustomPDFConfirm = async (directorData: { nombre: string; puesto: string }, omitEmptyStatus: boolean, observationsMode: boolean) => {
     setAreaPDFLoading(true);
     setAreaPDFError(null);
     
@@ -322,7 +342,7 @@ export default function LevantamientoUnificado() {
         puesto: directorData.puesto
       }];
 
-      const dataToExport = getFilteredMueblesForExportPDF();
+      const dataToExport = getFilteredMueblesForExportPDF(omitEmptyStatus);
       
       if (!Array.isArray(dataToExport) || dataToExport.length === 0) {
         setAreaPDFError('No hay datos para exportar.');
@@ -344,19 +364,31 @@ export default function LevantamientoUnificado() {
       const areaFilter = activeFilters.find(f => f.type === 'area');
       const areaNombre = areaFilter?.term || 'area';
 
+      // Define columns based on observations mode
+      const columns = observationsMode
+        ? [
+            { header: 'ID INVENTARIO', key: 'id_inv', width: 60 },
+            { header: 'DESCRIPCIÓN', key: 'descripcion', width: 150 },
+            { header: 'ESTADO', key: 'estado', width: 50 },
+            { header: 'OBSERVACIONES', key: 'observaciones', width: 150 },
+          ]
+        : [
+            { header: 'ID INVENTARIO', key: 'id_inv', width: 60 },
+            { header: 'DESCRIPCIÓN', key: 'descripcion', width: 120 },
+            { header: 'ESTADO', key: 'estado', width: 50 },
+            { header: 'ESTATUS', key: 'estatus', width: 50 },
+            { header: 'ÁREA', key: 'area', width: 60 },
+            { header: 'USUARIO FINAL', key: 'usufinal', width: 70 },
+          ];
+
       await generatePDFPerArea({
         data: plainData as Record<string, unknown>[],
         firmas,
-        columns: [
-          { header: 'ID INVENTARIO', key: 'id_inv', width: 60 },
-          { header: 'DESCRIPCIÓN', key: 'descripcion', width: 120 },
-          { header: 'ESTADO', key: 'estado', width: 50 },
-          { header: 'ESTATUS', key: 'estatus', width: 50 },
-          { header: 'ÁREA', key: 'area', width: 60 },
-          { header: 'USUARIO FINAL', key: 'usufinal', width: 70 },
-        ],
+        columns,
         title: 'LEVANTAMIENTO DE INVENTARIO',
-        fileName: `levantamiento_${areaNombre}_${new Date().toISOString().slice(0, 10)}`
+        fileName: `levantamiento_${areaNombre}_${new Date().toISOString().slice(0, 10)}`,
+        omitEmptyStatus,
+        observationsMode
       });
 
       setShowAreaPDFModal(false);
@@ -519,7 +551,7 @@ export default function LevantamientoUnificado() {
                   Levantamiento Unificado
                 </h1>
                 <p className={`${isDarkMode ? 'text-white/40' : 'text-black/40'}`} style={{ fontSize: 'clamp(0.75rem, 0.875vw, 0.875rem)' }}>
-                  Consulta integrada de inventario INEA, ITEA y TLAXCALA
+                  Consulta integrada de inventario INEA, ITEJPA y TLAXCALA
                 </p>
               </div>
               <SectionRealtimeToggle
@@ -686,7 +718,8 @@ export default function LevantamientoUnificado() {
         onDirectorSelect={handleDirectorSelect}
         loading={areaPDFLoading}
         error={areaPDFError}
-        recordCount={getFilteredMueblesForExportPDF().length}
+        recordCount={getFilteredMueblesForExportPDF(false).length}
+        recordsWithoutStatus={getRecordsWithoutStatusCount()}
         isDarkMode={isDarkMode}
       />
 

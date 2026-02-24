@@ -3,7 +3,7 @@
  * 
  * Aggregates and manages data from three indexation sources:
  * - INEA (Instituto Nacional para la Educación de los Adultos)
- * - ITEA (Instituto Tlaxcalteca para la Educación de los Adultos)
+ * - ITEJPA (Instituto Tlaxcalteca para la Educación de los Adultos - Jóvenes y Adultos)
  * - TLAXCALA (No Listado)
  * 
  * This hook combines data from all three sources, adds origin labels,
@@ -88,10 +88,13 @@ export function useUnifiedInventory(): UseUnifiedInventoryReturn {
       id_directorio: item.id_directorio,
       area: item.area,           // Keep nested object
       directorio: item.directorio, // Keep nested object
+      // Color fields (INEA doesn't have colors)
+      color: null,
+      colores: null,
       origen: 'INEA' as const 
     }));
     
-    // Map ITEA data - PRESERVE relational fields
+    // Map ITEA data - PRESERVE relational fields and color data
     const iteaData = iteaContext.muebles.map(item => ({ 
       ...item,
       resguardante: (item as any).resguardante ?? null,
@@ -100,7 +103,10 @@ export function useUnifiedInventory(): UseUnifiedInventoryReturn {
       id_directorio: item.id_directorio,
       area: item.area,           // Keep nested object
       directorio: item.directorio, // Keep nested object
-      origen: 'ITEA' as const 
+      // Preserve color fields from ITEA
+      color: (item as any).color ?? null,
+      colores: (item as any).colores ?? null,
+      origen: 'ITEJPA' as const 
     }));
     
     // Map TLAXCALA data - PRESERVE relational fields
@@ -113,6 +119,9 @@ export function useUnifiedInventory(): UseUnifiedInventoryReturn {
       id_directorio: item.id_directorio,
       area: item.area,           // Keep nested object
       directorio: item.directorio, // Keep nested object
+      // Color fields (TLAXCALA doesn't have colors)
+      color: null,
+      colores: null,
       origen: 'TLAXCALA' as const 
     }));
 
@@ -167,7 +176,7 @@ export function useUnifiedInventory(): UseUnifiedInventoryReturn {
   const syncingSources = useMemo(() => {
     const sources: string[] = [];
     if (ineaIsSyncing) sources.push('INEA');
-    if (iteaIsSyncing) sources.push('ITEA');
+    if (iteaIsSyncing) sources.push('ITEJPA');
     if (tlaxcalaIsSyncing) sources.push('TLAXCALA');
     return sources;
   }, [ineaIsSyncing, iteaIsSyncing, tlaxcalaIsSyncing]);

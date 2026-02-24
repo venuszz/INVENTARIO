@@ -14,6 +14,8 @@ interface PDFOptions {
     fileName: string;
     firmas?: Firma[];
     valorTotal?: number;
+    omitEmptyStatus?: boolean;
+    observationsMode?: boolean;
 }
 
 interface Column {
@@ -24,7 +26,12 @@ interface Column {
     keys?: string[];
 }
 
-export const generatePDF = async ({ data, columns, title, fileName, firmas = [] }: PDFOptions) => {
+export const generatePDF = async ({ data, columns, title, fileName, firmas = [], omitEmptyStatus = false, observationsMode = false }: PDFOptions) => {
+    // Filter data if omitEmptyStatus is true
+    const filteredData = omitEmptyStatus 
+        ? data.filter(item => item.estatus && (item.estatus as string).trim() !== '')
+        : data;
+
     const pdfDoc = await PDFDocument.create();
 
     const ineaImageBytes = await fetch('/images/INEA NACIONAL.png').then(res => res.arrayBuffer());
@@ -210,7 +217,7 @@ export const generatePDF = async ({ data, columns, title, fileName, firmas = [] 
     };
 
     const bienesPorOrigen: Record<string, Record<string, unknown>[]> = {};
-    for (const row of data) {
+    for (const row of filteredData) {
         const origen = (row.origen as string)?.toUpperCase() || 'SIN ORIGEN';
         if (!bienesPorOrigen[origen]) bienesPorOrigen[origen] = [];
         bienesPorOrigen[origen].push(row);
@@ -409,8 +416,8 @@ export const generatePDF = async ({ data, columns, title, fileName, firmas = [] 
 
     const origenesList = Object.keys(bienesPorOrigen);
     // Obtener datos generales para el encabezado de la primera página
-    const areaGeneral = (data[0]?.area || '').toString().toUpperCase();
-    const directorGeneral = (data[0]?.usufinal || '').toString().toUpperCase();
+    const areaGeneral = (filteredData[0]?.area || '').toString().toUpperCase();
+    const directorGeneral = (filteredData[0]?.usufinal || '').toString().toUpperCase();
     // Formatear la fecha como '1 de enero de 2025'
     const fechaActual = new Date();
     const meses = [

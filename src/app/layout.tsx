@@ -7,6 +7,7 @@ import { ThemeProvider } from "@/context/ThemeContext";
 import IndexationPopover from "@/components/IndexationPopover";
 import SileoToaster from "@/components/SileoToaster";
 import GlobalInconsistencyAlert from "@/components/GlobalInconsistencyAlert";
+import FloatingNotifications from "@/components/FloatingNotifications";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -50,6 +51,7 @@ export default function RootLayout({
             <IndexationPopover />
           </div>
           <GlobalInconsistencyAlert />
+          <FloatingNotifications />
           <SileoToaster />
         </ThemeProvider>
       </body>

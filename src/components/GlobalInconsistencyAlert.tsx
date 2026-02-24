@@ -12,6 +12,43 @@ export default function GlobalInconsistencyAlert() {
     const [isAuthenticated, setIsAuthenticated] = useState(false);
     const [isLoading, setIsLoading] = useState(true);
     
+    // Hook de indexación admin - DEBE estar antes de cualquier return
+    const { 
+        directorio, 
+        areas, 
+        directorioAreas,
+    } = useAdminIndexation();
+    
+    // Verificar que todos los módulos necesarios estén indexados
+    // useDirectorioStats depende de: inea, itea, noListado, resguardos
+    const modules = useIndexationStore(state => state.modules);
+    
+    // Obtener estado de visibilidad del popover de indexación - DEBE estar antes de cualquier return
+    const isPopoverVisible = useIndexationStore(state => state.isPopoverVisible);
+    
+    const allModulesIndexed = useMemo(() => {
+        const requiredModules = ['admin', 'inea', 'itea', 'noListado', 'resguardos'];
+        return requiredModules.every(key => modules[key]?.isIndexed === true);
+    }, [modules]);
+    
+    // Get all directorio IDs for stats calculation
+    const directorioIds = useMemo(
+        () => directorio.map(d => d.id_directorio),
+        [directorio]
+    );
+    
+    // Hook para estadísticas - solo se ejecuta si hay datos
+    const { stats: directorioStats, areaStats } = useDirectorioStats(directorioIds);
+    
+    // Hook para detectar inconsistencias
+    const { inconsistencies } = useDirectorioInconsistencies(
+        directorio,
+        areas,
+        directorioAreas,
+        directorioStats,
+        areaStats
+    );
+    
     // Verificar si el usuario está autenticado
     useEffect(() => {
         const checkAuth = async () => {
@@ -37,39 +74,8 @@ export default function GlobalInconsistencyAlert() {
                       pathname !== '/register' && 
                       pathname !== '/pending-approval';
     
-    // Hook de indexación admin
-    const { 
-        directorio, 
-        areas, 
-        directorioAreas,
-        isIndexed: adminIndexed
-    } = useAdminIndexation();
-    
-    // Verificar que todos los módulos necesarios estén indexados
-    // useDirectorioStats depende de: inea, itea, noListado, resguardos
-    const modules = useIndexationStore(state => state.modules);
-    const allModulesIndexed = useMemo(() => {
-        const requiredModules = ['admin', 'inea', 'itea', 'noListado', 'resguardos'];
-        return requiredModules.every(key => modules[key]?.isIndexed === true);
-    }, [modules]);
-    
-    // Get all directorio IDs for stats calculation
-    const directorioIds = useMemo(
-        () => directorio.map(d => d.id_directorio),
-        [directorio]
-    );
-    
-    // Hook para estadísticas - solo se ejecuta si hay datos
-    const { stats: directorioStats, areaStats } = useDirectorioStats(directorioIds);
-    
-    // Hook para detectar inconsistencias
-    const { inconsistencies } = useDirectorioInconsistencies(
-        directorio,
-        areas,
-        directorioAreas,
-        directorioStats,
-        areaStats
-    );
+    // Determinar si estamos en la página de directorio
+    const isInDirectorioPage = pathname === '/admin/personal';
     
     // No renderizar mientras carga la autenticación
     if (isLoading) return null;
@@ -80,14 +86,14 @@ export default function GlobalInconsistencyAlert() {
     // No renderizar si aún no ha indexado (esperar a que terminen TODOS los módulos necesarios)
     if (!allModulesIndexed) return null;
     
-    // Determinar si estamos en la página de directorio
-    const isInDirectorioPage = pathname === '/admin/personal';
-    
     // Solo renderizar si hay inconsistencias
     if (inconsistencies.length === 0) return null;
     
     // Si estamos en la página de directorio, no renderizar (el componente local lo hace)
     if (isInDirectorioPage) return null;
+    
+    // No renderizar si el popover de indexación está visible
+    if (isPopoverVisible) return null;
     
     return <InconsistencyAlert inconsistencies={inconsistencies} isInDirectorioPage={false} />;
 }

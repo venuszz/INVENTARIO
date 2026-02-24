@@ -64,6 +64,7 @@ export default function IndexationPopover() {
     // Obtener eventos de cambios en tiempo real
     const realtimeChanges = useIndexationStore(state => state.realtimeChanges);
     const dismissRealtimeChange = useIndexationStore(state => state.dismissRealtimeChange);
+    const setPopoverVisible = useIndexationStore(state => state.setPopoverVisible);
     
     const [dismissed, setDismissed] = useState<Set<string>>(new Set());
     const [showSuccessFlash, setShowSuccessFlash] = useState<string | null>(null);
@@ -253,6 +254,11 @@ export default function IndexationPopover() {
             }
         });
     }, [modules, dismissed]);
+
+    // Actualizar la visibilidad del popover en el store
+    useEffect(() => {
+        setPopoverVisible(activeModules.length > 0);
+    }, [activeModules.length, setPopoverVisible]);
 
     useEffect(() => {
         return () => {

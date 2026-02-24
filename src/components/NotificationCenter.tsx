@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react';
-import { Bell, Clock, AlertCircle, CheckCircle, Info, Sparkles, FileText, Package, Users, AlertTriangle } from 'lucide-react';
+import { useState, useEffect, useRef } from 'react';
+import { Bell, Clock, CheckCircle, Sparkles, FileText, Package, Users, AlertTriangle } from 'lucide-react';
 import { useTheme } from '@/context/ThemeContext';
 
 // Mock notifications data based on real system operations
@@ -63,9 +63,34 @@ const mockNotifications = [
 export default function NotificationsPanel({ onClose }: { onClose?: () => void }) {
     const { isDarkMode } = useTheme();
     const [animateIn, setAnimateIn] = useState(false);
+    const [maxHeight, setMaxHeight] = useState(580);
+    const panelRef = useRef<HTMLDivElement>(null);
 
     useEffect(() => {
         setAnimateIn(true);
+    }, []);
+
+    // Calculate dynamic height to avoid touching bottom edge
+    useEffect(() => {
+        const calculateMaxHeight = () => {
+            if (panelRef.current) {
+                const rect = panelRef.current.getBoundingClientRect();
+                const viewportHeight = window.innerHeight;
+                const bottomMargin = 16; // 16px margin from bottom
+                const availableHeight = viewportHeight - rect.top - bottomMargin;
+                
+                // Set max height, but not less than 300px for usability
+                const calculatedHeight = Math.max(300, Math.min(580, availableHeight));
+                setMaxHeight(calculatedHeight);
+            }
+        };
+
+        calculateMaxHeight();
+        window.addEventListener('resize', calculateMaxHeight);
+        
+        return () => {
+            window.removeEventListener('resize', calculateMaxHeight);
+        };
     }, []);
 
     const getNotificationIcon = (notification: typeof mockNotifications[0]) => {
@@ -92,10 +117,14 @@ export default function NotificationsPanel({ onClose }: { onClose?: () => void }
     };
 
     return (
-        <div className={`flex flex-col w-[380px] h-[580px] rounded-2xl overflow-hidden shadow-2xl border transition-all duration-500 transform ${isDarkMode
-            ? 'bg-black/95 text-white border-white/10 backdrop-blur-2xl'
-            : 'bg-white/95 text-gray-900 border-black/10 backdrop-blur-2xl'
-            } ${animateIn ? 'translate-y-0 opacity-100' : 'translate-y-4 opacity-0'}`}>
+        <div 
+            ref={panelRef}
+            className={`flex flex-col w-[380px] rounded-2xl overflow-hidden shadow-2xl border transition-all duration-500 transform ${isDarkMode
+                ? 'bg-black/95 text-white border-white/10 backdrop-blur-2xl'
+                : 'bg-white/95 text-gray-900 border-black/10 backdrop-blur-2xl'
+            } ${animateIn ? 'translate-y-0 opacity-100' : 'translate-y-4 opacity-0'}`}
+            style={{ maxHeight: `${maxHeight}px` }}
+        >
 
             {/* Header */}
             <div className={`flex items-center justify-between px-4 pt-4 pb-3 border-b ${

@@ -5,7 +5,7 @@
  * Since área and director come from relational IDs, the information is exact and known.
  */
 
-import { useMemo, useEffect } from 'react';
+import { useMemo, useEffect, useState } from 'react';
 import { X, FileText, AlertCircle, CheckCircle } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { DirectorioOption } from '../types';
@@ -19,12 +19,13 @@ interface CustomPDFModalProps {
   area: string;
   director: string;
   directorOptions: DirectorioOption[];
-  onConfirm: (directorData: { nombre: string; puesto: string }) => void;
+  onConfirm: (directorData: { nombre: string; puesto: string }, omitEmptyStatus: boolean, observationsMode: boolean) => void;
   onCancel: () => void;
   onDirectorSelect: (director: DirectorioOption) => void;
   loading: boolean;
   error: string | null;
   recordCount: number;
+  recordsWithoutStatus: number;
   isDarkMode: boolean;
 }
 
@@ -52,9 +53,30 @@ export function CustomPDFModal({
   loading,
   error,
   recordCount,
+  recordsWithoutStatus,
   isDarkMode
 }: CustomPDFModalProps) {
   
+  /**
+   * State for omit empty status switch
+   */
+  const [omitEmptyStatus, setOmitEmptyStatus] = useState(false);
+
+  /**
+   * State for observations mode switch
+   */
+  const [observationsMode, setObservationsMode] = useState(false);
+
+  /**
+   * Reset switches when modal is closed
+   */
+  useEffect(() => {
+    if (!show) {
+      setOmitEmptyStatus(false);
+      setObservationsMode(false);
+    }
+  }, [show]);
+
   /**
    * Find matched director based on name and area
    */
@@ -96,16 +118,23 @@ export function CustomPDFModal({
    */
   const handleConfirm = () => {
     if (matchedDirector) {
-      onConfirm({ nombre: matchedDirector.nombre, puesto: matchedDirector.puesto });
+      onConfirm({ nombre: matchedDirector.nombre, puesto: matchedDirector.puesto }, omitEmptyStatus, observationsMode);
     }
   };
+
+  /**
+   * Calculate final record count based on switch state
+   */
+  const finalRecordCount = omitEmptyStatus 
+    ? recordCount - recordsWithoutStatus 
+    : recordCount;
 
   /**
    * Check if confirm button should be disabled
    */
   const isConfirmDisabled = 
     loading ||
-    recordCount === 0 ||
+    finalRecordCount === 0 ||
     !area.trim() ||
     !matchedDirector;
 
@@ -129,36 +158,34 @@ export function CustomPDFModal({
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.95, y: 20 }}
             transition={{ duration: 0.2 }}
-            className={`rounded-lg border w-full max-w-lg overflow-hidden backdrop-blur-xl ${
+            className={`rounded-lg border w-full max-w-md overflow-hidden backdrop-blur-xl ${
               isDarkMode ? 'bg-black/95 border-white/10' : 'bg-white/95 border-black/10'
             }`}
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="p-6">
+            <div className="p-4">
               {/* Header */}
-              <div className="flex items-start justify-between mb-6">
-                <div className="flex items-center gap-3">
-                  <div className={`p-2 rounded-lg ${
+              <div className="flex items-start justify-between mb-4">
+                <div className="flex items-center gap-2">
+                  <div className={`p-1.5 rounded-lg ${
                     isDarkMode ? 'bg-white/10' : 'bg-black/10'
                   }`}>
-                    <FileText size={20} className={isDarkMode ? 'text-white' : 'text-black'} />
+                    <FileText size={18} className={isDarkMode ? 'text-white' : 'text-black'} />
                   </div>
                   <div>
-                    <h3 className={`text-lg font-medium ${isDarkMode ? 'text-white' : 'text-black'}`}>
+                    <h3 className={`text-base font-medium ${isDarkMode ? 'text-white' : 'text-black'}`}>
                       Confirmar Generación de PDF
                     </h3>
-                    <div className="flex items-center gap-2 mt-0.5">
-                      <p className={`text-sm ${
-                        isDarkMode ? 'text-white/60' : 'text-black/60'
-                      }`}>
-                        {recordCount} {recordCount === 1 ? 'registro' : 'registros'}
-                      </p>
-                    </div>
+                    <p className={`text-xs ${
+                      isDarkMode ? 'text-white/60' : 'text-black/60'
+                    }`}>
+                      {finalRecordCount} {finalRecordCount === 1 ? 'registro' : 'registros'}
+                    </p>
                   </div>
                 </div>
                 <motion.button
                   onClick={onCancel}
-                  className={`p-2 rounded-lg transition-colors ${
+                  className={`p-1.5 rounded-lg transition-colors ${
                     isDarkMode
                       ? 'hover:bg-white/10 text-white'
                       : 'hover:bg-black/10 text-black'
@@ -171,21 +198,21 @@ export function CustomPDFModal({
               </div>
 
               {/* Confirmation info */}
-              <div className="space-y-4 mb-6">
+              <div className="space-y-3 mb-4">
                 {/* Success indicator if director found */}
                 {matchedDirector && (
                   <motion.div
                     initial={{ opacity: 0, scale: 0.95 }}
                     animate={{ opacity: 1, scale: 1 }}
-                    className={`p-4 rounded-lg border flex items-start gap-3 ${
+                    className={`p-3 rounded-lg border flex items-start gap-2 ${
                       isDarkMode
                         ? 'bg-green-500/10 border-green-500/20'
                         : 'bg-green-50 border-green-200'
                     }`}
                   >
-                    <CheckCircle size={20} className={isDarkMode ? 'text-green-400 mt-0.5' : 'text-green-600 mt-0.5'} />
+                    <CheckCircle size={16} className={isDarkMode ? 'text-green-400 mt-0.5' : 'text-green-600 mt-0.5'} />
                     <div className="flex-1">
-                      <p className={`text-sm font-medium ${
+                      <p className={`text-xs font-medium ${
                         isDarkMode ? 'text-green-400' : 'text-green-800'
                       }`}>
                         Información verificada
@@ -204,15 +231,15 @@ export function CustomPDFModal({
                   <motion.div
                     initial={{ opacity: 0, scale: 0.95 }}
                     animate={{ opacity: 1, scale: 1 }}
-                    className={`p-4 rounded-lg border flex items-start gap-3 ${
+                    className={`p-3 rounded-lg border flex items-start gap-2 ${
                       isDarkMode
                         ? 'bg-yellow-500/10 border-yellow-500/20'
                         : 'bg-yellow-50 border-yellow-200'
                     }`}
                   >
-                    <AlertCircle size={20} className={isDarkMode ? 'text-yellow-400 mt-0.5' : 'text-yellow-600 mt-0.5'} />
+                    <AlertCircle size={16} className={isDarkMode ? 'text-yellow-400 mt-0.5' : 'text-yellow-600 mt-0.5'} />
                     <div className="flex-1">
-                      <p className={`text-sm font-medium ${
+                      <p className={`text-xs font-medium ${
                         isDarkMode ? 'text-yellow-400' : 'text-yellow-800'
                       }`}>
                         Director no encontrado
@@ -228,14 +255,14 @@ export function CustomPDFModal({
 
                 {/* Area field (read-only) */}
                 <div>
-                  <label className={`block text-xs font-medium mb-1.5 ${
+                  <label className={`block text-xs font-medium mb-1 ${
                     isDarkMode ? 'text-white/60' : 'text-black/60'
                   }`}>
                     Área
                   </label>
                   <input
                     type="text"
-                    className={`w-full px-3 py-2.5 rounded-lg border text-sm transition-all ${
+                    className={`w-full px-2.5 py-2 rounded-lg border text-xs transition-all ${
                       isDarkMode
                         ? 'bg-white/[0.02] border-white/10 text-white'
                         : 'bg-black/[0.02] border-black/10 text-black'
@@ -247,14 +274,14 @@ export function CustomPDFModal({
 
                 {/* Director name field (read-only) */}
                 <div>
-                  <label className={`block text-xs font-medium mb-1.5 ${
+                  <label className={`block text-xs font-medium mb-1 ${
                     isDarkMode ? 'text-white/60' : 'text-black/60'
                   }`}>
                     Director
                   </label>
                   <input
                     type="text"
-                    className={`w-full px-3 py-2.5 rounded-lg border text-sm transition-all ${
+                    className={`w-full px-2.5 py-2 rounded-lg border text-xs transition-all ${
                       isDarkMode
                         ? 'bg-white/[0.02] border-white/10 text-white'
                         : 'bg-black/[0.02] border-black/10 text-black'
@@ -266,14 +293,14 @@ export function CustomPDFModal({
 
                 {/* Puesto field (read-only) */}
                 <div>
-                  <label className={`block text-xs font-medium mb-1.5 ${
+                  <label className={`block text-xs font-medium mb-1 ${
                     isDarkMode ? 'text-white/60' : 'text-black/60'
                   }`}>
                     Puesto
                   </label>
                   <input
                     type="text"
-                    className={`w-full px-3 py-2.5 rounded-lg border text-sm transition-all ${
+                    className={`w-full px-2.5 py-2 rounded-lg border text-xs transition-all ${
                       isDarkMode
                         ? 'bg-white/[0.02] border-white/10 text-white'
                         : 'bg-black/[0.02] border-black/10 text-black'
@@ -282,6 +309,102 @@ export function CustomPDFModal({
                     readOnly
                   />
                 </div>
+
+                {/* Omit empty status switch */}
+                {recordsWithoutStatus > 0 && (
+                  <motion.div
+                    initial={{ opacity: 0, height: 0 }}
+                    animate={{ opacity: 1, height: 'auto' }}
+                    className={`p-3 rounded-lg border ${
+                      isDarkMode
+                        ? 'bg-white/[0.02] border-white/10'
+                        : 'bg-black/[0.02] border-black/10'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between gap-3">
+                      <div className="flex-1">
+                        <label className={`block text-xs font-medium ${
+                          isDarkMode ? 'text-white' : 'text-black'
+                        }`}>
+                          Omitir registros sin estatus
+                        </label>
+                        <p className={`text-xs mt-0.5 ${
+                          isDarkMode ? 'text-white/60' : 'text-black/60'
+                        }`}>
+                          {recordsWithoutStatus} {recordsWithoutStatus === 1 ? 'registro' : 'registros'} sin estatus {omitEmptyStatus ? 'serán omitidos' : 'se incluirán'}
+                        </p>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setOmitEmptyStatus(!omitEmptyStatus)}
+                        className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                          omitEmptyStatus
+                            ? isDarkMode ? 'bg-white' : 'bg-black'
+                            : isDarkMode ? 'bg-white/20' : 'bg-black/20'
+                        }`}
+                      >
+                        <span
+                          className={`inline-block h-4 w-4 transform rounded-full transition-transform shadow-sm ${
+                            omitEmptyStatus
+                              ? isDarkMode 
+                                ? 'translate-x-6 bg-black' 
+                                : 'translate-x-6 bg-white'
+                              : isDarkMode
+                                ? 'translate-x-1 bg-white'
+                                : 'translate-x-1 bg-white'
+                          }`}
+                        />
+                      </button>
+                    </div>
+                  </motion.div>
+                )}
+
+                {/* Observations mode switch */}
+                <motion.div
+                  initial={{ opacity: 0, height: 0 }}
+                  animate={{ opacity: 1, height: 'auto' }}
+                  className={`p-3 rounded-lg border ${
+                    isDarkMode
+                      ? 'bg-white/[0.02] border-white/10'
+                      : 'bg-black/[0.02] border-black/10'
+                  }`}
+                >
+                  <div className="flex items-center justify-between gap-3">
+                    <div className="flex-1">
+                      <label className={`block text-xs font-medium ${
+                        isDarkMode ? 'text-white' : 'text-black'
+                      }`}>
+                        Modo observaciones
+                      </label>
+                      <p className={`text-xs mt-0.5 ${
+                        isDarkMode ? 'text-white/60' : 'text-black/60'
+                      }`}>
+                        {observationsMode ? 'Columnas: ID, Descripción, Estado, Observaciones' : 'Columnas: ID, Descripción, Estado, Estatus, Área, Usuario Final'}
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setObservationsMode(!observationsMode)}
+                      className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                        observationsMode
+                          ? isDarkMode ? 'bg-white' : 'bg-black'
+                          : isDarkMode ? 'bg-white/20' : 'bg-black/20'
+                      }`}
+                    >
+                      <span
+                        className={`inline-block h-4 w-4 transform rounded-full transition-transform shadow-sm ${
+                          observationsMode
+                            ? isDarkMode 
+                              ? 'translate-x-6 bg-black' 
+                              : 'translate-x-6 bg-white'
+                            : isDarkMode
+                              ? 'translate-x-1 bg-white'
+                              : 'translate-x-1 bg-white'
+                        }`}
+                      />
+                    </button>
+                  </div>
+                </motion.div>
               </div>
 
               {/* Error message */}
@@ -289,14 +412,14 @@ export function CustomPDFModal({
                 <motion.div
                   initial={{ opacity: 0, height: 0 }}
                   animate={{ opacity: 1, height: 'auto' }}
-                  className={`mb-4 p-3 rounded-lg border flex items-start gap-2 ${
+                  className={`mb-3 p-2.5 rounded-lg border flex items-start gap-2 ${
                     isDarkMode
                       ? 'bg-red-500/10 border-red-500/20'
                       : 'bg-red-50 border-red-200'
                   }`}
                 >
-                  <AlertCircle size={16} className={isDarkMode ? 'text-red-400 mt-0.5' : 'text-red-600 mt-0.5'} />
-                  <p className={`text-sm ${
+                  <AlertCircle size={14} className={isDarkMode ? 'text-red-400 mt-0.5' : 'text-red-600 mt-0.5'} />
+                  <p className={`text-xs ${
                     isDarkMode ? 'text-red-400' : 'text-red-600'
                   }`}>
                     {error}
@@ -308,7 +431,7 @@ export function CustomPDFModal({
               <div className="flex gap-2">
                 <motion.button
                   onClick={onCancel}
-                  className={`flex-1 px-4 py-2 rounded-lg border text-sm font-medium transition-all ${
+                  className={`flex-1 px-3 py-2 rounded-lg border text-xs font-medium transition-all ${
                     isDarkMode
                       ? 'bg-black border-white/10 text-white hover:border-white/20 hover:bg-white/[0.02]'
                       : 'bg-white border-black/10 text-black hover:border-black/20 hover:bg-black/[0.02]'
@@ -321,7 +444,7 @@ export function CustomPDFModal({
                 <motion.button
                   onClick={handleConfirm}
                   disabled={isConfirmDisabled}
-                  className={`flex-1 px-4 py-2 rounded-lg border text-sm font-medium flex items-center justify-center gap-2 transition-all ${
+                  className={`flex-1 px-3 py-2 rounded-lg border text-xs font-medium flex items-center justify-center gap-2 transition-all ${
                     isConfirmDisabled
                       ? isDarkMode
                         ? 'bg-black border-white/5 text-white/40 cursor-not-allowed'
@@ -335,13 +458,13 @@ export function CustomPDFModal({
                 >
                   {loading ? (
                     <>
-                      <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
+                      <div className="w-3.5 h-3.5 border-2 border-current border-t-transparent rounded-full animate-spin" />
                       Generando...
                     </>
                   ) : (
                     <>
-                      <CheckCircle size={16} />
-                      Confirmar y Generar PDF
+                      <CheckCircle size={14} />
+                      Confirmar y Generar
                     </>
                   )}
                 </motion.button>

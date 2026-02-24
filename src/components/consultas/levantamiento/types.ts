@@ -34,7 +34,9 @@ export interface LevMueble {
   causadebaja: string | null;
   resguardante: string | null;
   image_path: string | null;
-  origen: 'INEA' | 'ITEA' | 'TLAXCALA';
+  origen: 'INEA' | 'ITEJPA' | 'TLAXCALA';
+  color: string | null;
+  colores: { id: string; nombre: string; significado: string | null } | null;
 }
 
 /**
@@ -68,7 +70,7 @@ export interface DirectorioOption {
  */
 export interface ActiveFilter {
   term: string;
-  type: 'id' | 'descripcion' | 'area' | 'usufinal' | 'resguardante' | 'rubro' | 'estado' | 'estatus' | 'origen' | 'resguardo' | null;
+  type: 'id' | 'descripcion' | 'area' | 'usufinal' | 'resguardante' | 'rubro' | 'estado' | 'estatus' | 'origen' | 'resguardo' | 'color' | null;
 }
 
 /**
@@ -82,7 +84,7 @@ export interface Suggestion {
 /**
  * Type of search match detected
  */
-export type SearchMatchType = 'id' | 'descripcion' | 'usufinal' | 'area' | 'resguardante' | 'rubro' | 'estado' | 'estatus' | 'origen' | 'resguardo' | null;
+export type SearchMatchType = 'id' | 'descripcion' | 'usufinal' | 'area' | 'resguardante' | 'rubro' | 'estado' | 'estatus' | 'origen' | 'resguardo' | 'color' | null;
 
 /**
  * Searchable data vectors for optimized filtering
@@ -98,6 +100,7 @@ export interface SearchableData {
   estatus: string[];
   origen: string[];      // INEA, ITEA, TLAXCALA
   resguardo: string[];   // "Con resguardo", "Sin resguardo"
+  color: string[];       // Color names from ITEJPA items
 }
 
 /**

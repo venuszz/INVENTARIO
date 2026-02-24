@@ -34,7 +34,7 @@ export function getOrigenColors(isDarkMode: boolean): Record<string, string> {
     INEA: isDarkMode 
       ? 'bg-white/90 text-gray-900 border border-white/80' 
       : 'bg-blue-50 text-blue-900 border border-blue-200',
-    ITEA: isDarkMode 
+    ITEJPA: isDarkMode 
       ? 'bg-white/80 text-gray-900 border border-white/70' 
       : 'bg-green-50 text-green-900 border border-green-200',
     TLAXCALA: isDarkMode 
@@ -106,6 +106,54 @@ export function getFilterChipColors(
     }
   }
   
+  // Special colors for color filters (use actual color)
+  if (type === 'color') {
+    const colorName = term.toUpperCase();
+    let bgColor = '';
+    let textColor = '';
+    let borderColor = '';
+    
+    switch (colorName) {
+      case 'ROJO':
+        bgColor = 'rgba(239, 68, 68, 0.15)';
+        textColor = isDarkMode ? '#fca5a5' : '#dc2626';
+        borderColor = isDarkMode ? 'rgba(239, 68, 68, 0.4)' : 'rgba(239, 68, 68, 0.5)';
+        break;
+      case 'VERDE':
+        bgColor = 'rgba(34, 197, 94, 0.15)';
+        textColor = isDarkMode ? '#86efac' : '#16a34a';
+        borderColor = isDarkMode ? 'rgba(34, 197, 94, 0.4)' : 'rgba(34, 197, 94, 0.5)';
+        break;
+      case 'BLANCO':
+        bgColor = isDarkMode ? 'rgba(255, 255, 255, 0.15)' : 'rgba(0, 0, 0, 0.05)';
+        textColor = isDarkMode ? '#ffffff' : '#000000';
+        borderColor = isDarkMode ? 'rgba(255, 255, 255, 0.4)' : 'rgba(0, 0, 0, 0.3)';
+        break;
+      case 'AMARILLO':
+        bgColor = 'rgba(234, 179, 8, 0.15)';
+        textColor = isDarkMode ? '#fde047' : '#ca8a04';
+        borderColor = isDarkMode ? 'rgba(234, 179, 8, 0.4)' : 'rgba(234, 179, 8, 0.5)';
+        break;
+      case 'AZUL':
+        bgColor = 'rgba(59, 130, 246, 0.15)';
+        textColor = isDarkMode ? '#93c5fd' : '#2563eb';
+        borderColor = isDarkMode ? 'rgba(59, 130, 246, 0.4)' : 'rgba(59, 130, 246, 0.5)';
+        break;
+      case 'NARANJA':
+        bgColor = 'rgba(249, 115, 22, 0.15)';
+        textColor = isDarkMode ? '#fdba74' : '#ea580c';
+        borderColor = isDarkMode ? 'rgba(249, 115, 22, 0.4)' : 'rgba(249, 115, 22, 0.5)';
+        break;
+      default:
+        return isDarkMode 
+          ? 'bg-white/10 text-white border-white/20' 
+          : 'bg-black/10 text-black border-black/20';
+    }
+    
+    // Return inline style string (will be handled differently in component)
+    return `color-chip-${colorName.toLowerCase()}`;
+  }
+  
   // Default colors for other filter types
   return isDarkMode 
     ? 'bg-white/10 text-white border-white/20' 
@@ -147,6 +195,7 @@ export function getTypeLabel(type: ActiveFilter['type']): string {
     case 'estatus': return 'ESTATUS';
     case 'origen': return 'ORIGEN';
     case 'resguardo': return 'RESGUARDO';
+    case 'color': return 'COLOR';
     default: return '';
   }
 }
@@ -172,6 +221,7 @@ export function getTypeIcon(type: ActiveFilter['type']): React.ReactElement | nu
     case 'estatus': return <span className={baseClass}>ES</span>;
     case 'origen': return <span className={baseClass}>OR</span>;
     case 'resguardo': return <span className={baseClass}>RG</span>;
+    case 'color': return <span className={baseClass}>CO</span>;
     default: return null;
   }
 }

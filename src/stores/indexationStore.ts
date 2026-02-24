@@ -30,6 +30,10 @@ interface IndexationStore {
   // Estado por módulo
   modules: Record<string, ModuleIndexationState>;
   
+  // Estado de visibilidad del popover
+  isPopoverVisible: boolean;
+  setPopoverVisible: (visible: boolean) => void;
+  
   // Eventos de cambios en tiempo real
   realtimeChanges: RealtimeChangeEvent[];
   addRealtimeChange: (change: Omit<RealtimeChangeEvent, 'id' | 'timestamp' | 'dismissed'>) => void;
@@ -106,6 +110,18 @@ export const useIndexationStore = create<IndexationStore>()(
     (set, get) => ({
       modules: {},
       realtimeChanges: [],
+      isPopoverVisible: false,
+      
+      // ========================================================================
+      // ACCIONES DE VISIBILIDAD DEL POPOVER
+      // ========================================================================
+      
+      /**
+       * Establece la visibilidad del popover de indexación
+       */
+      setPopoverVisible: (visible) => {
+        set({ isPopoverVisible: visible });
+      },
       
       // ========================================================================
       // ACCIONES DE EVENTOS EN TIEMPO REAL
@@ -443,8 +459,9 @@ export const useIndexationStore = create<IndexationStore>()(
             },
           ])
         ),
-        // NO persistir eventos de cambios en tiempo real
+        // NO persistir eventos de cambios en tiempo real ni visibilidad del popover
         realtimeChanges: [],
+        isPopoverVisible: false,
       }),
     }
   )

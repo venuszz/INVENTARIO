@@ -22,8 +22,10 @@ export function useIdInventarioValidation(idInventario: string) {
     const map = new Map<string, { institution: 'INEA' | 'ITEA' | 'TLAXCALA'; data: any }>();
     muebles.forEach(mueble => {
       if (mueble.id_inv) {
+        // Normalize ITEJPA to ITEA for consistency
+        const normalizedInstitution = mueble.origen === 'ITEJPA' ? 'ITEA' : mueble.origen;
         map.set(mueble.id_inv.trim().toLowerCase(), {
-          institution: mueble.origen,
+          institution: normalizedInstitution as 'INEA' | 'ITEA' | 'TLAXCALA',
           data: mueble
         });
       }

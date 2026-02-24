@@ -85,15 +85,16 @@ export function useSearchAndFilters({
     
     return {
       id: muebles.map(m => m.id_inv || '').filter(Boolean),
-      area: muebles.map(m => m.area?.nombre || '').filter(Boolean),        // FROM area.nombre
+      area: muebles.map(m => m.area?.nombre || '').filter(Boolean),
       usufinal: muebles.map(m => m.directorio?.nombre || '').filter(Boolean), // FROM directorio.nombre
       resguardante: muebles.map(m => (m as any).resguardante || '').filter(Boolean),
       descripcion: muebles.map(m => m.descripcion || '').filter(Boolean),
       rubro: muebles.map(m => m.rubro || '').filter(Boolean),
       estado: muebles.map(m => m.estado || '').filter(Boolean),
       estatus: muebles.map(m => m.estatus || '').filter(Boolean),
-      origen: ['INEA', 'ITEA', 'TLAXCALA'],
+      origen: ['INEA', 'ITEJPA', 'TLAXCALA'],
       resguardo: ['Con resguardo', 'Sin resguardo'],
+      color: Array.from(new Set(muebles.map(m => m.colores?.nombre).filter((c): c is string => !!c))),
     };
   }, [muebles]);
 
@@ -240,10 +241,11 @@ export function useSearchAndFilters({
 
     const seen = new Set<string>();
     
-    // Priority 1: Origen and Resguardo (always first)
+    // Priority 1: Origen, Resguardo, and Color (always first)
     const priorityFields = [
       { type: 'origen' as ActiveFilter['type'], data: searchableData.origen },
       { type: 'resguardo' as ActiveFilter['type'], data: searchableData.resguardo },
+      { type: 'color' as ActiveFilter['type'], data: searchableData.color },
     ];
     
     // Priority 2: Other fields
@@ -391,6 +393,9 @@ export function useSearchAndFilters({
                   return !(item as any).resguardante;
                 }
                 return true;
+              case 'color':
+                // Filter by color name (only ITEJPA items have colors)
+                return (item.colores?.nombre?.toLowerCase() || '').includes(filterTerm);
               default:
                 return true;
             }
@@ -411,7 +416,8 @@ export function useSearchAndFilters({
           (item.rubro?.toLowerCase() || '').includes(term) ||
           (item.estado?.toLowerCase() || '').includes(term) ||
           (item.estatus?.toLowerCase() || '').includes(term) ||
-          (item.origen?.toLowerCase() || '').includes(term)
+          (item.origen?.toLowerCase() || '').includes(term) ||
+          (item.colores?.nombre?.toLowerCase() || '').includes(term)
         );
       });
     }

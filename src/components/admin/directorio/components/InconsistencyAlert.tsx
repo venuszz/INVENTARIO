@@ -59,7 +59,7 @@ export function InconsistencyAlert({ inconsistencies, isInDirectorioPage = false
     
     return (
         <motion.div
-            className="fixed top-20 right-4 z-40"
+            className="fixed top-20 right-[3.5rem] z-30"
             initial={{ opacity: 0, x: 20, scale: 0.9 }}
             animate={{ opacity: 1, x: 0, scale: 1 }}
             exit={{ opacity: 0, x: 20, scale: 0.9 }}
@@ -76,7 +76,7 @@ export function InconsistencyAlert({ inconsistencies, isInDirectorioPage = false
                 }`}
                 animate={{ 
                     borderRadius: showExpandedView || (!isInDirectorioPage && isHovered) ? '12px' : shouldShowDetails && !isHovered ? '12px' : '9999px',
-                    width: showExpandedView || (!isInDirectorioPage && isHovered) ? '360px' : 'auto',
+                    width: showExpandedView || (!isInDirectorioPage && isHovered) ? '300px' : 'auto',
                 }}
                 transition={{ 
                     duration: 0.3,
@@ -89,7 +89,7 @@ export function InconsistencyAlert({ inconsistencies, isInDirectorioPage = false
                         <motion.div
                             key="collapsed"
                             className={`${
-                                shouldShowDetails && !isHovered ? 'flex flex-col items-center gap-2 px-6 py-4' : 'flex items-center gap-2 px-3 py-2'
+                                shouldShowDetails && !isHovered ? 'flex flex-col items-center gap-1.5 px-4 py-3' : 'flex items-center gap-1.5 px-2 py-1.5'
                             } ${
                                 !isInDirectorioPage ? 'cursor-pointer' : shouldShowDetails ? 'cursor-pointer' : ''
                             }`}
@@ -99,11 +99,11 @@ export function InconsistencyAlert({ inconsistencies, isInDirectorioPage = false
                             transition={{ duration: 0.2 }}
                             onClick={!isInDirectorioPage ? handleNavigateToDirectorio : undefined}
                         >
-                            <div className="flex items-center gap-3">
+                            <div className="flex items-center gap-2">
                                 <div className="relative">
                                     <AlertTriangle 
                                         className={`flex-shrink-0 ${
-                                            shouldShowDetails && !isHovered ? 'w-7 h-7' : 'w-3.5 h-3.5'
+                                            shouldShowDetails && !isHovered ? 'w-5 h-5' : 'w-3 h-3'
                                         } ${
                                             isDarkMode ? 'text-red-400' : 'text-red-600'
                                         }`}
@@ -112,7 +112,7 @@ export function InconsistencyAlert({ inconsistencies, isInDirectorioPage = false
                                     <motion.div
                                         className={`absolute rounded-full ${
                                             shouldShowDetails 
-                                                ? 'w-2.5 h-2.5 -top-1 -right-1' 
+                                                ? 'w-2 h-2 -top-0.5 -right-0.5' 
                                                 : 'w-1.5 h-1.5 -top-0.5 -right-0.5'
                                         } ${
                                             isDarkMode ? 'bg-red-400' : 'bg-red-600'
@@ -129,21 +129,21 @@ export function InconsistencyAlert({ inconsistencies, isInDirectorioPage = false
                                     />
                                 </div>
                                 <span className={`font-medium whitespace-nowrap ${
-                                    shouldShowDetails && !isHovered ? 'text-base' : 'text-xs'
+                                    shouldShowDetails && !isHovered ? 'text-sm' : 'text-[10px]'
                                 } ${
                                     isDarkMode ? 'text-red-400' : 'text-red-600'
                                 }`}>
                                     {totalCount} {totalCount === 1 ? 'inconsistencia' : 'inconsistencias'}
                                 </span>
                                 {!isInDirectorioPage && (
-                                    <ExternalLink className={`w-3 h-3 ml-1 ${
+                                    <ExternalLink className={`w-2.5 h-2.5 ml-0.5 ${
                                         isDarkMode ? 'text-red-400' : 'text-red-600'
                                     }`} />
                                 )}
                             </div>
                             {shouldShowDetails && isInDirectorioPage && !isHovered && (
                                 <motion.span
-                                    className={`text-xs ${
+                                    className={`text-[9px] ${
                                         isDarkMode ? 'text-white/50' : 'text-black/50'
                                     }`}
                                     initial={{ opacity: 0, y: -5 }}
