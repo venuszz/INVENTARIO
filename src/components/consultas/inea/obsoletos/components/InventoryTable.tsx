@@ -267,7 +267,7 @@ export const InventoryTable: React.FC<InventoryTableProps> = ({
                     <td className={`px-4 py-4 align-top text-sm font-light ${
                       isDarkMode ? 'text-white/80' : 'text-black/80'
                     }`}>
-                      {formatDate(item.fechabaja) || 'No especificada'}
+                      {isSyncing ? <CellSkeleton /> : (formatDate(item.fechabaja) || 'No especificada')}
                     </td>
                   </motion.tr>
                 );

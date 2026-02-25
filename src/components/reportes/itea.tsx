@@ -116,34 +116,16 @@ export default function ReportesIneaDashboard() {
                     
                     setReportes(colorReportes);
                 } else {
-                    // Original estatus logic
-                    let allEstatus: string[] = [];
-                    let from = 0;
-                    const pageSize = 1000;
-                    let hasMore = true;
+                    // Original estatus logic - fetch from config table
+                    const { data: estatusData, error } = await supabase
+                        .from('config')
+                        .select('id, concepto')
+                        .eq('tipo', 'estatus')
+                        .order('concepto');
 
-                    while (hasMore) {
-                        const { data, error } = await supabase
-                            .from('mueblesitea')
-                            .select('estatus')
-                            .not('estatus', 'is', null)
-                            .range(from, from + pageSize - 1);
+                    if (error) throw error;
 
-                        if (error) throw error;
-
-                        if (data && data.length > 0) {
-                            allEstatus = allEstatus.concat(data.map(d => d.estatus).filter(Boolean) as string[]);
-                            if (data.length < pageSize) {
-                                hasMore = false;
-                            } else {
-                                from += pageSize;
-                            }
-                        } else {
-                            hasMore = false;
-                        }
-                    }
-
-                    const uniqueEstatus = [...new Set(allEstatus)];
+                    const uniqueEstatus = estatusData?.map(e => e.concepto).filter(Boolean) || [];
 
                     const getIconForEstatus = (estatus: string): React.ReactElement => {
                         const estatusLower = estatus.toLowerCase();
@@ -221,7 +203,8 @@ export default function ReportesIneaDashboard() {
             let query = supabase.from('mueblesitea').select(`
                 *,
                 area:area(id_area, nombre),
-                directorio:directorio(id_directorio, nombre, puesto)
+                directorio:directorio(id_directorio, nombre, puesto),
+                config_estatus:config!id_estatus(id, concepto)
             `, { count: 'exact', head: false });
             
             // Aplicar filtro según el modo de vista
@@ -241,8 +224,18 @@ export default function ReportesIneaDashboard() {
                         query = query.eq('color', selectedColor.id);
                     }
                 } else {
-                    // Filter by estatus
-                    query = query.eq('estatus', selectedReporte.estatus);
+                    // Filter by estatus using id_estatus
+                    // Get estatus ID from config table
+                    const { data: estatusConfig } = await supabase
+                        .from('config')
+                        .select('id')
+                        .eq('tipo', 'estatus')
+                        .eq('concepto', selectedReporte.estatus)
+                        .single();
+                    
+                    if (estatusConfig) {
+                        query = query.eq('id_estatus', estatusConfig.id);
+                    }
                 }
             }
 

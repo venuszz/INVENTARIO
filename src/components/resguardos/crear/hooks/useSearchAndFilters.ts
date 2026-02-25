@@ -95,6 +95,15 @@ export function useSearchAndFilters(
       return typeof directorio === 'object' ? directorio.nombre : '';
     };
     
+    // Helper to get estatus value from relational field
+    const getEstatusValue = (mueble: Mueble): string => {
+      // Try relational field first, fallback to legacy
+      if (mueble.config_estatus && typeof mueble.config_estatus === 'object') {
+        return mueble.config_estatus.concepto || '';
+      }
+      return mueble.estatus || '';
+    };
+    
     return {
       id: muebles.map((m: Mueble) => m.id_inv || '').filter(Boolean),
       area: muebles.map((m: Mueble) => getAreaValue(m.area)).filter(Boolean),
@@ -102,7 +111,7 @@ export function useSearchAndFilters(
       descripcion: muebles.map((m: Mueble) => m.descripcion || '').filter(Boolean),
       rubro: muebles.map((m: Mueble) => m.rubro || '').filter(Boolean),
       estado: muebles.map((m: Mueble) => m.estado || '').filter(Boolean),
-      estatus: muebles.map((m: Mueble) => m.estatus || '').filter(Boolean),
+      estatus: muebles.map((m: Mueble) => getEstatusValue(m)).filter(Boolean),
       origen: muebles.map((m: Mueble) => m.origen || '').filter(Boolean),
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps

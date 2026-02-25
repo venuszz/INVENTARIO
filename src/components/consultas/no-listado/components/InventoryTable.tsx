@@ -209,7 +209,7 @@ export default function InventoryTable({
                                         <td className="px-4 py-4 align-top text-sm">
                                             {/* Badge de estatus con color automático */}
                                             {(() => {
-                                                const status = item.estatus;
+                                                const status = item.config_estatus?.concepto || item.estatus;
                                                 const { text, style } = getStatusBadgeColors(status);
                                                 return (
                                                     <span

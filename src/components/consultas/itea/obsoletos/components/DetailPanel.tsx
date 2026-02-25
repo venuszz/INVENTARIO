@@ -767,7 +767,7 @@ function ViewMode({
         <DetailCard label="Estado (Ubicación)" value={selectedItem.ubicacion_es || 'No especificado'} isDarkMode={isDarkMode} />
         <DetailCard label="Municipio" value={selectedItem.ubicacion_mu || 'No especificado'} isDarkMode={isDarkMode} />
         <DetailCard label="Nomenclatura" value={selectedItem.ubicacion_no || 'No especificado'} isDarkMode={isDarkMode} />
-        <DetailCard label="Estatus" value={selectedItem.estatus || 'No especificado'} isDarkMode={isDarkMode} />
+        <DetailCard label="Estatus" value={selectedItem.config_estatus?.concepto || selectedItem.estatus || 'No especificado'} isDarkMode={isDarkMode} />
         <DetailCard label="Área" value={isSyncing ? null : (selectedItem.area?.nombre || 'No especificado')} isDarkMode={isDarkMode} isSyncing={isSyncing} />
         <DetailCard label="Director/Jefe de Área" value={isSyncing ? null : (selectedItem.directorio?.nombre || 'No especificado')} isDarkMode={isDarkMode} isSyncing={isSyncing} />
       </div>

@@ -33,7 +33,7 @@ export function useSearchAndFilters(muebles: MuebleITEA[]) {
       descripcion: muebles.map(m => m.descripcion || '').filter(Boolean),
       rubro: muebles.map(m => m.rubro || '').filter(Boolean),
       estado: muebles.map(m => m.estado || '').filter(Boolean),
-      estatus: muebles.map(m => m.estatus || '').filter(Boolean),
+      estatus: muebles.map(m => m.config_estatus?.concepto || m.estatus || '').filter(Boolean),
     };
   }, [muebles]);
 
@@ -167,7 +167,7 @@ export function useSearchAndFilters(muebles: MuebleITEA[]) {
           case 'descripcion': return (item.descripcion?.toLowerCase() || '').includes(filterTerm);
           case 'rubro': return (item.rubro?.toLowerCase() || '').includes(filterTerm);
           case 'estado': return (item.estado?.toLowerCase() || '').includes(filterTerm);
-          case 'estatus': return (item.estatus?.toLowerCase() || '').includes(filterTerm);
+          case 'estatus': return ((item.config_estatus?.concepto || item.estatus)?.toLowerCase() || '').includes(filterTerm);
           case 'area': return (item.area?.nombre?.toLowerCase() || '').includes(filterTerm);
           case 'usufinal': return (item.directorio?.nombre?.toLowerCase() || '').includes(filterTerm);
           case 'resguardante': return ((item as any).resguardante?.toLowerCase() || '').includes(filterTerm);
@@ -185,7 +185,7 @@ export function useSearchAndFilters(muebles: MuebleITEA[]) {
         (item.descripcion?.toLowerCase() || '').includes(term) ||
         (item.rubro?.toLowerCase() || '').includes(term) ||
         (item.estado?.toLowerCase() || '').includes(term) ||
-        (item.estatus?.toLowerCase() || '').includes(term) ||
+        ((item.config_estatus?.concepto || item.estatus)?.toLowerCase() || '').includes(term) ||
         (item.area?.nombre?.toLowerCase() || '').includes(term) ||
         (item.directorio?.nombre?.toLowerCase() || '').includes(term) ||
         ((item as any).resguardante?.toLowerCase() || '').includes(term)

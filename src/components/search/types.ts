@@ -9,6 +9,7 @@ export interface SearchResult {
     area: string | null;
     estado: string | null;
     estatus: string | null;
+    config_estatus?: { id: number; concepto: string } | null;
     resguardante: string | null;
     origen: 'INEA' | 'ITEA' | 'NO_LISTADO' | 'INEA_OBS' | 'ITEA_OBS' | 'RESGUARDO' | 'RESGUARDO_BAJA' | 'AREA' | 'DIRECTOR';
     // Campos específicos para resguardos

@@ -1,10 +1,16 @@
 "use client"
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import { useTheme } from '@/context/ThemeContext';
 import { Plus, Trash2, Edit, X, Search } from 'lucide-react';
 import SectionRealtimeToggle from '@/components/SectionRealtimeToggle';
 import { useAdminIndexation } from '@/hooks/indexation/useAdminIndexation';
+import { useIneaStore } from '@/stores/ineaStore';
+import { useIteaStore } from '@/stores/iteaStore';
+import { useNoListadoStore } from '@/stores/noListadoStore';
+import { useIneaObsoletosStore } from '@/stores/ineaObsoletosStore';
+import { useIteaObsoletosStore } from '@/stores/iteaObsoletosStore';
 import { motion, AnimatePresence } from 'framer-motion';
+import { EditEstatusConfirmModal } from '@/components/admin/modals/EditEstatusConfirmModal';
 
 interface ConfigItem {
     id: number;
@@ -25,6 +31,22 @@ export default function ConfigManagementComponent() {
     // Usar config desde el hook de indexación admin
     const { config: configItems, realtimeConnected } = useAdminIndexation();
     
+    // Obtener datos de los stores para contar bienes por estatus
+    // Use selectors to get stable references and prevent infinite loops
+    const ineaMuebles = useIneaStore(state => state.muebles);
+    const iteaMuebles = useIteaStore(state => state.muebles);
+    const noListadoMuebles = useNoListadoStore(state => state.muebles);
+    const ineaObsoletosMuebles = useIneaObsoletosStore(state => state.muebles);
+    const iteaObsoletosMuebles = useIteaObsoletosStore(state => state.muebles);
+    
+    // Get lengths for dependency tracking (more stable than array references)
+    const ineaLength = ineaMuebles.length;
+    const iteaLength = iteaMuebles.length;
+    const noListadoLength = noListadoMuebles.length;
+    const ineaObsoletosLength = ineaObsoletosMuebles.length;
+    const iteaObsoletosLength = iteaObsoletosMuebles.length;
+    const configLength = configItems.length;
+    
     // Estados
     const [editingRow, setEditingRow] = useState<number | null>(null);
     const [deletingRow, setDeletingRow] = useState<number | null>(null);
@@ -33,9 +55,111 @@ export default function ConfigManagementComponent() {
     const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
     const [activeTab, setActiveTab] = useState<string>('estatus');
     const [newItemValue, setNewItemValue] = useState<string>('');
+    
+    // Modal de confirmación para editar estatus
+    const [showEditConfirmModal, setShowEditConfirmModal] = useState<boolean>(false);
+    const [pendingEdit, setPendingEdit] = useState<{ id: number; value: string } | null>(null);
 
     const editInputRef = useRef<HTMLInputElement>(null);
     const newItemInputRef = useRef<HTMLInputElement>(null);
+    
+    // Calcular conteo de bienes por estatus
+    const estatusCounts = useMemo(() => {
+        const counts: Record<number, { inea: number; itea: number; noListado: number; total: number }> = {};
+        
+        // Contar INEA (usar config_estatus?.concepto o estatus como fallback)
+        ineaMuebles.forEach(mueble => {
+            const estatusConcepto = mueble.config_estatus?.concepto || mueble.estatus;
+            if (!estatusConcepto) return;
+            
+            // Buscar el ID del config que coincida con este concepto
+            const configItem = configItems.find(
+                c => c.tipo === 'estatus' && c.concepto?.toUpperCase() === estatusConcepto.toUpperCase()
+            );
+            
+            if (configItem) {
+                if (!counts[configItem.id]) {
+                    counts[configItem.id] = { inea: 0, itea: 0, noListado: 0, total: 0 };
+                }
+                counts[configItem.id].inea++;
+                counts[configItem.id].total++;
+            }
+        });
+        
+        // Contar INEA Obsoletos
+        ineaObsoletosMuebles.forEach(mueble => {
+            const estatusConcepto = mueble.config_estatus?.concepto || mueble.estatus;
+            if (!estatusConcepto) return;
+            
+            const configItem = configItems.find(
+                c => c.tipo === 'estatus' && c.concepto?.toUpperCase() === estatusConcepto.toUpperCase()
+            );
+            
+            if (configItem) {
+                if (!counts[configItem.id]) {
+                    counts[configItem.id] = { inea: 0, itea: 0, noListado: 0, total: 0 };
+                }
+                counts[configItem.id].inea++;
+                counts[configItem.id].total++;
+            }
+        });
+        
+        // Contar ITEA (usar config_estatus?.concepto o estatus como fallback)
+        iteaMuebles.forEach(mueble => {
+            const estatusConcepto = mueble.config_estatus?.concepto || mueble.estatus;
+            if (!estatusConcepto) return;
+            
+            const configItem = configItems.find(
+                c => c.tipo === 'estatus' && c.concepto?.toUpperCase() === estatusConcepto.toUpperCase()
+            );
+            
+            if (configItem) {
+                if (!counts[configItem.id]) {
+                    counts[configItem.id] = { inea: 0, itea: 0, noListado: 0, total: 0 };
+                }
+                counts[configItem.id].itea++;
+                counts[configItem.id].total++;
+            }
+        });
+        
+        // Contar ITEA Obsoletos
+        iteaObsoletosMuebles.forEach(mueble => {
+            const estatusConcepto = mueble.config_estatus?.concepto || mueble.estatus;
+            if (!estatusConcepto) return;
+            
+            const configItem = configItems.find(
+                c => c.tipo === 'estatus' && c.concepto?.toUpperCase() === estatusConcepto.toUpperCase()
+            );
+            
+            if (configItem) {
+                if (!counts[configItem.id]) {
+                    counts[configItem.id] = { inea: 0, itea: 0, noListado: 0, total: 0 };
+                }
+                counts[configItem.id].itea++;
+                counts[configItem.id].total++;
+            }
+        });
+        
+        // Contar No Listado (usar config_estatus?.concepto o estatus como fallback)
+        noListadoMuebles.forEach(mueble => {
+            const estatusConcepto = mueble.config_estatus?.concepto || mueble.estatus;
+            if (!estatusConcepto) return;
+            
+            const configItem = configItems.find(
+                c => c.tipo === 'estatus' && c.concepto?.toUpperCase() === estatusConcepto.toUpperCase()
+            );
+            
+            if (configItem) {
+                if (!counts[configItem.id]) {
+                    counts[configItem.id] = { inea: 0, itea: 0, noListado: 0, total: 0 };
+                }
+                counts[configItem.id].noListado++;
+                counts[configItem.id].total++;
+            }
+        });
+        
+        return counts;
+    }, [ineaLength, iteaLength, noListadoLength, ineaObsoletosLength, iteaObsoletosLength, configLength, ineaMuebles, iteaMuebles, noListadoMuebles, ineaObsoletosMuebles, iteaObsoletosMuebles, configItems]);
 
     // Efecto para enfocar el input de edición cuando se activa
     useEffect(() => {
@@ -108,14 +232,26 @@ export default function ConfigManagementComponent() {
     };
 
     const saveRowEdit = async (itemId: number) => {
+        // Si es estatus y hay bienes asociados, mostrar modal de confirmación
+        if (activeTab === 'estatus' && estatusCounts[itemId]?.total > 0) {
+            setPendingEdit({ id: itemId, value: editValue });
+            setShowEditConfirmModal(true);
+            return;
+        }
+        
+        // Si no es estatus o no hay bienes asociados, guardar directamente
+        await performSave(itemId, editValue);
+    };
+    
+    const performSave = async (itemId: number, newValue: string) => {
         setIsSubmitting(true);
 
         try {
-            if (!editValue || editValue.trim() === '') {
+            if (!newValue || newValue.trim() === '') {
                 throw new Error('El concepto es obligatorio');
             }
 
-            const conceptoValue = editValue.trim().toUpperCase();
+            const conceptoValue = newValue.trim().toUpperCase();
 
             const existingItem = configItems.find(item =>
                 item.concepto?.toUpperCase() === conceptoValue &&
@@ -145,6 +281,8 @@ export default function ConfigManagementComponent() {
             }
 
             setEditingRow(null);
+            setShowEditConfirmModal(false);
+            setPendingEdit(null);
             // Notification removed
         } catch (error: unknown) {
             const errorMessage = (error instanceof Error) ? error.message : 'Ha ocurrido un error';
@@ -206,6 +344,7 @@ export default function ConfigManagementComponent() {
     };
 
     return (
+        <>
         <div className={`h-[calc(100vh-4rem)] overflow-hidden transition-colors duration-300 ${isDarkMode
             ? 'bg-black text-white'
             : 'bg-white text-black'
@@ -468,9 +607,77 @@ export default function ConfigManagementComponent() {
                                         </>
                                     ) : (
                                         <>
-                                            <span className="text-sm font-medium">{item.concepto}</span>
+                                            <div className="flex items-center gap-3 flex-1 min-w-0">
+                                                <span className="text-sm font-medium">{item.concepto}</span>
+                                                {activeTab === 'estatus' && estatusCounts[item.id] && (
+                                                    <div className="flex items-center gap-1 flex-wrap">
+                                                        {/* INEA - Solo si > 0 */}
+                                                        {estatusCounts[item.id].inea > 0 && (
+                                                            <span
+                                                                className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium border ${
+                                                                    isDarkMode 
+                                                                        ? 'bg-white/90 text-gray-900 border-white/80' 
+                                                                        : 'bg-blue-50 text-blue-900 border-blue-200'
+                                                                }`}
+                                                                title={`${estatusCounts[item.id].inea} bienes INEA con este estatus`}
+                                                            >
+                                                                <span>INEA</span>
+                                                                <span className={`px-1 py-0.5 rounded-full text-[10px] font-bold ${
+                                                                    isDarkMode 
+                                                                        ? 'bg-gray-800 text-white' 
+                                                                        : 'bg-blue-200 text-blue-900'
+                                                                }`}>
+                                                                    {estatusCounts[item.id].inea}
+                                                                </span>
+                                                            </span>
+                                                        )}
+                                                        
+                                                        {/* ITEA - Solo si > 0 */}
+                                                        {estatusCounts[item.id].itea > 0 && (
+                                                            <span
+                                                                className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium border ${
+                                                                    isDarkMode 
+                                                                        ? 'bg-white/80 text-gray-900 border-white/70' 
+                                                                        : 'bg-green-50 text-green-900 border-green-200'
+                                                                }`}
+                                                                title={`${estatusCounts[item.id].itea} bienes ITEA con este estatus`}
+                                                            >
+                                                                <span>ITEA</span>
+                                                                <span className={`px-1 py-0.5 rounded-full text-[10px] font-bold ${
+                                                                    isDarkMode 
+                                                                        ? 'bg-gray-800 text-white' 
+                                                                        : 'bg-green-200 text-green-900'
+                                                                }`}>
+                                                                    {estatusCounts[item.id].itea}
+                                                                </span>
+                                                            </span>
+                                                        )}
+                                                        
+                                                        {/* TLAXCALA - Solo si > 0 */}
+                                                        {estatusCounts[item.id].noListado > 0 && (
+                                                            <span
+                                                                className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium border ${
+                                                                    isDarkMode 
+                                                                        ? 'bg-white/70 text-gray-900 border-white/60' 
+                                                                        : 'bg-purple-50 text-purple-900 border-purple-200'
+                                                                }`}
+                                                                title={`${estatusCounts[item.id].noListado} bienes TLAXCALA con este estatus`}
+                                                            >
+                                                                <span>TLAXCALA</span>
+                                                                <span className={`px-1 py-0.5 rounded-full text-[10px] font-bold ${
+                                                                    isDarkMode 
+                                                                        ? 'bg-gray-800 text-white' 
+                                                                        : 'bg-purple-200 text-purple-900'
+                                                                }`}>
+                                                                    {estatusCounts[item.id].noListado}
+                                                                </span>
+                                                            </span>
+                                                        )}
+                                                    </div>
+                                                )}
+                                            </div>
                                             <motion.div 
-                                                className="flex gap-1"
+                                                className="flex gap-1 flex-shrink-0"
                                                 initial={{ opacity: 0 }}
                                                 animate={{ opacity: 1 }}
                                                 transition={{ duration: 0.2 }}
@@ -488,14 +695,31 @@ export default function ConfigManagementComponent() {
                                                     <Edit size={14} />
                                                 </motion.button>
                                                 <motion.button
-                                                    onClick={() => handleDelete(item.id)}
-                                                    className={`p-2 rounded-lg transition-colors ${isDarkMode
-                                                        ? 'hover:bg-red-500/10 hover:text-red-400'
-                                                        : 'hover:bg-red-50 hover:text-red-600'
-                                                        }`}
-                                                    title="Eliminar"
-                                                    whileHover={{ scale: 1.1 }}
-                                                    whileTap={{ scale: 0.95 }}
+                                                    onClick={() => {
+                                                        // Si hay bienes asociados y es estatus, mostrar mensaje
+                                                        if (activeTab === 'estatus' && estatusCounts[item.id]?.total > 0) {
+                                                            alert(`No se puede eliminar este estatus porque hay ${estatusCounts[item.id].total} bienes asociados a él.`);
+                                                            return;
+                                                        }
+                                                        handleDelete(item.id);
+                                                    }}
+                                                    disabled={activeTab === 'estatus' && estatusCounts[item.id]?.total > 0}
+                                                    className={`p-2 rounded-lg transition-colors ${
+                                                        activeTab === 'estatus' && estatusCounts[item.id]?.total > 0
+                                                            ? isDarkMode
+                                                                ? 'opacity-30 cursor-not-allowed'
+                                                                : 'opacity-30 cursor-not-allowed'
+                                                            : isDarkMode
+                                                                ? 'hover:bg-red-500/10 hover:text-red-400'
+                                                                : 'hover:bg-red-50 hover:text-red-600'
+                                                    }`}
+                                                    title={
+                                                        activeTab === 'estatus' && estatusCounts[item.id]?.total > 0
+                                                            ? `No se puede eliminar: ${estatusCounts[item.id].total} bienes asociados`
+                                                            : 'Eliminar'
+                                                    }
+                                                    whileHover={activeTab === 'estatus' && estatusCounts[item.id]?.total > 0 ? {} : { scale: 1.1 }}
+                                                    whileTap={activeTab === 'estatus' && estatusCounts[item.id]?.total > 0 ? {} : { scale: 0.95 }}
                                                 >
                                                     <Trash2 size={14} />
                                                 </motion.button>
@@ -521,5 +745,24 @@ export default function ConfigManagementComponent() {
                 </div>
             </motion.div>
         </div>
+        
+        {/* Edit Confirmation Modal */}
+        <EditEstatusConfirmModal
+            show={showEditConfirmModal}
+            estatusName={pendingEdit ? configItems.find(i => i.id === pendingEdit.id)?.concepto || '' : ''}
+            affectedCounts={pendingEdit && estatusCounts[pendingEdit.id] ? estatusCounts[pendingEdit.id] : { inea: 0, itea: 0, noListado: 0, total: 0 }}
+            onConfirm={() => {
+                if (pendingEdit) {
+                    performSave(pendingEdit.id, pendingEdit.value);
+                }
+            }}
+            onCancel={() => {
+                setShowEditConfirmModal(false);
+                setPendingEdit(null);
+            }}
+            loading={isSubmitting}
+            isDarkMode={isDarkMode}
+        />
+        </>
     );
 }

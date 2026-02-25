@@ -12,6 +12,7 @@ interface UseFilterOptionsReturn {
 const initialFilterOptions: FilterOptions = {
   estados: [],
   estatus: [],
+  estatusWithIds: [],
   areas: [],
   rubros: [],
   formasAdquisicion: ['Compra', 'Donación', 'Transferencia', 'Comodato'],
@@ -56,10 +57,21 @@ export function useFilterOptions(): UseFilterOptionsReturn {
       const estadosMueblesItea = await fetchUniqueValues('mueblesitea', 'estado');
       const estadosUnicos = [...new Set([...estadosMuebles, ...estadosMueblesItea])];
 
-      // Fetch estatus from config table or fallback to table values
-      const estatusConfig = await fetchConfigValues('estatus');
-      const estatusUnicos = estatusConfig.length > 0
-        ? estatusConfig
+      // Fetch estatus from config table with IDs
+      const { data: estatusData } = await supabase
+        .from('config')
+        .select('id, concepto')
+        .eq('tipo', 'estatus')
+        .order('concepto');
+
+      const estatusWithIds = estatusData?.map(item => ({
+        id: item.id,
+        concepto: item.concepto?.trim().toUpperCase()
+      })).filter(item => item.concepto) || [];
+
+      // Fallback to legacy text values if no config data
+      const estatusUnicos = estatusWithIds.length > 0
+        ? estatusWithIds.map(e => e.concepto)
         : [...new Set([
             ...(await fetchUniqueValues('muebles', 'estatus')),
             ...(await fetchUniqueValues('mueblesitea', 'estatus'))
@@ -97,6 +109,7 @@ export function useFilterOptions(): UseFilterOptionsReturn {
       setFilterOptions({
         estados: estadosUnicos,
         estatus: estatusUnicos,
+        estatusWithIds: estatusWithIds,
         areas: areasUnicas,
         rubros: rubrosUnicos,
         formasAdquisicion: formasAdquisicion,

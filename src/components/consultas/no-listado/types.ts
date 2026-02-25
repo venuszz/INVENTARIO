@@ -12,15 +12,17 @@ export interface Mueble {
     ubicacion_mu: string | null;
     ubicacion_no: string | null;
     estado: string | null;
-    estatus: string | null;
+    estatus: string | null; // Legacy field - kept for backward compatibility during migration
     
     // Relational fields
     id_area: number | null;
     id_directorio: number | null;
+    id_estatus: number | null;
     
     // Nested objects from JOINs
     area: { id_area: number; nombre: string } | null;
     directorio: { id_directorio: number; nombre: string; puesto: string } | null;
+    config_estatus: { id: number; concepto: string } | null;
     
     fechabaja: string | null;
     causadebaja: string | null;
@@ -31,7 +33,8 @@ export interface Mueble {
 
 export interface FilterOptions {
     estados: string[];
-    estatus: string[];
+    estatus: string[]; // Array of concepto values from config table
+    estatusMap?: { [concepto: string]: number }; // Map concepto to id for saving
     areas: string[];
     rubros: string[] | null;
     formadq: string[] | null;

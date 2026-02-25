@@ -10,13 +10,14 @@ export interface Mueble {
   id_inv: string | null;           // Inventory number
   descripcion: string | null;      // Item description
   estado: string | null;           // Condition (B/R/M/N)
-  estatus: string | null;          // Status (ACTIVO/INACTIVO)
+  estatus: string | null;          // Status (ACTIVO/INACTIVO) - legacy field
   resguardante: string | null;     // Current custodian
   rubro: string | null;            // Category
   
   // Relational fields (NEW - always objects from JOINs)
   directorio: { nombre: string; id_directorio: number; puesto: string } | null;  // Director
   area: { nombre: string; id_area: number } | null;                              // Area
+  config_estatus: { id: number; concepto: string } | null;                       // Estatus (relational)
   
   origen?: string;                 // Source (INEA/ITEA/TLAXCALA)
   resguardanteAsignado?: string;   // Individual override for resguardante

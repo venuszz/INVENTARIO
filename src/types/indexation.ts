@@ -169,10 +169,12 @@ export interface MuebleINEA {
   // Relational fields (NEW)
   id_area: number | null;
   id_directorio: number | null;
+  id_estatus: number | null;
   
   // Nested objects from JOINs (NEW)
   area: { id_area: number; nombre: string } | null;
   directorio: { id_directorio: number; nombre: string; puesto: string } | null;
+  config_estatus: { id: number; concepto: string } | null;
   
   // Legacy text fields (mantener por compatibilidad)
   usufinal: string | null;
@@ -199,16 +201,18 @@ export interface MuebleITEA {
   ubicacion_mu: string | null;
   ubicacion_no: string | null;
   estado: string | null;
-  estatus: string | null;
+  estatus: string | null; // Legacy field - kept for backward compatibility
   
   // Relational fields (NEW)
   id_area: number | null;
   id_directorio: number | null;
+  id_estatus: number | null;
   color: string | null;
   
   // Nested objects from JOINs (NEW)
   area: { id_area: number; nombre: string } | null;
   directorio: { id_directorio: number; nombre: string; puesto: string } | null;
+  config_estatus: { id: number; concepto: string } | null;
   colores: { id: string; nombre: string; significado: string | null } | null;
   
   fechabaja: string | null;
@@ -234,6 +238,10 @@ export interface MuebleNoListado {
   ubicacion_no: string | null;
   estado: string | null;
   estatus: string | null;
+  
+  // Estatus relational fields (NEW)
+  id_estatus: number | null;
+  config_estatus: { id: number; concepto: string } | null;
   
   // Relational fields (NEW)
   id_area: number | null;

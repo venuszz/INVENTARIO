@@ -33,7 +33,7 @@ export function useNoListadoIndexation() {
   const reconnectionTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const isInitializedRef = useRef(false);
   const hasHydratedRef = useRef(false);
-  const syncQueueRef = useRef<{ ids: string[]; type: 'area' | 'directorio'; refId: number } | null>(null);
+  const syncQueueRef = useRef<{ ids: string[]; type: 'area' | 'directorio' | 'estatus'; refId: number } | null>(null);
   const isSyncingRef = useRef(false);
   
   /**
@@ -41,7 +41,7 @@ export function useNoListadoIndexation() {
    */
   const processBatchUpdates = useCallback(async (
     _ids: string[],
-    type: 'area' | 'directorio',
+    type: 'area' | 'directorio' | 'estatus',
     refId: number
   ) => {
     if (isSyncingRef.current) {
@@ -54,7 +54,7 @@ export function useNoListadoIndexation() {
     
     const BATCH_SIZE = 1000;
     const allFetchedMuebles: MuebleNoListado[] = [];
-    const filterField = type === 'area' ? 'id_area' : 'id_directorio';
+    const filterField = type === 'area' ? 'id_area' : type === 'directorio' ? 'id_directorio' : 'id_estatus';
     
     // Fetch all affected records in batches of 1000
     let hasMore = true;
@@ -67,7 +67,8 @@ export function useNoListadoIndexation() {
           .select(`
             *,
             area:area(id_area, nombre),
-            directorio:directorio(id_directorio, nombre, puesto)
+            directorio:directorio(id_directorio, nombre, puesto),
+            config_estatus:config!id_estatus(id, concepto)
           `)
           .eq(filterField, refId)
           .neq('estatus', 'BAJA')
@@ -175,7 +176,8 @@ export function useNoListadoIndexation() {
               .select(`
                 *,
                 area:area(id_area, nombre),
-                directorio:directorio(id_directorio, nombre, puesto)
+                directorio:directorio(id_directorio, nombre, puesto),
+                config_estatus:config!id_estatus(id, concepto)
               `)
               .neq('estatus', 'BAJA')
               .range(offset, offset + BATCH_SIZE - 1);
@@ -273,7 +275,8 @@ export function useNoListadoIndexation() {
                   .select(`
                     *,
                     area:area(id_area, nombre),
-                    directorio:directorio(id_directorio, nombre, puesto)
+                    directorio:directorio(id_directorio, nombre, puesto),
+                    config_estatus:config!id_estatus(id, concepto)
                   `)
                   .eq('id', newRecord.id)
                   .single();
@@ -311,7 +314,8 @@ export function useNoListadoIndexation() {
                   .select(`
                     *,
                     area:area(id_area, nombre),
-                    directorio:directorio(id_directorio, nombre, puesto)
+                    directorio:directorio(id_directorio, nombre, puesto),
+                    config_estatus:config!id_estatus(id, concepto)
                   `)
                   .eq('id', newRecord.id)
                   .single();
@@ -395,6 +399,27 @@ export function useNoListadoIndexation() {
           }
         }
       )
+      // Listen to config table changes (for estatus updates)
+      .on('postgres_changes', { 
+        event: 'UPDATE', 
+        schema: 'public', 
+        table: 'config',
+        filter: 'tipo=eq.estatus'
+      },
+        async (payload: any) => {
+          const { new: updatedConfig } = payload;
+          updateLastEventReceived(MODULE_KEY);
+          
+          try {
+            // Only process if it's an estatus type config
+            if (updatedConfig.tipo === 'estatus') {
+              processBatchUpdates([], 'estatus', updatedConfig.id);
+            }
+          } catch (error) {
+            console.error('Error handling config estatus update:', error);
+          }
+        }
+      )
       .on('system', {}, (payload) => {
         const { status } = payload;
         const wasConnected = indexationState?.realtimeConnected ?? false;
@@ -424,7 +449,8 @@ export function useNoListadoIndexation() {
               .select(`
                 *,
                 area:area(id_area, nombre),
-                directorio:directorio(id_directorio, nombre, puesto)
+                directorio:directorio(id_directorio, nombre, puesto),
+                config_estatus:config!id_estatus(id, concepto)
               `)
               .eq('id', affectedMuebleId)
               .single();

@@ -31,6 +31,7 @@ const initialFormData: FormData = {
   ubicacion_no: '',
   estado: '',
   estatus: '',
+  id_estatus: null,
   area: '',
   usufinal: '',
   id_area: null,
@@ -68,12 +69,17 @@ export function useFormData(defaultEstado: string = '', defaultEstatus: string =
     const { name, value } = e.target;
     
     // Convert to uppercase for text inputs and textareas (but not selects or date inputs)
-    let newValue = value;
+    let newValue: string | number | null = value;
     if (
       (e.target.tagName === 'INPUT' && e.target.getAttribute('type') !== 'date') ||
       e.target.tagName === 'TEXTAREA'
     ) {
       newValue = value.toUpperCase();
+    }
+    
+    // Handle id_estatus conversion to number
+    if (name === 'id_estatus') {
+      newValue = value ? parseInt(value, 10) : null;
     }
     
     setFormData(prev => ({ ...prev, [name]: newValue }));

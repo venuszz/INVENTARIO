@@ -19,7 +19,8 @@ export interface FormData {
   ubicacion_mu: string;
   ubicacion_no: string;
   estado: Estado;
-  estatus: Estatus;
+  estatus: Estatus; // Display name for UI (legacy)
+  id_estatus: number | null; // Actual ID to save
   area: string; // Display name for UI
   usufinal: string; // Display name for UI
   id_area: number | null; // Actual ID to save
@@ -32,7 +33,8 @@ export interface FormData {
 // Filter options interface
 export interface FilterOptions {
   estados: string[];
-  estatus: string[];
+  estatus: string[]; // Legacy text values for display
+  estatusWithIds: { id: number; concepto: string }[]; // Relational estatus with IDs
   areas: string[];
   rubros: string[];
   formasAdquisicion: string[];

@@ -251,8 +251,10 @@ export default function RegistroBienesForm() {
       console.log('🔍 [Save Validation] Checking IDs:', {
         id_area: formData.id_area,
         id_directorio: formData.id_directorio,
+        id_estatus: formData.id_estatus,
         area: formData.area,
-        usufinal: formData.usufinal
+        usufinal: formData.usufinal,
+        estatus: formData.estatus
       });
       
       if (!formData.id_area || !formData.id_directorio) {
@@ -261,6 +263,15 @@ export default function RegistroBienesForm() {
           id_directorio: formData.id_directorio
         });
         throw new Error('Debe seleccionar un área y un director válidos');
+      }
+      
+      // Validate estatus ID if estatus is selected
+      if (formData.estatus && !formData.id_estatus) {
+        console.error('❌ [Save Validation] Missing estatus ID:', {
+          estatus: formData.estatus,
+          id_estatus: formData.id_estatus
+        });
+        throw new Error('Error al procesar el estatus seleccionado');
       }
       
       console.log('✅ [Save Validation] IDs are valid, proceeding with save');
@@ -278,7 +289,8 @@ export default function RegistroBienesForm() {
         ubicacion_mu: formData.ubicacion_mu.toUpperCase(),
         ubicacion_no: formData.ubicacion_no.toUpperCase(),
         estado: formData.estado.toUpperCase(),
-        estatus: formData.estatus.toUpperCase(),
+        estatus: formData.estatus.toUpperCase(), // Keep legacy field for backward compatibility
+        id_estatus: formData.id_estatus, // Save relational ID
         causadebaja: formData.causadebaja.toUpperCase(),
         f_adq: formData.f_adq || null,
         fechabaja: formData.fechabaja || null,

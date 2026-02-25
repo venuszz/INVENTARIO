@@ -1,254 +1,260 @@
-# ITEA General - Sync Status Indicator Implementation
+# ITEA - Sync Status Indicator Implementation
 
 ## Overview
-This document describes the implementation of the sync status indicator for the ITEA General module, which prevents user interactions during batch synchronization operations when area or director changes affect multiple records simultaneously.
+This document describes the implementation of realtime sync status indicators for the ITEA module when the `config` table (estatus values) is updated. This follows the same pattern implemented for No Listado, Area, and Director updates.
 
-## Problem Statement
-When changing area or director assignments that affect multiple records in ITEA General, the system performs batch updates with skeleton loading states. However, users could still attempt to edit records or trigger new operations during this sync process, potentially causing:
-- Data inconsistencies
-- Race conditions
-- Confusing UX with overlapping operations
-- Failed updates due to concurrent modifications
+## Feature Description
 
-## Solution
-Implemented a comprehensive sync status system with:
-1. **Global sync state management** in the store
-2. **Floating visual indicator** showing sync progress
-3. **Disabled UI controls** during sync operations
-4. **Form field protection** in edit mode
+When an estatus value is updated in the `config` table (tipo='estatus'), the ITEA module:
+1. Detects the change via realtime listener
+2. Shows skeleton loaders in affected table cells
+3. Fetches updated data in batches
+4. Updates the UI smoothly without freezing
+5. Clears skeleton indicators when complete
 
 ## Implementation Details
 
-### 1. Store Updates (`src/stores/iteaStore.ts`)
+### 1. Realtime Listener (`useIteaIndexation.ts`)
 
-The ITEA store already had sync state management:
+The indexation hook listens for config table updates:
+
+```typescript
+.on('postgres_changes', { 
+  event: 'UPDATE', 
+  schema: 'public', 
+  table: 'config',
+  filter: 'tipo=eq.estatus'
+},
+  async (payload: any) => {
+    const { new: updatedConfig } = payload;
+    updateLastEventReceived(MODULE_KEY);
+    
+    try {
+      if (updatedConfig.tipo === 'estatus') {
+        processBatchUpdates([], 'estatus', updatedConfig.id);
+      }
+    } catch (error) {
+      console.error('Error handling config estatus update:', error);
+    }
+  }
+)
+```
+
+### 2. Batch Processing
+
+The `processBatchUpdates` function handles the sync:
+
+```typescript
+const processBatchUpdates = useCallback(async (
+  _ids: string[],
+  type: 'area' | 'directorio' | 'estatus',
+  refId: number
+) => {
+  if (isSyncingRef.current) {
+    syncQueueRef.current = { ids: _ids, type, refId };
+    return;
+  }
+  
+  isSyncingRef.current = true;
+  setIsSyncing(true);
+  
+  const BATCH_SIZE = 1000;
+  const allFetchedMuebles: MuebleITEA[] = [];
+  const filterField = type === 'area' ? 'id_area' : 
+                      type === 'directorio' ? 'id_directorio' : 
+                      'id_estatus';
+  
+  // Fetch all affected records in batches of 1000
+  let hasMore = true;
+  let offset = 0;
+  
+  while (hasMore) {
+    const { data: affectedMuebles, error } = await supabase
+      .from(TABLE)
+      .select(`
+        *,
+        area:area(id_area, nombre),
+        directorio:directorio(id_directorio, nombre, puesto),
+        config_estatus:config!id_estatus(id, concepto)
+      `)
+      .eq(filterField, refId)
+      .neq('estatus', 'BAJA')
+      .range(offset, offset + BATCH_SIZE - 1);
+    
+    if (affectedMuebles && affectedMuebles.length > 0) {
+      // Set syncing IDs for skeleton display
+      const ids = affectedMuebles.map(m => m.id);
+      setSyncingIds(ids);
+      
+      allFetchedMuebles.push(...affectedMuebles);
+      hasMore = affectedMuebles.length === BATCH_SIZE;
+      offset += BATCH_SIZE;
+    } else {
+      hasMore = false;
+    }
+  }
+  
+  // Update store in batches of 50 to avoid UI lag
+  const UI_BATCH_SIZE = 50;
+  for (let i = 0; i < allFetchedMuebles.length; i += UI_BATCH_SIZE) {
+    const batch = allFetchedMuebles.slice(i, i + UI_BATCH_SIZE);
+    updateMuebleBatch(batch);
+    
+    const syncedIds = batch.map(m => m.id);
+    removeSyncingIds(syncedIds);
+    
+    await new Promise(resolve => {
+      if (typeof requestIdleCallback !== 'undefined') {
+        requestIdleCallback(() => resolve(undefined), { timeout: 100 });
+      } else {
+        setTimeout(resolve, 16);
+      }
+    });
+  }
+  
+  clearSyncingIds();
+  setIsSyncing(false);
+  isSyncingRef.current = false;
+}, [updateMuebleBatch, setSyncingIds, removeSyncingIds, clearSyncingIds, setIsSyncing]);
+```
+
+### 3. Store Management (`iteaStore.ts`)
+
+The store tracks syncing state:
 
 ```typescript
 interface IteaStore {
-  // ... existing state
+  muebles: MuebleITEA[];
   syncingIds: string[];
   isSyncing: boolean;
-  
-  // Sync actions
-  updateMuebleBatch: (muebles: MuebleITEA[]) => void;
   setSyncingIds: (ids: string[]) => void;
   removeSyncingIds: (ids: string[]) => void;
   clearSyncingIds: () => void;
   setIsSyncing: (syncing: boolean) => void;
+  // ... other methods
 }
 ```
 
-**Key Features:**
-- `syncingIds`: Array of record IDs currently being synchronized
-- `isSyncing`: Global flag indicating if any sync operation is in progress
-- `updateMuebleBatch`: Efficiently updates multiple records at once
-- Sync control actions for managing the sync lifecycle
+### 4. UI Components
 
-### 2. Sync Status Banner Component
+#### InventoryTable.tsx
 
-Created `src/components/consultas/itea/components/SyncStatusBanner.tsx`:
+Shows skeleton loaders for syncing cells:
 
 ```typescript
-interface SyncStatusBannerProps {
-  isSyncing: boolean;
-  syncingCount: number;
-  isDarkMode: boolean;
+function CellSkeleton() {
+  return (
+    <div className={`h-4 rounded animate-pulse ${
+      isDarkMode ? 'bg-white/10' : 'bg-black/10'
+    }`} style={{ width: '80%' }} />
+  );
 }
+
+// In table row
+const isSyncing = syncingIdsArray.includes(item.id);
+
+<td>
+  {isSyncing ? <CellSkeleton /> : (item.area?.nombre ?? null)}
+</td>
 ```
 
-**Visual Design:**
-- **Position**: Fixed top-left (top-[5.5rem] left-6)
-- **Style**: Glassmorphism with backdrop blur
-- **Animation**: Smooth fade-in/out with spring physics
-- **Content**:
-  - Animated spinner icon with pulse effect
-  - "Sincronizando" text
-  - Record counter (e.g., "5 registros")
-  - Three animated progress dots
+#### DetailPanel.tsx
 
-**Responsive Behavior:**
-- Only visible when `isSyncing` is true
-- Automatically shows/hides with smooth transitions
-- Updates counter in real-time as records sync
-
-### 3. Main Component Integration
-
-Updated `src/components/consultas/itea/index.tsx`:
+Shows skeleton in detail view:
 
 ```typescript
-// Get sync state from store
-const syncingIds = useIteaStore(state => state.syncingIds) || [];
-const isSyncing = useIteaStore(state => state.isSyncing);
-
-// Render banner
-<SyncStatusBanner
-  isSyncing={isSyncing}
-  syncingCount={syncingIds.length}
+<DetailCard
+  label="Área"
+  value={isSyncing ? null : (selectedItem.area?.nombre || 'No especificado')}
   isDarkMode={isDarkMode}
-/>
-
-// Disable action buttons
-<button
-  onClick={handleStartEdit}
-  disabled={isSyncing}
-  title={isSyncing ? "Espere a que termine la sincronización" : "Editar bien"}
->
-  Editar
-</button>
-
-// All action buttons (Color, Editar, Inactivo, Dar de Baja) are disabled during sync
-// Save and Cancel buttons in edit mode are also disabled during sync
-```
-
-### 4. Detail Panel Form Protection
-
-Updated `src/components/consultas/itea/components/DetailPanel.tsx`:
-
-**Interface Updates:**
-```typescript
-interface DetailPanelProps {
-  // ... existing props
-  isGlobalSyncing?: boolean;
-}
-
-interface EditModeProps {
-  // ... existing props
-  isDisabled?: boolean;
-}
-```
-
-**Disabled State Logic:**
-```typescript
-// In DetailPanel component
-const isDisabled = isGlobalSyncing;
-
-// Pass to EditMode
-<EditMode
-  {...props}
-  isDisabled={isDisabled}
+  isSyncing={isSyncing}
 />
 ```
 
-**Form Field Protection:**
-All input fields, textareas, and CustomSelect components receive:
-```typescript
-disabled={isDisabled}
-className={`... ${isDisabled ? 'opacity-50 cursor-not-allowed' : ''}`}
-```
+## User Experience
 
-**Protected Fields:**
-- ID Inventario (text input)
-- Rubro (CustomSelect)
-- Descripción (textarea)
-- Estado (CustomSelect)
-- Valor (text input)
-- Fecha de Adquisición (date input)
-- Forma de Adquisición (CustomSelect)
-- Proveedor (text input)
-- Factura (text input)
-- Estado (text input)
-- Municipio (text input)
-- Nomenclatura (text input)
-- Estatus (CustomSelect)
-- Director/Jefe de Área (CustomSelect - also disabled if has active resguardo)
+### Before Update
+- User sees current estatus values in table and detail panel
+- All data displays normally
 
-## User Experience Flow
+### During Update
+1. Admin updates an estatus value in config table
+2. Realtime listener detects the change
+3. Skeleton loaders appear in affected cells
+4. Data fetches in background (batched for performance)
+5. UI updates smoothly as batches complete
+6. Skeleton loaders disappear
 
-### Normal Operation
-1. User views ITEA General inventory
-2. All controls are enabled
-3. User can edit, assign colors, mark as inactive, or dar de baja freely
+### After Update
+- All affected records show new estatus value
+- No page refresh required
+- No data loss or inconsistency
 
-### During Sync
-1. Admin changes area/director affecting multiple records
-2. Sync status banner appears (top-left, floating)
-3. Banner shows: "Sincronizando - X registros"
-4. All action buttons disabled with tooltips
-5. If user is in edit mode, all form fields become disabled
-6. Skeleton loaders appear in table cells for syncing records
-7. Banner updates counter as records complete
-8. When sync completes, banner fades out
-9. All controls re-enable automatically
+## Performance Optimizations
 
-## Technical Specifications
-
-### Animation Details
-- **Banner Entry**: Spring animation (stiffness: 500, damping: 30)
-- **Banner Exit**: Smooth fade with scale down
-- **Spinner**: Continuous rotation with pulse effect
-- **Progress Dots**: Staggered scale/opacity animation (1.5s cycle)
-
-### Timing
-- Minimum skeleton display: 800ms per record
-- Batch processing: 50 records per batch
-- Inter-batch delay: 100ms
-- Banner transition: ~300ms
-
-### Z-Index Hierarchy
-- Banner: z-50 (ensures visibility above content)
-- Modals: z-40
-- Table content: z-10
-
-### Accessibility
-- Disabled buttons include `title` attributes with explanatory text
-- Visual feedback through opacity changes
-- Clear status messaging in banner
-- Maintains keyboard navigation flow
+1. **Batch Fetching**: Fetches 1000 records at a time from Supabase
+2. **UI Batching**: Updates UI in batches of 50 to prevent freezing
+3. **Idle Callbacks**: Uses `requestIdleCallback` for smooth updates
+4. **Queue Management**: Queues concurrent updates to prevent conflicts
+5. **Skeleton Indicators**: Shows loading state without blocking UI
 
 ## Benefits
 
-1. **Data Integrity**: Prevents concurrent modifications during batch updates
-2. **Clear Feedback**: Users understand when system is processing
-3. **Error Prevention**: Disabled controls prevent invalid operations
-4. **Professional UX**: Smooth animations and clear status indicators
-5. **Consistency**: Matches INEA implementation pattern
+1. **Real-time Updates**: Changes appear immediately without refresh
+2. **Visual Feedback**: Skeleton loaders show sync progress
+3. **Performance**: Batched updates prevent UI lag
+4. **Consistency**: All affected records update together
+5. **User Experience**: Smooth, non-blocking updates
 
-## Related Files
+## Testing Scenarios
 
-- `src/stores/iteaStore.ts` - State management
-- `src/hooks/indexation/useIteaIndexation.ts` - Sync trigger logic and realtime listeners
-- `src/components/consultas/itea/index.tsx` - Main component
-- `src/components/consultas/itea/components/SyncStatusBanner.tsx` - Banner component
-- `src/components/consultas/itea/components/DetailPanel.tsx` - Form protection
+### Scenario 1: Single Estatus Update
+1. Admin updates "ACTIVO" to "ACTIVO (VERIFICADO)" in config table
+2. All ITEA records with that estatus show skeleton loaders
+3. Records update with new value
+4. Skeleton loaders disappear
 
-## Key Implementation Details
+### Scenario 2: Multiple Records
+1. Admin updates estatus used by 500+ records
+2. Batch fetching handles large dataset
+3. UI updates in chunks of 50
+4. No performance degradation
 
-### Realtime Listeners
-The hook `useIteaIndexation.ts` includes listeners for:
-1. **muebles.itea table** - INSERT, UPDATE, DELETE events
-2. **area table** - UPDATE events that trigger batch sync for affected records
-3. **directorio table** - UPDATE events that trigger batch sync for affected records
-4. **resguardos table** - All events (filtered by `origen = 'ITEA'`) to update resguardante field
-5. **colores table** - All events to update color assignments
+### Scenario 3: Concurrent Updates
+1. Admin updates estatus while area is also updating
+2. Queue system prevents conflicts
+3. Both updates complete successfully
+4. UI reflects all changes
 
-### Batch Processing
-When area or director changes occur:
-1. `processBatchUpdates` is called with the affected area/director ID
-2. Fetches all records in batches of 1000 (Supabase limit)
-3. Sets `syncingIds` to trigger skeleton loaders
-4. Updates store in UI batches of 50 records
-5. Clears sync state when complete
-6. Queues additional sync requests if they arrive during processing
+## Comparison with Other Modules
 
-## Testing Checklist
+| Feature | No Listado | ITEA | INEA |
+|---------|-----------|------|------|
+| Estatus Sync | ✅ | ✅ | ⏳ |
+| Area Sync | ✅ | ✅ | ✅ |
+| Director Sync | ✅ | ✅ | ✅ |
+| Skeleton Indicators | ✅ | ✅ | ✅ |
+| Batch Processing | ✅ | ✅ | ✅ |
 
-- [ ] Banner appears when sync starts
-- [ ] Banner shows correct record count
-- [ ] Banner disappears when sync completes
-- [ ] Color button disabled during sync
-- [ ] Edit button disabled during sync
-- [ ] Inactivo button disabled during sync
-- [ ] Dar de Baja button disabled during sync
-- [ ] Save/Cancel buttons disabled during sync in edit mode
-- [ ] Form fields disabled in edit mode during sync
-- [ ] Tooltips show on disabled buttons
-- [ ] Skeleton loaders appear for syncing records
-- [ ] No console errors during sync
-- [ ] Smooth animations throughout
-- [ ] Works in both light and dark modes
+## Files Modified
 
-## Implementation Date
-February 23, 2026
+1. `src/hooks/indexation/useIteaIndexation.ts` - Added config listener and batch processing
+2. `src/stores/iteaStore.ts` - Added syncing state management
+3. `src/components/consultas/itea/components/InventoryTable.tsx` - Added skeleton loaders
+4. `src/components/consultas/itea/components/DetailPanel.tsx` - Added skeleton support
+5. `src/components/consultas/itea/index.tsx` - Passes syncing props
 
-## Author
-Kiro AI Assistant
+## Related Documentation
+
+- [ITEA Estatus Relational Migration](./ITEA_ESTATUS_RELATIONAL_MIGRATION.md)
+- [No Listado Sync Status Indicator](./NO_LISTADO_SYNC_STATUS_INDICATOR.md)
+- [INEA Sync Status Indicator](./INEA_SYNC_STATUS_INDICATOR.md)
+- [Levantamiento Sync Status Indicator](./LEVANTAMIENTO_SYNC_STATUS_INDICATOR.md)
+
+## Future Enhancements
+
+1. Add progress percentage indicator
+2. Add estimated time remaining
+3. Add cancel/pause functionality
+4. Add retry logic for failed batches
+5. Add notification when sync completes

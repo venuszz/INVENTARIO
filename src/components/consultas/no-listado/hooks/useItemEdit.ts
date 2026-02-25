@@ -194,7 +194,7 @@ export function useItemEdit() {
             // Refetch the mueble with JOINs to get updated nested objects
             const refetchResponse = await fetch(
                 '/api/supabase-proxy?target=' + encodeURIComponent(
-                    `/rest/v1/mueblestlaxcala?id=eq.${editFormData.id}&select=*,area:area(id_area,nombre),directorio:directorio(id_directorio,nombre,puesto)`
+                    `/rest/v1/mueblestlaxcala?id=eq.${editFormData.id}&select=*,area:area(id_area,nombre),directorio:directorio(id_directorio,nombre,puesto),config_estatus:config!id_estatus(id,concepto)`
                 ),
                 {
                     method: 'GET',
@@ -262,6 +262,9 @@ export function useItemEdit() {
             case 'id_directorio':
                 newData.id_directorio = value ? parseInt(value) : null;
                 break;
+            case 'id_estatus':
+                newData.id_estatus = value ? parseInt(value) : null;
+                break;
             case 'rubro':
             case 'descripcion':
             case 'f_adq':
@@ -298,6 +301,26 @@ export function useItemEdit() {
                 String(todayDate.getMonth() + 1).padStart(2, '0') + '-' +
                 String(todayDate.getDate()).padStart(2, '0');
             
+            // Fetch the id_estatus for "BAJA" from config table
+            const { data: bajaConfig } = await supabase
+                .from('config')
+                .select('id')
+                .eq('tipo', 'estatus')
+                .eq('concepto', 'BAJA')
+                .single();
+            
+            const updatePayload: any = { 
+                causadebaja: bajaCause, 
+                fechabaja: today 
+            };
+            
+            // Use id_estatus if available, otherwise fall back to legacy estatus field
+            if (bajaConfig?.id) {
+                updatePayload.id_estatus = bajaConfig.id;
+            } else {
+                updatePayload.estatus = 'BAJA';
+            }
+            
             const updateResponse = await fetch(
                 '/api/supabase-proxy?target=' + encodeURIComponent(`/rest/v1/mueblestlaxcala?id=eq.${selectedItem.id}`),
                 {
@@ -307,11 +330,7 @@ export function useItemEdit() {
                         'Content-Type': 'application/json',
                         'Prefer': 'return=representation'
                     },
-                    body: JSON.stringify({ 
-                        estatus: 'BAJA', 
-                        causadebaja: bajaCause, 
-                        fechabaja: today 
-                    })
+                    body: JSON.stringify(updatePayload)
                 }
             );
             
@@ -369,6 +388,23 @@ export function useItemEdit() {
         setShowInactiveModal(false);
         
         try {
+            // Fetch the id_estatus for "INACTIVO" from config table
+            const { data: inactivoConfig } = await supabase
+                .from('config')
+                .select('id')
+                .eq('tipo', 'estatus')
+                .eq('concepto', 'INACTIVO')
+                .single();
+            
+            const updatePayload: any = {};
+            
+            // Use id_estatus if available, otherwise fall back to legacy estatus field
+            if (inactivoConfig?.id) {
+                updatePayload.id_estatus = inactivoConfig.id;
+            } else {
+                updatePayload.estatus = 'INACTIVO';
+            }
+            
             const response = await fetch(
                 '/api/supabase-proxy?target=' + encodeURIComponent(`/rest/v1/mueblestlaxcala?id=eq.${selectedItem.id}`),
                 {
@@ -378,7 +414,7 @@ export function useItemEdit() {
                         'Content-Type': 'application/json',
                         'Prefer': 'return=representation'
                     },
-                    body: JSON.stringify({ estatus: 'INACTIVO' })
+                    body: JSON.stringify(updatePayload)
                 }
             );
 

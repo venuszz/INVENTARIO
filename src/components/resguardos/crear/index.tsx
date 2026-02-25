@@ -177,13 +177,22 @@ export default function CrearResguardos() {
           if (!directorio) return '';
           return typeof directorio === 'object' ? directorio.nombre.toLowerCase() : '';
         };
+        
+        // Helper to get estatus value from relational field
+        const getEstatusValue = (): string => {
+          // Try relational field first, fallback to legacy
+          if (item.config_estatus && typeof item.config_estatus === 'object') {
+            return item.config_estatus.concepto?.toLowerCase() || '';
+          }
+          return (item.estatus?.toLowerCase() || '');
+        };
 
         switch (filter.type) {
           case 'id': return (item.id_inv?.toLowerCase() || '').includes(filterTerm);
           case 'descripcion': return (item.descripcion?.toLowerCase() || '').includes(filterTerm);
           case 'rubro': return (item.rubro?.toLowerCase() || '').includes(filterTerm);
           case 'estado': return (item.estado?.toLowerCase() || '').includes(filterTerm);
-          case 'estatus': return (item.estatus?.toLowerCase() || '').includes(filterTerm);
+          case 'estatus': return getEstatusValue().includes(filterTerm);
           case 'area': return getAreaValue(item.area).includes(filterTerm);
           case 'director': return getDirectorValue(item.directorio).includes(filterTerm);
           case 'origen': return (item.origen?.toLowerCase() || '').includes(filterTerm);
@@ -205,13 +214,22 @@ export default function CrearResguardos() {
         if (!directorio) return '';
         return typeof directorio === 'object' ? directorio.nombre.toLowerCase() : '';
       };
+      
+      // Helper to get estatus value from relational field
+      const getEstatusValue = (): string => {
+        // Try relational field first, fallback to legacy
+        if (item.config_estatus && typeof item.config_estatus === 'object') {
+          return item.config_estatus.concepto?.toLowerCase() || '';
+        }
+        return (item.estatus?.toLowerCase() || '');
+      };
 
       return (
         (item.id_inv?.toLowerCase() || '').includes(term) ||
         (item.descripcion?.toLowerCase() || '').includes(term) ||
         (item.rubro?.toLowerCase() || '').includes(term) ||
         (item.estado?.toLowerCase() || '').includes(term) ||
-        (item.estatus?.toLowerCase() || '').includes(term) ||
+        getEstatusValue().includes(term) ||
         (item.origen?.toLowerCase() || '').includes(term) ||
         getAreaValue(item.area).includes(term) ||
         getDirectorValue(item.directorio).includes(term)

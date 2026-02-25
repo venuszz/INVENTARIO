@@ -178,14 +178,16 @@ interface CustomSelectProps {
   value: string;
   options: string[];
   optionsWithDetails?: Array<{ nombre: string; area?: string; puesto?: string }>;
+  optionsWithIds?: Array<{ id: number; concepto: string }>; // For estatus with IDs
   onChange: (value: string) => void;
+  onSelectWithId?: (id: number, value: string) => void; // For estatus with IDs
   placeholder: string;
   hasError?: boolean;
   isDarkMode: boolean;
   showError?: boolean;
 }
 
-function CustomSelect({ value, options, optionsWithDetails, onChange, placeholder, hasError, isDarkMode, showError }: CustomSelectProps) {
+function CustomSelect({ value, options, optionsWithDetails, optionsWithIds, onChange, onSelectWithId, placeholder, hasError, isDarkMode, showError }: CustomSelectProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -208,7 +210,11 @@ function CustomSelect({ value, options, optionsWithDetails, onChange, placeholde
     };
   }, [isOpen]);
 
-  const filteredOptions = optionsWithDetails 
+  const filteredOptions = optionsWithIds
+    ? optionsWithIds.filter(option =>
+        option.concepto.toLowerCase().includes(searchTerm.toLowerCase())
+      )
+    : optionsWithDetails 
     ? optionsWithDetails.filter(option =>
         option.nombre.toLowerCase().includes(searchTerm.toLowerCase()) ||
         option.area?.toLowerCase().includes(searchTerm.toLowerCase())
@@ -217,8 +223,12 @@ function CustomSelect({ value, options, optionsWithDetails, onChange, placeholde
         option.toLowerCase().includes(searchTerm.toLowerCase())
       );
 
-  const handleSelect = (option: string) => {
-    onChange(option);
+  const handleSelect = (option: string, id?: number) => {
+    if (onSelectWithId && id !== undefined) {
+      onSelectWithId(id, option);
+    } else {
+      onChange(option);
+    }
     setIsOpen(false);
     setSearchTerm('');
   };
@@ -311,6 +321,41 @@ function CustomSelect({ value, options, optionsWithDetails, onChange, placeholde
                 }`}>
                   No se encontraron resultados
                 </div>
+              ) : optionsWithIds ? (
+                filteredOptions.map((option, index) => {
+                  const estatusOption = option as { id: number; concepto: string };
+                  return (
+                    <motion.button
+                      key={index}
+                      type="button"
+                      onClick={() => handleSelect(estatusOption.concepto, estatusOption.id)}
+                      className={`w-full px-4 py-2.5 text-sm text-left transition-all flex items-center justify-between ${
+                        value === estatusOption.concepto
+                          ? isDarkMode
+                            ? 'bg-white/10 text-white font-medium'
+                            : 'bg-black/10 text-black font-medium'
+                          : isDarkMode
+                            ? 'hover:bg-white/5 text-white/80'
+                            : 'hover:bg-black/5 text-black/80'
+                      }`}
+                      whileHover={{ x: 4 }}
+                      transition={{ duration: 0.15 }}
+                    >
+                      <span>{estatusOption.concepto}</span>
+                      {value === estatusOption.concepto && (
+                        <motion.div
+                          initial={{ scale: 0 }}
+                          animate={{ scale: 1 }}
+                          className={`p-1 rounded-full ${
+                            isDarkMode ? 'bg-white/20' : 'bg-black/20'
+                          }`}
+                        >
+                          <Check size={12} className={isDarkMode ? 'text-white' : 'text-black'} />
+                        </motion.div>
+                      )}
+                    </motion.button>
+                  );
+                })
               ) : optionsWithDetails ? (
                 filteredOptions.map((option, index) => {
                   const detailedOption = option as { nombre: string; area?: string; puesto?: string };
@@ -615,6 +660,20 @@ export default function Step2LocationStatus({
     onChange(syntheticEvent);
   };
 
+  const handleEstatusChange = (id: number, concepto: string) => {
+    // Update both the display value and the ID
+    const estatusEvent = {
+      target: { name: 'estatus', value: concepto }
+    } as React.ChangeEvent<HTMLSelectElement>;
+    onChange(estatusEvent);
+    
+    // Also update the id_estatus in formData
+    const idEvent = {
+      target: { name: 'id_estatus', value: id.toString() }
+    } as React.ChangeEvent<HTMLSelectElement>;
+    onChange(idEvent);
+  };
+
   return (
     <motion.div 
       className="space-y-8"
@@ -719,7 +778,9 @@ export default function Step2LocationStatus({
               <CustomSelect
                 value={formData.estatus}
                 options={filterOptions.estatus}
+                optionsWithIds={filterOptions.estatusWithIds}
                 onChange={(value) => handleSelectChange('estatus', value)}
+                onSelectWithId={handleEstatusChange}
                 placeholder="Seleccionar estatus..."
                 hasError={!isFieldValid('estatus')}
                 showError={showErrors}

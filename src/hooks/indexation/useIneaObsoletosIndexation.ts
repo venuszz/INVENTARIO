@@ -51,7 +51,7 @@ export function useIneaObsoletosIndexation() {
   const reconnectionTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const isInitializedRef = useRef(false);
   const hasHydratedRef = useRef(false);
-  const syncQueueRef = useRef<{ ids: string[]; type: 'area' | 'directorio'; refId: number } | null>(null);
+  const syncQueueRef = useRef<{ ids: string[]; type: 'area' | 'directorio' | 'estatus'; refId: number } | null>(null);
   const isSyncingRef = useRef(false);
   
   /**
@@ -59,7 +59,7 @@ export function useIneaObsoletosIndexation() {
    */
   const processBatchUpdates = useCallback(async (
     _ids: string[],
-    type: 'area' | 'directorio',
+    type: 'area' | 'directorio' | 'estatus',
     refId: number
   ) => {
     if (isSyncingRef.current) {
@@ -72,7 +72,7 @@ export function useIneaObsoletosIndexation() {
     
     const BATCH_SIZE = 1000;
     const allFetchedMuebles: MuebleINEA[] = [];
-    const filterField = type === 'area' ? 'id_area' : 'id_directorio';
+    const filterField = type === 'area' ? 'id_area' : type === 'directorio' ? 'id_directorio' : 'id_estatus';
     
     // Fetch all affected records in batches of 1000
     let hasMore = true;
@@ -85,7 +85,8 @@ export function useIneaObsoletosIndexation() {
           .select(`
             *,
             area:id_area(id_area, nombre),
-            directorio:id_directorio(id_directorio, nombre, puesto)
+            directorio:id_directorio(id_directorio, nombre, puesto),
+            config_estatus:config!id_estatus(id, concepto)
           `)
           .eq(filterField, refId)
           .eq('estatus', 'BAJA')
@@ -195,7 +196,8 @@ export function useIneaObsoletosIndexation() {
               .select(`
                 *,
                 area:id_area(id_area, nombre),
-                directorio:id_directorio(id_directorio, nombre, puesto)
+                directorio:id_directorio(id_directorio, nombre, puesto),
+                config_estatus:config!id_estatus(id, concepto)
               `)
               .eq('estatus', 'BAJA')
               .range(offset, offset + BATCH_SIZE - 1);
@@ -304,7 +306,8 @@ export function useIneaObsoletosIndexation() {
                   .select(`
                     *,
                     area:id_area(id_area, nombre),
-                    directorio:id_directorio(id_directorio, nombre, puesto)
+                    directorio:id_directorio(id_directorio, nombre, puesto),
+                    config_estatus:config!id_estatus(id, concepto)
                   `)
                   .eq('id', newRecord.id)
                   .single();
@@ -339,7 +342,8 @@ export function useIneaObsoletosIndexation() {
                   .select(`
                     *,
                     area:id_area(id_area, nombre),
-                    directorio:id_directorio(id_directorio, nombre, puesto)
+                    directorio:id_directorio(id_directorio, nombre, puesto),
+                    config_estatus:config!id_estatus(id, concepto)
                   `)
                   .eq('id', newRecord.id)
                   .single();
@@ -427,6 +431,26 @@ export function useIneaObsoletosIndexation() {
           }
         }
       )
+      // Listen to config table changes (for estatus updates)
+      .on('postgres_changes', { 
+        event: 'UPDATE', 
+        schema: 'public', 
+        table: 'config',
+        filter: 'tipo=eq.estatus'
+      },
+        async (payload: any) => {
+          const { new: updatedConfig } = payload;
+          updateLastEventReceived(MODULE_KEY);
+          
+          try {
+            if (updatedConfig.tipo === 'estatus') {
+              processBatchUpdates([], 'estatus', updatedConfig.id);
+            }
+          } catch (error) {
+            console.error('Error handling config estatus update:', error);
+          }
+        }
+      )
       // Listen to resguardos table changes
       .on('postgres_changes', 
         { event: '*', schema: 'public', table: 'resguardos', filter: 'origen=eq.INEA' },
@@ -443,7 +467,8 @@ export function useIneaObsoletosIndexation() {
               .select(`
                 *,
                 area:id_area(id_area, nombre),
-                directorio:id_directorio(id_directorio, nombre, puesto)
+                directorio:id_directorio(id_directorio, nombre, puesto),
+                config_estatus:config!id_estatus(id, concepto)
               `)
               .eq('id', affectedMuebleId)
               .single();

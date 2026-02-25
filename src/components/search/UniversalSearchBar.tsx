@@ -164,7 +164,8 @@ export default function UniversalSearchBar({ isDarkMode, userRoles, onExpandChan
             valor: item.valor !== null ? String(item.valor) : null,
             area: item.area?.nombre || null,
             estado: item.estado,
-            estatus: item.estatus,
+            estatus: item.config_estatus?.concepto || item.estatus,
+            config_estatus: item.config_estatus,
             resguardante: item.resguardante,
             origen: 'INEA' as const
         }));
@@ -177,7 +178,8 @@ export default function UniversalSearchBar({ isDarkMode, userRoles, onExpandChan
             valor: item.valor,
             area: item.area?.nombre || null,
             estado: item.estado,
-            estatus: item.estatus,
+            estatus: item.config_estatus?.concepto || item.estatus,
+            config_estatus: item.config_estatus,
             resguardante: item.resguardante,
             origen: 'ITEA' as const
         }));
@@ -190,7 +192,8 @@ export default function UniversalSearchBar({ isDarkMode, userRoles, onExpandChan
             valor: item.valor,
             area: item.area?.nombre || null,
             estado: item.estado,
-            estatus: item.estatus,
+            estatus: item.config_estatus?.concepto || item.estatus,
+            config_estatus: item.config_estatus,
             resguardante: item.resguardante,
             origen: 'NO_LISTADO' as const
         }));
@@ -203,7 +206,8 @@ export default function UniversalSearchBar({ isDarkMode, userRoles, onExpandChan
             valor: item.valor !== null ? String(item.valor) : null,
             area: item.area?.nombre || null,
             estado: item.estado,
-            estatus: item.estatus,
+            estatus: item.config_estatus?.concepto || item.estatus,
+            config_estatus: item.config_estatus,
             resguardante: item.resguardante,
             origen: 'INEA_OBS' as const
         }));
@@ -216,7 +220,8 @@ export default function UniversalSearchBar({ isDarkMode, userRoles, onExpandChan
             valor: item.valor,
             area: item.area?.nombre || null,
             estado: item.estado,
-            estatus: item.estatus,
+            estatus: item.config_estatus?.concepto || item.estatus,
+            config_estatus: item.config_estatus,
             resguardante: item.resguardante,
             origen: 'ITEA_OBS' as const
         }));
@@ -323,6 +328,7 @@ export default function UniversalSearchBar({ isDarkMode, userRoles, onExpandChan
 
         const term = deferredSearchTerm.trim();
         const results: SearchResult[] = [];
+        const estatusMatches: SearchResult[] = [];
 
         // Primero, buscar directores que coincidan
         const matchedDirectors = allData
@@ -335,13 +341,16 @@ export default function UniversalSearchBar({ isDarkMode, userRoles, onExpandChan
 
         // Búsqueda directa en todos los campos
         allData.forEach(item => {
+            // Check if estatus matches
+            const isEstatusMatch = normalizedIncludes(item.estatus, term);
+            
             const isDirectMatch =
                 normalizedIncludes(item.id_inv, term) ||
                 normalizedIncludes(item.descripcion, term) ||
                 normalizedIncludes(item.rubro, term) ||
                 normalizedIncludes(item.area, term) ||
                 normalizedIncludes(item.estado, term) ||
-                normalizedIncludes(item.estatus, term) ||
+                isEstatusMatch ||
                 normalizedIncludes(item.resguardante, term) ||
                 normalizedIncludes(item.folio, term) ||
                 normalizedIncludes(item.folio_resguardo, term) ||
@@ -357,7 +366,12 @@ export default function UniversalSearchBar({ isDarkMode, userRoles, onExpandChan
                 item.areas_asignadas?.some(area => normalizedIncludes(area, term));
 
             if (isDirectMatch) {
-                results.push({ ...item, matchType: 'direct' });
+                // Separate estatus matches for priority
+                if (isEstatusMatch) {
+                    estatusMatches.push({ ...item, matchType: 'direct' });
+                } else {
+                    results.push({ ...item, matchType: 'direct' });
+                }
             }
         });
 
@@ -404,7 +418,7 @@ export default function UniversalSearchBar({ isDarkMode, userRoles, onExpandChan
             });
         }
 
-        // Aplicar límites por categoría
+        // Aplicar límites por categoría - Priorizar estatus matches
         const categorizedResults: SearchResult[] = [];
         const limits = {
             DIRECTOR: 25,
@@ -420,6 +434,18 @@ export default function UniversalSearchBar({ isDarkMode, userRoles, onExpandChan
 
         const counts: Record<string, number> = {};
 
+        // First add estatus matches (higher priority)
+        estatusMatches.forEach(result => {
+            const count = counts[result.origen] || 0;
+            const limit = limits[result.origen as keyof typeof limits] || 50;
+
+            if (count < limit) {
+                categorizedResults.push(result);
+                counts[result.origen] = count + 1;
+            }
+        });
+
+        // Then add other matches
         results.forEach(result => {
             const count = counts[result.origen] || 0;
             const limit = limits[result.origen as keyof typeof limits] || 50;
@@ -643,16 +669,19 @@ export default function UniversalSearchBar({ isDarkMode, userRoles, onExpandChan
             addToHistory(searchTerm, searchResults.length);
         }
 
+        // Build URL with estatus parameter if available
+        const estatusParam = result.estatus ? `&estatus=${encodeURIComponent(result.estatus)}` : '';
+
         if (result.origen === 'INEA') {
-            router.push(`/consultas/inea/general?id=${result.id}`);
+            router.push(`/consultas/inea/general?id=${result.id}${estatusParam}`);
         } else if (result.origen === 'ITEA') {
-            router.push(`/consultas/itea/general?id=${result.id}`);
+            router.push(`/consultas/itea/general?id=${result.id}${estatusParam}`);
         } else if (result.origen === 'NO_LISTADO') {
-            router.push(`/consultas/no-listado?id=${result.id}`);
+            router.push(`/consultas/no-listado?id=${result.id}${estatusParam}`);
         } else if (result.origen === 'INEA_OBS') {
-            router.push(`/consultas/inea/obsoletos?id=${result.id}`);
+            router.push(`/consultas/inea/obsoletos?id=${result.id}${estatusParam}`);
         } else if (result.origen === 'ITEA_OBS') {
-            router.push(`/consultas/itea/obsoletos?id=${result.id}`);
+            router.push(`/consultas/itea/obsoletos?id=${result.id}${estatusParam}`);
         } else if (result.origen === 'RESGUARDO') {
             router.push(`/resguardos/consultar?folio=${result.folio}`);
         } else if (result.origen === 'RESGUARDO_BAJA') {

@@ -824,7 +824,7 @@ function ViewMode({
         />
         <DetailCard
           label="Estatus"
-          value={selectedItem.estatus || 'No especificado'}
+          value={selectedItem.config_estatus?.concepto || selectedItem.estatus || 'No especificado'}
           isDarkMode={isDarkMode}
         />
         <DetailCard

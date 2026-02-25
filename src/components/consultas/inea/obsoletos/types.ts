@@ -30,6 +30,10 @@ export interface Mueble {
   estado: string | null;
   /** Status (ACTIVO/BAJA) */
   estatus: string | null;
+  /** Status ID (foreign key to config table) */
+  id_estatus: number | null;
+  /** Status relational data */
+  config_estatus: { id: number; concepto: string } | null;
   /** Area/department (relational) */
   area: { id_area: number; nombre: string } | null;
   /** Director information (relational) */

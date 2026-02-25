@@ -67,35 +67,17 @@ export default function ReportesTlaxcalaDashboard() {
             try {
                 setLoadingReportes(true);
                 
-                // Obtener todos los registros con paginación para asegurar que obtenemos todos los estatus únicos
-                let allEstatus: string[] = [];
-                let from = 0;
-                const pageSize = 1000;
-                let hasMore = true;
+                // Fetch estatus from config table with IDs
+                const { data: estatusData, error } = await supabase
+                    .from('config')
+                    .select('id, concepto')
+                    .eq('tipo', 'estatus')
+                    .order('concepto');
 
-                while (hasMore) {
-                    const { data, error } = await supabase
-                        .from('mueblestlaxcala')
-                        .select('estatus')
-                        .not('estatus', 'is', null)
-                        .range(from, from + pageSize - 1);
+                if (error) throw error;
 
-                    if (error) throw error;
-
-                    if (data && data.length > 0) {
-                        allEstatus = allEstatus.concat(data.map(d => d.estatus).filter(Boolean) as string[]);
-                        if (data.length < pageSize) {
-                            hasMore = false;
-                        } else {
-                            from += pageSize;
-                        }
-                    } else {
-                        hasMore = false;
-                    }
-                }
-
-                // Obtener valores únicos de estatus
-                const uniqueEstatus = [...new Set(allEstatus)];
+                // Map to unique estatus values
+                const uniqueEstatus = estatusData?.map(e => e.concepto).filter(Boolean) || [];
 
                 // Generar iconos dinámicamente basados en el nombre del estatus
                 const getIconForEstatus = (estatus: string): React.ReactElement => {
@@ -174,12 +156,23 @@ export default function ReportesTlaxcalaDashboard() {
             let query = supabase.from('mueblestlaxcala').select(`
                 *,
                 area:area(id_area, nombre),
-                directorio:directorio(id_directorio, nombre, puesto)
+                directorio:directorio(id_directorio, nombre, puesto),
+                config_estatus:config!id_estatus(id, concepto)
             `, { count: 'exact', head: false });
             
             // Aplicar filtro solo si no es "General"
             if (selectedReporte?.estatus) {
-                query = query.eq('estatus', selectedReporte.estatus);
+                // Get estatus ID from config table
+                const { data: estatusConfig } = await supabase
+                    .from('config')
+                    .select('id')
+                    .eq('tipo', 'estatus')
+                    .eq('concepto', selectedReporte.estatus)
+                    .single();
+                
+                if (estatusConfig) {
+                    query = query.eq('id_estatus', estatusConfig.id);
+                }
             }
 
             const firmasData = firmas;

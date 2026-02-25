@@ -55,10 +55,10 @@ export function useDirectorManagement() {
         .select('concepto')
         .eq('tipo', 'rubro');
 
-      // Obtener estatus desde config
-      const { data: estatus } = await supabase
+      // Obtener estatus desde config con id
+      const { data: estatusData } = await supabase
         .from('config')
-        .select('concepto')
+        .select('id, concepto')
         .eq('tipo', 'estatus');
 
       // Obtener formas de adquisición desde config
@@ -67,10 +67,19 @@ export function useDirectorManagement() {
         .select('concepto')
         .eq('tipo', 'formadq');
 
+      // Create estatus map for id lookup
+      const estatusMap: { [concepto: string]: number } = {};
+      if (estatusData) {
+        estatusData.forEach(item => {
+          estatusMap[item.concepto] = item.id;
+        });
+      }
+
       return {
         estados: [...new Set(estados?.map(item => item.estado?.trim()).filter(Boolean))] as string[],
         rubros: rubros?.map(item => item.concepto?.trim()).filter(Boolean) || [],
-        estatus: estatus?.map(item => item.concepto?.trim()).filter(Boolean) || [],
+        estatus: estatusData?.map(item => item.concepto?.trim()).filter(Boolean) || [],
+        estatusMap: estatusMap,
         formasAdq: formasAdq?.map(item => item.concepto?.trim()).filter(Boolean) || []
       };
     } catch (error) {

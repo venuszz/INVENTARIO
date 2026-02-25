@@ -556,8 +556,23 @@ function EditMode({
             Estatus
           </label>
           <CustomSelect
-            value={editFormData?.estatus || ''}
-            onChange={(val) => onFormChange({ target: { value: val } } as any, 'estatus')}
+            value={editFormData?.config_estatus?.concepto || editFormData?.estatus || ''}
+            onChange={(val) => {
+              // Find the id_estatus from filterOptions.estatusMap
+              const idEstatus = filterOptions.estatusMap?.[val];
+              if (idEstatus && editFormData) {
+                // Create a synthetic event with the id_estatus
+                const syntheticEvent = {
+                  target: { value: String(idEstatus) }
+                } as React.ChangeEvent<HTMLInputElement>;
+                onFormChange(syntheticEvent, 'id_estatus');
+                
+                // Also update the nested object for immediate UI feedback
+                if (editFormData) {
+                  editFormData.config_estatus = { id: idEstatus, concepto: val };
+                }
+              }
+            }}
             options={filterOptions.estatus.map(status => ({ value: status, label: status }))}
             placeholder="Seleccione el estatus"
             isDarkMode={isDarkMode}
@@ -824,7 +839,7 @@ function ViewMode({
         />
         <DetailCard
           label="Estatus"
-          value={selectedItem.estatus || 'No especificado'}
+          value={selectedItem.config_estatus?.concepto || selectedItem.estatus || 'No especificado'}
           isDarkMode={isDarkMode}
         />
         <DetailCard

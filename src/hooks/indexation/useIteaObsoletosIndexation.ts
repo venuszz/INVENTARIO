@@ -51,11 +51,14 @@ export function useIteaObsoletosIndexation() {
       while (hasMore) {
         const batch = await withExponentialBackoff(
           async () => {
-            // Step 1: Fetch muebles without resguardo JOIN
+            // Step 1: Fetch muebles with relational data
             const { data, error } = await supabase
               .from(TABLE)
               .select(`
-                *
+                *,
+                area:area(id_area, nombre),
+                directorio:directorio(id_directorio, nombre, puesto),
+                config_estatus:config!id_estatus(id, concepto)
               `)
               .eq('estatus', 'BAJA')
               .range(offset, offset + BATCH_SIZE - 1);
@@ -151,7 +154,10 @@ export function useIteaObsoletosIndexation() {
                 const { data, error } = await supabase
                   .from(TABLE)
                   .select(`
-                    *
+                    *,
+                    area:area(id_area, nombre),
+                    directorio:directorio(id_directorio, nombre, puesto),
+                    config_estatus:config!id_estatus(id, concepto)
                   `)
                   .eq('id', newRecord.id)
                   .single();
@@ -178,7 +184,10 @@ export function useIteaObsoletosIndexation() {
                 const { data, error } = await supabase
                   .from(TABLE)
                   .select(`
-                    *
+                    *,
+                    area:area(id_area, nombre),
+                    directorio:directorio(id_directorio, nombre, puesto),
+                    config_estatus:config!id_estatus(id, concepto)
                   `)
                   .eq('id', newRecord.id)
                   .single();
@@ -247,7 +256,10 @@ export function useIteaObsoletosIndexation() {
             const { data: updatedMueble, error } = await supabase
               .from(TABLE)
               .select(`
-                *
+                *,
+                area:area(id_area, nombre),
+                directorio:directorio(id_directorio, nombre, puesto),
+                config_estatus:config!id_estatus(id, concepto)
               `)
               .eq('id', affectedMuebleId)
               .single();
