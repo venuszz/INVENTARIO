@@ -119,7 +119,7 @@ export default function NotificationsPanel({ onClose }: { onClose?: () => void }
     return (
         <div 
             ref={panelRef}
-            className={`flex flex-col w-[380px] rounded-2xl overflow-hidden shadow-2xl border transition-all duration-500 transform ${isDarkMode
+            className={`flex flex-col w-full rounded-2xl overflow-hidden shadow-2xl border transition-all duration-500 transform ${isDarkMode
                 ? 'bg-black/95 text-white border-white/10 backdrop-blur-2xl'
                 : 'bg-white/95 text-gray-900 border-black/10 backdrop-blur-2xl'
             } ${animateIn ? 'translate-y-0 opacity-100' : 'translate-y-4 opacity-0'}`}
