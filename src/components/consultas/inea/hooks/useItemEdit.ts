@@ -194,7 +194,7 @@ export function useItemEdit() {
             }
 
             // Extract only the database columns (exclude nested objects and resguardante if present)
-            const { area, directorio, resguardante, ...dbFields } = editFormData as any;
+            const { area, directorio, resguardante, config_estatus, ...dbFields } = editFormData as any;
             
             const response = await fetch(
                 '/api/supabase-proxy?target=' + encodeURIComponent(`/rest/v1/muebles?id=eq.${editFormData.id}`),
@@ -227,7 +227,7 @@ export function useItemEdit() {
             // Refetch the mueble with JOINs to get updated nested objects
             const refetchResponse = await fetch(
                 '/api/supabase-proxy?target=' + encodeURIComponent(
-                    `/rest/v1/muebles?id=eq.${editFormData.id}&select=*,area:area(id_area,nombre),directorio:directorio(id_directorio,nombre,puesto)`
+                    `/rest/v1/muebles?id=eq.${editFormData.id}&select=*,area:id_area(id_area,nombre),directorio:id_directorio(id_directorio,nombre,puesto),config_estatus:config!id_estatus(id,concepto)`
                 ),
                 {
                     method: 'GET',
@@ -299,6 +299,9 @@ export function useItemEdit() {
             case 'id_directorio':
                 newData.id_directorio = value ? parseInt(value) : null;
                 break;
+            case 'id_estatus':
+                newData.id_estatus = value ? parseInt(value) : null;
+                break;
             case 'rubro':
             case 'descripcion':
             case 'f_adq':
@@ -309,7 +312,6 @@ export function useItemEdit() {
             case 'ubicacion_mu':
             case 'ubicacion_no':
             case 'estado':
-            case 'estatus':
             case 'usufinal':
             case 'fechabaja':
             case 'causadebaja':
@@ -336,6 +338,29 @@ export function useItemEdit() {
                 String(todayDate.getMonth() + 1).padStart(2, '0') + '-' +
                 String(todayDate.getDate()).padStart(2, '0');
             
+            // Get BAJA estatus ID from config table
+            const estatusResponse = await fetch(
+                '/api/supabase-proxy?target=' + encodeURIComponent(
+                    `/rest/v1/config?tipo=eq.estatus&concepto=eq.BAJA&select=id`
+                ),
+                {
+                    method: 'GET',
+                    credentials: 'include',
+                    headers: { 'Content-Type': 'application/json' }
+                }
+            );
+            
+            if (!estatusResponse.ok) {
+                throw new Error('Error al obtener ID de estatus BAJA');
+            }
+            
+            const estatusData = await estatusResponse.json();
+            if (!estatusData || estatusData.length === 0) {
+                throw new Error('No se encontró el estatus BAJA en la configuración');
+            }
+            
+            const bajaEstatusId = estatusData[0].id;
+            
             const updateResponse = await fetch(
                 '/api/supabase-proxy?target=' + encodeURIComponent(`/rest/v1/muebles?id=eq.${selectedItem.id}`),
                 {
@@ -346,7 +371,7 @@ export function useItemEdit() {
                         'Prefer': 'return=representation'
                     },
                     body: JSON.stringify({ 
-                        estatus: 'BAJA', 
+                        id_estatus: bajaEstatusId, 
                         causadebaja: bajaCause, 
                         fechabaja: today 
                     })
@@ -407,6 +432,29 @@ export function useItemEdit() {
         setShowInactiveModal(false);
         
         try {
+            // Get INACTIVO estatus ID from config table
+            const estatusResponse = await fetch(
+                '/api/supabase-proxy?target=' + encodeURIComponent(
+                    `/rest/v1/config?tipo=eq.estatus&concepto=eq.INACTIVO&select=id`
+                ),
+                {
+                    method: 'GET',
+                    credentials: 'include',
+                    headers: { 'Content-Type': 'application/json' }
+                }
+            );
+            
+            if (!estatusResponse.ok) {
+                throw new Error('Error al obtener ID de estatus INACTIVO');
+            }
+            
+            const estatusData = await estatusResponse.json();
+            if (!estatusData || estatusData.length === 0) {
+                throw new Error('No se encontró el estatus INACTIVO en la configuración');
+            }
+            
+            const inactivoEstatusId = estatusData[0].id;
+            
             const response = await fetch(
                 '/api/supabase-proxy?target=' + encodeURIComponent(`/rest/v1/muebles?id=eq.${selectedItem.id}`),
                 {
@@ -416,7 +464,7 @@ export function useItemEdit() {
                         'Content-Type': 'application/json',
                         'Prefer': 'return=representation'
                     },
-                    body: JSON.stringify({ estatus: 'INACTIVO' })
+                    body: JSON.stringify({ id_estatus: inactivoEstatusId })
                 }
             );
 

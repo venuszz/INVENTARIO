@@ -159,8 +159,8 @@ export function useItemEdit() {
                 if (newPath) imagePath = newPath;
             }
 
-            // Extract only the database columns (exclude nested objects and resguardante if present)
-            const { area, directorio, resguardante, ...dbFields } = editFormData as any;
+            // Extract only the database columns (exclude nested objects from JOINs)
+            const { area, directorio, resguardante, config_estatus, ...dbFields } = editFormData as any;
             
             const response = await fetch(
                 '/api/supabase-proxy?target=' + encodeURIComponent(`/rest/v1/mueblestlaxcala?id=eq.${editFormData.id}`),

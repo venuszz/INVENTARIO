@@ -50,7 +50,7 @@ export function useDirectorManagement() {
                 .select('concepto')
                 .eq('tipo', 'formadq');
 
-            // Obtener estatus desde la tabla config con id
+            // Obtener estatus desde la tabla config con id y concepto
             const { data: estatusData } = await supabase
                 .from('config')
                 .select('id, concepto')
@@ -62,20 +62,11 @@ export function useDirectorManagement() {
                 .select('nombre')
                 .not('nombre', 'is', null);
 
-            // Create estatus map for id lookup
-            const estatusMap: { [concepto: string]: number } = {};
-            if (estatusData) {
-                estatusData.forEach(item => {
-                    estatusMap[item.concepto] = item.id;
-                });
-            }
-
             const filterOptions: Partial<FilterOptions> = {
                 estados: [...new Set(estados?.map(item => item.estado).filter(Boolean))] as string[],
                 rubros: rubrosData?.map(item => item.concepto).filter(Boolean) || [],
                 formadq: formadqData?.map(item => item.concepto).filter(Boolean) || [],
-                estatus: estatusData?.map(item => item.concepto).filter(Boolean) || [],
-                estatusMap: estatusMap,
+                estatus: estatusData?.map(item => ({ id: item.id, concepto: item.concepto?.trim() })).filter(item => item.concepto) || [],
                 areas: [...new Set(areasData?.map(item => item.nombre).filter(Boolean))] as string[]
             };
 

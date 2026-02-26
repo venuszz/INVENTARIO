@@ -16,8 +16,7 @@ export interface Message {
 // Opciones de filtro
 export interface FilterOptions {
   estados: string[];
-  estatus: string[]; // Array of concepto values from config table
-  estatusMap?: { [concepto: string]: number }; // Map concepto to id for saving
+  estatus: { id: number; concepto: string }[];
   areas: string[];
   rubros: string[];
   formasAdq: string[];

@@ -249,7 +249,7 @@ export function useItemEdit({
         if (newPath) imagePath = newPath;
       }
 
-      // Prepare update data - only include actual table columns, not joined objects or resguardante
+      // Prepare update data - only include actual table columns, not joined objects (area, directorio, colores, config_estatus)
       const updateData: any = {
         id_inv: editFormData.id_inv,
         rubro: editFormData.rubro,
@@ -264,6 +264,7 @@ export function useItemEdit({
         ubicacion_no: editFormData.ubicacion_no,
         estado: editFormData.estado,
         estatus: editFormData.estatus,
+        id_estatus: editFormData.id_estatus,
         id_area: editFormData.id_area,
         id_directorio: editFormData.id_directorio,
         fechabaja: editFormData.fechabaja,
@@ -347,6 +348,12 @@ export function useItemEdit({
         setEditFormData(prev => ({
           ...prev,
           id_directorio: value ? parseInt(value) : null
+        }));
+        break;
+      case 'id_estatus':
+        setEditFormData(prev => ({
+          ...prev,
+          id_estatus: value ? parseInt(value) : null
         }));
         break;
       case 'color':

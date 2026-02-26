@@ -556,9 +556,9 @@ function EditMode({
             Estatus
           </label>
           <CustomSelect
-            value={editFormData?.estatus || ''}
-            onChange={(val) => onFormChange({ target: { value: val } } as any, 'estatus')}
-            options={filterOptions.estatus.map(status => ({ value: status, label: status }))}
+            value={editFormData?.id_estatus?.toString() || ''}
+            onChange={(val) => onFormChange({ target: { value: val } } as any, 'id_estatus')}
+            options={filterOptions.estatus.map(status => ({ value: status.id.toString(), label: status.concepto }))}
             placeholder="Seleccione el estatus"
             isDarkMode={isDarkMode}
             disabled={isDisabled}

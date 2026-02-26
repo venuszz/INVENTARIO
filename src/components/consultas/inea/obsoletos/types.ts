@@ -59,7 +59,7 @@ export interface FilterOptions {
   /** Available states */
   estados: string[];
   /** Available statuses */
-  estatus: string[];
+  estatus: { id: number; concepto: string }[];
   /** Available areas */
   areas: string[];
   /** Available categories */

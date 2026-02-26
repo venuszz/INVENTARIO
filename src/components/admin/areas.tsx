@@ -55,6 +55,8 @@ export default function ConfigManagementComponent() {
     const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
     const [activeTab, setActiveTab] = useState<string>('estatus');
     const [newItemValue, setNewItemValue] = useState<string>('');
+    const [estatusCounts, setEstatusCounts] = useState<Record<number, { inea: number; itea: number; noListado: number; total: number }>>({});
+    const [isLoadingCounts, setIsLoadingCounts] = useState<boolean>(false);
     
     // Modal de confirmación para editar estatus
     const [showEditConfirmModal, setShowEditConfirmModal] = useState<boolean>(false);
@@ -63,103 +65,116 @@ export default function ConfigManagementComponent() {
     const editInputRef = useRef<HTMLInputElement>(null);
     const newItemInputRef = useRef<HTMLInputElement>(null);
     
-    // Calcular conteo de bienes por estatus
-    const estatusCounts = useMemo(() => {
-        const counts: Record<number, { inea: number; itea: number; noListado: number; total: number }> = {};
+    // Calcular conteo de bienes por estatus cuando cambian los datos
+    useEffect(() => {
+        if (activeTab !== 'estatus') {
+            setEstatusCounts({});
+            return;
+        }
         
-        // Contar INEA (usar config_estatus?.concepto o estatus como fallback)
-        ineaMuebles.forEach(mueble => {
-            const estatusConcepto = mueble.config_estatus?.concepto || mueble.estatus;
-            if (!estatusConcepto) return;
+        setIsLoadingCounts(true);
+        
+        // Usar setTimeout para evitar bloquear el UI
+        const timer = setTimeout(() => {
+            const counts: Record<number, { inea: number; itea: number; noListado: number; total: number }> = {};
             
-            // Buscar el ID del config que coincida con este concepto
-            const configItem = configItems.find(
-                c => c.tipo === 'estatus' && c.concepto?.toUpperCase() === estatusConcepto.toUpperCase()
-            );
-            
-            if (configItem) {
-                if (!counts[configItem.id]) {
-                    counts[configItem.id] = { inea: 0, itea: 0, noListado: 0, total: 0 };
+            // Contar INEA (usar config_estatus?.concepto o estatus como fallback)
+            ineaMuebles.forEach(mueble => {
+                const estatusConcepto = mueble.config_estatus?.concepto || mueble.estatus;
+                if (!estatusConcepto) return;
+                
+                // Buscar el ID del config que coincida con este concepto
+                const configItem = configItems.find(
+                    c => c.tipo === 'estatus' && c.concepto?.toUpperCase() === estatusConcepto.toUpperCase()
+                );
+                
+                if (configItem) {
+                    if (!counts[configItem.id]) {
+                        counts[configItem.id] = { inea: 0, itea: 0, noListado: 0, total: 0 };
+                    }
+                    counts[configItem.id].inea++;
+                    counts[configItem.id].total++;
                 }
-                counts[configItem.id].inea++;
-                counts[configItem.id].total++;
-            }
-        });
-        
-        // Contar INEA Obsoletos
-        ineaObsoletosMuebles.forEach(mueble => {
-            const estatusConcepto = mueble.config_estatus?.concepto || mueble.estatus;
-            if (!estatusConcepto) return;
+            });
             
-            const configItem = configItems.find(
-                c => c.tipo === 'estatus' && c.concepto?.toUpperCase() === estatusConcepto.toUpperCase()
-            );
-            
-            if (configItem) {
-                if (!counts[configItem.id]) {
-                    counts[configItem.id] = { inea: 0, itea: 0, noListado: 0, total: 0 };
+            // Contar INEA Obsoletos
+            ineaObsoletosMuebles.forEach(mueble => {
+                const estatusConcepto = mueble.config_estatus?.concepto || mueble.estatus;
+                if (!estatusConcepto) return;
+                
+                const configItem = configItems.find(
+                    c => c.tipo === 'estatus' && c.concepto?.toUpperCase() === estatusConcepto.toUpperCase()
+                );
+                
+                if (configItem) {
+                    if (!counts[configItem.id]) {
+                        counts[configItem.id] = { inea: 0, itea: 0, noListado: 0, total: 0 };
+                    }
+                    counts[configItem.id].inea++;
+                    counts[configItem.id].total++;
                 }
-                counts[configItem.id].inea++;
-                counts[configItem.id].total++;
-            }
-        });
-        
-        // Contar ITEA (usar config_estatus?.concepto o estatus como fallback)
-        iteaMuebles.forEach(mueble => {
-            const estatusConcepto = mueble.config_estatus?.concepto || mueble.estatus;
-            if (!estatusConcepto) return;
+            });
             
-            const configItem = configItems.find(
-                c => c.tipo === 'estatus' && c.concepto?.toUpperCase() === estatusConcepto.toUpperCase()
-            );
-            
-            if (configItem) {
-                if (!counts[configItem.id]) {
-                    counts[configItem.id] = { inea: 0, itea: 0, noListado: 0, total: 0 };
+            // Contar ITEA (usar config_estatus?.concepto o estatus como fallback)
+            iteaMuebles.forEach(mueble => {
+                const estatusConcepto = mueble.config_estatus?.concepto || mueble.estatus;
+                if (!estatusConcepto) return;
+                
+                const configItem = configItems.find(
+                    c => c.tipo === 'estatus' && c.concepto?.toUpperCase() === estatusConcepto.toUpperCase()
+                );
+                
+                if (configItem) {
+                    if (!counts[configItem.id]) {
+                        counts[configItem.id] = { inea: 0, itea: 0, noListado: 0, total: 0 };
+                    }
+                    counts[configItem.id].itea++;
+                    counts[configItem.id].total++;
                 }
-                counts[configItem.id].itea++;
-                counts[configItem.id].total++;
-            }
-        });
-        
-        // Contar ITEA Obsoletos
-        iteaObsoletosMuebles.forEach(mueble => {
-            const estatusConcepto = mueble.config_estatus?.concepto || mueble.estatus;
-            if (!estatusConcepto) return;
+            });
             
-            const configItem = configItems.find(
-                c => c.tipo === 'estatus' && c.concepto?.toUpperCase() === estatusConcepto.toUpperCase()
-            );
-            
-            if (configItem) {
-                if (!counts[configItem.id]) {
-                    counts[configItem.id] = { inea: 0, itea: 0, noListado: 0, total: 0 };
+            // Contar ITEA Obsoletos
+            iteaObsoletosMuebles.forEach(mueble => {
+                const estatusConcepto = mueble.config_estatus?.concepto || mueble.estatus;
+                if (!estatusConcepto) return;
+                
+                const configItem = configItems.find(
+                    c => c.tipo === 'estatus' && c.concepto?.toUpperCase() === estatusConcepto.toUpperCase()
+                );
+                
+                if (configItem) {
+                    if (!counts[configItem.id]) {
+                        counts[configItem.id] = { inea: 0, itea: 0, noListado: 0, total: 0 };
+                    }
+                    counts[configItem.id].itea++;
+                    counts[configItem.id].total++;
                 }
-                counts[configItem.id].itea++;
-                counts[configItem.id].total++;
-            }
-        });
-        
-        // Contar No Listado (usar config_estatus?.concepto o estatus como fallback)
-        noListadoMuebles.forEach(mueble => {
-            const estatusConcepto = mueble.config_estatus?.concepto || mueble.estatus;
-            if (!estatusConcepto) return;
+            });
             
-            const configItem = configItems.find(
-                c => c.tipo === 'estatus' && c.concepto?.toUpperCase() === estatusConcepto.toUpperCase()
-            );
-            
-            if (configItem) {
-                if (!counts[configItem.id]) {
-                    counts[configItem.id] = { inea: 0, itea: 0, noListado: 0, total: 0 };
+            // Contar No Listado (usar config_estatus?.concepto o estatus como fallback)
+            noListadoMuebles.forEach(mueble => {
+                const estatusConcepto = mueble.config_estatus?.concepto || mueble.estatus;
+                if (!estatusConcepto) return;
+                
+                const configItem = configItems.find(
+                    c => c.tipo === 'estatus' && c.concepto?.toUpperCase() === estatusConcepto.toUpperCase()
+                );
+                
+                if (configItem) {
+                    if (!counts[configItem.id]) {
+                        counts[configItem.id] = { inea: 0, itea: 0, noListado: 0, total: 0 };
+                    }
+                    counts[configItem.id].noListado++;
+                    counts[configItem.id].total++;
                 }
-                counts[configItem.id].noListado++;
-                counts[configItem.id].total++;
-            }
-        });
+            });
+            
+            setEstatusCounts(counts);
+            setIsLoadingCounts(false);
+        }, 100);
         
-        return counts;
-    }, [ineaLength, iteaLength, noListadoLength, ineaObsoletosLength, iteaObsoletosLength, configLength, ineaMuebles, iteaMuebles, noListadoMuebles, ineaObsoletosMuebles, iteaObsoletosMuebles, configItems]);
+        return () => clearTimeout(timer);
+    }, [activeTab, ineaLength, iteaLength, noListadoLength, ineaObsoletosLength, iteaObsoletosLength, configLength]);
 
     // Efecto para enfocar el input de edición cuando se activa
     useEffect(() => {
@@ -609,70 +624,80 @@ export default function ConfigManagementComponent() {
                                         <>
                                             <div className="flex items-center gap-3 flex-1 min-w-0">
                                                 <span className="text-sm font-medium">{item.concepto}</span>
-                                                {activeTab === 'estatus' && estatusCounts[item.id] && (
+                                                {activeTab === 'estatus' && (
                                                     <div className="flex items-center gap-1 flex-wrap">
-                                                        {/* INEA - Solo si > 0 */}
-                                                        {estatusCounts[item.id].inea > 0 && (
-                                                            <span
-                                                                className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium border ${
-                                                                    isDarkMode 
-                                                                        ? 'bg-white/90 text-gray-900 border-white/80' 
-                                                                        : 'bg-blue-50 text-blue-900 border-blue-200'
-                                                                }`}
-                                                                title={`${estatusCounts[item.id].inea} bienes INEA con este estatus`}
-                                                            >
-                                                                <span>INEA</span>
-                                                                <span className={`px-1 py-0.5 rounded-full text-[10px] font-bold ${
-                                                                    isDarkMode 
-                                                                        ? 'bg-gray-800 text-white' 
-                                                                        : 'bg-blue-200 text-blue-900'
-                                                                }`}>
-                                                                    {estatusCounts[item.id].inea}
-                                                                </span>
+                                                        {isLoadingCounts ? (
+                                                            <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs ${
+                                                                isDarkMode ? 'bg-white/10 text-white/40' : 'bg-black/10 text-black/40'
+                                                            }`}>
+                                                                <div className="w-3 h-3 border-2 border-current border-t-transparent rounded-full animate-spin" />
                                                             </span>
-                                                        )}
-                                                        
-                                                        {/* ITEA - Solo si > 0 */}
-                                                        {estatusCounts[item.id].itea > 0 && (
-                                                            <span
-                                                                className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium border ${
-                                                                    isDarkMode 
-                                                                        ? 'bg-white/80 text-gray-900 border-white/70' 
-                                                                        : 'bg-green-50 text-green-900 border-green-200'
-                                                                }`}
-                                                                title={`${estatusCounts[item.id].itea} bienes ITEA con este estatus`}
-                                                            >
-                                                                <span>ITEA</span>
-                                                                <span className={`px-1 py-0.5 rounded-full text-[10px] font-bold ${
-                                                                    isDarkMode 
-                                                                        ? 'bg-gray-800 text-white' 
-                                                                        : 'bg-green-200 text-green-900'
-                                                                }`}>
-                                                                    {estatusCounts[item.id].itea}
-                                                                </span>
-                                                            </span>
-                                                        )}
-                                                        
-                                                        {/* TLAXCALA - Solo si > 0 */}
-                                                        {estatusCounts[item.id].noListado > 0 && (
-                                                            <span
-                                                                className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium border ${
-                                                                    isDarkMode 
-                                                                        ? 'bg-white/70 text-gray-900 border-white/60' 
-                                                                        : 'bg-purple-50 text-purple-900 border-purple-200'
-                                                                }`}
-                                                                title={`${estatusCounts[item.id].noListado} bienes TLAXCALA con este estatus`}
-                                                            >
-                                                                <span>TLAXCALA</span>
-                                                                <span className={`px-1 py-0.5 rounded-full text-[10px] font-bold ${
-                                                                    isDarkMode 
-                                                                        ? 'bg-gray-800 text-white' 
-                                                                        : 'bg-purple-200 text-purple-900'
-                                                                }`}>
-                                                                    {estatusCounts[item.id].noListado}
-                                                                </span>
-                                                            </span>
-                                                        )}
+                                                        ) : estatusCounts[item.id] ? (
+                                                            <>
+                                                                {/* INEA - Solo si > 0 */}
+                                                                {estatusCounts[item.id].inea > 0 && (
+                                                                    <span
+                                                                        className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium border ${
+                                                                            isDarkMode 
+                                                                                ? 'bg-white/90 text-gray-900 border-white/80' 
+                                                                                : 'bg-blue-50 text-blue-900 border-blue-200'
+                                                                        }`}
+                                                                        title={`${estatusCounts[item.id].inea} bienes INEA con este estatus`}
+                                                                    >
+                                                                        <span>INEA</span>
+                                                                        <span className={`px-1 py-0.5 rounded-full text-[10px] font-bold ${
+                                                                            isDarkMode 
+                                                                                ? 'bg-gray-800 text-white' 
+                                                                                : 'bg-blue-200 text-blue-900'
+                                                                        }`}>
+                                                                            {estatusCounts[item.id].inea}
+                                                                        </span>
+                                                                    </span>
+                                                                )}
+                                                                
+                                                                {/* ITEA - Solo si > 0 */}
+                                                                {estatusCounts[item.id].itea > 0 && (
+                                                                    <span
+                                                                        className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium border ${
+                                                                            isDarkMode 
+                                                                                ? 'bg-white/80 text-gray-900 border-white/70' 
+                                                                                : 'bg-green-50 text-green-900 border-green-200'
+                                                                        }`}
+                                                                        title={`${estatusCounts[item.id].itea} bienes ITEA con este estatus`}
+                                                                    >
+                                                                        <span>ITEA</span>
+                                                                        <span className={`px-1 py-0.5 rounded-full text-[10px] font-bold ${
+                                                                            isDarkMode 
+                                                                                ? 'bg-gray-800 text-white' 
+                                                                                : 'bg-green-200 text-green-900'
+                                                                        }`}>
+                                                                            {estatusCounts[item.id].itea}
+                                                                        </span>
+                                                                    </span>
+                                                                )}
+                                                                
+                                                                {/* TLAXCALA - Solo si > 0 */}
+                                                                {estatusCounts[item.id].noListado > 0 && (
+                                                                    <span
+                                                                        className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium border ${
+                                                                            isDarkMode 
+                                                                                ? 'bg-white/70 text-gray-900 border-white/60' 
+                                                                                : 'bg-purple-50 text-purple-900 border-purple-200'
+                                                                        }`}
+                                                                        title={`${estatusCounts[item.id].noListado} bienes TLAXCALA con este estatus`}
+                                                                    >
+                                                                        <span>TLAXCALA</span>
+                                                                        <span className={`px-1 py-0.5 rounded-full text-[10px] font-bold ${
+                                                                            isDarkMode 
+                                                                                ? 'bg-gray-800 text-white' 
+                                                                                : 'bg-purple-200 text-purple-900'
+                                                                        }`}>
+                                                                            {estatusCounts[item.id].noListado}
+                                                                        </span>
+                                                                    </span>
+                                                                )}
+                                                            </>
+                                                        ) : null}
                                                     </div>
                                                 )}
                                             </div>

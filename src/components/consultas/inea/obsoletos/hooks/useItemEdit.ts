@@ -244,8 +244,8 @@ export function useItemEdit({
         if (newPath) imagePath = newPath;
       }
 
-      // Extract only database columns (exclude nested objects and resguardante if present)
-      const { area, directorio, resguardante, ...dbFields } = editFormData as any;
+      // Extract only database columns (exclude nested objects: area, directorio, config_estatus)
+      const { area, directorio, resguardante, config_estatus, ...dbFields } = editFormData as any;
 
       const { error } = await supabase
         .from('muebles')
