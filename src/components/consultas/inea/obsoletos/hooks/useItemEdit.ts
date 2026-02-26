@@ -79,10 +79,23 @@ export function useItemEdit({
     
     const calculateItemPage = async () => {
       try {
+        // Get BAJA status ID from config table
+        const { data: bajaStatus } = await supabase
+          .from('config')
+          .select('id')
+          .eq('tipo', 'estatus')
+          .eq('concepto', 'BAJA')
+          .single();
+        
+        if (!bajaStatus) {
+          console.error('No se pudo obtener el estatus BAJA');
+          return;
+        }
+
         let query = supabase
           .from('muebles')
           .select('id')
-          .eq('estatus', 'BAJA');
+          .eq('id_estatus', bajaStatus.id);
 
         if (searchTerm) {
           const searchFilter = `id_inv.ilike.%${searchTerm}%,descripcion.ilike.%${searchTerm}%,resguardante.ilike.%${searchTerm}%,usufinal.ilike.%${searchTerm}%`;

@@ -48,12 +48,23 @@ export function useObsoletosData(): UseObsoletosDataReturn {
     let from = 0;
     const pageSize = 1000;
     let keepGoing = true;
+    
+    // Get BAJA status ID from config table
+    const { data: bajaStatus } = await supabase
+      .from('config')
+      .select('id')
+      .eq('tipo', 'estatus')
+      .eq('concepto', 'BAJA')
+      .single();
+    
+    if (!bajaStatus) return 0;
+    
     while (keepGoing) {
       const { data, error } = await supabase
         .from('muebles')
         .select('valor')
         .match({
-          estatus: 'BAJA',
+          id_estatus: bajaStatus.id,
           ...(filters.estado && { estado: filters.estado }),
           ...(filters.area && { area: filters.area }),
           ...(filters.rubro && { rubro: filters.rubro })
@@ -80,11 +91,22 @@ export function useObsoletosData(): UseObsoletosDataReturn {
     let from = 0;
     const pageSize = 1000;
     let keepGoing = true;
+    
+    // Get BAJA status ID from config table
+    const { data: bajaStatus } = await supabase
+      .from('config')
+      .select('id')
+      .eq('tipo', 'estatus')
+      .eq('concepto', 'BAJA')
+      .single();
+    
+    if (!bajaStatus) return 0;
+    
     while (keepGoing) {
       const { data, error } = await supabase
         .from('muebles')
         .select('valor')
-        .eq('estatus', 'BAJA')
+        .eq('id_estatus', bajaStatus.id)
         .range(from, from + pageSize - 1);
       if (error) break;
       if (data && data.length > 0) {
@@ -105,13 +127,25 @@ export function useObsoletosData(): UseObsoletosDataReturn {
     setLoading(true);
 
     try {
+      // Get BAJA status ID from config table
+      const { data: bajaStatus } = await supabase
+        .from('config')
+        .select('id')
+        .eq('tipo', 'estatus')
+        .eq('concepto', 'BAJA')
+        .single();
+      
+      if (!bajaStatus) {
+        throw new Error('No se pudo obtener el estatus BAJA');
+      }
+
       let countQuery = supabase
         .from('muebles')
-        .select('id, id_inv, rubro, descripcion, valor, f_adq, formadq, proveedor, factura, ubicacion_es, ubicacion_mu, ubicacion_no, estado, estatus, area, usufinal, fechabaja, causadebaja, resguardante, image_path', { count: 'exact', head: false })
-        .eq('estatus', 'BAJA');
+        .select('id, id_inv, rubro, descripcion, valor, f_adq, formadq, proveedor, factura, ubicacion_es, ubicacion_mu, ubicacion_no, estado, id_estatus, area, usufinal, fechabaja, causadebaja, resguardante, image_path', { count: 'exact', head: false })
+        .eq('id_estatus', bajaStatus.id);
 
-      let dataQuery = supabase.from('muebles').select('id, id_inv, rubro, descripcion, valor, f_adq, formadq, proveedor, factura, ubicacion_es, ubicacion_mu, ubicacion_no, estado, estatus, area, usufinal, fechabaja, causadebaja, resguardante, image_path')
-        .eq('estatus', 'BAJA');
+      let dataQuery = supabase.from('muebles').select('id, id_inv, rubro, descripcion, valor, f_adq, formadq, proveedor, factura, ubicacion_es, ubicacion_mu, ubicacion_no, estado, id_estatus, area, usufinal, fechabaja, causadebaja, resguardante, image_path')
+        .eq('id_estatus', bajaStatus.id);
 
       if (searchTerm) {
         const searchFilter = `id_inv.ilike.%${searchTerm}%,descripcion.ilike.%${searchTerm}%,resguardante.ilike.%${searchTerm}%,usufinal.ilike.%${searchTerm}%`;

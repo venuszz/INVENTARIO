@@ -42,6 +42,18 @@ export function useIteaObsoletosIndexation() {
       const stage1 = STAGES[0];
       updateProgress(MODULE_KEY, accumulatedProgress, stage1.label);
       
+      // Get BAJA status ID from config table
+      const { data: bajaStatus, error: bajaError } = await supabase
+        .from('config')
+        .select('id')
+        .eq('tipo', 'estatus')
+        .eq('concepto', 'BAJA')
+        .single();
+      
+      if (bajaError || !bajaStatus) {
+        throw new Error('No se pudo obtener el estatus BAJA');
+      }
+      
       // Fetch data in batches of 1000
       const fetchedMuebles: MuebleITEA[] = [];
       let hasMore = true;
@@ -60,7 +72,7 @@ export function useIteaObsoletosIndexation() {
                 directorio:directorio(id_directorio, nombre, puesto),
                 config_estatus:config!id_estatus(id, concepto)
               `)
-              .eq('estatus', 'BAJA')
+              .eq('id_estatus', bajaStatus.id)
               .range(offset, offset + BATCH_SIZE - 1);
             
             if (error) throw error;

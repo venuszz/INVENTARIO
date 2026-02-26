@@ -102,6 +102,21 @@ export function useIteaIndexation() {
     // Get colors map
     const colorsMap = await fetchColorsMap();
     
+    // Get BAJA status ID from config table to exclude it
+    const { data: bajaStatus } = await supabase
+      .from('config')
+      .select('id')
+      .eq('tipo', 'estatus')
+      .eq('concepto', 'BAJA')
+      .single();
+    
+    if (!bajaStatus) {
+      console.error('No se pudo obtener el estatus BAJA');
+      setIsSyncing(false);
+      isSyncingRef.current = false;
+      return;
+    }
+    
     // Fetch all affected records in batches of 1000
     let hasMore = true;
     let offset = 0;
@@ -117,7 +132,7 @@ export function useIteaIndexation() {
             config_estatus:config!id_estatus(id, concepto)
           `)
           .eq(filterField, refId)
-          .neq('estatus', 'BAJA')
+          .neq('id_estatus', bajaStatus.id)
           .range(offset, offset + BATCH_SIZE - 1);
         
         if (error) {
@@ -208,6 +223,18 @@ export function useIteaIndexation() {
       const stage1 = STAGES[0];
       updateProgress(MODULE_KEY, accumulatedProgress, stage1.label);
       
+      // Get BAJA status ID from config table to exclude it
+      const { data: bajaStatus, error: bajaError } = await supabase
+        .from('config')
+        .select('id')
+        .eq('tipo', 'estatus')
+        .eq('concepto', 'BAJA')
+        .single();
+      
+      if (bajaError || !bajaStatus) {
+        throw new Error('No se pudo obtener el estatus BAJA');
+      }
+      
       // Fetch colors from API first (bypasses RLS)
       console.log('🎨 [ITEA Indexation] Fetching colors from API...');
       let coloresMap: { [id: string]: { id: string; nombre: string; significado: string | null } } = {};
@@ -249,7 +276,7 @@ export function useIteaIndexation() {
                 directorio:directorio(id_directorio, nombre, puesto),
                 config_estatus:config!id_estatus(id, concepto)
               `)
-              .neq('estatus', 'BAJA')
+              .neq('id_estatus', bajaStatus.id)
               .range(offset, offset + BATCH_SIZE - 1);
             
             if (error) {

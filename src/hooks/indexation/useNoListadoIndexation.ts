@@ -56,6 +56,21 @@ export function useNoListadoIndexation() {
     const allFetchedMuebles: MuebleNoListado[] = [];
     const filterField = type === 'area' ? 'id_area' : type === 'directorio' ? 'id_directorio' : 'id_estatus';
     
+    // Get BAJA status ID from config table to exclude it
+    const { data: bajaStatus } = await supabase
+      .from('config')
+      .select('id')
+      .eq('tipo', 'estatus')
+      .eq('concepto', 'BAJA')
+      .single();
+    
+    if (!bajaStatus) {
+      console.error('No se pudo obtener el estatus BAJA');
+      setIsSyncing(false);
+      isSyncingRef.current = false;
+      return;
+    }
+    
     // Fetch all affected records in batches of 1000
     let hasMore = true;
     let offset = 0;
@@ -71,7 +86,7 @@ export function useNoListadoIndexation() {
             config_estatus:config!id_estatus(id, concepto)
           `)
           .eq(filterField, refId)
-          .neq('estatus', 'BAJA')
+          .neq('id_estatus', bajaStatus.id)
           .range(offset, offset + BATCH_SIZE - 1);
         
         if (error) {
@@ -161,6 +176,18 @@ export function useNoListadoIndexation() {
       const stage1 = STAGES[0];
       updateProgress(MODULE_KEY, accumulatedProgress, stage1.label);
       
+      // Get BAJA status ID from config table to exclude it
+      const { data: bajaStatus, error: bajaError } = await supabase
+        .from('config')
+        .select('id')
+        .eq('tipo', 'estatus')
+        .eq('concepto', 'BAJA')
+        .single();
+      
+      if (bajaError || !bajaStatus) {
+        throw new Error('No se pudo obtener el estatus BAJA');
+      }
+      
       // Fetch data in batches of 1000
       const fetchedMuebles: MuebleNoListado[] = [];
       let hasMore = true;
@@ -179,7 +206,7 @@ export function useNoListadoIndexation() {
                 directorio:directorio(id_directorio, nombre, puesto),
                 config_estatus:config!id_estatus(id, concepto)
               `)
-              .neq('estatus', 'BAJA')
+              .neq('id_estatus', bajaStatus.id)
               .range(offset, offset + BATCH_SIZE - 1);
             
             if (error) throw error;
