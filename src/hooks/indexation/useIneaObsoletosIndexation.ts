@@ -317,7 +317,7 @@ export function useIneaObsoletosIndexation() {
                   break;
                 }
                 
-                if (insertedData && insertedData.estatus === 'BAJA') {
+                if (insertedData && insertedData.config_estatus?.concepto === 'BAJA') {
                   // Fetch resguardo separately
                   const { data: resguardos } = await supabase
                     .from('resguardos')
@@ -368,7 +368,7 @@ export function useIneaObsoletosIndexation() {
                     resguardante: resguardos?.[0]?.resguardante || null
                   };
                   
-                  if (transformed.estatus === 'BAJA') {
+                  if (transformed.config_estatus?.concepto === 'BAJA') {
                     updateMueble(transformed.id, transformed);
                   } else {
                     removeMueble(transformed.id);
@@ -473,7 +473,7 @@ export function useIneaObsoletosIndexation() {
               .eq('id', affectedMuebleId)
               .single();
             
-            if (!error && updatedMueble && updatedMueble.estatus === 'BAJA') {
+            if (!error && updatedMueble && updatedMueble.config_estatus?.concepto === 'BAJA') {
               // Fetch resguardo separately
               const { data: resguardos } = await supabase
                 .from('resguardos')

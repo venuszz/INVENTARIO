@@ -162,7 +162,7 @@ export function useIteaObsoletosIndexation() {
                   .eq('id', newRecord.id)
                   .single();
                 
-                if (!error && data && data.estatus === 'BAJA') {
+                if (!error && data && data.config_estatus?.concepto === 'BAJA') {
                   // Fetch resguardo separately
                   const { data: resguardos } = await supabase
                     .from('resguardos')
@@ -207,7 +207,7 @@ export function useIteaObsoletosIndexation() {
                     resguardante: resguardos?.[0]?.resguardante || null
                   };
                   
-                  if (transformed.estatus === 'BAJA') {
+                  if (transformed.config_estatus?.concepto === 'BAJA') {
                     updateMueble(transformed.id, transformed);
                   } else {
                     removeMueble(transformed.id);
@@ -264,7 +264,7 @@ export function useIteaObsoletosIndexation() {
               .eq('id', affectedMuebleId)
               .single();
             
-            if (!error && updatedMueble && updatedMueble.estatus === 'BAJA') {
+            if (!error && updatedMueble && updatedMueble.config_estatus?.concepto === 'BAJA') {
               // Fetch resguardo separately
               const { data: resguardos } = await supabase
                 .from('resguardos')

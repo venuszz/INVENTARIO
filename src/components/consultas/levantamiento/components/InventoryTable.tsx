@@ -325,15 +325,15 @@ export function InventoryTable({
                 {/* Estatus Badge */}
                 <td className="px-4 py-3 text-sm">
                   <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium border ${
-                    item.estatus === 'ACTIVO' 
+                    (item.config_estatus?.concepto || item.estatus) === 'ACTIVO' 
                       ? estatusColors.ACTIVO
-                      : item.estatus === 'INACTIVO' 
+                      : (item.config_estatus?.concepto || item.estatus) === 'INACTIVO' 
                         ? estatusColors.INACTIVO
-                        : item.estatus === 'NO LOCALIZADO' 
+                        : (item.config_estatus?.concepto || item.estatus) === 'NO LOCALIZADO' 
                           ? estatusColors['NO LOCALIZADO']
                           : estatusColors.DEFAULT
                   }`}>
-                    {item.estatus}
+                    {item.config_estatus?.concepto || item.estatus}
                   </span>
                 </td>
               </motion.tr>

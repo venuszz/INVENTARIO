@@ -307,7 +307,10 @@ export default function LevantamientoUnificado() {
     );
 
     if (omitEmptyStatus) {
-      filtered = filtered.filter(item => item.estatus && item.estatus.trim() !== '');
+      filtered = filtered.filter(item => {
+        const estatusValue = item.config_estatus?.concepto || item.estatus;
+        return estatusValue && estatusValue.trim() !== '';
+      });
     }
 
     return filtered;
@@ -324,7 +327,10 @@ export default function LevantamientoUnificado() {
       item.area?.nombre && 
       item.directorio?.nombre
     );
-    return baseFiltered.filter(item => !item.estatus || item.estatus.trim() === '').length;
+    return baseFiltered.filter(item => {
+      const estatusValue = item.config_estatus?.concepto || item.estatus;
+      return !estatusValue || estatusValue.trim() === '';
+    }).length;
   };
 
   /**

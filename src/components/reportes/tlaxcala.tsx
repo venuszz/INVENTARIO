@@ -45,6 +45,7 @@ interface Reporte {
     path: string;
     icon: React.ReactElement;
     estatus: string | null;
+    count?: number;
 }
 
 export default function ReportesTlaxcalaDashboard() {
@@ -58,6 +59,8 @@ export default function ReportesTlaxcalaDashboard() {
     const [exportingFormat, setExportingFormat] = useState<string | null>(null);
     const [reportes, setReportes] = useState<Reporte[]>([]);
     const [loadingReportes, setLoadingReportes] = useState(true);
+    const [recordCount, setRecordCount] = useState<number | null>(null);
+    const [loadingCount, setLoadingCount] = useState(false);
 
     const { firmas } = useAdminIndexation();
 
@@ -77,7 +80,7 @@ export default function ReportesTlaxcalaDashboard() {
                 if (error) throw error;
 
                 // Map to unique estatus values
-                const uniqueEstatus = estatusData?.map(e => e.concepto).filter(Boolean) || [];
+                const uniqueEstatus = estatusData?.map(e => ({ id: e.id, concepto: e.concepto })).filter(Boolean) || [];
 
                 // Generar iconos dinámicamente basados en el nombre del estatus
                 const getIconForEstatus = (estatus: string): React.ReactElement => {
@@ -89,7 +92,34 @@ export default function ReportesTlaxcalaDashboard() {
                     return <Database className="h-5 w-5" />;
                 };
 
-                // Crear array de reportes: General + reportes dinámicos
+                // Obtener conteo para cada estatus
+                const reportesWithCount = await Promise.all(
+                    uniqueEstatus.map(async (estatus, index) => {
+                        const { count } = await supabase
+                            .from('mueblestlaxcala')
+                            .select('id', { count: 'exact', head: true })
+                            .eq('id_estatus', estatus.id);
+                        
+                        return {
+                            id: index + 2,
+                            title: estatus.concepto,
+                            path: `/reportes/tlaxcala/${estatus.concepto.toLowerCase().replace(/\s+/g, '-')}`,
+                            icon: getIconForEstatus(estatus.concepto),
+                            estatus: estatus.concepto,
+                            count: count || 0
+                        };
+                    })
+                );
+
+                // Filtrar solo los que tienen registros
+                const reportesConRegistros = reportesWithCount.filter(r => r.count > 0);
+
+                // Obtener conteo general
+                const { count: generalCount } = await supabase
+                    .from('mueblestlaxcala')
+                    .select('id', { count: 'exact', head: true });
+
+                // Crear array de reportes: General + reportes dinámicos con registros
                 const dynamicReportes: Reporte[] = [
                     {
                         id: 1,
@@ -98,13 +128,7 @@ export default function ReportesTlaxcalaDashboard() {
                         icon: <Database className="h-5 w-5" />,
                         estatus: null
                     },
-                    ...uniqueEstatus.map((estatus, index) => ({
-                        id: index + 2,
-                        title: estatus,
-                        path: `/reportes/tlaxcala/${estatus.toLowerCase().replace(/\s+/g, '-')}`,
-                        icon: getIconForEstatus(estatus),
-                        estatus: estatus
-                    }))
+                    ...reportesConRegistros
                 ];
 
                 setReportes(dynamicReportes);
@@ -140,9 +164,38 @@ export default function ReportesTlaxcalaDashboard() {
         { header: 'Resguardante', key: 'resguardante', width: 18 },
     ];
 
-    const openExportModal = (reportTitle: string) => {
+    const openExportModal = async (reportTitle: string) => {
         setSelectedReport(reportTitle);
         setExportModalOpen(true);
+        setRecordCount(null);
+        setLoadingCount(true);
+        
+        try {
+            const selectedReporte = reportes.find(r => r.title === reportTitle);
+            
+            let query = supabase.from('mueblestlaxcala').select('id', { count: 'exact', head: true });
+            
+            if (selectedReporte?.estatus) {
+                const { data: estatusConfig } = await supabase
+                    .from('config')
+                    .select('id')
+                    .eq('tipo', 'estatus')
+                    .eq('concepto', selectedReporte.estatus)
+                    .single();
+                
+                if (estatusConfig) {
+                    query = query.eq('id_estatus', estatusConfig.id);
+                }
+            }
+            
+            const { count } = await query;
+            setRecordCount(count || 0);
+        } catch (error) {
+            console.error('Error al obtener conteo:', error);
+            setRecordCount(null);
+        } finally {
+            setLoadingCount(false);
+        }
     };
 
     const handleExport = async (format: string) => {
@@ -407,7 +460,7 @@ export default function ReportesTlaxcalaDashboard() {
                                     </div>
                                     <motion.button
                                         onClick={() => openExportModal(reporte.title)}
-                                        className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all flex items-center gap-2 ${
+                                        className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all flex items-center gap-2 relative ${
                                             isDarkMode
                                                 ? 'bg-white text-black hover:bg-white/90'
                                                 : 'bg-black text-white hover:bg-black/90'
@@ -417,6 +470,15 @@ export default function ReportesTlaxcalaDashboard() {
                                     >
                                         <Download size={14} />
                                         Exportar
+                                        {reporte.count !== undefined && (
+                                            <span className={`ml-1 px-1.5 py-0.5 rounded text-[10px] font-semibold ${
+                                                isDarkMode
+                                                    ? 'bg-black/20 text-white'
+                                                    : 'bg-white/20 text-black'
+                                            }`}>
+                                                {reporte.count.toLocaleString()}
+                                            </span>
+                                        )}
                                     </motion.button>
                                 </motion.div>
                             ))}
@@ -495,6 +557,21 @@ export default function ReportesTlaxcalaDashboard() {
                                         <X size={18} />
                                     </motion.button>
                                 </div>
+                                
+                                {loadingCount ? (
+                                    <div className="flex items-center justify-center py-3 mb-6">
+                                        <Loader2 size={16} className={`animate-spin ${isDarkMode ? 'text-white/40' : 'text-black/40'}`} />
+                                    </div>
+                                ) : recordCount !== null ? (
+                                    <div className={`flex items-center justify-center gap-2 py-2 px-4 rounded-lg mb-6 ${
+                                        isDarkMode ? 'bg-white/5' : 'bg-black/5'
+                                    }`}>
+                                        <Database size={14} className={isDarkMode ? 'text-white/60' : 'text-black/60'} />
+                                        <span className={`text-sm font-medium ${isDarkMode ? 'text-white/80' : 'text-black/80'}`}>
+                                            {recordCount.toLocaleString()} {recordCount === 1 ? 'registro' : 'registros'}
+                                        </span>
+                                    </div>
+                                ) : null}
                                 
                                 <p className={`text-sm mb-6 ${isDarkMode ? 'text-white/50' : 'text-black/50'}`}>
                                     Selecciona el formato de exportación

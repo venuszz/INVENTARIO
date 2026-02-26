@@ -90,7 +90,10 @@ export function useInventoryData(
       const ineaTotalWithBaja = ineaActiveCount + ineaBajaCount;
       
       // Count ITEA items by status
-      const iteaActiveCount = iteaData.filter((item: any) => item.estatus === 'ACTIVO').length;
+      const iteaActiveCount = iteaData.filter((item: any) => {
+        const estatusValue = item.config_estatus?.concepto || item.estatus;
+        return estatusValue === 'ACTIVO';
+      }).length;
       const iteaInactiveCount = iteaData.length - iteaActiveCount;
       
       // TLAXCALA count
@@ -110,7 +113,10 @@ export function useInventoryData(
         // INEA: Already filtered (no BAJA items from hook)
         ...(ineaData.map((item: any) => ({ ...item, origen: 'INEA' as const }))),
         // ITEA: Only ACTIVO items
-        ...(iteaData.filter((item: any) => item.estatus === 'ACTIVO').map((item: any) => ({ ...item, origen: 'ITEA' as const }))),
+        ...(iteaData.filter((item: any) => {
+          const estatusValue = item.config_estatus?.concepto || item.estatus;
+          return estatusValue === 'ACTIVO';
+        }).map((item: any) => ({ ...item, origen: 'ITEA' as const }))),
         // TLAXCALA: All items
         ...(noListadoData.map((item: any) => ({ ...item, origen: 'TLAXCALA' as const }))),
       ];

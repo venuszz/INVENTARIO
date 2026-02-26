@@ -366,7 +366,7 @@ export function useIteaIndexation() {
                   .single();
                 
                 if (!error && data) {
-                  if (data.estatus !== 'BAJA') {
+                  if (data.config_estatus?.concepto !== 'BAJA') {
                     // Fetch resguardo separately
                     const { data: resguardos } = await supabase
                       .from('resguardos')
@@ -426,7 +426,7 @@ export function useIteaIndexation() {
                     colores: data.color ? colorsMap[data.color] || null : null
                   };
                   
-                  if (dataWithColorAndResguardante.estatus === 'BAJA') {
+                  if (dataWithColorAndResguardante.config_estatus?.concepto === 'BAJA') {
                     removeMueble(dataWithColorAndResguardante.id);
                   } else {
                     updateMueble(dataWithColorAndResguardante.id, dataWithColorAndResguardante);
@@ -547,7 +547,7 @@ export function useIteaIndexation() {
               .eq('id', affectedMuebleId)
               .single();
             
-            if (!error && updatedMueble && updatedMueble.estatus !== 'BAJA') {
+            if (!error && updatedMueble && updatedMueble.config_estatus?.concepto !== 'BAJA') {
               // Fetch resguardo separately
               const { data: resguardos } = await supabase
                 .from('resguardos')

@@ -29,7 +29,11 @@ interface Column {
 export const generatePDF = async ({ data, columns, title, fileName, firmas = [], omitEmptyStatus = false, observationsMode = false }: PDFOptions) => {
     // Filter data if omitEmptyStatus is true
     const filteredData = omitEmptyStatus 
-        ? data.filter(item => item.estatus && (item.estatus as string).trim() !== '')
+        ? data.filter(item => {
+            const itemWithEstatus = item as { estatus?: string | null; config_estatus?: { id: number; concepto: string } | null };
+            const estatusValue = itemWithEstatus.config_estatus?.concepto || itemWithEstatus.estatus;
+            return estatusValue && (estatusValue as string).trim() !== '';
+          })
         : data;
 
     const pdfDoc = await PDFDocument.create();

@@ -27,8 +27,10 @@ export interface LevMueble {
   // Relational fields
   id_area: number | null;
   id_directorio: number | null;
+  id_estatus: number | null;
   area: { id_area: number; nombre: string } | null;
   directorio: { id_directorio: number; nombre: string; puesto: string } | null;
+  config_estatus: { id: number; concepto: string } | null;
   
   fechabaja: string | null;
   causadebaja: string | null;

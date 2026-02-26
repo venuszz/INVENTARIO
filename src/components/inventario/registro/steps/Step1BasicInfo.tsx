@@ -618,7 +618,7 @@ export default function Step1BasicInfo({
                                     Estatus
                                   </div>
                                   <div className={`inline-flex items-center gap-1.5 px-2 py-1 rounded text-[10px] font-bold uppercase tracking-wide ${
-                                    idValidation.itemData.estatus === 'ACTIVO'
+                                    (idValidation.itemData.config_estatus?.concepto || idValidation.itemData.estatus) === 'ACTIVO'
                                       ? isDarkMode
                                         ? 'bg-green-500/10 text-green-400 border border-green-500/20'
                                         : 'bg-green-50 text-green-600 border border-green-200'
@@ -627,11 +627,11 @@ export default function Step1BasicInfo({
                                         : 'bg-red-50 text-red-600 border border-red-200'
                                   }`}>
                                     <div className={`w-1.5 h-1.5 rounded-full ${
-                                      idValidation.itemData.estatus === 'ACTIVO'
+                                      (idValidation.itemData.config_estatus?.concepto || idValidation.itemData.estatus) === 'ACTIVO'
                                         ? isDarkMode ? 'bg-green-400' : 'bg-green-500'
                                         : isDarkMode ? 'bg-red-400' : 'bg-red-500'
                                     }`} />
-                                    {idValidation.itemData.estatus}
+                                    {idValidation.itemData.config_estatus?.concepto || idValidation.itemData.estatus}
                                   </div>
                                 </div>
                               )}

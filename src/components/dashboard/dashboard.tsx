@@ -111,7 +111,8 @@ export default function InventoryDashboard() {
         const rubrosSet = new Set<string>();
         
         ineaData.forEach(item => {
-            if (item.estatus) estatusSet.add(item.estatus);
+            const estatusValue = item.config_estatus?.concepto || item.estatus;
+            if (estatusValue) estatusSet.add(estatusValue);
             if (item.rubro) rubrosSet.add(item.rubro);
         });
         
@@ -127,7 +128,8 @@ export default function InventoryDashboard() {
         const rubrosSet = new Set<string>();
         
         iteaData.forEach(item => {
-            if (item.estatus) estatusSet.add(item.estatus);
+            const estatusValue = item.config_estatus?.concepto || item.estatus;
+            if (estatusValue) estatusSet.add(estatusValue);
             if (item.rubro) rubrosSet.add(item.rubro);
         });
         
@@ -337,9 +339,9 @@ export default function InventoryDashboard() {
     // Función para procesar datos de inventario desde indexación
     const processInventoryData = (
         origin: 'INEA' | 'ITEJPA', 
-        data: Array<{ estatus?: string | null; rubro?: string | null; valor?: string | number | null }>, 
+        data: Array<{ estatus?: string | null; rubro?: string | null; valor?: string | number | null; config_estatus?: { id: number; concepto: string } | null }>, 
         estatusList: string[],
-        obsoletosData: Array<{ estatus?: string | null; rubro?: string | null; valor?: string | number | null }>
+        obsoletosData: Array<{ estatus?: string | null; rubro?: string | null; valor?: string | number | null; config_estatus?: { id: number; concepto: string } | null }>
     ) => {
         const cards: InventoryCard[] = [];
         let totalCount = 0;
@@ -350,7 +352,10 @@ export default function InventoryDashboard() {
         for (const status of estatusList) {
             if (status === 'BAJA') continue; // Saltar BAJA, se procesará al final
             
-            const statusData = data.filter(item => item.estatus === status);
+            const statusData = data.filter(item => {
+                const estatusValue = item.config_estatus?.concepto || item.estatus;
+                return estatusValue === status;
+            });
             const count = statusData.length;
             const total = statusData.reduce((sum, item) => sum + (parseFloat(String(item.valor || 0))), 0);
             
@@ -397,7 +402,10 @@ export default function InventoryDashboard() {
         }
 
         // Procesar artículos sin estatus
-        const noStatusData = data.filter(item => !item.estatus || item.estatus === '');
+        const noStatusData = data.filter(item => {
+            const estatusValue = item.config_estatus?.concepto || item.estatus;
+            return !estatusValue || estatusValue === '';
+        });
         if (noStatusData.length > 0) {
             const count = noStatusData.length;
             const total = noStatusData.reduce((sum, item) => sum + (parseFloat(String(item.valor || 0))), 0);
@@ -444,7 +452,10 @@ export default function InventoryDashboard() {
         }
 
         // Procesar BAJA del inventario principal (se resta del total)
-        const bajaData = data.filter(item => item.estatus === 'BAJA');
+        const bajaData = data.filter(item => {
+            const estatusValue = item.config_estatus?.concepto || item.estatus;
+            return estatusValue === 'BAJA';
+        });
         if (bajaData.length > 0) {
             const count = bajaData.length;
             const total = bajaData.reduce((sum, item) => sum + (parseFloat(String(item.valor || 0))), 0);
@@ -539,7 +550,8 @@ export default function InventoryDashboard() {
         const rubrosTotalesMap = new Map<string, { count: number; value: number }>();
         
         data.forEach(item => {
-            if (item.rubro && item.estatus !== 'BAJA') {
+            const estatusValue = item.config_estatus?.concepto || item.estatus;
+            if (item.rubro && estatusValue !== 'BAJA') {
                 const existing = rubrosTotalesMap.get(item.rubro);
                 const itemValue = parseFloat(String(item.valor || 0));
                 if (existing) {
