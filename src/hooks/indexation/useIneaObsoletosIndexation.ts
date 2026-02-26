@@ -53,6 +53,8 @@ export function useIneaObsoletosIndexation() {
   const hasHydratedRef = useRef(false);
   const syncQueueRef = useRef<{ ids: string[]; type: 'area' | 'directorio' | 'estatus'; refId: number } | null>(null);
   const isSyncingRef = useRef(false);
+  const configUpdateTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const pendingConfigUpdatesRef = useRef<Set<number>>(new Set());
   
   /**
    * Process updates in batches to avoid UI lag and handle Supabase 1000-record limit
@@ -459,6 +461,7 @@ export function useIneaObsoletosIndexation() {
         }
       )
       // Listen to config table changes (for estatus updates)
+      // Use debouncing to handle mass updates efficiently
       .on('postgres_changes', { 
         event: 'UPDATE', 
         schema: 'public', 
@@ -471,7 +474,24 @@ export function useIneaObsoletosIndexation() {
           
           try {
             if (updatedConfig.tipo === 'estatus') {
-              processBatchUpdates([], 'estatus', updatedConfig.id);
+              // Add to pending updates set
+              pendingConfigUpdatesRef.current.add(updatedConfig.id);
+              
+              // Clear existing timeout
+              if (configUpdateTimeoutRef.current) {
+                clearTimeout(configUpdateTimeoutRef.current);
+              }
+              
+              // Set new timeout to process all pending updates after 2 seconds of inactivity
+              configUpdateTimeoutRef.current = setTimeout(async () => {
+                const configIds = Array.from(pendingConfigUpdatesRef.current);
+                pendingConfigUpdatesRef.current.clear();
+                
+                // Process each unique config ID
+                for (const configId of configIds) {
+                  await processBatchUpdates([], 'estatus', configId);
+                }
+              }, 2000);
             }
           } catch (error) {
             console.error('Error handling config estatus update:', error);
@@ -625,6 +645,9 @@ export function useIneaObsoletosIndexation() {
     return () => {
       if (reconnectionTimeoutRef.current) {
         clearTimeout(reconnectionTimeoutRef.current);
+      }
+      if (configUpdateTimeoutRef.current) {
+        clearTimeout(configUpdateTimeoutRef.current);
       }
     };
   }, [initializeModule, indexData, setupRealtimeSubscription, isStoreHydrated, completeIndexation]);
