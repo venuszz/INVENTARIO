@@ -474,7 +474,7 @@ export default function ReportesTlaxcalaDashboard() {
                                             <span className={`ml-1 px-1.5 py-0.5 rounded text-[10px] font-semibold ${
                                                 isDarkMode
                                                     ? 'bg-black/20 text-white'
-                                                    : 'bg-white/20 text-black'
+                                                    : 'bg-white/30 text-white'
                                             }`}>
                                                 {reporte.count.toLocaleString()}
                                             </span>
