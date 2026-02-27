@@ -289,8 +289,7 @@ export default function RegistroBienesForm() {
         ubicacion_mu: formData.ubicacion_mu.toUpperCase(),
         ubicacion_no: formData.ubicacion_no.toUpperCase(),
         estado: formData.estado.toUpperCase(),
-        estatus: formData.estatus.toUpperCase(), // Keep legacy field for backward compatibility
-        id_estatus: formData.id_estatus, // Save relational ID
+        id_estatus: formData.id_estatus, // Save relational ID (estatus column removed from schema)
         causadebaja: formData.causadebaja.toUpperCase(),
         f_adq: formData.f_adq || null,
         fechabaja: formData.fechabaja || null,
