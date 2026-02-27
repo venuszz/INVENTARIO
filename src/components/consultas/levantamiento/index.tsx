@@ -219,6 +219,7 @@ export default function LevantamientoUnificado() {
           _counter: index + 1,
           area: item.area?.nombre || '',
           usufinal: item.directorio?.nombre || '',
+          estatus: item.config_estatus?.concepto || item.estatus || '',
           valor: item.valor?.toString() || '',
           f_adq: item.f_adq || '',
           fechabaja: item.fechabaja || ''
@@ -237,7 +238,8 @@ export default function LevantamientoUnificado() {
           ...item,
           _counter: index + 1,
           area: item.area?.nombre || '',
-          usufinal: item.directorio?.nombre || ''
+          usufinal: item.directorio?.nombre || '',
+          estatus: item.config_estatus?.concepto || item.estatus || ''
         }));
         await generatePDF({
           data: formattedData,
@@ -358,7 +360,8 @@ export default function LevantamientoUnificado() {
       const plainData = dataToExport.map(item => ({
         ...item,
         area: item.area?.nombre || '',
-        usufinal: item.directorio?.nombre || ''
+        usufinal: item.directorio?.nombre || '',
+        estatus: item.config_estatus?.concepto || item.estatus || ''
       }));
       
       if (!plainData.every(obj => obj && typeof obj === 'object' && obj.id_inv && obj.area && obj.usufinal)) {

@@ -371,6 +371,14 @@ export default function ReportesIneaDashboard() {
                     directorNombre = item.usufinal;
                 }
                 
+                // Extract estatus - handle both relational and legacy formats
+                let estatusValue = '';
+                if (itemAny.config_estatus && typeof itemAny.config_estatus === 'object') {
+                    estatusValue = itemAny.config_estatus.concepto || '';
+                } else if (typeof item.estatus === 'string') {
+                    estatusValue = item.estatus;
+                }
+                
                 const mapped: Record<string, unknown> = {
                     id_inv: item.id_inv,
                     rubro: item.rubro,
@@ -384,7 +392,7 @@ export default function ReportesIneaDashboard() {
                     ubicacion_mu: item.ubicacion_mu,
                     ubicacion_no: item.ubicacion_no,
                     estado: item.estado,
-                    estatus: item.estatus,
+                    estatus: estatusValue,
                     area_nombre: areaNombre,
                     director_nombre: directorNombre,
                     fechabaja: item.fechabaja || '',

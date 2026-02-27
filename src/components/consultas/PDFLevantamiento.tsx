@@ -37,7 +37,87 @@ export const generatePDF = async ({ data, columns, title, fileName, firmas = [] 
     const regularFont = await pdfDoc.embedFont(StandardFonts.Helvetica);
 
     const normalizeText = (text: string) => {
-        return text.normalize('NFKD').replace(/[\u0300-\u036f]/g, '');
+        // Primero normalizar y remover diacríticos
+        let normalized = text.normalize('NFKD').replace(/[\u0300-\u036f]/g, '');
+        
+        // Reemplazar caracteres especiales que no están en WinAnsi
+        const replacements: Record<string, string> = {
+            'Ω': 'OMEGA',
+            'ω': 'omega',
+            'α': 'alpha',
+            'β': 'beta',
+            'γ': 'gamma',
+            'δ': 'delta',
+            'ε': 'epsilon',
+            'θ': 'theta',
+            'λ': 'lambda',
+            'μ': 'mu',
+            'π': 'pi',
+            'σ': 'sigma',
+            'φ': 'phi',
+            'Δ': 'DELTA',
+            'Σ': 'SIGMA',
+            '°': 'deg',
+            '±': '+/-',
+            '×': 'x',
+            '÷': '/',
+            '≤': '<=',
+            '≥': '>=',
+            '≠': '!=',
+            '≈': '~',
+            '∞': 'inf',
+            '√': 'sqrt',
+            '∑': 'SUM',
+            '∏': 'PROD',
+            '∫': 'INT',
+            '∂': 'd',
+            '∆': 'DELTA',
+            '∇': 'NABLA',
+            '∈': 'in',
+            '∉': 'not in',
+            '⊂': 'subset',
+            '⊃': 'superset',
+            '∩': 'intersect',
+            '∪': 'union',
+            '∧': 'AND',
+            '∨': 'OR',
+            '¬': 'NOT',
+            '→': '->',
+            '←': '<-',
+            '↔': '<->',
+            '⇒': '=>',
+            '⇐': '<=',
+            '⇔': '<=>',
+            '•': '*',
+            '·': '.',
+            '…': '...',
+            '—': '-',
+            '–': '-',
+            '\u201C': '"',
+            '\u201D': '"',
+            '\u2018': "'",
+            '\u2019': "'",
+            '€': 'EUR',
+            '£': 'GBP',
+            '¥': 'YEN',
+            '©': '(c)',
+            '®': '(R)',
+            '™': '(TM)',
+            '§': 'S',
+            '¶': 'P',
+            '†': '+',
+            '‡': '++',
+        };
+        
+        for (const [char, replacement] of Object.entries(replacements)) {
+            normalized = normalized.replace(new RegExp(char, 'g'), replacement);
+        }
+        
+        // Remover cualquier carácter que no sea ASCII imprimible o caracteres latinos extendidos básicos
+        // WinAnsi soporta 0x20-0x7E y 0xA0-0xFF
+        normalized = normalized.replace(/[^\x20-\x7E\xA0-\xFF]/g, '?');
+        
+        return normalized;
     };
 
     const margin = 40;
@@ -49,7 +129,11 @@ export const generatePDF = async ({ data, columns, title, fileName, firmas = [] 
     const verticalPadding = 3;
 
     const wrapText = (text: string, maxWidth: number, font: import('pdf-lib').PDFFont, fontSize: number) => {
-        const words = text.toString().split(' ');
+        // Limpiar caracteres problemáticos para WinAnsi (CR, LF, tabs, etc.)
+        let cleanedText = text.toString().replace(/[\r\n\t]/g, ' ').replace(/\s+/g, ' ').trim();
+        // Normalizar caracteres especiales
+        cleanedText = normalizeText(cleanedText);
+        const words = cleanedText.split(' ');
         const lines: string[] = [];
         let currentLine = '';
 

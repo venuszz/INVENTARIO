@@ -1,151 +1,150 @@
-# Config Estatus Real-time Counts Implementation
+# Estatus Counts - Simplified Implementation
 
 ## Overview
-This document describes the implementation of real-time updates for estatus counts in the admin areas component. When an estatus is edited in the config table, the count badges now show a skeleton loading state while recalculating the new counts.
+This document describes the simplified implementation for displaying estatus counts in the admin areas component. The counts update automatically when store data changes, without requiring explicit real-time listeners or loading states.
 
-## Problem
-Previously, when an estatus was edited in the config table, the count badges would update but without any visual feedback to the user that a recalculation was happening. This could be confusing, especially when dealing with large datasets where the recalculation might take a moment.
+## Problem History
 
-## Solution
-Created a custom hook `useEstatusCountsRealtime` that:
-1. Listens to real-time changes in the `config` table (specifically for `tipo='estatus'`)
-2. Shows a skeleton loading state immediately when a change is detected
-3. Debounces the recalculation to handle multiple rapid updates efficiently
-4. Recalculates counts from all inventory sources (INEA, ITEA, TLAXCALA, and their obsoletos variants)
+### Initial Requirement
+When an estatus name is edited in the config table, the badges showing the count of bienes with that estatus need to update in real-time.
 
-## Implementation Details
+### Failed Approaches
 
-### New Hook: `useEstatusCountsRealtime`
-**Location:** `src/hooks/useEstatusCountsRealtime.ts`
+1. **Real-time listeners on config table with loading states for all badges**
+   - Problem: Showed skeleton loading for ALL badges when ANY estatus changed
+   - User feedback: Only the affected estatus should show loading
 
-**Features:**
-- Real-time listener for config table changes
-- Debounced recalculation (1 second after last update)
-- Skeleton loading state during recalculation
-- Automatic cleanup of Supabase channels
-- Only active when on the "estatus" tab
+2. **Real-time listeners with per-estatus loading states**
+   - Problem: Caused infinite loops and glitches
+   - Events fired multiple times
+   - Store updates triggered by indexation hooks caused cascading recalculations
+   - Badges would disappear or get stuck in skeleton state
 
-**States:**
-- `estatusCounts`: Object containing counts per estatus ID
-- `isLoadingCounts`: Initial loading state
-- `recalculatingIds`: Set of estatus IDs currently being recalculated
+## Current Solution
 
-**How it works:**
-1. Subscribes to `postgres_changes` on the `config` table with filter `tipo=eq.estatus`
-2. When an UPDATE event is received:
-   - Adds the specific config ID to `recalculatingIds` Set immediately
-   - Clears any existing debounce timeout for that specific estatus ID
-   - Sets a new timeout (800ms) to recalculate only that estatus
-3. After the timeout:
-   - Recalculates counts only for the affected estatus ID
-   - Updates only that estatus in the `estatusCounts` state
-   - Removes the ID from `recalculatingIds` Set
-4. Each estatus has its own independent timeout, preventing interference between updates
+### Simplified Approach
+Remove all real-time listeners from the counts hook. Let the existing indexation infrastructure handle updates naturally.
 
-### Updated Component: `areas.tsx`
-**Location:** `src/components/admin/areas.tsx`
+**Key Insight:** The indexation hooks (useIneaIndexation, useIteaIndexation, etc.) already listen to config table changes and refetch affected muebles. We just need to recalculate counts when those stores update.
 
-**Changes:**
-1. Removed direct store subscriptions for counting
-2. Removed manual useEffect for count calculation
-3. Integrated `useEstatusCountsRealtime` hook
-4. Updated badge rendering to show skeleton states
+## Implementation
 
-**Skeleton Loading State:**
-When `isLoadingCounts` is true (initial load) or when a specific estatus ID is in `recalculatingIds`, shows 3 animated skeleton badges only for that estatus:
-```tsx
-{isLoadingCounts || recalculatingIds.has(item.id) ? (
-    <div className="flex items-center gap-1">
-        {[1, 2, 3].map((i) => (
-            <div className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs animate-pulse">
-                <div className="h-3 w-12 rounded bg-white/20" />
-                <div className="h-3 w-6 rounded bg-white/20" />
-            </div>
-        ))}
-    </div>
-) : (
-    // Show actual badges
-)}
+### Hook: `useEstatusCountsRealtime`
+Location: `src/hooks/useEstatusCountsRealtime.ts`
+
+The hook uses `useMemo` to calculate counts from all inventory stores:
+- INEA (general + obsoletos)
+- ITEA (general + obsoletos)  
+- No Listado (Tlaxcala)
+
+**Key Features:**
+- Automatic recalculation when any store data changes
+- Memoized to prevent unnecessary recalculations
+- No Supabase real-time subscriptions
+- No explicit loading states
+- Simple and reliable
+
+**Returns:**
+```typescript
+{
+  estatusCounts: {
+    [configId: number]: {
+      inea: number;
+      itea: number;
+      noListado: number;
+      total: number;
+    }
+  }
+}
 ```
 
-## User Experience
+### Component: `areas.tsx`
+Location: `src/components/admin/areas.tsx`
 
-### Before
-- Estatus edited → Counts update silently
-- No visual feedback during recalculation
-- User might not notice the change
+The component displays badges for each estatus showing counts per origin (INEA, ITEA, TLAXCALA).
 
-### After
-- Estatus edited → Skeleton badges appear immediately for that specific estatus only
-- Clear visual feedback that recalculation is happening for the affected estatus
-- Other estatus badges remain visible and unchanged
-- Smooth transition to new counts after 800ms
-- Multiple rapid edits to the same estatus are debounced efficiently
-- Multiple different estatus can be edited simultaneously without interference
+**Badge Display Rules:**
+- Only show badges when count > 0
+- Badges appear immediately when counts change
+- No skeleton loading states
 
-## Technical Benefits
+## How It Works
 
-1. **Performance**: 
-   - Only recalculates the specific estatus that changed
-   - Independent debouncing per estatus prevents interference
-   - No unnecessary recalculation of unchanged estatus
-2. **User Feedback**: Clear loading states improve UX
-3. **Separation of Concerns**: Counting logic isolated in dedicated hook
-4. **Maintainability**: Easier to test and modify counting behavior
-5. **Real-time**: Automatic updates without page refresh
-6. **Scalability**: Can handle multiple simultaneous estatus edits
+1. **Config Update**: User edits an estatus name in the config table
+2. **Indexation Hooks Detect Change**: The indexation hooks (useIneaIndexation, etc.) have real-time listeners on the config table
+3. **Batch Refetch**: The indexation hooks refetch all affected muebles with the updated estatus name
+4. **Store Updates**: The indexation hooks update their respective stores with the new data
+5. **Automatic Recalculation**: The `useMemo` in useEstatusCountsRealtime detects store changes and recalculates counts
+6. **UI Update**: React re-renders the component with updated counts
+
+## Why This Approach Works
+
+### Benefits
+- **Simple**: No complex state management or timeouts
+- **Reliable**: No race conditions or infinite loops
+- **Efficient**: Leverages existing indexation infrastructure
+- **Maintainable**: Easy to understand and modify
+- **Performant**: useMemo prevents unnecessary recalculations
+
+### Why Previous Approaches Failed
+- Adding real-time listeners to the counts hook created a circular dependency:
+  - Config update → Hook detects change → Triggers recalculation
+  - Meanwhile: Config update → Indexation hook detects change → Updates stores
+  - Store update → Hook detects change → Triggers another recalculation
+  - Result: Infinite loop
+
+- The indexation hooks already handle the real-time updates correctly with debouncing and batch processing
+- We just need to react to their store updates, not duplicate their work
+
+## Performance Considerations
+
+- `useMemo` prevents recalculation unless dependencies change
+- Only recalculates when activeTab is 'estatus'
+- Efficient counting algorithm (single pass through each store)
+- No additional Supabase channels or subscriptions
 
 ## Data Flow
 
 ```
-Config Table UPDATE (estatus ID: 5)
+Config Table UPDATE (estatus name changed)
     ↓
-Supabase Realtime Event
+Indexation Hooks Detect Change (via their real-time listeners)
     ↓
-useEstatusCountsRealtime Hook
+Indexation Hooks Refetch Affected Muebles
     ↓
-Add ID 5 to recalculatingIds Set
+Indexation Hooks Update Stores
     ↓
-Debounce (800ms) - Independent per estatus
+useEstatusCountsRealtime Detects Store Change (via useMemo dependencies)
     ↓
-Recalculate counts ONLY for estatus ID 5
+useMemo Recalculates Counts
     ↓
-Update estatusCounts[5] in state
-    ↓
-Remove ID 5 from recalculatingIds Set
-    ↓
-UI shows new counts for estatus ID 5 only
+Component Re-renders with Updated Counts
 ```
 
-## Dependencies
+## Files Modified
 
-- `@supabase/supabase-js`: Real-time subscriptions
-- Zustand stores: `ineaStore`, `iteaStore`, `noListadoStore`, `ineaObsoletosStore`, `iteaObsoletosStore`
-- React hooks: `useState`, `useEffect`, `useCallback`, `useRef`
+1. `src/hooks/useEstatusCountsRealtime.ts` - Simplified hook implementation
+2. `src/components/admin/areas.tsx` - Removed loading state references
+3. `docs/CONFIG_ESTATUS_REALTIME_COUNTS.md` - Updated documentation
 
-## Future Enhancements
+## Testing
 
-1. Add error handling for failed recalculations
-2. Add animation when counts change (fade in/out)
-3. Cache counts to reduce recalculation frequency
-4. Add manual refresh button for counts
-5. Show a subtle pulse animation on the updated badge after recalculation
-
-## Testing Recommendations
-
-1. Edit an estatus name and verify skeleton appears
-2. Edit multiple estatus rapidly and verify debouncing works
-3. Switch tabs and verify channel cleanup
-4. Check that counts are accurate after recalculation
-5. Test with large datasets to verify performance
+To verify the implementation:
+1. Navigate to Admin > Áreas > Estatus tab
+2. Edit an estatus name
+3. Observe that badges update automatically without glitches
+4. Verify no skeleton loading states appear
+5. Confirm counts are accurate across all origins
+6. Edit multiple estatus in quick succession - no infinite loops
+7. Verify badges never disappear or get stuck
 
 ## Related Files
 
 - `src/hooks/useEstatusCountsRealtime.ts` - Main hook implementation
 - `src/components/admin/areas.tsx` - Component using the hook
-- `src/hooks/indexation/useIneaIndexation.ts` - Example of similar real-time pattern
-- `src/hooks/indexation/useIteaIndexation.ts` - Example of similar real-time pattern
-- `src/hooks/indexation/useNoListadoIndexation.ts` - Example of similar real-time pattern
+- `src/hooks/indexation/useIneaIndexation.ts` - Handles INEA real-time updates
+- `src/hooks/indexation/useIteaIndexation.ts` - Handles ITEA real-time updates
+- `src/hooks/indexation/useNoListadoIndexation.ts` - Handles NoListado real-time updates
 
 ## Date
 February 27, 2026
