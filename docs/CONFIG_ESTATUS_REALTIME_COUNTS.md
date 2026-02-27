@@ -28,18 +28,19 @@ Created a custom hook `useEstatusCountsRealtime` that:
 **States:**
 - `estatusCounts`: Object containing counts per estatus ID
 - `isLoadingCounts`: Initial loading state
-- `isRecalculating`: Real-time update loading state
+- `recalculatingIds`: Set of estatus IDs currently being recalculated
 
 **How it works:**
 1. Subscribes to `postgres_changes` on the `config` table with filter `tipo=eq.estatus`
 2. When an UPDATE event is received:
-   - Sets `isRecalculating` to `true` immediately
-   - Adds the config ID to a pending updates set
-   - Clears any existing debounce timeout
-   - Sets a new timeout to recalculate after 1 second
-3. After the timeout, recalculates all counts from the store data
-4. Updates the `estatusCounts` state with new values
-5. Sets `isRecalculating` to `false`
+   - Adds the specific config ID to `recalculatingIds` Set immediately
+   - Clears any existing debounce timeout for that specific estatus ID
+   - Sets a new timeout (800ms) to recalculate only that estatus
+3. After the timeout:
+   - Recalculates counts only for the affected estatus ID
+   - Updates only that estatus in the `estatusCounts` state
+   - Removes the ID from `recalculatingIds` Set
+4. Each estatus has its own independent timeout, preventing interference between updates
 
 ### Updated Component: `areas.tsx`
 **Location:** `src/components/admin/areas.tsx`
@@ -51,16 +52,20 @@ Created a custom hook `useEstatusCountsRealtime` that:
 4. Updated badge rendering to show skeleton states
 
 **Skeleton Loading State:**
-When `isLoadingCounts` or `isRecalculating` is true, shows 3 animated skeleton badges:
+When `isLoadingCounts` is true (initial load) or when a specific estatus ID is in `recalculatingIds`, shows 3 animated skeleton badges only for that estatus:
 ```tsx
-<div className="flex items-center gap-1">
-    {[1, 2, 3].map((i) => (
-        <div className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs animate-pulse">
-            <div className="h-3 w-12 rounded bg-white/20" />
-            <div className="h-3 w-6 rounded bg-white/20" />
-        </div>
-    ))}
-</div>
+{isLoadingCounts || recalculatingIds.has(item.id) ? (
+    <div className="flex items-center gap-1">
+        {[1, 2, 3].map((i) => (
+            <div className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs animate-pulse">
+                <div className="h-3 w-12 rounded bg-white/20" />
+                <div className="h-3 w-6 rounded bg-white/20" />
+            </div>
+        ))}
+    </div>
+) : (
+    // Show actual badges
+)}
 ```
 
 ## User Experience
@@ -71,39 +76,45 @@ When `isLoadingCounts` or `isRecalculating` is true, shows 3 animated skeleton b
 - User might not notice the change
 
 ### After
-- Estatus edited → Skeleton badges appear immediately
-- Clear visual feedback that recalculation is happening
-- Smooth transition to new counts after 1 second
-- Multiple rapid edits are debounced efficiently
+- Estatus edited → Skeleton badges appear immediately for that specific estatus only
+- Clear visual feedback that recalculation is happening for the affected estatus
+- Other estatus badges remain visible and unchanged
+- Smooth transition to new counts after 800ms
+- Multiple rapid edits to the same estatus are debounced efficiently
+- Multiple different estatus can be edited simultaneously without interference
 
 ## Technical Benefits
 
-1. **Performance**: Debouncing prevents excessive recalculations during bulk edits
+1. **Performance**: 
+   - Only recalculates the specific estatus that changed
+   - Independent debouncing per estatus prevents interference
+   - No unnecessary recalculation of unchanged estatus
 2. **User Feedback**: Clear loading states improve UX
 3. **Separation of Concerns**: Counting logic isolated in dedicated hook
 4. **Maintainability**: Easier to test and modify counting behavior
 5. **Real-time**: Automatic updates without page refresh
+6. **Scalability**: Can handle multiple simultaneous estatus edits
 
 ## Data Flow
 
 ```
-Config Table UPDATE
+Config Table UPDATE (estatus ID: 5)
     ↓
 Supabase Realtime Event
     ↓
 useEstatusCountsRealtime Hook
     ↓
-Set isRecalculating = true
+Add ID 5 to recalculatingIds Set
     ↓
-Debounce (1 second)
+Debounce (800ms) - Independent per estatus
     ↓
-Recalculate counts from stores
+Recalculate counts ONLY for estatus ID 5
     ↓
-Update estatusCounts state
+Update estatusCounts[5] in state
     ↓
-Set isRecalculating = false
+Remove ID 5 from recalculatingIds Set
     ↓
-UI shows new counts
+UI shows new counts for estatus ID 5 only
 ```
 
 ## Dependencies
@@ -115,10 +126,10 @@ UI shows new counts
 ## Future Enhancements
 
 1. Add error handling for failed recalculations
-2. Show specific loading state per badge (instead of all 3)
-3. Add animation when counts change
-4. Cache counts to reduce recalculation frequency
-5. Add manual refresh button for counts
+2. Add animation when counts change (fade in/out)
+3. Cache counts to reduce recalculation frequency
+4. Add manual refresh button for counts
+5. Show a subtle pulse animation on the updated badge after recalculation
 
 ## Testing Recommendations
 

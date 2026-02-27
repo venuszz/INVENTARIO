@@ -36,8 +36,8 @@ export default function ConfigManagementComponent() {
     const [activeTab, setActiveTab] = useState<string>('estatus');
     const [newItemValue, setNewItemValue] = useState<string>('');
     
-    // Use the realtime hook for estatus counts
-    const { estatusCounts, isLoadingCounts, isRecalculating } = useEstatusCountsRealtime(configItems, activeTab);
+    // Use the hook for estatus counts (automatically updates when stores change)
+    const { estatusCounts } = useEstatusCountsRealtime(configItems, activeTab);
     
     // Modal de confirmación para editar estatus
     const [showEditConfirmModal, setShowEditConfirmModal] = useState<boolean>(false);
@@ -496,22 +496,7 @@ export default function ConfigManagementComponent() {
                                                 <span className="text-sm font-medium">{item.concepto}</span>
                                                 {activeTab === 'estatus' && (
                                                     <div className="flex items-center gap-1 flex-wrap">
-                                                        {isLoadingCounts || isRecalculating ? (
-                                                            // Skeleton loading state
-                                                            <div className="flex items-center gap-1">
-                                                                {[1, 2, 3].map((i) => (
-                                                                    <div
-                                                                        key={i}
-                                                                        className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs animate-pulse ${
-                                                                            isDarkMode ? 'bg-white/10' : 'bg-black/10'
-                                                                        }`}
-                                                                    >
-                                                                        <div className={`h-3 w-12 rounded ${isDarkMode ? 'bg-white/20' : 'bg-black/20'}`} />
-                                                                        <div className={`h-3 w-6 rounded ${isDarkMode ? 'bg-white/20' : 'bg-black/20'}`} />
-                                                                    </div>
-                                                                ))}
-                                                            </div>
-                                                        ) : estatusCounts[item.id] ? (
+                                                        {estatusCounts[item.id] ? (
                                                             <>
                                                                 {/* INEA - Solo si > 0 */}
                                                                 {estatusCounts[item.id].inea > 0 && (
