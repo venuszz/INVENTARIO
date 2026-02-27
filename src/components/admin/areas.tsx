@@ -4,11 +4,7 @@ import { useTheme } from '@/context/ThemeContext';
 import { Plus, Trash2, Edit, X, Search } from 'lucide-react';
 import SectionRealtimeToggle from '@/components/SectionRealtimeToggle';
 import { useAdminIndexation } from '@/hooks/indexation/useAdminIndexation';
-import { useIneaStore } from '@/stores/ineaStore';
-import { useIteaStore } from '@/stores/iteaStore';
-import { useNoListadoStore } from '@/stores/noListadoStore';
-import { useIneaObsoletosStore } from '@/stores/ineaObsoletosStore';
-import { useIteaObsoletosStore } from '@/stores/iteaObsoletosStore';
+import { useEstatusCountsRealtime } from '@/hooks/useEstatusCountsRealtime';
 import { motion, AnimatePresence } from 'framer-motion';
 import { EditEstatusConfirmModal } from '@/components/admin/modals/EditEstatusConfirmModal';
 
@@ -31,22 +27,6 @@ export default function ConfigManagementComponent() {
     // Usar config desde el hook de indexación admin
     const { config: configItems, realtimeConnected } = useAdminIndexation();
     
-    // Obtener datos de los stores para contar bienes por estatus
-    // Use selectors to get stable references and prevent infinite loops
-    const ineaMuebles = useIneaStore(state => state.muebles);
-    const iteaMuebles = useIteaStore(state => state.muebles);
-    const noListadoMuebles = useNoListadoStore(state => state.muebles);
-    const ineaObsoletosMuebles = useIneaObsoletosStore(state => state.muebles);
-    const iteaObsoletosMuebles = useIteaObsoletosStore(state => state.muebles);
-    
-    // Get lengths for dependency tracking (more stable than array references)
-    const ineaLength = ineaMuebles.length;
-    const iteaLength = iteaMuebles.length;
-    const noListadoLength = noListadoMuebles.length;
-    const ineaObsoletosLength = ineaObsoletosMuebles.length;
-    const iteaObsoletosLength = iteaObsoletosMuebles.length;
-    const configLength = configItems.length;
-    
     // Estados
     const [editingRow, setEditingRow] = useState<number | null>(null);
     const [deletingRow, setDeletingRow] = useState<number | null>(null);
@@ -55,8 +35,9 @@ export default function ConfigManagementComponent() {
     const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
     const [activeTab, setActiveTab] = useState<string>('estatus');
     const [newItemValue, setNewItemValue] = useState<string>('');
-    const [estatusCounts, setEstatusCounts] = useState<Record<number, { inea: number; itea: number; noListado: number; total: number }>>({});
-    const [isLoadingCounts, setIsLoadingCounts] = useState<boolean>(false);
+    
+    // Use the realtime hook for estatus counts
+    const { estatusCounts, isLoadingCounts, isRecalculating } = useEstatusCountsRealtime(configItems, activeTab);
     
     // Modal de confirmación para editar estatus
     const [showEditConfirmModal, setShowEditConfirmModal] = useState<boolean>(false);
@@ -64,117 +45,6 @@ export default function ConfigManagementComponent() {
 
     const editInputRef = useRef<HTMLInputElement>(null);
     const newItemInputRef = useRef<HTMLInputElement>(null);
-    
-    // Calcular conteo de bienes por estatus cuando cambian los datos
-    useEffect(() => {
-        if (activeTab !== 'estatus') {
-            setEstatusCounts({});
-            return;
-        }
-        
-        setIsLoadingCounts(true);
-        
-        // Usar setTimeout para evitar bloquear el UI
-        const timer = setTimeout(() => {
-            const counts: Record<number, { inea: number; itea: number; noListado: number; total: number }> = {};
-            
-            // Contar INEA (usar config_estatus?.concepto o estatus como fallback)
-            ineaMuebles.forEach(mueble => {
-                const estatusConcepto = mueble.config_estatus?.concepto || mueble.estatus;
-                if (!estatusConcepto) return;
-                
-                // Buscar el ID del config que coincida con este concepto
-                const configItem = configItems.find(
-                    c => c.tipo === 'estatus' && c.concepto?.toUpperCase() === estatusConcepto.toUpperCase()
-                );
-                
-                if (configItem) {
-                    if (!counts[configItem.id]) {
-                        counts[configItem.id] = { inea: 0, itea: 0, noListado: 0, total: 0 };
-                    }
-                    counts[configItem.id].inea++;
-                    counts[configItem.id].total++;
-                }
-            });
-            
-            // Contar INEA Obsoletos
-            ineaObsoletosMuebles.forEach(mueble => {
-                const estatusConcepto = mueble.config_estatus?.concepto || mueble.estatus;
-                if (!estatusConcepto) return;
-                
-                const configItem = configItems.find(
-                    c => c.tipo === 'estatus' && c.concepto?.toUpperCase() === estatusConcepto.toUpperCase()
-                );
-                
-                if (configItem) {
-                    if (!counts[configItem.id]) {
-                        counts[configItem.id] = { inea: 0, itea: 0, noListado: 0, total: 0 };
-                    }
-                    counts[configItem.id].inea++;
-                    counts[configItem.id].total++;
-                }
-            });
-            
-            // Contar ITEA (usar config_estatus?.concepto o estatus como fallback)
-            iteaMuebles.forEach(mueble => {
-                const estatusConcepto = mueble.config_estatus?.concepto || mueble.estatus;
-                if (!estatusConcepto) return;
-                
-                const configItem = configItems.find(
-                    c => c.tipo === 'estatus' && c.concepto?.toUpperCase() === estatusConcepto.toUpperCase()
-                );
-                
-                if (configItem) {
-                    if (!counts[configItem.id]) {
-                        counts[configItem.id] = { inea: 0, itea: 0, noListado: 0, total: 0 };
-                    }
-                    counts[configItem.id].itea++;
-                    counts[configItem.id].total++;
-                }
-            });
-            
-            // Contar ITEA Obsoletos
-            iteaObsoletosMuebles.forEach(mueble => {
-                const estatusConcepto = mueble.config_estatus?.concepto || mueble.estatus;
-                if (!estatusConcepto) return;
-                
-                const configItem = configItems.find(
-                    c => c.tipo === 'estatus' && c.concepto?.toUpperCase() === estatusConcepto.toUpperCase()
-                );
-                
-                if (configItem) {
-                    if (!counts[configItem.id]) {
-                        counts[configItem.id] = { inea: 0, itea: 0, noListado: 0, total: 0 };
-                    }
-                    counts[configItem.id].itea++;
-                    counts[configItem.id].total++;
-                }
-            });
-            
-            // Contar No Listado (usar config_estatus?.concepto o estatus como fallback)
-            noListadoMuebles.forEach(mueble => {
-                const estatusConcepto = mueble.config_estatus?.concepto || mueble.estatus;
-                if (!estatusConcepto) return;
-                
-                const configItem = configItems.find(
-                    c => c.tipo === 'estatus' && c.concepto?.toUpperCase() === estatusConcepto.toUpperCase()
-                );
-                
-                if (configItem) {
-                    if (!counts[configItem.id]) {
-                        counts[configItem.id] = { inea: 0, itea: 0, noListado: 0, total: 0 };
-                    }
-                    counts[configItem.id].noListado++;
-                    counts[configItem.id].total++;
-                }
-            });
-            
-            setEstatusCounts(counts);
-            setIsLoadingCounts(false);
-        }, 100);
-        
-        return () => clearTimeout(timer);
-    }, [activeTab, ineaLength, iteaLength, noListadoLength, ineaObsoletosLength, iteaObsoletosLength, configLength]);
 
     // Efecto para enfocar el input de edición cuando se activa
     useEffect(() => {
@@ -626,12 +496,21 @@ export default function ConfigManagementComponent() {
                                                 <span className="text-sm font-medium">{item.concepto}</span>
                                                 {activeTab === 'estatus' && (
                                                     <div className="flex items-center gap-1 flex-wrap">
-                                                        {isLoadingCounts ? (
-                                                            <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs ${
-                                                                isDarkMode ? 'bg-white/10 text-white/40' : 'bg-black/10 text-black/40'
-                                                            }`}>
-                                                                <div className="w-3 h-3 border-2 border-current border-t-transparent rounded-full animate-spin" />
-                                                            </span>
+                                                        {isLoadingCounts || isRecalculating ? (
+                                                            // Skeleton loading state
+                                                            <div className="flex items-center gap-1">
+                                                                {[1, 2, 3].map((i) => (
+                                                                    <div
+                                                                        key={i}
+                                                                        className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs animate-pulse ${
+                                                                            isDarkMode ? 'bg-white/10' : 'bg-black/10'
+                                                                        }`}
+                                                                    >
+                                                                        <div className={`h-3 w-12 rounded ${isDarkMode ? 'bg-white/20' : 'bg-black/20'}`} />
+                                                                        <div className={`h-3 w-6 rounded ${isDarkMode ? 'bg-white/20' : 'bg-black/20'}`} />
+                                                                    </div>
+                                                                ))}
+                                                            </div>
                                                         ) : estatusCounts[item.id] ? (
                                                             <>
                                                                 {/* INEA - Solo si > 0 */}
