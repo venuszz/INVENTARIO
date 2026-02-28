@@ -8,6 +8,7 @@ import ImagePreview from './ImagePreview';
 import CustomSelect from './CustomSelect';
 import { Mueble, FilterOptions, Directorio, ResguardoDetalle } from '../types';
 import { formatDate } from '../utils';
+import { FieldSkeleton } from '@/components/shared/FieldSkeleton';
 
 /**
  * DetailPanel Component
@@ -683,14 +684,6 @@ function ViewMode({
 }: ViewModeProps) {
   const folio = selectedItem?.id_inv ? (foliosResguardo[selectedItem.id_inv] || null) : null;
   const detalleResguardo = folio ? resguardoDetalles[folio] : undefined;
-
-  function FieldSkeleton() {
-    return (
-      <div className={`h-5 rounded animate-pulse ${
-        isDarkMode ? 'bg-white/10' : 'bg-black/10'
-      }`} style={{ width: '60%' }} />
-    );
-  }
 
   return (
     <div className="space-y-[1.5vw]">

@@ -5,7 +5,7 @@
 
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { motion } from 'framer-motion';
 import { RefreshCw } from 'lucide-react';
 
@@ -24,22 +24,19 @@ export default function SectionRealtimeToggle({
   onReindexClick,
   className = '',
 }: SectionRealtimeToggleProps) {
-  const [prevConnected, setPrevConnected] = useState(isConnected);
+  const prevConnectedRef = useRef(isConnected);
   const [showPulse, setShowPulse] = useState(false);
   
   const displayName = sectionName || moduleKey || 'Unknown';
   
   useEffect(() => {
-  }, [isConnected, displayName]);
-  
-  useEffect(() => {
-    if (prevConnected !== isConnected) {
+    if (prevConnectedRef.current !== isConnected) {
       setShowPulse(true);
       const timer = setTimeout(() => setShowPulse(false), 800);
-      setPrevConnected(isConnected);
+      prevConnectedRef.current = isConnected;
       return () => clearTimeout(timer);
     }
-  }, [isConnected, prevConnected]);
+  }, [isConnected]);
   
   return (
     <div className={`flex items-center gap-2 ${className}`}>

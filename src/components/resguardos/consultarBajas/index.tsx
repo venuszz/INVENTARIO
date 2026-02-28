@@ -504,6 +504,7 @@ const ConsultarBajasResguardos = () => {
       />
 
       <DeleteModal
+        key={showDeleteModal ? 'open' : 'closed'}
         show={showDeleteModal}
         deleteType={deleteType}
         itemToDelete={itemToDelete}

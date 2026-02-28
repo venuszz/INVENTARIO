@@ -1,10 +1,12 @@
 'use client';
 
 import React from 'react';
-import { ArrowUpDown, RefreshCw, AlertCircle, Search, X } from 'lucide-react';
+import { RefreshCw, AlertCircle, Search, X } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { Mueble } from '../types';
 import { truncateText, formatDate } from '../utils';
+import { SortableHeader } from './SortableHeader';
+import { CellSkeleton } from '@/components/shared/CellSkeleton';
 
 interface InventoryTableProps {
   /** Array of all furniture items */
@@ -59,51 +61,6 @@ export const InventoryTable: React.FC<InventoryTableProps> = ({
   hasActiveFilters,
   syncingIds = []
 }) => {
-  /**
-   * Sortable header component
-   */
-  function SortableHeader({ 
-    field, 
-    label 
-  }: { 
-    field: keyof Mueble; 
-    label: string 
-  }) {
-    const isActive = sortField === field;
-    
-    return (
-      <th
-        onClick={() => onSort(field)}
-        className={`px-4 py-3 text-left text-xs font-medium uppercase tracking-wider cursor-pointer transition-all ${
-          isActive
-            ? isDarkMode 
-              ? 'text-white bg-white/[0.02]' 
-              : 'text-black bg-black/[0.02]'
-            : isDarkMode 
-              ? 'text-white/60 hover:bg-white/[0.02] hover:text-white' 
-              : 'text-black/60 hover:bg-black/[0.02] hover:text-black'
-        }`}
-        title={`Ordenar por ${label}`}
-      >
-        <div className="flex items-center gap-1.5">
-          {label}
-          <ArrowUpDown size={12} className={isActive ? 'opacity-100' : 'opacity-40'} />
-        </div>
-      </th>
-    );
-  }
-
-  /**
-   * Skeleton loader for syncing cells
-   */
-  function CellSkeleton() {
-    return (
-      <div className={`h-4 rounded animate-pulse ${
-        isDarkMode ? 'bg-white/10' : 'bg-black/10'
-      }`} style={{ width: '80%' }} />
-    );
-  }
-
   return (
     <div className={`rounded-lg border overflow-hidden h-full flex flex-col ${
       isDarkMode ? 'bg-black border-white/10' : 'bg-white border-black/10'
@@ -119,11 +76,41 @@ export const InventoryTable: React.FC<InventoryTableProps> = ({
             isDarkMode ? 'bg-black/95 border-b border-white/10' : 'bg-white/95 border-b border-black/10'
           }`}>
             <tr>
-              <SortableHeader field="id_inv" label="ID Inventario" />
-              <SortableHeader field="descripcion" label="Descripción" />
-              <SortableHeader field="area" label="Área" />
-              <SortableHeader field="usufinal" label="Director/Jefe de Área" />
-              <SortableHeader field="fechabaja" label="Fecha de Baja" />
+              <SortableHeader 
+                field="id_inv" 
+                label="ID Inventario"
+                sortField={sortField}
+                sortDirection={sortDirection}
+                onSort={onSort}
+              />
+              <SortableHeader 
+                field="descripcion" 
+                label="Descripción"
+                sortField={sortField}
+                sortDirection={sortDirection}
+                onSort={onSort}
+              />
+              <SortableHeader 
+                field="area" 
+                label="Área"
+                sortField={sortField}
+                sortDirection={sortDirection}
+                onSort={onSort}
+              />
+              <SortableHeader 
+                field="usufinal" 
+                label="Director/Jefe de Área"
+                sortField={sortField}
+                sortDirection={sortDirection}
+                onSort={onSort}
+              />
+              <SortableHeader 
+                field="fechabaja" 
+                label="Fecha de Baja"
+                sortField={sortField}
+                sortDirection={sortDirection}
+                onSort={onSort}
+              />
             </tr>
           </thead>
 

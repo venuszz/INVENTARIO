@@ -1,16 +1,23 @@
 "use client";
 import { usePathname } from 'next/navigation';
-import { useEffect, useState, useMemo } from 'react';
+import { useMemo } from 'react';
 import { useAdminIndexation } from '@/hooks/indexation/useAdminIndexation';
 import { useIndexationStore } from '@/stores/indexationStore';
 import { useDirectorioStats } from '@/components/admin/directorio/hooks/useDirectorioStats';
 import { useDirectorioInconsistencies } from '@/components/admin/directorio/hooks/useDirectorioInconsistencies';
 import { InconsistencyAlert } from '@/components/admin/directorio/components/InconsistencyAlert';
+import { useAuthQuery } from '@/hooks/queries/useAuthQuery';
 
 export default function GlobalInconsistencyAlert() {
     const pathname = usePathname();
-    const [isAuthenticated, setIsAuthenticated] = useState(false);
-    const [isLoading, setIsLoading] = useState(true);
+    
+    // Use React Query hook for authentication
+    const { 
+        data: authData, 
+        isLoading 
+    } = useAuthQuery(pathname);
+    
+    const isAuthenticated = authData?.isAuthenticated ?? false;
     
     // Hook de indexación admin - DEBE estar antes de cualquier return
     const { 
@@ -48,25 +55,6 @@ export default function GlobalInconsistencyAlert() {
         directorioStats,
         areaStats
     );
-    
-    // Verificar si el usuario está autenticado
-    useEffect(() => {
-        const checkAuth = async () => {
-            try {
-                const response = await fetch('/api/auth/session', {
-                    credentials: 'include'
-                });
-                const data = await response.json();
-                setIsAuthenticated(data.isAuthenticated === true);
-            } catch (error) {
-                setIsAuthenticated(false);
-            } finally {
-                setIsLoading(false);
-            }
-        };
-        
-        checkAuth();
-    }, [pathname]);
     
     // Determinar si debe mostrar basado en autenticación y ruta
     const shouldShow = isAuthenticated && 

@@ -35,17 +35,12 @@ export function EditableAreaChip({
 }: EditableAreaChipProps) {
     const { isDarkMode } = useTheme();
     const [isEditing, setIsEditing] = useState(false);
-    const [editValue, setEditValue] = useState(areaName);
+    const [editValue, setEditValue] = useState('');
     const [isSubmitting, setIsSubmitting] = useState(false);
     const inputRef = useRef<HTMLInputElement>(null);
 
     // Determinar si se puede editar: debe estar en modo edición del director, no tener resguardos ni conflictos
     const canEdit = isEditMode && resguardosCount === 0 && !hasConflict && onAreaNameUpdate;
-
-    // Sincronizar el estado local cuando el prop areaName cambia (actualización desde indexación)
-    useEffect(() => {
-        setEditValue(areaName);
-    }, [areaName]);
 
     useEffect(() => {
         if (isEditing && inputRef.current) {
@@ -57,8 +52,8 @@ export function EditableAreaChip({
     const handleStartEdit = (e: React.MouseEvent) => {
         e.stopPropagation();
         if (canEdit) {
-            setIsEditing(true);
             setEditValue(areaName);
+            setIsEditing(true);
         }
     };
 

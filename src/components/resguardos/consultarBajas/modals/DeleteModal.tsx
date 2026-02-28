@@ -1,5 +1,5 @@
 import { AlertCircle, X, FileDigit, ListChecks, ShieldAlert, KeyRound } from 'lucide-react';
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import type { DeleteType, ItemToDelete } from '../types';
 
 interface DeleteModalProps {
@@ -26,21 +26,9 @@ export const DeleteModal: React.FC<DeleteModalProps> = ({
 }) => {
   const [step, setStep] = useState<1 | 2>(1);
   const [confirmText, setConfirmText] = useState('');
-  const [isConfirmValid, setIsConfirmValid] = useState(false);
-
-  // Reset state when modal opens/closes
-  useEffect(() => {
-    if (show) {
-      setStep(1);
-      setConfirmText('');
-      setIsConfirmValid(false);
-    }
-  }, [show]);
-
-  // Validate confirmation text
-  useEffect(() => {
-    setIsConfirmValid(confirmText.toUpperCase() === 'ELIMINAR');
-  }, [confirmText]);
+  
+  // Derive validation state instead of using useEffect
+  const isConfirmValid = confirmText.toUpperCase() === 'ELIMINAR';
 
   if (!show) return null;
 

@@ -34,7 +34,7 @@ export default function SuggestionDropdown({
                     <li
                         key={s.value + s.type}
                         role="option"
-                        {...(isSelected && { 'aria-selected': 'true' })}
+                        aria-selected={isSelected}
                         onMouseDown={() => onSelect(i)}
                         className={`flex items-center gap-1.5 px-2 py-1 cursor-pointer select-none text-xs whitespace-normal break-words w-full transition-colors ${isSelected
                             ? (isDarkMode ? 'bg-white/5 text-white' : 'bg-blue-50 text-blue-900')

@@ -1007,7 +1007,7 @@ export function DirectorioManager() {
                                                             
                                                             return areaObj ? (
                                                                 <EditableAreaChip
-                                                                    key={`edit-area-${id_area}`}
+                                                                    key={`edit-area-${id_area}-${areaObj.nombre}`}
                                                                     areaId={id_area}
                                                                     areaName={areaObj.nombre}
                                                                     directorId={editEmployee.id_directorio}
@@ -1212,7 +1212,7 @@ export function DirectorioManager() {
                                                     
                                                     return areaObj ? (
                                                         <EditableAreaChip
-                                                            key={`view-area-${id_area}`}
+                                                            key={`view-area-${id_area}-${areaObj.nombre}`}
                                                             areaId={id_area}
                                                             areaName={areaObj.nombre}
                                                             directorId={employee.id_directorio}

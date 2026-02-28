@@ -606,6 +606,7 @@ export default function ConsultarResguardos({ folioParam }: ConsultarResguardosP
 
       {/* Modals */}
       <DeleteAllModal
+        key={showDeleteAllModal ? 'open' : 'closed'}
         show={showDeleteAllModal}
         folio={resguardoDetails.resguardoDetails?.folio || ''}
         articulosCount={resguardoDetails.articulos.length}

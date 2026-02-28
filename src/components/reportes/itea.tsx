@@ -15,6 +15,7 @@ import RoleGuard from "@/components/roleGuard";
 import { useAdminIndexation } from '@/hooks/indexation/useAdminIndexation';
 import type { Firma } from '@/types/admin';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useColorsQuery } from '@/hooks/queries/useColorsQuery';
 
 interface Mueble {
     id: number;
@@ -58,25 +59,40 @@ export default function ReportesIneaDashboard() {
     const [isExporting, setIsExporting] = useState(false);
     const [exportingFormat, setExportingFormat] = useState<string | null>(null);
     const [reportes, setReportes] = useState<Reporte[]>([]);
-    const [loadingReportes, setLoadingReportes] = useState(true);
     const [viewMode, setViewMode] = useState<'estatus' | 'colores'>('estatus');
     const [recordCount, setRecordCount] = useState<number | null>(null);
     const [loadingCount, setLoadingCount] = useState(false);
 
     const { firmas } = useAdminIndexation();
+    
+    // React Query hook for colors - only used when viewMode is 'colores'
+    const { 
+        data: colorsData, 
+        isLoading: loadingColores, 
+        error: colorsError 
+    } = useColorsQuery();
 
     // Obtener valores únicos de estatus al cargar el componente
     useEffect(() => {
         const fetchEstatus = async () => {
             try {
-                setLoadingReportes(true);
                 
                 if (viewMode === 'colores') {
-                    // Fetch colors from API
-                    const response = await fetch('/api/colores');
-                    if (!response.ok) throw new Error('Error al cargar colores');
+                    // Use React Query data instead of fetch
+                    if (loadingColores) {
+                        // Still loading, don't process yet
+                        return;
+                    }
                     
-                    const { colors } = await response.json();
+                    if (colorsError) {
+                        throw colorsError;
+                    }
+                    
+                    if (!colorsData?.colors) {
+                        throw new Error('No se pudieron cargar los colores');
+                    }
+                    
+                    const { colors } = colorsData;
                     
                     const getColorHex = (colorName: string) => {
                         const name = colorName.toUpperCase();
@@ -203,13 +219,14 @@ export default function ReportesIneaDashboard() {
             } catch (error) {
                 console.error('Error al obtener datos:', error);
                 setError('Error al cargar las categorías de reportes');
-            } finally {
-                setLoadingReportes(false);
             }
         };
 
         fetchEstatus();
-    }, [viewMode]);
+    }, [viewMode, colorsData, loadingColores, colorsError]);
+    
+    // Determine loading state based on viewMode
+    const loadingReportes = viewMode === 'colores' ? loadingColores : false;
 
     const exportColumns = [
         { header: 'ID Inventario', key: 'id_inv', width: 18 },
@@ -245,10 +262,9 @@ export default function ReportesIneaDashboard() {
             
             if (selectedReporte?.estatus) {
                 if (viewMode === 'colores') {
-                    const colorsResponse = await fetch('/api/colores');
-                    if (colorsResponse.ok) {
-                        const { colors } = await colorsResponse.json();
-                        const selectedColor = colors.find((c: any) => c.nombre === selectedReporte.estatus);
+                    // Use React Query data instead of fetch
+                    if (colorsData?.colors) {
+                        const selectedColor = colorsData.colors.find((c: any) => c.nombre === selectedReporte.estatus);
                         if (selectedColor) {
                             query = query.eq('color', selectedColor.id);
                         }
@@ -295,18 +311,13 @@ export default function ReportesIneaDashboard() {
             // Aplicar filtro según el modo de vista
             if (selectedReporte?.estatus) {
                 if (viewMode === 'colores') {
-                    // Filter by color - need to fetch with color data
-                    // First get all records, then filter by color in memory since we can't JOIN in export
-                    const colorName = selectedReporte.estatus;
-                    
-                    // Get color ID from API
-                    const colorsResponse = await fetch('/api/colores');
-                    if (!colorsResponse.ok) throw new Error('Error al cargar colores');
-                    const { colors } = await colorsResponse.json();
-                    const selectedColor = colors.find((c: any) => c.nombre === colorName);
-                    
-                    if (selectedColor) {
-                        query = query.eq('color', selectedColor.id);
+                    // Use React Query data instead of fetch
+                    if (colorsData?.colors) {
+                        const selectedColor = colorsData.colors.find((c: any) => c.nombre === selectedReporte.estatus);
+                        
+                        if (selectedColor) {
+                            query = query.eq('color', selectedColor.id);
+                        }
                     }
                 } else {
                     // Filter by estatus using id_estatus

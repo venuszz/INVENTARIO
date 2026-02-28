@@ -8,6 +8,7 @@ import IndexationPopover from "@/components/IndexationPopover";
 import SileoToaster from "@/components/SileoToaster";
 import GlobalInconsistencyAlert from "@/components/GlobalInconsistencyAlert";
 import FloatingNotifications from "@/components/FloatingNotifications";
+import { QueryClientProvider } from "@/components/QueryClientProvider";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -39,21 +40,23 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased flex flex-col h-screen`}
       >
-        <ThemeProvider>
-          <div className="header-container">
-            <HeaderContainer />
-          </div>
-          <main className="flex-1 overflow-hidden">
-            {children}
-            <SpeedInsights />
-          </main>
-          <div className="indexation-popover-container">
-            <IndexationPopover />
-          </div>
-          <GlobalInconsistencyAlert />
-          <FloatingNotifications />
-          <SileoToaster />
-        </ThemeProvider>
+        <QueryClientProvider>
+          <ThemeProvider>
+            <div className="header-container">
+              <HeaderContainer />
+            </div>
+            <main className="flex-1 overflow-hidden">
+              {children}
+              <SpeedInsights />
+            </main>
+            <div className="indexation-popover-container">
+              <IndexationPopover />
+            </div>
+            <GlobalInconsistencyAlert />
+            <FloatingNotifications />
+            <SileoToaster />
+          </ThemeProvider>
+        </QueryClientProvider>
       </body>
     </html>
   );

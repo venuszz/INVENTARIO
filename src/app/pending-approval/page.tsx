@@ -19,10 +19,9 @@ export default function PendingApprovalPage() {
     const { user, pendingUser } = useSession();
     const router = useRouter();
     const [userInfo, setUserInfo] = useState<PendingUserInfo | null>(null);
-    const [isApproved, setIsApproved] = useState(false);
     const [isChecking, setIsChecking] = useState(true);
-
     const [imageError, setImageError] = useState(false);
+    const [shouldRedirect, setShouldRedirect] = useState(false);
 
     useEffect(() => {
         const checkAccess = () => {
@@ -63,7 +62,7 @@ export default function PendingApprovalPage() {
                 (payload) => {
                     const newUser = payload.new as any;
                     if (newUser.is_active || !newUser.pending_approval) {
-                        setIsApproved(true);
+                        setShouldRedirect(true);
                         // Auto-redirect logic
                         setTimeout(() => {
                             window.location.href = '/api/auth/sso';
@@ -163,12 +162,12 @@ export default function PendingApprovalPage() {
                             }`}>
 
                             {/* Decorative Top Gradient Line */}
-                            <div className={`absolute top-0 left-0 right-0 h-1 bg-gradient-to-r ${isApproved
+                            <div className={`absolute top-0 left-0 right-0 h-1 bg-gradient-to-r ${shouldRedirect
                                 ? 'from-emerald-500 via-green-400 to-emerald-500'
                                 : 'from-blue-600 via-indigo-600 to-blue-600'
                                 }`} />
 
-                            {isApproved ? (
+                            {shouldRedirect ? (
                                 /* Approved State */
                                 <div className="text-center space-y-8 py-8 animate-in zoom-in-95 duration-500">
                                     <div className={`w-20 h-20 mx-auto rounded-full flex items-center justify-center bg-gradient-to-tr shadow-[0_0_30px_rgba(16,185,129,0.3)] ${isDarkMode ? 'from-green-500/20 to-emerald-500/10 text-green-400' : 'from-green-100 to-emerald-50 text-green-600'

@@ -15,6 +15,7 @@ import RoleGuard from "@/components/roleGuard";
 import { useAdminIndexation } from '@/hooks/indexation/useAdminIndexation';
 import type { Firma } from '@/types/admin';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useEstatusQuery } from '@/hooks/queries/useEstatusQuery';
 
 interface Mueble {
     id: number;
@@ -58,29 +59,34 @@ export default function ReportesTlaxcalaDashboard() {
     const [isExporting, setIsExporting] = useState(false);
     const [exportingFormat, setExportingFormat] = useState<string | null>(null);
     const [reportes, setReportes] = useState<Reporte[]>([]);
-    const [loadingReportes, setLoadingReportes] = useState(true);
     const [recordCount, setRecordCount] = useState<number | null>(null);
     const [loadingCount, setLoadingCount] = useState(false);
 
     const { firmas } = useAdminIndexation();
+    
+    // Use React Query hook for estatus data
+    const { 
+        data: estatusData, 
+        isLoading: loadingReportes, 
+        error: estatusError 
+    } = useEstatusQuery();
 
-    // Obtener valores únicos de estatus al cargar el componente
+    // Process estatus data from React Query
     useEffect(() => {
-        const fetchEstatus = async () => {
+        if (loadingReportes) return;
+        
+        if (estatusError) {
+            console.error('Error al obtener estatus:', estatusError);
+            setError('Error al cargar las categorías de reportes');
+            return;
+        }
+        
+        if (!estatusData?.estatus) return;
+        
+        const processEstatus = async () => {
             try {
-                setLoadingReportes(true);
-                
-                // Fetch estatus from config table with IDs
-                const { data: estatusData, error } = await supabase
-                    .from('config')
-                    .select('id, concepto')
-                    .eq('tipo', 'estatus')
-                    .order('concepto');
-
-                if (error) throw error;
-
                 // Map to unique estatus values
-                const uniqueEstatus = estatusData?.map(e => ({ id: e.id, concepto: e.concepto })).filter(Boolean) || [];
+                const uniqueEstatus = estatusData.estatus.map(e => ({ id: e.id, concepto: e.concepto }));
 
                 // Generar iconos dinámicamente basados en el nombre del estatus
                 const getIconForEstatus = (estatus: string): React.ReactElement => {
@@ -114,11 +120,6 @@ export default function ReportesTlaxcalaDashboard() {
                 // Filtrar solo los que tienen registros
                 const reportesConRegistros = reportesWithCount.filter(r => r.count > 0);
 
-                // Obtener conteo general
-                const { count: generalCount } = await supabase
-                    .from('mueblestlaxcala')
-                    .select('id', { count: 'exact', head: true });
-
                 // Crear array de reportes: General + reportes dinámicos con registros
                 const dynamicReportes: Reporte[] = [
                     {
@@ -133,15 +134,13 @@ export default function ReportesTlaxcalaDashboard() {
 
                 setReportes(dynamicReportes);
             } catch (error) {
-                console.error('Error al obtener estatus:', error);
-                setError('Error al cargar las categorías de reportes');
-            } finally {
-                setLoadingReportes(false);
+                console.error('Error al procesar estatus:', error);
+                setError('Error al procesar las categorías de reportes');
             }
         };
 
-        fetchEstatus();
-    }, []);
+        processEstatus();
+    }, [estatusData, loadingReportes, estatusError]);
 
     const exportColumns = [
         { header: 'ID Inventario', key: 'id_inv', width: 18 },
@@ -175,13 +174,10 @@ export default function ReportesTlaxcalaDashboard() {
             
             let query = supabase.from('mueblestlaxcala').select('id', { count: 'exact', head: true });
             
-            if (selectedReporte?.estatus) {
-                const { data: estatusConfig } = await supabase
-                    .from('config')
-                    .select('id')
-                    .eq('tipo', 'estatus')
-                    .eq('concepto', selectedReporte.estatus)
-                    .single();
+            if (selectedReporte?.estatus && estatusData?.estatus) {
+                const estatusConfig = estatusData.estatus.find(
+                    e => e.concepto === selectedReporte.estatus
+                );
                 
                 if (estatusConfig) {
                     query = query.eq('id_estatus', estatusConfig.id);
@@ -214,14 +210,11 @@ export default function ReportesTlaxcalaDashboard() {
             `, { count: 'exact', head: false });
             
             // Aplicar filtro solo si no es "General"
-            if (selectedReporte?.estatus) {
-                // Get estatus ID from config table
-                const { data: estatusConfig } = await supabase
-                    .from('config')
-                    .select('id')
-                    .eq('tipo', 'estatus')
-                    .eq('concepto', selectedReporte.estatus)
-                    .single();
+            if (selectedReporte?.estatus && estatusData?.estatus) {
+                // Get estatus ID from cached data
+                const estatusConfig = estatusData.estatus.find(
+                    e => e.concepto === selectedReporte.estatus
+                );
                 
                 if (estatusConfig) {
                     query = query.eq('id_estatus', estatusConfig.id);

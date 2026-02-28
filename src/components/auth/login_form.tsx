@@ -6,7 +6,7 @@ import { useSearchParams } from 'next/navigation';
 import { User, Lock, Eye, EyeOff, LogIn, Moon, Sun } from 'lucide-react';
 import { motion } from 'framer-motion';
 import SSOButton from './SSOButton';
-import supabase from '@/app/lib/supabase/client';
+import { useUserApprovalMonitoring } from '@/hooks/useUserApprovalMonitoring';
 
 export default function LoginPage() {
     const { isDarkMode, toggleDarkMode } = useTheme();
@@ -15,8 +15,6 @@ export default function LoginPage() {
     const [error, setError] = useState<string | null>(null);
     const [isLoading, setIsLoading] = useState(false);
     const [showPassword, setShowPassword] = useState(false);
-    const [isPendingApproval, setIsPendingApproval] = useState(false);
-    const [isApproved, setIsApproved] = useState(false);
     const [isAccountDisabled, setIsAccountDisabled] = useState(false);
     const [monitoringUserId, setMonitoringUserId] = useState<string | null>(null);
     const searchParams = useSearchParams();
@@ -27,60 +25,12 @@ export default function LoginPage() {
             const userId = localStorage.getItem('pending_user_id');
             if (userId) {
                 setMonitoringUserId(userId);
-                setIsPendingApproval(true);
             }
         }
     }, [searchParams]);
 
-    // Monitoreo en tiempo real del estado del usuario
-    useEffect(() => {
-        if (!monitoringUserId) return;
-
-        const checkUserStatus = async () => {
-            try {
-                const response = await fetch(`/api/auth/check-status?userId=${monitoringUserId}`);
-                const result = await response.json();
-
-                if (result.success && result.is_active && !result.pending_approval) {
-                    setIsApproved(true);
-                    setIsPendingApproval(false);
-                    localStorage.removeItem('pending_user_id');
-                }
-            } catch (err) {
-                console.error('Error checking user status:', err);
-            }
-        };
-
-        checkUserStatus();
-
-        const pollInterval = setInterval(checkUserStatus, 3000);
-
-        const channel = supabase
-            .channel(`user-status-${monitoringUserId}`)
-            .on(
-                'postgres_changes',
-                {
-                    event: 'UPDATE',
-                    schema: 'public',
-                    table: 'users',
-                    filter: `id=eq.${monitoringUserId}`
-                },
-                (payload) => {
-                    const newData = payload.new as { is_active: boolean; pending_approval: boolean };
-                    if (newData.is_active && !newData.pending_approval) {
-                        setIsApproved(true);
-                        setIsPendingApproval(false);
-                        localStorage.removeItem('pending_user_id');
-                    }
-                }
-            )
-            .subscribe();
-
-        return () => {
-            clearInterval(pollInterval);
-            supabase.removeChannel(channel);
-        };
-    }, [monitoringUserId]);
+    // Monitoreo en tiempo real del estado del usuario usando custom hook
+    const { isApproved, isPending: isPendingApproval } = useUserApprovalMonitoring(monitoringUserId);
 
     if (isAccountDisabled) {
         return (
@@ -300,7 +250,6 @@ export default function LoginPage() {
 
                                 <button
                                     onClick={() => {
-                                        setIsApproved(false);
                                         setMonitoringUserId(null);
                                     }}
                                     className={`w-full py-3 px-5 rounded-lg text-sm font-medium transition-all flex items-center justify-center gap-2 border ${
@@ -486,7 +435,8 @@ export default function LoginPage() {
                         localStorage.setItem('pending_user_id', data.userId);
                         window.location.href = '/login?awaiting_approval=true';
                     } else {
-                        setIsPendingApproval(true);
+                        // El hook manejará el estado isPending automáticamente
+                        setMonitoringUserId(localStorage.getItem('pending_user_id'));
                     }
                     setIsLoading(false);
                     return;

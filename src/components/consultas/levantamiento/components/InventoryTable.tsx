@@ -5,10 +5,12 @@
  * resguardo badges, and status badges.
  */
 
-import { ArrowUpDown, BadgeCheck } from 'lucide-react';
+import { BadgeCheck } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { LevMueble, SortDirection } from '../types';
 import { getOrigenColors, getEstatusColors, truncateText } from '../utils';
+import { SortableHeader } from './SortableHeader';
+import { CellSkeleton } from '@/components/shared/CellSkeleton';
 
 /**
  * Component props interface
@@ -58,51 +60,6 @@ export function InventoryTable({
   const isMuebleSyncing = (muebleId: string) => {
     return syncingIds.includes(muebleId);
   };
-  
-  /**
-   * Skeleton loader component for syncing cells
-   */
-  function SkeletonLoader() {
-    return (
-      <div className={`h-4 rounded animate-pulse ${
-        isDarkMode ? 'bg-white/10' : 'bg-black/10'
-      }`} style={{ width: '80%' }} />
-    );
-  }
-
-  /**
-   * Sortable column header component
-   */
-  function SortableHeader({ 
-    field, 
-    label 
-  }: { 
-    field: keyof LevMueble; 
-    label: string 
-  }) {
-    const isActive = sortField === field;
-    
-    return (
-      <th
-        onClick={() => onSort(field)}
-        className={`px-4 py-3 text-left text-xs font-medium uppercase tracking-wider cursor-pointer transition-all ${
-          isActive
-            ? isDarkMode 
-              ? 'text-white bg-white/[0.02]' 
-              : 'text-black bg-black/[0.02]'
-            : isDarkMode 
-              ? 'text-white/60 hover:bg-white/[0.02] hover:text-white' 
-              : 'text-black/60 hover:bg-black/[0.02] hover:text-black'
-        }`}
-        title={`Ordenar por ${label}`}
-      >
-        <div className="flex items-center gap-1.5">
-          {label}
-          <ArrowUpDown size={12} className={isActive ? 'opacity-100' : 'opacity-40'} />
-        </div>
-      </th>
-    );
-  }
 
   return (
     <div className={`rounded-lg border overflow-hidden ${
@@ -125,8 +82,20 @@ export function InventoryTable({
               }`}>
                 Resguardo
               </th>
-              <SortableHeader field="id_inv" label="ID Inventario" />
-              <SortableHeader field="descripcion" label="Descripción" />
+              <SortableHeader 
+                field="id_inv" 
+                label="ID Inventario"
+                sortField={sortField}
+                sortDirection={sortDirection}
+                onSort={onSort}
+              />
+              <SortableHeader 
+                field="descripcion" 
+                label="Descripción"
+                sortField={sortField}
+                sortDirection={sortDirection}
+                onSort={onSort}
+              />
               <th className={`px-4 py-3 text-left text-xs font-medium uppercase tracking-wider ${
                 isDarkMode ? 'text-white/60' : 'text-black/60'
               }`}>
@@ -137,7 +106,13 @@ export function InventoryTable({
               }`}>
                 Jefe/Director
               </th>
-              <SortableHeader field="estatus" label="Estatus" />
+              <SortableHeader 
+                field="estatus" 
+                label="Estatus"
+                sortField={sortField}
+                sortDirection={sortDirection}
+                onSort={onSort}
+              />
             </tr>
           </thead>
 
@@ -281,7 +256,7 @@ export function InventoryTable({
                   isDarkMode ? 'text-white/80' : 'text-black/80'
                 }`}>
                   {isMuebleSyncing(item.id) ? (
-                    <SkeletonLoader />
+                    <CellSkeleton />
                   ) : (
                     <div className="line-clamp-3" title={item.area?.nombre || ''}>
                       {item.area?.nombre || '-'}
@@ -295,8 +270,8 @@ export function InventoryTable({
                 }`}>
                   {isMuebleSyncing(item.id) ? (
                     <div className="flex flex-col gap-1">
-                      <SkeletonLoader />
-                      {item.resguardante && <SkeletonLoader />}
+                      <CellSkeleton />
+                      {item.resguardante && <CellSkeleton />}
                     </div>
                   ) : (
                     <div className="flex flex-col gap-1">

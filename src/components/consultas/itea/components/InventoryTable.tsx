@@ -1,5 +1,4 @@
 import {
-    ArrowUpDown,
     AlertCircle,
     FileWarning,
     CheckCircle,
@@ -11,6 +10,8 @@ import { motion } from 'framer-motion';
 import { Mueble } from '../types';
 import { truncateText, getTypeIcon } from '../utils';
 import TableSkeleton from './TableSkeleton';
+import { SortableHeader } from './SortableHeader';
+import { CellSkeleton } from '@/components/shared/CellSkeleton';
 
 interface InventoryTableProps {
     muebles: Mueble[];
@@ -45,37 +46,6 @@ export default function InventoryTable({
     // Ensure syncingIds is always an array
     const syncingIdsArray = Array.isArray(syncingIds) ? syncingIds : [];
     
-    function SortableHeader({ 
-        field, 
-        label 
-    }: { 
-        field: keyof Mueble; 
-        label: string 
-    }) {
-        const isActive = sortField === field;
-        
-        return (
-            <th
-                onClick={() => onSort(field)}
-                className={`px-4 py-3 text-left text-xs font-medium uppercase tracking-wider cursor-pointer transition-all ${
-                    isActive
-                        ? isDarkMode 
-                            ? 'text-white bg-white/[0.02]' 
-                            : 'text-black bg-black/[0.02]'
-                        : isDarkMode 
-                            ? 'text-white/60 hover:bg-white/[0.02] hover:text-white' 
-                            : 'text-black/60 hover:bg-black/[0.02] hover:text-black'
-                }`}
-                title={`Ordenar por ${label}`}
-            >
-                <div className="flex items-center gap-1.5">
-                    {label}
-                    <ArrowUpDown size={12} className={isActive ? 'opacity-100' : 'opacity-40'} />
-                </div>
-            </th>
-        );
-    }
-
     const getStatusBadgeColors = (status: string | null) => {
         if (!status) return { text: isDarkMode ? 'text-white/60' : 'text-black/60', style: {} };
         
@@ -120,17 +90,6 @@ export default function InventoryTable({
         };
     };
 
-    /**
-     * Skeleton loader for syncing cells
-     */
-    function CellSkeleton() {
-        return (
-            <div className={`h-4 rounded animate-pulse ${
-                isDarkMode ? 'bg-white/10' : 'bg-black/10'
-            }`} style={{ width: '80%' }} />
-        );
-    }
-
     return (
         <div className={`rounded-lg border overflow-hidden h-full flex flex-col ${
             isDarkMode ? 'bg-black border-white/10' : 'bg-white border-black/10'
@@ -145,11 +104,41 @@ export default function InventoryTable({
                         isDarkMode ? 'bg-black/95 border-b border-white/10' : 'bg-white/95 border-b border-black/10'
                     }`}>
                         <tr>
-                            <SortableHeader field="id_inv" label="ID Inventario" />
-                            <SortableHeader field="descripcion" label="Descripción" />
-                            <SortableHeader field="area" label="Área" />
-                            <SortableHeader field="directorio" label="Director/Jefe" />
-                            <SortableHeader field="estatus" label="Estatus" />
+                            <SortableHeader 
+                                field="id_inv" 
+                                label="ID Inventario"
+                                sortField={sortField}
+                                sortDirection={sortDirection}
+                                onSort={onSort}
+                            />
+                            <SortableHeader 
+                                field="descripcion" 
+                                label="Descripción"
+                                sortField={sortField}
+                                sortDirection={sortDirection}
+                                onSort={onSort}
+                            />
+                            <SortableHeader 
+                                field="area" 
+                                label="Área"
+                                sortField={sortField}
+                                sortDirection={sortDirection}
+                                onSort={onSort}
+                            />
+                            <SortableHeader 
+                                field="directorio" 
+                                label="Director/Jefe"
+                                sortField={sortField}
+                                sortDirection={sortDirection}
+                                onSort={onSort}
+                            />
+                            <SortableHeader 
+                                field="estatus" 
+                                label="Estatus"
+                                sortField={sortField}
+                                sortDirection={sortDirection}
+                                onSort={onSort}
+                            />
                             <th className={`px-4 py-3 text-left text-xs font-medium uppercase tracking-wider ${
                                 isDarkMode ? 'text-white/60' : 'text-black/60'
                             }`}>

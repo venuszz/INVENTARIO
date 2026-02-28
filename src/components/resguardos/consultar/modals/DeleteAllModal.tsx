@@ -35,18 +35,15 @@ export default function DeleteAllModal({
   const { isDarkMode } = useTheme();
   const { previewNextFolio } = useFolioGenerator();
   const [folioBajaPreview, setFolioBajaPreview] = useState<string>('');
-  const [loadingPreview, setLoadingPreview] = useState(false);
+  const [loadingPreview, setLoadingPreview] = useState(true);
 
-  // Load folio preview when modal opens
+  // Load folio preview on mount (component remounts when show changes via key prop)
   useEffect(() => {
-    if (show) {
-      setLoadingPreview(true);
-      previewNextFolio('BAJA')
-        .then(preview => setFolioBajaPreview(preview))
-        .catch(err => console.error('Error loading folio preview:', err))
-        .finally(() => setLoadingPreview(false));
-    }
-  }, [show, previewNextFolio]);
+    previewNextFolio('BAJA')
+      .then(preview => setFolioBajaPreview(preview))
+      .catch(err => console.error('Error loading folio preview:', err))
+      .finally(() => setLoadingPreview(false));
+  }, [previewNextFolio]);
 
   if (!show) return null;
 
