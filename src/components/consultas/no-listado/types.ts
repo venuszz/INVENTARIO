@@ -34,10 +34,10 @@ export interface Mueble {
 export interface FilterOptions {
     estados: string[];
     estatus: { id: number; concepto: string }[];
-    areas: string[];
+    areas: { id_area: number; nombre: string }[];
     rubros: string[] | null;
     formadq: string[] | null;
-    directores: { nombre: string }[];
+    directores: { id_directorio: number; nombre: string }[];
 }
 
 export interface Area {

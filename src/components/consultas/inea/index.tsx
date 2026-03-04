@@ -31,6 +31,7 @@ import InactiveModal from './modals/InactiveModal';
 import BajaModal from './modals/BajaModal';
 import AreaSelectionModal from './modals/AreaSelectionModal';
 import DirectorModal from './modals/DirectorModal';
+import ChangeConfirmationModal from './modals/ChangeConfirmationModal';
 
 // Import types
 import { Mueble, Message, FilterOptions, Directorio, Area } from './types';
@@ -124,18 +125,25 @@ export default function ConsultasIneaGeneral() {
     setBajaCause,
     showInactiveModal,
     setShowInactiveModal,
+    showChangeConfirmModal,
+    setShowChangeConfirmModal,
+    changeReason,
+    setChangeReason,
+    pendingChanges,
+    setPendingChanges,
     handleSelectItem,
     handleStartEdit,
     cancelEdit,
     closeDetail,
     handleImageChange,
     saveChanges,
+    confirmAndSaveChanges,
     handleEditFormChange,
     markAsBaja,
     confirmBaja,
     markAsInactive,
     confirmMarkAsInactive
-  } = useItemEdit();
+  } = useItemEdit(filterOptions, directorioData);
 
   // Initialize URL parameter handler
   const { paramNotFound, foundItem, clearParamNotFound } = useURLParamHandler({
@@ -801,6 +809,21 @@ export default function ConsultasIneaGeneral() {
         onSave={saveDirectorInfo}
         onClose={() => setShowDirectorModal(false)}
         isDarkMode={isDarkMode}
+      />
+
+      <ChangeConfirmationModal
+        show={showChangeConfirmModal}
+        changes={pendingChanges}
+        changeReason={changeReason}
+        onReasonChange={setChangeReason}
+        onConfirm={() => confirmAndSaveChanges(user)}
+        onCancel={() => {
+          setShowChangeConfirmModal(false);
+          setChangeReason('');
+          setPendingChanges([]);
+        }}
+        isDarkMode={isDarkMode}
+        isSaving={isSaving}
       />
     </>
   );

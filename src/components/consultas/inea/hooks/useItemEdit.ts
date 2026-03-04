@@ -2,13 +2,18 @@ import { useState, useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import supabase from '@/app/lib/supabase/client';
 import { useIneaStore } from '@/stores/ineaStore';
-import { Mueble, Message } from '../types';
+import { Mueble, Message, FilterOptions, Directorio } from '../types';
+import { detectChanges, Change } from '../utils/changeDetection';
+import { registrarCambios } from '@/lib/changeHistory';
+import type { ChangeHistoryEntry } from '@/types/changeHistory';
 
 /**
  * Hook para gestionar la edición de items INEA
+ * @param filterOptions - Opciones de filtro para resolver nombres de campos relacionales
+ * @param directorio - Lista de directores para resolver nombres
  * @returns Objeto con estados y funciones para editar items
  */
-export function useItemEdit() {
+export function useItemEdit(filterOptions?: FilterOptions, directorio?: Directorio[]) {
     const router = useRouter();
     const searchParams = useSearchParams();
     // Sync store
@@ -20,20 +25,10 @@ export function useItemEdit() {
     
     // Update selectedItem when the mueble changes in the store
     useEffect(() => {
-        console.log('🔍 [useItemEdit] Effect triggered, selectedItem:', selectedItem?.id, 'muebles count:', muebles.length);
-        
         if (selectedItem?.id) {
             const updatedMueble = muebles.find(m => m.id === selectedItem.id);
             
-            console.log('🔍 [useItemEdit] Found mueble in store:', {
-                found: !!updatedMueble,
-                id: updatedMueble?.id,
-                area: updatedMueble?.area,
-                directorio: updatedMueble?.directorio
-            });
-            
             if (updatedMueble && JSON.stringify(updatedMueble) !== JSON.stringify(selectedItem)) {
-                console.log('🔄 [useItemEdit] Updating selectedItem with new data');
                 setSelectedItem(updatedMueble);
             }
         }
@@ -48,6 +43,11 @@ export function useItemEdit() {
     const [showBajaModal, setShowBajaModal] = useState(false);
     const [bajaCause, setBajaCause] = useState('');
     const [showInactiveModal, setShowInactiveModal] = useState(false);
+    
+    // Change confirmation states
+    const [showChangeConfirmModal, setShowChangeConfirmModal] = useState(false);
+    const [changeReason, setChangeReason] = useState('');
+    const [pendingChanges, setPendingChanges] = useState<Change[]>([]);
 
     const handleSelectItem = (item: Mueble) => {
         setSelectedItem(item);
@@ -68,6 +68,10 @@ export function useItemEdit() {
         setEditFormData(null);
         setImageFile(null);
         setImagePreview(null);
+        // Clear change confirmation states
+        setShowChangeConfirmModal(false);
+        setChangeReason('');
+        setPendingChanges([]);
     };
 
     const closeDetail = () => {
@@ -161,8 +165,41 @@ export function useItemEdit() {
     };
 
     const saveChanges = async () => {
-        if (!editFormData) return;
+        if (!editFormData || !selectedItem) return;
 
+        // Detect changes
+        const changes = detectChanges(selectedItem, editFormData, {
+            estatus: filterOptions?.estatus || [],
+            areas: directorio?.map(d => ({ 
+                id_area: d.id_directorio, // Nota: esto es temporal, necesitamos las áreas reales
+                nombre: d.area || '' 
+            })) || [],
+            directores: directorio?.map(d => ({
+                id_directorio: d.id_directorio,
+                nombre: d.nombre || ''
+            })) || []
+        });
+
+        if (changes.length === 0) {
+            setMessage({ type: 'info', text: 'No hay cambios para guardar' });
+            return;
+        }
+
+        // Show confirmation modal with detected changes
+        setPendingChanges(changes);
+        setShowChangeConfirmModal(true);
+    };
+
+    const confirmAndSaveChanges = async (user: any) => {
+        if (!editFormData || !selectedItem) return;
+
+        // Validate change reason
+        if (!changeReason.trim()) {
+            setMessage({ type: 'warning', text: 'Debe proporcionar un motivo del cambio' });
+            return;
+        }
+
+        setShowChangeConfirmModal(false);
         setIsSaving(true);
         setUploading(true);
         
@@ -222,7 +259,31 @@ export function useItemEdit() {
                 throw new Error(error.message || 'Error al guardar cambios');
             }
 
-            // Notification removed
+            // Register changes in the new change history system
+            try {
+                if (!user?.id) {
+                    console.warn('⚠️ [Change History] Usuario no disponible, omitiendo registro de historial');
+                } else {
+                    const changeHistoryEntries: ChangeHistoryEntry[] = pendingChanges.map(change => ({
+                        campo: change.field,
+                        valorAnterior: change.oldValue,
+                        valorNuevo: change.newValue,
+                        campoDisplay: change.label
+                    }));
+
+                    await registrarCambios({
+                        idMueble: editFormData.id, // UUID del bien
+                        tablaOrigen: 'muebles', // Tabla muebles para INEA
+                        cambios: changeHistoryEntries,
+                        razonCambio: changeReason
+                    }, user.id); // Pass userId as second parameter
+
+                    console.log('✅ [Change History] Cambios registrados exitosamente en la base de datos');
+                }
+            } catch (historyError) {
+                console.error('❌ [Change History] Error al registrar cambios:', historyError);
+                // No bloqueamos la operación si falla el historial
+            }
 
             // Refetch the mueble with JOINs to get updated nested objects
             const refetchResponse = await fetch(
@@ -249,6 +310,8 @@ export function useItemEdit() {
             setEditFormData(null);
             setImageFile(null);
             setImagePreview(null);
+            setChangeReason('');
+            setPendingChanges([]);
             setMessage({
                 type: 'success',
                 text: 'Cambios guardados correctamente'
@@ -295,12 +358,40 @@ export function useItemEdit() {
                 break;
             case 'id_area':
                 newData.id_area = value ? parseInt(value) : null;
+                // Update nested area object if available
+                if (value && directorio) {
+                    const selectedDirector = directorio.find(d => d.id_directorio === newData.id_directorio);
+                    if (selectedDirector) {
+                        newData.area = { id_area: parseInt(value), nombre: selectedDirector.area || '' };
+                    }
+                }
                 break;
             case 'id_directorio':
                 newData.id_directorio = value ? parseInt(value) : null;
+                // Update nested directorio object if available
+                if (value && directorio) {
+                    const selectedDirector = directorio.find(d => d.id_directorio === parseInt(value));
+                    if (selectedDirector) {
+                        newData.directorio = {
+                            id_directorio: selectedDirector.id_directorio,
+                            nombre: selectedDirector.nombre || '',
+                            puesto: selectedDirector.puesto || ''
+                        };
+                    }
+                }
                 break;
             case 'id_estatus':
                 newData.id_estatus = value ? parseInt(value) : null;
+                // Update nested config_estatus object if available
+                if (value && filterOptions?.estatus) {
+                    const selectedEstatus = filterOptions.estatus.find(e => e.id === parseInt(value));
+                    if (selectedEstatus) {
+                        newData.config_estatus = {
+                            id: selectedEstatus.id,
+                            concepto: selectedEstatus.concepto
+                        };
+                    }
+                }
                 break;
             case 'rubro':
             case 'descripcion':
@@ -510,12 +601,19 @@ export function useItemEdit() {
         setBajaCause,
         showInactiveModal,
         setShowInactiveModal,
+        showChangeConfirmModal,
+        setShowChangeConfirmModal,
+        changeReason,
+        setChangeReason,
+        pendingChanges,
+        setPendingChanges,
         handleSelectItem,
         handleStartEdit,
         cancelEdit,
         closeDetail,
         handleImageChange,
         saveChanges,
+        confirmAndSaveChanges,
         handleEditFormChange,
         markAsBaja,
         confirmBaja,

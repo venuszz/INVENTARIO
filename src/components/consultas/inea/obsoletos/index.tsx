@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect, useMemo } from 'react';
 import { useTheme } from '@/context/ThemeContext';
+import { useSession } from '@/hooks/useSession';
 import { useUserRole } from '@/hooks/useUserRole';
 import { useIneaObsoletosIndexation } from '@/hooks/indexation/useIneaObsoletosIndexation';
 import { useIneaObsoletosStore } from '@/stores/ineaObsoletosStore';
@@ -31,6 +32,7 @@ import { SyncStatusBanner } from './components/SyncStatusBanner';
 import { ReactivarModal } from './modals/ReactivarModal';
 import { DirectorModal } from './modals/DirectorModal';
 import { AreaSelectionModal } from './modals/AreaSelectionModal';
+import { ChangeConfirmationModal } from './modals/ChangeConfirmationModal';
 
 // Import types
 import { Mueble, Message, FilterOptions, Directorio } from './types';
@@ -39,6 +41,7 @@ import { Edit, Save, X, RotateCw, Plus } from 'lucide-react';
 export default function ConsultasIneaObsoletos() {
   const router = useRouter();
   const { isDarkMode } = useTheme();
+  const { user } = useSession();
   const userRole = useUserRole();
   const inputRef = useRef<HTMLInputElement | null>(null);
 
@@ -90,40 +93,6 @@ export default function ConsultasIneaObsoletos() {
     handleInputBlur
   } = useSearchAndFilters(muebles, emptyFoliosMap);
 
-  // Initialize item edit hook
-  const {
-    selectedItem,
-    isEditing,
-    editFormData,
-    imagePreview,
-    uploading,
-    isSaving,
-    showReactivarModal,
-    reactivating,
-    detailRef,
-    handleSelectItem,
-    handleStartEdit,
-    cancelEdit,
-    closeDetail,
-    handleImageChange,
-    saveChanges,
-    handleEditFormChange,
-    setShowReactivarModal,
-    reactivarArticulo,
-    setSelectedItem,
-  } = useItemEdit({
-    muebles,
-    fetchMuebles: reindexObsoletos,
-    sortField,
-    sortDirection,
-    searchTerm,
-    filters: { estado: '', area: '', rubro: '' },
-    rowsPerPage,
-    setCurrentPage,
-    setMessage,
-    setLoading,
-  });
-
   // Initialize area management hook
   const { areas, directorAreasMap } = useAreaManagement();
 
@@ -147,6 +116,48 @@ export default function ConsultasIneaObsoletos() {
   } = useDirectorManagement({
     setMessage,
     setFilterOptions,
+  });
+
+  // Initialize item edit hook
+  const {
+    selectedItem,
+    isEditing,
+    editFormData,
+    imagePreview,
+    uploading,
+    isSaving,
+    showReactivarModal,
+    reactivating,
+    showChangeConfirmModal,
+    setShowChangeConfirmModal,
+    changeReason,
+    setChangeReason,
+    pendingChanges,
+    detailRef,
+    handleSelectItem,
+    handleStartEdit,
+    cancelEdit,
+    closeDetail,
+    handleImageChange,
+    saveChanges,
+    confirmAndSaveChanges,
+    handleEditFormChange,
+    setShowReactivarModal,
+    reactivarArticulo,
+    setSelectedItem,
+  } = useItemEdit({
+    muebles,
+    fetchMuebles: reindexObsoletos,
+    sortField,
+    sortDirection,
+    searchTerm,
+    filters: { estado: '', area: '', rubro: '' },
+    rowsPerPage,
+    setCurrentPage,
+    setMessage,
+    setLoading,
+    filterOptions,
+    directorio,
   });
 
   // Initialize baja info hook
@@ -632,7 +643,7 @@ export default function ConsultasIneaObsoletos() {
         show={showReactivarModal}
         selectedItem={selectedItem}
         reactivating={reactivating}
-        onConfirm={reactivarArticulo}
+        onConfirm={() => reactivarArticulo(user)}
         onClose={() => setShowReactivarModal(false)}
         isDarkMode={isDarkMode}
       />
@@ -659,6 +670,20 @@ export default function ConsultasIneaObsoletos() {
         onSave={saveDirectorInfo}
         onClose={() => setShowDirectorModal(false)}
         isDarkMode={isDarkMode}
+      />
+
+      <ChangeConfirmationModal
+        show={showChangeConfirmModal}
+        changes={pendingChanges}
+        changeReason={changeReason}
+        onReasonChange={setChangeReason}
+        onConfirm={() => confirmAndSaveChanges(user)}
+        onCancel={() => {
+          setShowChangeConfirmModal(false);
+          setChangeReason('');
+        }}
+        isDarkMode={isDarkMode}
+        isSaving={isSaving}
       />
     </>
   );

@@ -15,9 +15,10 @@ export function useDirectorManagement() {
 
             setDirectorio(directorioData || []);
 
-            // Return directores for filter options
+            // Return directores for filter options with full data
             if (directorioData) {
                 const directores = directorioData.map(item => ({
+                    id_directorio: item.id_directorio,
                     nombre: item.nombre?.trim().toUpperCase() || ''
                 }));
                 return directores;
@@ -56,10 +57,10 @@ export function useDirectorManagement() {
                 .select('id, concepto')
                 .eq('tipo', 'estatus');
 
-            // Obtener áreas desde la tabla area
+            // Obtener áreas desde la tabla area con id y nombre
             const { data: areasData } = await supabase
                 .from('area')
-                .select('nombre')
+                .select('id_area, nombre')
                 .not('nombre', 'is', null);
 
             const filterOptions: Partial<FilterOptions> = {
@@ -67,7 +68,7 @@ export function useDirectorManagement() {
                 rubros: rubrosData?.map(item => item.concepto).filter(Boolean) || [],
                 formadq: formadqData?.map(item => item.concepto).filter(Boolean) || [],
                 estatus: estatusData?.map(item => ({ id: item.id, concepto: item.concepto?.trim() })).filter(item => item.concepto) || [],
-                areas: [...new Set(areasData?.map(item => item.nombre).filter(Boolean))] as string[]
+                areas: areasData?.map(item => ({ id_area: item.id_area, nombre: item.nombre })).filter(item => item.nombre) || []
             };
 
             return filterOptions;

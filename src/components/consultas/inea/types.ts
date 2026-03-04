@@ -69,3 +69,8 @@ export interface ActiveFilter {
   term: string;
   type: 'id' | 'descripcion' | 'rubro' | 'estado' | 'estatus' | 'area' | 'usufinal' | 'resguardante' | 'folio' | 'sin_id' | 'con_resguardo' | 'sin_resguardo' | null;
 }
+
+/**
+ * Re-export change detection types for convenience
+ */
+export type { Change, ChangeHistory } from './utils/changeDetection';

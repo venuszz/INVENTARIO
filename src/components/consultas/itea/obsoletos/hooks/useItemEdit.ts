@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import supabase from '@/app/lib/supabase/client';
 import { useIteaObsoletosIndexation } from '@/hooks/indexation/useIteaObsoletosIndexation';
+import { detectChanges, Change, prepareChangeHistoryForDB, saveChangeHistoryToDB } from '../utils/changeDetection';
 import type { MuebleITEA, FilterState } from '../types';
 
 interface UseItemEditReturn {
@@ -14,6 +15,11 @@ interface UseItemEditReturn {
   isSaving: boolean;
   showReactivarModal: boolean;
   reactivating: boolean;
+  showChangeConfirmModal: boolean;
+  setShowChangeConfirmModal: (show: boolean) => void;
+  changeReason: string;
+  setChangeReason: (reason: string) => void;
+  pendingChanges: Change[];
   detailRef: React.RefObject<HTMLDivElement | null>;
   handleSelectItem: (item: MuebleITEA) => void;
   handleStartEdit: () => void;
@@ -21,6 +27,7 @@ interface UseItemEditReturn {
   closeDetail: () => void;
   handleImageChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
   saveChanges: () => Promise<void>;
+  confirmAndSaveChanges: () => Promise<void>;
   handleEditFormChange: (
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>,
     field: keyof MuebleITEA
@@ -68,6 +75,11 @@ export function useItemEdit({
   const [isSaving, setIsSaving] = useState(false);
   const [showReactivarModal, setShowReactivarModal] = useState(false);
   const [reactivating, setReactivating] = useState(false);
+  
+  // Change confirmation states
+  const [showChangeConfirmModal, setShowChangeConfirmModal] = useState(false);
+  const [changeReason, setChangeReason] = useState('');
+  const [pendingChanges, setPendingChanges] = useState<Change[]>([]);
   
   const detailRef = useRef<HTMLDivElement>(null);
 
@@ -184,6 +196,10 @@ export function useItemEdit({
     setEditFormData({});
     setImageFile(null);
     setImagePreview(null);
+    // Clear change confirmation states
+    setShowChangeConfirmModal(false);
+    setChangeReason('');
+    setPendingChanges([]);
   }, []);
 
   const closeDetail = useCallback(() => {
@@ -249,8 +265,31 @@ export function useItemEdit({
   }, [setMessage]);
 
   const saveChanges = async () => {
-    if (!editFormData || !editFormData.id) return;
+    if (!editFormData || !editFormData.id || !selectedItem) return;
 
+    // Detect changes
+    const changes = detectChanges(selectedItem as any, editFormData as any);
+
+    if (changes.length === 0) {
+      setMessage({ type: 'info', text: 'No hay cambios para guardar' });
+      return;
+    }
+
+    // Show confirmation modal with detected changes
+    setPendingChanges(changes);
+    setShowChangeConfirmModal(true);
+  };
+
+  const confirmAndSaveChanges = async () => {
+    if (!editFormData || !editFormData.id || !selectedItem) return;
+
+    // Validate change reason
+    if (!changeReason.trim()) {
+      setMessage({ type: 'warning', text: 'Debe proporcionar un motivo del cambio' });
+      return;
+    }
+
+    setShowChangeConfirmModal(false);
     setIsSaving(true);
     setLoading(true);
     setUploading(true);
@@ -297,7 +336,17 @@ export function useItemEdit({
 
       if (error) throw error;
 
-            // Notification removed
+      // Prepare change history for future DB integration
+      const changeHistory = prepareChangeHistoryForDB(
+        editFormData.id,
+        pendingChanges,
+        changeReason,
+        'SISTEMA' // TODO: Get actual user info
+      );
+
+      // TODO: Uncomment when change_history table is ready
+      // await saveChangeHistoryToDB(changeHistory);
+      console.log('📝 [Change History] Cambios registrados:', changeHistory);
 
       await fetchMuebles();
       
@@ -310,6 +359,8 @@ export function useItemEdit({
       setEditFormData({});
       setImageFile(null);
       setImagePreview(null);
+      setChangeReason('');
+      setPendingChanges([]);
       setMessage({
         type: 'success',
         text: 'Cambios guardados correctamente'
@@ -431,6 +482,11 @@ export function useItemEdit({
     isSaving,
     showReactivarModal,
     reactivating,
+    showChangeConfirmModal,
+    setShowChangeConfirmModal,
+    changeReason,
+    setChangeReason,
+    pendingChanges,
     detailRef,
     handleSelectItem,
     handleStartEdit,
@@ -438,6 +494,7 @@ export function useItemEdit({
     closeDetail,
     handleImageChange,
     saveChanges,
+    confirmAndSaveChanges,
     handleEditFormChange,
     setShowReactivarModal,
     reactivarArticulo,

@@ -72,8 +72,8 @@ export default function ColorAssignmentModal({
           exit={{ opacity: 0, scale: 0.95 }}
           className={`w-full max-w-md rounded-2xl border p-6 shadow-xl ${
             isDarkMode
-              ? 'bg-black border-white/10'
-              : 'bg-white border-black/10'
+              ? 'bg-black border-white/10 text-white'
+              : 'bg-white border-black/10 text-black'
           }`}
         >
           {/* Header */}
@@ -82,10 +82,14 @@ export default function ColorAssignmentModal({
               <div className={`p-2 rounded-lg ${
                 isDarkMode ? 'bg-white/5' : 'bg-black/5'
               }`}>
-                <Palette className="h-5 w-5" />
+                <Palette className={`h-5 w-5 ${
+                  isDarkMode ? 'text-white' : 'text-black'
+                }`} />
               </div>
               <div>
-                <h3 className="text-lg font-medium">Asignar Color</h3>
+                <h3 className={`text-lg font-medium ${
+                  isDarkMode ? 'text-white' : 'text-black'
+                }`}>Asignar Color</h3>
                 <p className={`text-sm ${
                   isDarkMode ? 'text-white/60' : 'text-black/60'
                 }`}>
@@ -98,8 +102,8 @@ export default function ColorAssignmentModal({
               disabled={isAssigning}
               className={`p-2 rounded-lg transition-colors ${
                 isDarkMode
-                  ? 'hover:bg-white/5'
-                  : 'hover:bg-black/5'
+                  ? 'hover:bg-white/5 text-white'
+                  : 'hover:bg-black/5 text-black'
               }`}
             >
               <X className="h-5 w-5" />
@@ -129,7 +133,9 @@ export default function ColorAssignmentModal({
                   }}
                 />
                 <div>
-                  <p className="font-medium">{currentColor.nombre}</p>
+                  <p className={`font-medium ${
+                    isDarkMode ? 'text-white' : 'text-black'
+                  }`}>{currentColor.nombre}</p>
                   {currentColor.significado && (
                     <p className={`text-xs ${
                       isDarkMode ? 'text-white/60' : 'text-black/60'
@@ -184,16 +190,20 @@ export default function ColorAssignmentModal({
                     />
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2">
-                        <p className="font-medium">{color.nombre}</p>
+                        <p className={`font-medium ${
+                          isDarkMode ? 'text-white' : 'text-black'
+                        }`}>{color.nombre}</p>
                         {isCurrent && (
                           <span className={`text-xs px-2 py-0.5 rounded ${
-                            isDarkMode ? 'bg-white/10' : 'bg-black/10'
+                            isDarkMode ? 'bg-white/10 text-white' : 'bg-black/10 text-black'
                           }`}>
                             Actual
                           </span>
                         )}
                         {isSelected && (
-                          <Check className="h-4 w-4 ml-auto" />
+                          <Check className={`h-4 w-4 ml-auto ${
+                            isDarkMode ? 'text-white' : 'text-black'
+                          }`} />
                         )}
                       </div>
                       {color.significado && (
@@ -218,8 +228,8 @@ export default function ColorAssignmentModal({
                 disabled={isAssigning}
                 className={`flex-1 py-2 px-4 rounded-lg border text-sm font-medium transition-colors ${
                   isDarkMode
-                    ? 'bg-white/[0.02] border-white/10 hover:bg-white/5'
-                    : 'bg-black/[0.02] border-black/10 hover:bg-black/5'
+                    ? 'bg-white/[0.02] border-white/10 hover:bg-white/5 text-white'
+                    : 'bg-black/[0.02] border-black/10 hover:bg-black/5 text-black'
                 } ${isAssigning ? 'opacity-50 cursor-not-allowed' : ''}`}
               >
                 {isAssigning ? 'Procesando...' : 'Remover Color'}
@@ -231,11 +241,11 @@ export default function ColorAssignmentModal({
               className={`flex-1 py-2 px-4 rounded-lg border text-sm font-medium transition-colors ${
                 selectedColorId && selectedColorId !== currentColor?.id && !isAssigning
                   ? isDarkMode
-                    ? 'bg-white/10 border-white/20 hover:bg-white/[0.15]'
-                    : 'bg-black/10 border-black/20 hover:bg-black/[0.15]'
+                    ? 'bg-white/10 border-white/20 hover:bg-white/[0.15] text-white'
+                    : 'bg-black/10 border-black/20 hover:bg-black/[0.15] text-black'
                   : isDarkMode
-                    ? 'bg-white/[0.02] border-white/10 opacity-50 cursor-not-allowed'
-                    : 'bg-black/[0.02] border-black/10 opacity-50 cursor-not-allowed'
+                    ? 'bg-white/[0.02] border-white/10 opacity-50 cursor-not-allowed text-white'
+                    : 'bg-black/[0.02] border-black/10 opacity-50 cursor-not-allowed text-black'
               }`}
             >
               {isAssigning ? 'Asignando...' : 'Confirmar'}
@@ -245,8 +255,8 @@ export default function ColorAssignmentModal({
               disabled={isAssigning}
               className={`flex-1 py-2 px-4 rounded-lg border text-sm font-medium transition-colors ${
                 isDarkMode
-                  ? 'bg-white/5 border-white/10 hover:bg-white/10'
-                  : 'bg-black/5 border-black/10 hover:bg-black/10'
+                  ? 'bg-white/5 border-white/10 hover:bg-white/10 text-white'
+                  : 'bg-black/5 border-black/10 hover:bg-black/10 text-black'
               } ${isAssigning ? 'opacity-50 cursor-not-allowed' : ''}`}
             >
               Cerrar

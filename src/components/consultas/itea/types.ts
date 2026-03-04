@@ -17,7 +17,7 @@ export interface Message {
 export interface FilterOptions {
   estados: string[];
   estatus: { id: number; concepto: string }[];
-  areas: string[];
+  areas: { id_area: number; nombre: string }[];
   rubros: string[];
   formasAdq: string[];
   directores: { nombre: string; area: string }[];

@@ -2,13 +2,15 @@ import React, { RefObject } from 'react';
 import { useTheme } from '@/context/ThemeContext';
 import { 
   Archive, X, Edit, Plus, Calendar, DollarSign, Store, Receipt, 
-  Building2, Shield, Save, XCircle, AlertTriangle, Info, Trash2, FileText, MapPin, User
+  Building2, XCircle, AlertTriangle, Info, FileText, MapPin, User
 } from 'lucide-react';
 import ImagePreview from './ImagePreview';
 import CustomSelect from './CustomSelect';
+import FieldHistoryIcon from './FieldHistoryIcon';
 import { Mueble, FilterOptions, Directorio, ResguardoDetalle } from '../types';
 import { formatDate } from '../utils';
-import { FieldSkeleton } from '@/components/shared/FieldSkeleton';
+import { useFieldHistory } from '../hooks/useFieldHistory';
+import type { CambioInventario } from '@/types/changeHistory';
 
 /**
  * DetailPanel Component
@@ -685,6 +687,9 @@ function ViewMode({
   const folio = selectedItem?.id_inv ? (foliosResguardo[selectedItem.id_inv] || null) : null;
   const detalleResguardo = folio ? resguardoDetalles[folio] : undefined;
 
+  // Load field history
+  const { fieldsWithHistory, fieldHistory, loading } = useFieldHistory(selectedItem?.id || null, 'mueblestlaxcala');
+
   return (
     <div className="space-y-[1.5vw]">
       {/* Image Section */}
@@ -809,17 +814,33 @@ function ViewMode({
 
       {/* Details Grid */}
       <div className="grid grid-cols-1 gap-[1.5vw] md:grid-cols-2">
-        <DetailCard label="ID Inventario" value={selectedItem.id_inv} isDarkMode={isDarkMode} />
+        <DetailCard 
+          label="ID Inventario" 
+          value={selectedItem.id_inv} 
+          isDarkMode={isDarkMode}
+          idMueble={selectedItem.id}
+          fieldName="id_inv"
+          hasHistory={fieldsWithHistory['id_inv']}
+          fieldHistory={fieldHistory}
+        />
         <DetailCard
           label="Rubro"
           value={selectedItem.rubro || 'No especificado'}
           isDarkMode={isDarkMode}
+          idMueble={selectedItem.id}
+          fieldName="rubro"
+          hasHistory={fieldsWithHistory['rubro']}
+          fieldHistory={fieldHistory}
         />
         <DetailCard
           label="Descripción"
           value={selectedItem.descripcion || 'No especificado'}
           isDarkMode={isDarkMode}
           colSpan2
+          idMueble={selectedItem.id}
+          fieldName="descripcion"
+          hasHistory={fieldsWithHistory['descripcion']}
+          fieldHistory={fieldHistory}
         />
         <DetailCard
           label="Valor"
@@ -832,63 +853,111 @@ function ViewMode({
               : '$0.00'
           }
           isDarkMode={isDarkMode}
+          idMueble={selectedItem.id}
+          fieldName="valor"
+          hasHistory={fieldsWithHistory['valor']}
+          fieldHistory={fieldHistory}
         />
         <DetailCard
           label="Fecha de Adquisición"
           value={formatDate(selectedItem.f_adq) || 'No especificado'}
           isDarkMode={isDarkMode}
+          idMueble={selectedItem.id}
+          fieldName="f_adq"
+          hasHistory={fieldsWithHistory['f_adq']}
+          fieldHistory={fieldHistory}
         />
         <DetailCard
           label="Forma de Adquisición"
           value={selectedItem.formadq || 'No especificado'}
           isDarkMode={isDarkMode}
+          idMueble={selectedItem.id}
+          fieldName="formadq"
+          hasHistory={fieldsWithHistory['formadq']}
+          fieldHistory={fieldHistory}
         />
         <DetailCard
           label="Proveedor"
           value={selectedItem.proveedor || 'No especificado'}
           isDarkMode={isDarkMode}
+          idMueble={selectedItem.id}
+          fieldName="proveedor"
+          hasHistory={fieldsWithHistory['proveedor']}
+          fieldHistory={fieldHistory}
         />
         <DetailCard
           label="Factura"
           value={selectedItem.factura || 'No especificado'}
           isDarkMode={isDarkMode}
+          idMueble={selectedItem.id}
+          fieldName="factura"
+          hasHistory={fieldsWithHistory['factura']}
+          fieldHistory={fieldHistory}
         />
         <DetailCard
           label="Estado"
           value={selectedItem.estado || 'No especificado'}
           isDarkMode={isDarkMode}
+          idMueble={selectedItem.id}
+          fieldName="estado"
+          hasHistory={fieldsWithHistory['estado']}
+          fieldHistory={fieldHistory}
         />
         <DetailCard
           label="Estado"
           value={selectedItem.ubicacion_es || 'No especificado'}
           isDarkMode={isDarkMode}
+          idMueble={selectedItem.id}
+          fieldName="ubicacion_es"
+          hasHistory={fieldsWithHistory['ubicacion_es']}
+          fieldHistory={fieldHistory}
         />
         <DetailCard
           label="Municipio"
           value={selectedItem.ubicacion_mu || 'No especificado'}
           isDarkMode={isDarkMode}
+          idMueble={selectedItem.id}
+          fieldName="ubicacion_mu"
+          hasHistory={fieldsWithHistory['ubicacion_mu']}
+          fieldHistory={fieldHistory}
         />
         <DetailCard
           label="Nomenclatura"
           value={selectedItem.ubicacion_no || 'No especificado'}
           isDarkMode={isDarkMode}
+          idMueble={selectedItem.id}
+          fieldName="ubicacion_no"
+          hasHistory={fieldsWithHistory['ubicacion_no']}
+          fieldHistory={fieldHistory}
         />
         <DetailCard
           label="Estatus"
           value={selectedItem.config_estatus?.concepto || selectedItem.estatus || 'No especificado'}
           isDarkMode={isDarkMode}
+          idMueble={selectedItem.id}
+          fieldName="id_estatus"
+          hasHistory={fieldsWithHistory['id_estatus']}
+          fieldHistory={fieldHistory}
         />
         <DetailCard
           label="Área"
           value={selectedItem.area?.nombre || 'No especificado'}
           isDarkMode={isDarkMode}
           isLoading={isSyncing}
+          idMueble={selectedItem.id}
+          fieldName="id_area"
+          hasHistory={fieldsWithHistory['id_area']}
+          fieldHistory={fieldHistory}
         />
         <DetailCard
           label="Director/Jefe de Área"
           value={selectedItem.directorio?.nombre || 'No especificado'}
           isDarkMode={isDarkMode}
           isLoading={isSyncing}
+          idMueble={selectedItem.id}
+          fieldName="id_directorio"
+          hasHistory={fieldsWithHistory['id_directorio']}
+          fieldHistory={fieldHistory}
         />
         {detalleResguardo?.usufinal && (
           <DetailCard
@@ -939,9 +1008,25 @@ interface DetailCardProps {
   isDarkMode: boolean;
   colSpan2?: boolean;
   isLoading?: boolean;
+  idMueble?: string;
+  fieldName?: string;
+  hasHistory?: boolean;
+  fieldHistory?: Record<string, CambioInventario[]>;
 }
 
-function DetailCard({ label, value, isDarkMode, colSpan2 = false, isLoading = false }: DetailCardProps) {
+function DetailCard({ 
+  label, 
+  value, 
+  isDarkMode, 
+  colSpan2 = false, 
+  isLoading = false,
+  idMueble,
+  fieldName,
+  hasHistory = false,
+  fieldHistory
+}: DetailCardProps) {
+  const history = fieldName && fieldHistory && fieldHistory[fieldName] ? fieldHistory[fieldName] : [];
+
   return (
     <div
       className={`rounded-lg p-[1vw] transition-all border ${
@@ -953,12 +1038,15 @@ function DetailCard({ label, value, isDarkMode, colSpan2 = false, isLoading = fa
       }`}
     >
       <h3
-        className={`font-medium uppercase tracking-wider mb-[0.5vw] ${
+        className={`font-medium uppercase tracking-wider mb-[0.5vw] flex items-center justify-between ${
           isDarkMode ? 'text-white/60' : 'text-black/60'
         }`}
         style={{ fontSize: 'clamp(0.625rem, 0.75vw, 0.75rem)' }}
       >
-        {label}
+        <span>{label}</span>
+        {hasHistory && history.length > 0 && (
+          <FieldHistoryIcon fieldHistory={history} isDarkMode={isDarkMode} />
+        )}
       </h3>
       {isLoading ? (
         <div className={`h-[1.25vw] min-h-[18px] rounded animate-pulse ${

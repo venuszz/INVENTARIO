@@ -176,6 +176,17 @@ export interface MuebleINEA {
   directorio: { id_directorio: number; nombre: string; puesto: string } | null;
   config_estatus: { id: number; concepto: string } | null;
   
+  // Change history (populated from cambios_inventario table)
+  cambios_inventario?: Array<{
+    id: string;
+    campo_modificado: string;
+    valor_anterior: string | null;
+    valor_nuevo: string | null;
+    usuario_id: string;
+    fecha_cambio: string;
+    metadata: any;
+  }> | null;
+  
   // Legacy text fields (mantener por compatibilidad)
   usufinal: string | null;
   
@@ -215,6 +226,17 @@ export interface MuebleITEA {
   config_estatus: { id: number; concepto: string } | null;
   colores: { id: string; nombre: string; significado: string | null } | null;
   
+  // Change history (populated from cambios_inventario table)
+  cambios_inventario?: Array<{
+    id: string;
+    campo_modificado: string;
+    valor_anterior: string | null;
+    valor_nuevo: string | null;
+    usuario_id: string;
+    fecha_cambio: string;
+    metadata: any;
+  }> | null;
+  
   fechabaja: string | null;
   causadebaja: string | null;
   image_path: string | null;
@@ -250,6 +272,17 @@ export interface MuebleNoListado {
   // Nested objects from JOINs (NEW)
   area: { id_area: number; nombre: string } | null;
   directorio: { id_directorio: number; nombre: string; puesto: string } | null;
+  
+  // Change history (populated from cambios_inventario table)
+  cambios_inventario?: Array<{
+    id: string;
+    campo_modificado: string;
+    valor_anterior: string | null;
+    valor_nuevo: string | null;
+    usuario_id: string;
+    fecha_cambio: string;
+    metadata: any;
+  }> | null;
   
   fechabaja: string | null;
   causadebaja: string | null;

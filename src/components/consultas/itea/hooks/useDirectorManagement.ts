@@ -49,6 +49,12 @@ export function useDirectorManagement() {
         .filter('estado', 'not.is', null)
         .limit(1000);
 
+      // Obtener áreas con id_area
+      const { data: areasData } = await supabase
+        .from('area')
+        .select('id_area, nombre')
+        .order('nombre', { ascending: true });
+
       // Obtener rubros desde config
       const { data: rubros } = await supabase
         .from('config')
@@ -69,6 +75,7 @@ export function useDirectorManagement() {
 
       return {
         estados: [...new Set(estados?.map(item => item.estado?.trim()).filter(Boolean))] as string[],
+        areas: areasData?.map(item => ({ id_area: item.id_area, nombre: item.nombre?.trim() || '' })).filter(item => item.nombre) || [],
         rubros: rubros?.map(item => item.concepto?.trim()).filter(Boolean) || [],
         estatus: estatusData?.map(item => ({ id: item.id, concepto: item.concepto?.trim() })).filter(item => item.concepto) || [],
         formasAdq: formasAdq?.map(item => item.concepto?.trim()).filter(Boolean) || []
@@ -77,6 +84,7 @@ export function useDirectorManagement() {
       console.error('Error al cargar opciones de filtro:', error);
       return {
         estados: [],
+        areas: [],
         rubros: [],
         estatus: [],
         formasAdq: []

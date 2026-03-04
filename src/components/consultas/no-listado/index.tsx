@@ -31,6 +31,7 @@ import InactiveModal from './modals/InactiveModal';
 import BajaModal from './modals/BajaModal';
 import AreaSelectionModal from './modals/AreaSelectionModal';
 import DirectorModal from './modals/DirectorModal';
+import ChangeConfirmationModal from './modals/ChangeConfirmationModal';
 
 // Import types
 import { Mueble, Message, FilterOptions, Directorio, Area } from './types';
@@ -121,18 +122,24 @@ export default function ConsultasNoListadoGeneral() {
     setBajaCause,
     showInactiveModal,
     setShowInactiveModal,
+    showChangeConfirmModal,
+    setShowChangeConfirmModal,
+    changeReason,
+    setChangeReason,
+    pendingChanges,
     handleSelectItem,
     handleStartEdit,
     cancelEdit,
     closeDetail,
     handleImageChange,
     saveChanges,
+    confirmAndSaveChanges,
     handleEditFormChange,
     markAsBaja,
     confirmBaja,
     markAsInactive,
     confirmMarkAsInactive
-  } = useItemEdit();
+  } = useItemEdit(filterOptions);
 
   // Initialize URL parameter handler
   const { paramNotFound, foundItem, clearParamNotFound } = useURLParamHandler({
@@ -781,6 +788,17 @@ export default function ConsultasNoListadoGeneral() {
         onSave={saveDirectorInfo}
         onClose={() => setShowDirectorModal(false)}
         isDarkMode={isDarkMode}
+      />
+
+      <ChangeConfirmationModal
+        show={showChangeConfirmModal}
+        changes={pendingChanges}
+        changeReason={changeReason}
+        onReasonChange={setChangeReason}
+        onConfirm={() => confirmAndSaveChanges(user)}
+        onCancel={() => setShowChangeConfirmModal(false)}
+        isDarkMode={isDarkMode}
+        isSaving={isSaving}
       />
     </>
   );

@@ -1,9 +1,12 @@
 import { useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import supabase from '@/app/lib/supabase/client';
-import { Mueble, Message } from '../types';
+import { detectChanges, Change } from '../utils/changeDetection';
+import { Mueble, Message, FilterOptions, Directorio } from '../types';
+import { registrarCambios } from '@/lib/changeHistory';
+import type { ChangeHistoryEntry } from '@/types/changeHistory';
 
-export function useItemEdit() {
+export function useItemEdit(filterOptions: FilterOptions, directorioData: Directorio[]) {
     const router = useRouter();
     const searchParams = useSearchParams();
     const [selectedItem, setSelectedItem] = useState<Mueble | null>(null);
@@ -17,6 +20,11 @@ export function useItemEdit() {
     const [showBajaModal, setShowBajaModal] = useState(false);
     const [bajaCause, setBajaCause] = useState('');
     const [showInactiveModal, setShowInactiveModal] = useState(false);
+    
+    // Change confirmation states
+    const [showChangeConfirmModal, setShowChangeConfirmModal] = useState(false);
+    const [changeReason, setChangeReason] = useState('');
+    const [pendingChanges, setPendingChanges] = useState<Change[]>([]);
 
     const handleSelectItem = (item: Mueble) => {
         setSelectedItem(item);
@@ -41,6 +49,10 @@ export function useItemEdit() {
         setEditFormData(null);
         setImageFile(null);
         setImagePreview(null);
+        // Clear change confirmation states
+        setShowChangeConfirmModal(false);
+        setChangeReason('');
+        setPendingChanges([]);
     };
 
     const closeDetail = () => {
@@ -134,8 +146,31 @@ export function useItemEdit() {
     };
 
     const saveChanges = async () => {
-        if (!editFormData) return;
+        if (!editFormData || !selectedItem) return;
 
+        // Detect changes with filterOptions for proper value resolution
+        const changes = detectChanges(selectedItem, editFormData, filterOptions, directorioData);
+
+        if (changes.length === 0) {
+            setMessage({ type: 'info', text: 'No hay cambios para guardar' });
+            return;
+        }
+
+        // Show confirmation modal with detected changes
+        setPendingChanges(changes);
+        setShowChangeConfirmModal(true);
+    };
+
+    const confirmAndSaveChanges = async (user?: any) => {
+        if (!editFormData || !selectedItem) return;
+
+        // Validate change reason
+        if (!changeReason.trim()) {
+            setMessage({ type: 'warning', text: 'Debe proporcionar un motivo del cambio' });
+            return;
+        }
+
+        setShowChangeConfirmModal(false);
         setIsSaving(true);
         setUploading(true);
 
@@ -192,8 +227,31 @@ export function useItemEdit() {
                 throw new Error(error.message || 'Error al guardar cambios');
             }
 
-            // Notification for edit
-            // Notification removed
+            // Register changes in the new change history system
+            try {
+                if (!user?.id) {
+                    console.warn('⚠️ [Change History] Usuario no disponible, omitiendo registro de historial');
+                } else {
+                    const changeHistoryEntries: ChangeHistoryEntry[] = pendingChanges.map(change => ({
+                        campo: change.field,
+                        valorAnterior: change.oldValue,
+                        valorNuevo: change.newValue,
+                        campoDisplay: change.label
+                    }));
+
+                    await registrarCambios({
+                        idMueble: editFormData.id, // UUID del bien
+                        tablaOrigen: 'mueblesitea', // Tabla mueblesitea para ITEA
+                        cambios: changeHistoryEntries,
+                        razonCambio: changeReason
+                    }, user.id); // Pass userId as second parameter
+
+                    console.log('✅ [Change History] Cambios registrados exitosamente en la base de datos');
+                }
+            } catch (historyError) {
+                console.error('❌ [Change History] Error al registrar cambios:', historyError);
+                // No bloqueamos la operación si falla el historial
+            }
 
             // Refetch the mueble with JOINs to get updated nested objects
             const refetchResponse = await fetch(
@@ -220,6 +278,8 @@ export function useItemEdit() {
             setEditFormData(null);
             setImageFile(null);
             setImagePreview(null);
+            setChangeReason('');
+            setPendingChanges([]);
             setMessage({
                 type: 'success',
                 text: 'Cambios guardados correctamente'
@@ -467,12 +527,18 @@ export function useItemEdit() {
         setBajaCause,
         showInactiveModal,
         setShowInactiveModal,
+        showChangeConfirmModal,
+        setShowChangeConfirmModal,
+        changeReason,
+        setChangeReason,
+        pendingChanges,
         handleSelectItem,
         handleStartEdit,
         cancelEdit,
         closeDetail,
         handleImageChange,
         saveChanges,
+        confirmAndSaveChanges,
         handleEditFormChange,
         markAsBaja,
         confirmBaja,

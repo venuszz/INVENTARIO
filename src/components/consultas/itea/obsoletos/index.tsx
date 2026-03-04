@@ -45,6 +45,7 @@ import {
   DirectorModal,
   AreaSelectionModal
 } from './modals';
+import ChangeConfirmationModal from './modals/ChangeConfirmationModal';
 
 /**
  * ITEA Obsoletos Component
@@ -134,6 +135,11 @@ export default function IteaObsoletosComponent() {
     isSaving,
     showReactivarModal,
     reactivating,
+    showChangeConfirmModal,
+    setShowChangeConfirmModal,
+    changeReason,
+    setChangeReason,
+    pendingChanges,
     detailRef,
     handleSelectItem,
     handleStartEdit,
@@ -141,6 +147,7 @@ export default function IteaObsoletosComponent() {
     closeDetail,
     handleImageChange,
     saveChanges,
+    confirmAndSaveChanges,
     handleEditFormChange,
     setShowReactivarModal,
     reactivarArticulo,
@@ -562,6 +569,17 @@ export default function IteaObsoletosComponent() {
         onConfirm={reactivarArticulo}
         onClose={() => setShowReactivarModal(false)}
         isDarkMode={isDarkMode}
+      />
+
+      <ChangeConfirmationModal
+        show={showChangeConfirmModal}
+        changes={pendingChanges}
+        changeReason={changeReason}
+        onReasonChange={setChangeReason}
+        onConfirm={confirmAndSaveChanges}
+        onCancel={() => setShowChangeConfirmModal(false)}
+        isDarkMode={isDarkMode}
+        isSaving={isSaving}
       />
 
       <AreaSelectionModal
