@@ -7,5 +7,9 @@ const LoginPage = dynamic(() => import('@/components/auth/login_form'), {
 })
 
 export default function Login() {
-    return <LoginPage />
+    return (
+        <div className="fixed inset-0 overflow-y-auto">
+            <LoginPage />
+        </div>
+    )
 }

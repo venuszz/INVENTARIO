@@ -28,11 +28,11 @@ export default function RegisterForm() {
 
     if (registrationSuccess) {
         return (
-            <div className={`h-screen flex items-center justify-center transition-colors duration-300 ${
+            <div className={`w-full min-h-screen flex items-center justify-center p-6 transition-colors duration-300 ${
                 isDarkMode ? 'bg-black' : 'bg-white'
             }`}>
                 <motion.div 
-                    className="w-full max-w-md px-6"
+                    className="w-full max-w-md"
                     initial={{ opacity: 0, scale: 0.95 }}
                     animate={{ opacity: 1, scale: 1 }}
                     transition={{ duration: 0.5 }}
@@ -95,7 +95,7 @@ export default function RegisterForm() {
     }
 
     return (
-        <div className={`h-screen flex items-center justify-center transition-colors duration-300 ${
+        <div className={`w-full min-h-screen flex items-center justify-center p-6 transition-colors duration-300 ${
             isDarkMode ? 'bg-black' : 'bg-white'
         }`}>
             {/* Botón de tema */}
@@ -111,8 +111,8 @@ export default function RegisterForm() {
                 {isDarkMode ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
             </button>
 
-            <div className="w-full max-w-5xl px-6">
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-20 items-center">
+            <div className="w-full max-w-6xl">
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 lg:gap-24 items-center">
                     {/* Panel izquierdo - Logo e información */}
                     <motion.div 
                         className="text-center lg:text-left"
@@ -120,15 +120,15 @@ export default function RegisterForm() {
                         animate={{ opacity: 1, x: 0 }}
                         transition={{ duration: 0.5 }}
                     >
-                        <div className="inline-flex items-center justify-center lg:justify-start mb-12">
+                        <div className="mb-8">
                             <img
                                 src={isDarkMode ? "/images/ITEA_logo.png" : "/images/ITEA_logo_negro.svg"}
                                 alt="Logo ITEA"
-                                className="h-24 w-auto object-contain"
+                                className="h-24 lg:h-32 w-auto mx-auto lg:mx-0"
                             />
                         </div>
 
-                        <h1 className={`text-5xl lg:text-6xl font-light mb-3 tracking-tight ${
+                        <h1 className={`text-5xl lg:text-6xl xl:text-7xl font-light mb-4 tracking-tight ${
                             isDarkMode ? 'text-white' : 'text-gray-900'
                         }`}>
                             Registro de
@@ -136,7 +136,7 @@ export default function RegisterForm() {
                                 isDarkMode ? 'text-white/70' : 'text-black/70'
                             }`}>Nuevo Usuario</span>
                         </h1>
-                        <p className={`text-base font-light ${
+                        <p className={`text-lg font-light ${
                             isDarkMode ? 'text-white/40' : 'text-black/40'
                         }`}>
                             Creación de cuentas para el sistema
