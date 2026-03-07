@@ -81,6 +81,7 @@ export const InventoryTable: React.FC<InventoryTableProps> = ({
                 sortDirection="asc"
                 onSort={onSort}
               />
+
               <SortableHeader 
                 field="descripcion" 
                 label="Descripción"
@@ -228,6 +229,7 @@ export const InventoryTable: React.FC<InventoryTableProps> = ({
                         <RefreshCw className="inline-block ml-2 h-3 w-3 animate-spin" />
                       )}
                     </td>
+
                     <td className={`px-4 py-4 align-top text-sm font-light transition-all ${
                       isDarkMode ? 'text-white/90' : 'text-black/90'
                     }`}>

@@ -116,9 +116,9 @@ export default function LevantamientoUnificado() {
   const [showAreaPDFModal, setShowAreaPDFModal] = useState(false);
   const [areaPDFLoading, setAreaPDFLoading] = useState(false);
   const [areaPDFError, setAreaPDFError] = useState<string | null>(null);
-  const [areaPDFTarget, setAreaPDFTarget] = useState<{ area: string; director: string }>({ 
-    area: '', 
-    director: '' 
+  const [areaPDFTarget, setAreaPDFTarget] = useState<{ area: string; director: string }>({
+    area: '',
+    director: ''
   });
 
   // Director data modal state (kept for admin incomplete director data updates)
@@ -199,7 +199,7 @@ export default function LevantamientoUnificado() {
           .from('firmas')
           .select('*')
           .order('id', { ascending: true });
-        
+
         if (firmasError) throw firmasError;
         if (firmasData && firmasData.length > 0) {
           firmas = firmasData.map(f => ({
@@ -268,12 +268,12 @@ export default function LevantamientoUnificado() {
     const usufinalFilter = activeFilters.find(f => f.type === 'usufinal');
     const areaTerm = areaFilter?.term || '';
     const directorTerm = usufinalFilter?.term || '';
-    
+
     // Filter by relational fields
-    const filtered = filteredMuebles.filter(item => 
+    const filtered = filteredMuebles.filter(item =>
       item.area?.nombre && item.directorio?.nombre
     );
-    
+
     // Extract unique directors with id_directorio
     const uniqueDirectors = new Map<number, DirectorioOption>();
     filtered.forEach(item => {
@@ -288,9 +288,9 @@ export default function LevantamientoUnificado() {
         }
       }
     });
-    
+
     const directorOptionsArray = Array.from(uniqueDirectors.values());
-    
+
     setAreaPDFTarget({ area: areaTerm, director: directorTerm });
     await fetchDirectorFromDirectorio(areaTerm, directorTerm);
     setShowAreaPDFModal(true);
@@ -300,11 +300,11 @@ export default function LevantamientoUnificado() {
    * Get filtered muebles for custom PDF export
    */
   const getFilteredMueblesForExportPDF = (omitEmptyStatus = false): LevMueble[] => {
-    let filtered = filteredMuebles.filter(item => 
-      item && 
-      typeof item === 'object' && 
-      item.id_inv && 
-      item.area?.nombre && 
+    let filtered = filteredMuebles.filter(item =>
+      item &&
+      typeof item === 'object' &&
+      item.id_inv &&
+      item.area?.nombre &&
       item.directorio?.nombre
     );
 
@@ -322,11 +322,11 @@ export default function LevantamientoUnificado() {
    * Count records without status
    */
   const getRecordsWithoutStatusCount = (): number => {
-    const baseFiltered = filteredMuebles.filter(item => 
-      item && 
-      typeof item === 'object' && 
-      item.id_inv && 
-      item.area?.nombre && 
+    const baseFiltered = filteredMuebles.filter(item =>
+      item &&
+      typeof item === 'object' &&
+      item.id_inv &&
+      item.area?.nombre &&
       item.directorio?.nombre
     );
     return baseFiltered.filter(item => {
@@ -342,7 +342,7 @@ export default function LevantamientoUnificado() {
   const handleCustomPDFConfirm = async (directorData: { nombre: string; puesto: string }, omitEmptyStatus: boolean, observationsMode: boolean) => {
     setAreaPDFLoading(true);
     setAreaPDFError(null);
-    
+
     try {
       const firmas = [{
         concepto: 'DIRECTOR DE ÁREA',
@@ -351,7 +351,7 @@ export default function LevantamientoUnificado() {
       }];
 
       const dataToExport = getFilteredMueblesForExportPDF(omitEmptyStatus);
-      
+
       if (!Array.isArray(dataToExport) || dataToExport.length === 0) {
         setAreaPDFError('No hay datos para exportar.');
         return;
@@ -363,7 +363,7 @@ export default function LevantamientoUnificado() {
         usufinal: item.directorio?.nombre || '',
         estatus: item.config_estatus?.concepto || item.estatus || ''
       }));
-      
+
       if (!plainData.every(obj => obj && typeof obj === 'object' && obj.id_inv && obj.area && obj.usufinal)) {
         setAreaPDFError('Error: Hay registros corruptos o incompletos.');
         return;
@@ -376,19 +376,19 @@ export default function LevantamientoUnificado() {
       // Define columns based on observations mode
       const columns = observationsMode
         ? [
-            { header: 'ID INVENTARIO', key: 'id_inv', width: 60 },
-            { header: 'DESCRIPCIÓN', key: 'descripcion', width: 150 },
-            { header: 'ESTADO', key: 'estado', width: 50 },
-            { header: 'OBSERVACIONES', key: 'observaciones', width: 150 },
-          ]
+          { header: 'ID INVENTARIO', key: 'id_inv', width: 60 },
+          { header: 'DESCRIPCIÓN', key: 'descripcion', width: 150 },
+          { header: 'ESTADO', key: 'estado', width: 50 },
+          { header: 'OBSERVACIONES', key: 'observaciones', width: 150 },
+        ]
         : [
-            { header: 'ID INVENTARIO', key: 'id_inv', width: 60 },
-            { header: 'DESCRIPCIÓN', key: 'descripcion', width: 120 },
-            { header: 'ESTADO', key: 'estado', width: 50 },
-            { header: 'ESTATUS', key: 'estatus', width: 50 },
-            { header: 'ÁREA', key: 'area', width: 60 },
-            { header: 'USUARIO FINAL', key: 'usufinal', width: 70 },
-          ];
+          { header: 'ID INVENTARIO', key: 'id_inv', width: 60 },
+          { header: 'DESCRIPCIÓN', key: 'descripcion', width: 120 },
+          { header: 'ESTADO', key: 'estado', width: 50 },
+          { header: 'ESTATUS', key: 'estatus', width: 50 },
+          { header: 'ÁREA', key: 'area', width: 60 },
+          { header: 'USUARIO FINAL', key: 'usufinal', width: 70 },
+        ];
 
       await generatePDFPerArea({
         data: plainData as Record<string, unknown>[],
@@ -447,7 +447,7 @@ export default function LevantamientoUnificado() {
    */
   const handleInputKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (!showSuggestions || suggestions.length === 0) return;
-    
+
     if (e.key === 'ArrowDown') {
       e.preventDefault();
       setHighlightedIndex(prev => (prev + 1) % suggestions.length);
@@ -487,19 +487,19 @@ export default function LevantamientoUnificado() {
   useEffect(() => {
     async function fetchFolios() {
       if (!muebles.length) return;
-      
+
       // Fetch resguardos with id_mueble (UUID)
       const { data, error } = await supabase
         .from('resguardos')
         .select('id_mueble, folio');
-      
+
       if (!error && data) {
         // Create a map of mueble UUID to id_inv
         const muebleIdToIdInv: Record<string, string> = {};
         muebles.forEach(m => {
           muebleIdToIdInv[m.id] = m.id_inv;
         });
-        
+
         // Map resguardos to id_inv
         const map: Record<string, string> = {};
         data.forEach(r => {
@@ -536,24 +536,21 @@ export default function LevantamientoUnificado() {
 
   return (
     <>
-      <div className={`h-[calc(100vh-4rem)] overflow-hidden transition-colors duration-300 ${
-        isDarkMode ? 'bg-black text-white' : 'bg-white text-black'
-      }`}>
-        <div className={`h-full overflow-y-auto ${
-          isDarkMode 
+      <div className={`h-[calc(100vh-4rem)] overflow-hidden transition-colors duration-300 ${isDarkMode ? 'bg-black text-white' : 'bg-white text-black'
+        }`}>
+        <div className={`h-full overflow-y-auto ${isDarkMode
             ? 'scrollbar-thin scrollbar-track-white/5 scrollbar-thumb-white/20 hover:scrollbar-thumb-white/30'
             : 'scrollbar-thin scrollbar-track-black/5 scrollbar-thumb-black/20 hover:scrollbar-thumb-black/30'
-        }`} style={{ padding: 'clamp(0.75rem, 1vw, 1rem) clamp(1.5rem, 2vw, 2rem)' }}>
+          }`} style={{ padding: 'clamp(0.75rem, 1vw, 1rem) clamp(1.5rem, 2vw, 2rem)' }}>
           <div className="w-full max-w-[95vw] mx-auto" style={{ paddingBottom: 'clamp(1.5rem, 2vw, 2rem)' }}>
             {/* Header */}
-            <div className={`flex justify-between items-center border-b ${
-              isDarkMode ? 'border-white/10' : 'border-black/10'
-            }`} style={{ 
-              marginBottom: 'clamp(1.5rem, 2vw, 2rem)',
-              paddingBottom: 'clamp(1rem, 1.5vw, 1.5rem)'
-            }}>
+            <div className={`flex justify-between items-center border-b ${isDarkMode ? 'border-white/10' : 'border-black/10'
+              }`} style={{
+                marginBottom: 'clamp(1.5rem, 2vw, 2rem)',
+                paddingBottom: 'clamp(1rem, 1.5vw, 1.5rem)'
+              }}>
               <div>
-                <h1 className="font-light tracking-tight" style={{ 
+                <h1 className="font-light tracking-tight" style={{
                   fontSize: 'clamp(1.5rem, 1.875vw, 1.875rem)',
                   marginBottom: 'clamp(0.125rem, 0.25vw, 0.25rem)'
                 }}>
@@ -570,15 +567,15 @@ export default function LevantamientoUnificado() {
             </div>
 
             {/* Sync Status Banner */}
-            <SyncStatusBanner 
-              isSyncing={isSyncing} 
-              syncingCount={syncingCount} 
+            <SyncStatusBanner
+              isSyncing={isSyncing}
+              syncingCount={syncingCount}
               syncingSources={syncingSources}
-              isDarkMode={isDarkMode} 
+              isDarkMode={isDarkMode}
             />
 
             {/* Search and filters */}
-            <div style={{ 
+            <div style={{
               marginBottom: 'clamp(1rem, 1.5vw, 1.5rem)',
               gap: 'clamp(0.5rem, 0.75vw, 0.75rem)',
               display: 'flex',
@@ -624,21 +621,20 @@ export default function LevantamientoUnificado() {
 
             {/* Message banner */}
             {message && (
-              <div className={`rounded-lg border ${
-                isDarkMode
+              <div className={`rounded-lg border ${isDarkMode
                   ? message.type === 'success' ? 'bg-green-500/10 text-green-400 border-green-500/20' :
                     message.type === 'error' ? 'bg-red-500/10 text-red-400 border-red-500/20' :
-                    message.type === 'warning' ? 'bg-yellow-500/10 text-yellow-400 border-yellow-500/20' :
-                    message.type === 'info' ? 'bg-blue-500/10 text-blue-400 border-blue-500/20' : ''
+                      message.type === 'warning' ? 'bg-yellow-500/10 text-yellow-400 border-yellow-500/20' :
+                        message.type === 'info' ? 'bg-blue-500/10 text-blue-400 border-blue-500/20' : ''
                   : message.type === 'success' ? 'bg-green-50 text-green-800 border-green-200' :
                     message.type === 'error' ? 'bg-red-50 text-red-800 border-red-200' :
-                    message.type === 'warning' ? 'bg-yellow-50 text-yellow-800 border-yellow-200' :
-                    message.type === 'info' ? 'bg-blue-50 text-blue-800 border-blue-200' : ''
-              }`} style={{ 
-                padding: 'clamp(0.5rem, 0.75vw, 0.75rem)',
-                marginBottom: 'clamp(0.75rem, 1vw, 1rem)',
-                fontSize: 'clamp(0.75rem, 0.875vw, 0.875rem)'
-              }}>
+                      message.type === 'warning' ? 'bg-yellow-50 text-yellow-800 border-yellow-200' :
+                        message.type === 'info' ? 'bg-blue-50 text-blue-800 border-blue-200' : ''
+                }`} style={{
+                  padding: 'clamp(0.5rem, 0.75vw, 0.75rem)',
+                  marginBottom: 'clamp(0.75rem, 1vw, 1rem)',
+                  fontSize: 'clamp(0.75rem, 0.875vw, 0.875rem)'
+                }}>
                 {message.text}
               </div>
             )}

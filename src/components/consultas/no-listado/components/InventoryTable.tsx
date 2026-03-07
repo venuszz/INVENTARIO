@@ -69,6 +69,7 @@ export default function InventoryTable({
                                 sortDirection={sortDirection}
                                 onSort={onSort}
                             />
+
                             <SortableHeader 
                                 field="descripcion" 
                                 label="Descripción"
@@ -171,6 +172,7 @@ export default function InventoryTable({
                                                 {item.id_inv}
                                             </span>
                                         </td>
+
                                         <td className={`px-4 py-4 align-top text-sm font-light transition-all ${
                                             isDarkMode ? 'text-white/90' : 'text-black/90'
                                         }`}>
