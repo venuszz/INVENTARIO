@@ -52,11 +52,11 @@ export default function useOrigenTransfer({
           .select('id')
           .eq('id_mueble', recordId)
           .limit(1);
-        
+
         if (resguardos && resguardos.length > 0) {
           return false; // Has active resguardo
         }
-        
+
         return true;
       } catch (err) {
         console.error('Error checking transfer eligibility:', err);
@@ -129,6 +129,15 @@ export default function useOrigenTransfer({
           console.log('[useOrigenTransfer] Campo "color" eliminado (exclusivo de ITEA)');
         }
 
+        // Sanitizar: convertir strings vacíos a null para evitar
+        // "invalid input syntax for type numeric" en PostgreSQL
+        const sanitizedData = Object.fromEntries(
+          Object.entries(recordData).map(([key, value]) => [
+            key,
+            value === '' ? null : value,
+          ])
+        );
+
         // 5. Insertar en tabla destino usando supabase-proxy (como las ediciones)
         const insertResponse = await fetch(
           '/api/supabase-proxy?target=' + encodeURIComponent(`/rest/v1/${destTable}`),
@@ -139,7 +148,7 @@ export default function useOrigenTransfer({
               'Content-Type': 'application/json',
               'Prefer': 'return=minimal' // NO retornar datos para evitar reindexación
             },
-            body: JSON.stringify(recordData)
+            body: JSON.stringify(sanitizedData)
           }
         );
 
@@ -191,7 +200,7 @@ export default function useOrigenTransfer({
         console.log('[useOrigenTransfer] === ERROR CATCH ===', err);
         const errorMessage = err.message || 'Error al transferir registro';
         setError(errorMessage);
-        
+
         sileo.show({
           title: 'Error al transferir',
           description: errorMessage,

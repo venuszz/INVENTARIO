@@ -6,12 +6,13 @@
  */
 
 import { BadgeCheck } from 'lucide-react';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { LevMueble, SortDirection } from '../types';
-import { getOrigenColors, getEstatusColors, truncateText } from '../utils';
+import { getOrigenColors, getEstatusColors } from '../utils';
 import { SortableHeader } from './SortableHeader';
 import { CellSkeleton } from '@/components/shared/CellSkeleton';
 import OrigenBadge from '@/components/consultas/shared/OrigenBadge';
+import { useTransferModeContext } from './BatchTransfer/useTransferModeContext';
 
 /**
  * Component props interface
@@ -25,6 +26,15 @@ interface InventoryTableProps {
   onFolioClick: (folio: string) => void;
   syncingIds: string[];
   isDarkMode: boolean;
+  // Transfer mode props
+  transferMode?: boolean;
+  selectedItems?: Set<string>;
+  onItemSelect?: (itemId: string) => void;
+  onSelectAll?: () => void;
+  allSelected?: boolean;
+  blockedItems?: Map<string, string>;
+  // All filtered items for select all functionality
+  allFilteredMuebles?: LevMueble[];
 }
 
 /**
@@ -50,7 +60,33 @@ export function InventoryTable({
   onFolioClick,
   syncingIds,
   isDarkMode,
+  transferMode: transferModeProp = false,
+  selectedItems: selectedItemsProp = new Set(),
+  onItemSelect: onItemSelectProp,
+  onSelectAll: onSelectAllProp,
+  allSelected: allSelectedProp = false,
+  blockedItems: blockedItemsProp = new Map(),
+  allFilteredMuebles,
 }: InventoryTableProps) {
+
+  // Try to get transfer mode context
+  const transferContext = useTransferModeContext();
+  
+  // Use context values if available, otherwise use props
+  const transferMode = transferContext ? true : transferModeProp;
+  const selectedItems = transferContext?.selectedItems ?? selectedItemsProp;
+  const onItemSelect = transferContext?.handleItemSelect ?? onItemSelectProp;
+  
+  // Use allFilteredMuebles for select all logic if provided, otherwise use muebles
+  const mueblesForSelectAll = allFilteredMuebles || muebles;
+  
+  const onSelectAll = transferContext 
+    ? () => transferContext.handleSelectAll(mueblesForSelectAll)
+    : onSelectAllProp;
+  const allSelected = transferContext 
+    ? transferContext.isAllSelected(mueblesForSelectAll)
+    : allSelectedProp;
+  const blockedItems = transferContext?.blockedItems ?? blockedItemsProp;
 
   const origenColors = getOrigenColors(isDarkMode);
   const estatusColors = getEstatusColors(isDarkMode);
@@ -62,6 +98,20 @@ export function InventoryTable({
     return syncingIds.includes(muebleId);
   };
 
+  /**
+   * Check if an item is blocked from transfer
+   */
+  const isItemBlocked = (itemId: string) => {
+    return blockedItems.has(itemId);
+  };
+
+  /**
+   * Get block reason for an item
+   */
+  const getBlockReason = (itemId: string) => {
+    return blockedItems.get(itemId);
+  };
+
   return (
     <div className={`rounded-lg border overflow-hidden ${isDarkMode ? 'bg-black border-white/10' : 'bg-white border-black/10'
       }`}>
@@ -71,6 +121,58 @@ export function InventoryTable({
           <thead className={`sticky top-0 z-10 backdrop-blur-xl ${isDarkMode ? 'bg-black/95 border-b border-white/10' : 'bg-white/95 border-b border-black/10'
             }`}>
             <tr>
+              {/* Checkbox Column - Only visible in transfer mode */}
+              {transferMode && (
+                <th className={`px-4 py-3 text-left w-12 ${isDarkMode ? 'text-white/60' : 'text-black/60'
+                  }`}>
+                  <div className="flex items-center justify-center">
+                    <label className="relative inline-flex items-center cursor-pointer group">
+                      <input
+                        type="checkbox"
+                        checked={allSelected}
+                        onChange={onSelectAll}
+                        className="sr-only peer"
+                        aria-label="Seleccionar todos los items"
+                      />
+                      <motion.div 
+                        className={`
+                          w-5 h-5 rounded border-2 transition-all duration-200
+                          flex items-center justify-center
+                          ${isDarkMode
+                            ? 'border-white/30 peer-checked:bg-white peer-checked:border-white'
+                            : 'border-black/30 peer-checked:bg-black peer-checked:border-black'
+                          }
+                          group-hover:border-opacity-60
+                        `}
+                        whileHover={{ scale: 1.1 }}
+                        whileTap={{ scale: 0.9 }}
+                      >
+                        <AnimatePresence>
+                          {allSelected && (
+                            <motion.svg 
+                              className={`w-3 h-3 ${isDarkMode ? 'text-black' : 'text-white'}`} 
+                              fill="none" 
+                              viewBox="0 0 24 24" 
+                              stroke="currentColor" 
+                              strokeWidth={3}
+                              initial={{ scale: 0, rotate: -180 }}
+                              animate={{ scale: 1, rotate: 0 }}
+                              exit={{ scale: 0, rotate: 180 }}
+                              transition={{ 
+                                type: 'spring',
+                                stiffness: 500,
+                                damping: 25
+                              }}
+                            >
+                              <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                            </motion.svg>
+                          )}
+                        </AnimatePresence>
+                      </motion.div>
+                    </label>
+                  </div>
+                </th>
+              )}
               <th className={`px-4 py-3 text-left text-xs font-medium uppercase tracking-wider ${isDarkMode ? 'text-white/60' : 'text-black/60'
                 }`}>
                 Origen
@@ -113,17 +215,98 @@ export function InventoryTable({
 
           {/* Table Body */}
           <tbody>
-            {muebles.map((item, index) => (
+            {muebles.map((item, index) => {
+              const isBlocked = isItemBlocked(item.id);
+              const blockReason = getBlockReason(item.id);
+              const isSelected = selectedItems.has(item.id);
+
+              return (
               <motion.tr
                 key={`${item.origen}-${item.id || ''}-${item.id_inv || ''}-${index}`}
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 transition={{ delay: index * 0.02, duration: 0.2 }}
-                className={`border-b transition-colors ${isDarkMode
-                  ? 'border-white/5 hover:bg-white/[0.02]'
-                  : 'border-black/5 hover:bg-black/[0.02]'
-                  }`}
+                onClick={() => {
+                  if (transferMode && !isBlocked) {
+                    onItemSelect?.(item.id);
+                  }
+                }}
+                className={`border-b transition-colors ${
+                  isBlocked && transferMode
+                    ? isDarkMode
+                      ? 'opacity-50 bg-white/[0.01] border-white/5 cursor-not-allowed'
+                      : 'opacity-50 bg-black/[0.01] border-black/5 cursor-not-allowed'
+                    : isDarkMode
+                      ? `border-white/5 hover:bg-white/[0.02] ${transferMode && !isBlocked ? 'cursor-pointer' : ''}`
+                      : `border-black/5 hover:bg-black/[0.02] ${transferMode && !isBlocked ? 'cursor-pointer' : ''}`
+                }`}
               >
+                {/* Checkbox Cell - Only visible in transfer mode */}
+                {transferMode && (
+                  <td className="px-4 py-3 text-xs" onClick={(e) => e.stopPropagation()}>
+                    <div className="flex items-center justify-center gap-2">
+                      <label className="relative inline-flex items-center cursor-pointer group">
+                        <input
+                          type="checkbox"
+                          checked={isSelected}
+                          disabled={isBlocked}
+                          onChange={() => onItemSelect?.(item.id)}
+                          className="sr-only peer"
+                          aria-label={`Seleccionar item ${item.id_inv}`}
+                          aria-checked={isSelected}
+                          title={isBlocked ? blockReason : undefined}
+                        />
+                        <motion.div 
+                          className={`
+                            w-5 h-5 rounded border-2 transition-all duration-200
+                            flex items-center justify-center
+                            ${isBlocked
+                              ? isDarkMode
+                                ? 'border-white/10 bg-white/5 cursor-not-allowed'
+                                : 'border-black/10 bg-black/5 cursor-not-allowed'
+                              : isDarkMode
+                                ? 'border-white/30 peer-checked:bg-white peer-checked:border-white group-hover:border-white/50'
+                                : 'border-black/30 peer-checked:bg-black peer-checked:border-black group-hover:border-black/50'
+                            }
+                          `}
+                          whileHover={!isBlocked ? { scale: 1.1 } : {}}
+                          whileTap={!isBlocked ? { scale: 0.9 } : {}}
+                        >
+                          <AnimatePresence>
+                            {isSelected && !isBlocked && (
+                              <motion.svg 
+                                className={`w-3 h-3 ${isDarkMode ? 'text-black' : 'text-white'}`} 
+                                fill="none" 
+                                viewBox="0 0 24 24" 
+                                stroke="currentColor" 
+                                strokeWidth={3}
+                                initial={{ scale: 0, rotate: -180 }}
+                                animate={{ scale: 1, rotate: 0 }}
+                                exit={{ scale: 0, rotate: 180 }}
+                                transition={{ 
+                                  type: 'spring',
+                                  stiffness: 500,
+                                  damping: 25
+                                }}
+                              >
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                              </motion.svg>
+                            )}
+                          </AnimatePresence>
+                        </motion.div>
+                      </label>
+                      {isBlocked && (
+                        <span
+                          className={`text-xs ${isDarkMode ? 'text-orange-400' : 'text-orange-600'}`}
+                          title={blockReason}
+                        >
+                          ⚠
+                        </span>
+                      )}
+                    </div>
+                  </td>
+                )}
+
                 {/* Origen Badge */}
                 <td className="px-4 py-3 text-xs" onClick={(e) => e.stopPropagation()}>
                   <div className="flex items-center gap-2">
@@ -211,6 +394,7 @@ export function InventoryTable({
                       itemColor={item.color || null}
                       itemColorName={item.colores?.nombre || null}
                       itemColorSignificado={item.colores?.significado || null}
+                      disabled={transferMode}
                     />
                   </div>
                 </td>
@@ -311,7 +495,8 @@ export function InventoryTable({
                   </span>
                 </td>
               </motion.tr>
-            ))}
+            );
+            })}
           </tbody>
         </table>
       </div>

@@ -41,6 +41,16 @@ import { DirectorDataModal } from './modals/DirectorDataModal';
 // Import types
 import { Message, ExportType, DirectorioOption, LevMueble } from './types';
 
+// Lazy load batch transfer provider
+import { lazy, Suspense } from 'react';
+import { TransferModeProvider } from './components/BatchTransfer/TransferModeProvider';
+
+const BatchTransfer = lazy(() =>
+  import('./components/BatchTransfer').then(module => ({
+    default: module.BatchTransfer
+  }))
+);
+
 /**
  * LevantamientoUnificado component
  * 
@@ -127,6 +137,27 @@ export default function LevantamientoUnificado() {
 
   // Folio resguardo state
   const [foliosResguardo, setFoliosResguardo] = useState<Record<string, string>>({});
+
+  // Transfer mode state
+  const [transferMode, setTransferMode] = useState(false);
+
+  /**
+   * Toggle transfer mode
+   */
+  const toggleTransferMode = () => {
+    setTransferMode(!transferMode);
+  };
+
+  /**
+   * Auto-disable transfer mode when origen filter is removed
+   */
+  useEffect(() => {
+    const hasOrigenFilter = activeFilters.some(f => f.type === 'origen');
+    if (!hasOrigenFilter && transferMode) {
+      console.log('🔄 [Levantamiento] Desactivando modo de transferencia - filtro de origen removido');
+      setTransferMode(false);
+    }
+  }, [activeFilters, transferMode]);
 
   /**
    * Handle sorting
@@ -539,8 +570,8 @@ export default function LevantamientoUnificado() {
       <div className={`h-[calc(100vh-4rem)] overflow-hidden transition-colors duration-300 ${isDarkMode ? 'bg-black text-white' : 'bg-white text-black'
         }`}>
         <div className={`h-full overflow-y-auto ${isDarkMode
-            ? 'scrollbar-thin scrollbar-track-white/5 scrollbar-thumb-white/20 hover:scrollbar-thumb-white/30'
-            : 'scrollbar-thin scrollbar-track-black/5 scrollbar-thumb-black/20 hover:scrollbar-thumb-black/30'
+          ? 'scrollbar-thin scrollbar-track-white/5 scrollbar-thumb-white/20 hover:scrollbar-thumb-white/30'
+          : 'scrollbar-thin scrollbar-track-black/5 scrollbar-thumb-black/20 hover:scrollbar-thumb-black/30'
           }`} style={{ padding: 'clamp(0.75rem, 1vw, 1rem) clamp(1.5rem, 2vw, 2rem)' }}>
           <div className="w-full max-w-[95vw] mx-auto" style={{ paddingBottom: 'clamp(1.5rem, 2vw, 2rem)' }}>
             {/* Header */}
@@ -607,6 +638,9 @@ export default function LevantamientoUnificado() {
                   isCustomPDFEnabled={isCustomPDFEnabled}
                   loading={loading}
                   isDarkMode={isDarkMode}
+                  transferMode={transferMode}
+                  onTransferModeToggle={toggleTransferMode}
+                  hasOrigenFilter={activeFilters.some(f => f.type === 'origen')}
                 />
               </div>
 
@@ -622,14 +656,14 @@ export default function LevantamientoUnificado() {
             {/* Message banner */}
             {message && (
               <div className={`rounded-lg border ${isDarkMode
-                  ? message.type === 'success' ? 'bg-green-500/10 text-green-400 border-green-500/20' :
-                    message.type === 'error' ? 'bg-red-500/10 text-red-400 border-red-500/20' :
-                      message.type === 'warning' ? 'bg-yellow-500/10 text-yellow-400 border-yellow-500/20' :
-                        message.type === 'info' ? 'bg-blue-500/10 text-blue-400 border-blue-500/20' : ''
-                  : message.type === 'success' ? 'bg-green-50 text-green-800 border-green-200' :
-                    message.type === 'error' ? 'bg-red-50 text-red-800 border-red-200' :
-                      message.type === 'warning' ? 'bg-yellow-50 text-yellow-800 border-yellow-200' :
-                        message.type === 'info' ? 'bg-blue-50 text-blue-800 border-blue-200' : ''
+                ? message.type === 'success' ? 'bg-green-500/10 text-green-400 border-green-500/20' :
+                  message.type === 'error' ? 'bg-red-500/10 text-red-400 border-red-500/20' :
+                    message.type === 'warning' ? 'bg-yellow-500/10 text-yellow-400 border-yellow-500/20' :
+                      message.type === 'info' ? 'bg-blue-500/10 text-blue-400 border-blue-500/20' : ''
+                : message.type === 'success' ? 'bg-green-50 text-green-800 border-green-200' :
+                  message.type === 'error' ? 'bg-red-50 text-red-800 border-red-200' :
+                    message.type === 'warning' ? 'bg-yellow-50 text-yellow-800 border-yellow-200' :
+                      message.type === 'info' ? 'bg-blue-50 text-blue-800 border-blue-200' : ''
                 }`} style={{
                   padding: 'clamp(0.5rem, 0.75vw, 0.75rem)',
                   marginBottom: 'clamp(0.75rem, 1vw, 1rem)',
@@ -651,16 +685,39 @@ export default function LevantamientoUnificado() {
 
               {!loading && !inventoryError && filteredMuebles.length > 0 && (
                 <>
-                  <InventoryTable
-                    muebles={paginatedMuebles}
-                    sortField={sortField}
-                    sortDirection={sortDirection}
-                    onSort={handleSort}
-                    foliosResguardo={foliosResguardo}
-                    onFolioClick={handleFolioClick}
-                    syncingIds={syncingIds}
-                    isDarkMode={isDarkMode}
-                  />
+                  {transferMode ? (
+                    <TransferModeProvider>
+                      <InventoryTable
+                        muebles={paginatedMuebles}
+                        allFilteredMuebles={filteredMuebles}
+                        sortField={sortField}
+                        sortDirection={sortDirection}
+                        onSort={handleSort}
+                        foliosResguardo={foliosResguardo}
+                        onFolioClick={handleFolioClick}
+                        syncingIds={syncingIds}
+                        isDarkMode={isDarkMode}
+                      />
+                      <Suspense fallback={null}>
+                        <BatchTransfer
+                          filteredMuebles={filteredMuebles}
+                          onSuccess={() => { }}
+                          isDarkMode={isDarkMode}
+                        />
+                      </Suspense>
+                    </TransferModeProvider>
+                  ) : (
+                    <InventoryTable
+                      muebles={paginatedMuebles}
+                      sortField={sortField}
+                      sortDirection={sortDirection}
+                      onSort={handleSort}
+                      foliosResguardo={foliosResguardo}
+                      onFolioClick={handleFolioClick}
+                      syncingIds={syncingIds}
+                      isDarkMode={isDarkMode}
+                    />
+                  )}
 
                   <Pagination
                     currentPage={currentPage}

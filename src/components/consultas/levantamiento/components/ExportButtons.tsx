@@ -5,7 +5,7 @@
  * with special styling for custom PDF export when enabled.
  */
 
-import { FileSpreadsheet, FileText } from 'lucide-react';
+import { FileSpreadsheet, FileText, ArrowRightLeft, X } from 'lucide-react';
 import { motion } from 'framer-motion';
 
 /**
@@ -18,6 +18,10 @@ interface ExportButtonsProps {
   isCustomPDFEnabled: boolean;
   loading: boolean;
   isDarkMode: boolean;
+  // Transfer mode props
+  hasOrigenFilter?: boolean;
+  transferMode?: boolean;
+  onTransferModeToggle?: () => void;
 }
 
 /**
@@ -34,11 +38,40 @@ export function ExportButtons({
   onExcelClick,
   onPDFClick,
   isCustomPDFEnabled,
-  isDarkMode
+  isDarkMode,
+  hasOrigenFilter = false,
+  transferMode = false,
+  onTransferModeToggle
 }: ExportButtonsProps) {
   
   return (
     <div className="flex gap-2">
+      {/* Transfer Mode Button - Only visible when origen filter is active */}
+      {hasOrigenFilter && onTransferModeToggle && (
+        <motion.button
+          onClick={onTransferModeToggle}
+          className={`px-3 py-2 rounded-lg border text-sm font-light flex items-center gap-2 transition-all ${
+            transferMode
+              ? isDarkMode
+                ? 'bg-red-500/10 border-red-500/20 text-red-400 hover:bg-red-500/15 hover:border-red-500/30'
+                : 'bg-red-50 border-red-200 text-red-600 hover:bg-red-100 hover:border-red-300'
+              : isDarkMode
+                ? 'bg-white/5 border-white/10 text-white hover:bg-white/10 hover:border-white/20'
+                : 'bg-black/5 border-black/10 text-black hover:bg-black/10 hover:border-black/20'
+          }`}
+          title={transferMode ? 'Cancelar transferencia' : 'Transferir origen de items seleccionados'}
+          aria-label={transferMode ? 'Cancelar transferencia' : 'Transferir origen de items seleccionados'}
+          aria-pressed={transferMode}
+          whileHover={{ scale: 1.02 }}
+          whileTap={{ scale: 0.98 }}
+        >
+          {transferMode ? <X size={16} /> : <ArrowRightLeft size={16} />}
+          <span className="hidden sm:inline">
+            {transferMode ? 'Cancelar' : 'Transferir Origen'}
+          </span>
+        </motion.button>
+      )}
+
       {/* Excel Export Button */}
       <motion.button
         onClick={onExcelClick}
